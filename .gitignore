@@ -1,0 +1,20 @@
+node_modules/
+.next/
+*.tsbuildinfo
+next-env.d.ts
+
+# local databases
+prisma/*.db
+prisma/*.db-journal
+
+# env
+.env
+.env.local
+
+# uploads (S3 mock)
+public/uploads/*
+!public/uploads/.gitkeep
+
+# misc
+.DS_Store
+coverage/

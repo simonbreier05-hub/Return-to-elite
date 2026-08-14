@@ -1,0 +1,25 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ivory: #faf8f4;
+  --color-parchment: #f2eee6;
+  --color-charcoal: #1c1b18;
+  --color-graphite: #3a382f;
+  --color-gold: #b08d3f;
+  --color-gold-soft: #d9c69a;
+
+  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
+  --font-sans: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+}
+
+html {
+  background: var(--color-ivory);
+  color: var(--color-charcoal);
+  font-family: var(--font-sans);
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Tablet-first: comfortable touch targets everywhere */
+button {
+  touch-action: manipulation;
+}

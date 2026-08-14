@@ -1,0 +1,160 @@
+// Elite Housekeeping — Prisma schema (SQLite, default for quick local runs)
+//
+// NOTE ON ENUMS: status/role fields are stored as String (not Prisma enum)
+// so the identical model set runs on both SQLite and Postgres. All values are
+// validated server-side with Zod (src/lib/domain.ts) — nothing unvalidated
+// ever reaches the database.
+//
+// Postgres variant: prisma/schema.postgres.prisma (same models, pg provider).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String
+  passwordHash  String
+  role          String // room_attendant | supervisor | front_office | concierge | engineering | duty_manager
+  section       String? // preferred working section for attendants, e.g. "3A"
+  currentRoomId String? // live location: room the attendant is currently working in
+  lastSeenAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  assignedRooms Room[]      @relation("RoomAssignee")
+  notes         RoomNote[]
+  defects       Defect[]    @relation("DefectReporter")
+  workOrders    WorkOrder[] @relation("WorkOrderAssignee")
+  auditLogs     AuditLog[]
+  arrivals      Arrival[]
+  excursions    Excursion[]
+}
+
+model Room {
+  id               String    @id @default(cuid())
+  number           String    @unique // "101" .. "713"
+  floor            Int
+  section          String // "1A", "1B", ...
+  type             String // STANDARD | DELUXE | JUNIOR_SUITE | SUITE | PENTHOUSE
+  status           String    @default("DIRTY") // see RoomStatus in src/lib/domain.ts
+  statusSince      DateTime  @default(now())
+  occupancy        String    @default("VACANT") // VACANT | OCCUPIED
+  isCheckoutToday  Boolean   @default(false) // due-out today (drives priority: turn before stayover)
+  blockReason      String? // DND | GUEST_IN_ROOM | DOUBLE_LOCKED | REFUSED (only when BLOCKED)
+  blockedSince     DateTime?
+  reworkNote       String? // supervisor note when sending CLEAN back to PICKUP
+  oooUntil         DateTime? // end time for OUT_OF_ORDER
+  baseCleanMinutes Int       @default(30) // baseline used by predictCleaningMinutes
+  assignedToId     String?
+  assignedTo       User?     @relation("RoomAssignee", fields: [assignedToId], references: [id])
+  updatedAt        DateTime  @updatedAt
+
+  notes      RoomNote[]
+  defects    Defect[]
+  arrivals   Arrival[]
+  excursions Excursion[]
+  auditLogs  AuditLog[]
+}
+
+model Arrival {
+  id           String    @id @default(cuid())
+  roomId       String
+  room         Room      @relation(fields: [roomId], references: [id])
+  guestName    String
+  eta          DateTime?
+  vip          Boolean   @default(false)
+  earlyCheckIn Boolean   @default(false)
+  neededNow    Boolean   @default(false) // front office: "room needed now"
+  notifyOnRelease Boolean @default(true) // FO gets a notification when the room turns INSPECTED
+  status       String    @default("EXPECTED") // EXPECTED | CHECKED_IN | CANCELLED
+  createdById  String
+  createdBy    User      @relation(fields: [createdById], references: [id])
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model Excursion {
+  id          String   @id @default(cuid())
+  roomId      String
+  room        Room     @relation(fields: [roomId], references: [id])
+  guestName   String?
+  startsAt    DateTime // guest out of house from ...
+  endsAt      DateTime // ... until (cleaning window)
+  note        String?
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+  createdAt   DateTime @default(now())
+}
+
+model RoomNote {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  body      String
+  createdAt DateTime @default(now())
+}
+
+model Defect {
+  id           String     @id @default(cuid())
+  roomId       String
+  room         Room       @relation(fields: [roomId], references: [id])
+  category     String // PLUMBING | ELECTRICAL | HVAC | FURNITURE | IT_TV | MINIBAR | OTHER
+  note         String
+  photoPath    String? // stored under /public/uploads (S3 mock)
+  reportedById String
+  reportedBy   User       @relation("DefectReporter", fields: [reportedById], references: [id])
+  createdAt    DateTime   @default(now())
+  workOrder    WorkOrder?
+}
+
+model WorkOrder {
+  id           String    @id @default(cuid())
+  defectId     String    @unique
+  defect       Defect    @relation(fields: [defectId], references: [id])
+  status       String    @default("OPEN") // OPEN | ACK | IN_PROGRESS | RESOLVED
+  assignedToId String?
+  assignedTo   User?     @relation("WorkOrderAssignee", fields: [assignedToId], references: [id])
+  ackAt        DateTime?
+  startedAt    DateTime?
+  resolvedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  roomId     String?
+  room       Room?    @relation(fields: [roomId], references: [id])
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id])
+  action     String // e.g. STATUS_CHANGE, STATUS_CHANGE_DENIED, LOGIN, PMS_PUSH, ...
+  fromStatus String?
+  toStatus   String?
+  meta       String? // JSON blob with extra context (reason, note, ip, ...)
+  createdAt  DateTime @default(now())
+}
+
+model Notification {
+  id           String    @id @default(cuid())
+  type         String // ROOM_RELEASED | BLOCKED_RECHECK | WELFARE_CHECK | ETA_AT_RISK | RELEASE_QUEUE_BACKLOG | WORK_ORDER | ...
+  level        String    @default("info") // info | warning | critical
+  targetRole   String // role that should see it (duty_manager sees all)
+  roomId       String?
+  message      String
+  dedupeKey    String? // prevents the escalation ticker from re-firing the same alert
+  acknowledged Boolean   @default(false)
+  createdAt    DateTime  @default(now())
+}
+
+model Setting {
+  key   String @id
+  value String
+}
