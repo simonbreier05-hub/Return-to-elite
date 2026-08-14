@@ -8,6 +8,8 @@
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
+    "build:railway": "prisma generate --schema prisma/schema.postgres.prisma && next build",
+    "start:railway": "prisma db push --schema prisma/schema.postgres.prisma --skip-generate --accept-data-loss && SEED_MODE=if-empty tsx prisma/seed.ts && NODE_ENV=production node server.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:push:postgres": "prisma db push --schema prisma/schema.postgres.prisma",
@@ -21,10 +23,12 @@
     "bcryptjs": "^3.0.2",
     "jose": "^6.0.10",
     "next": "^15.3.2",
+    "prisma": "^6.5.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "socket.io": "^4.8.1",
     "socket.io-client": "^4.8.1",
+    "tsx": "^4.19.3",
     "zod": "^3.24.2"
   },
   "devDependencies": {
@@ -32,9 +36,7 @@
     "@types/node": "^22.14.0",
     "@types/react": "^19.1.0",
     "@types/react-dom": "^19.1.0",
-    "prisma": "^6.5.0",
     "tailwindcss": "^4.1.4",
-    "tsx": "^4.19.3",
     "typescript": "^5.8.3",
     "vitest": "^3.1.1"
   },

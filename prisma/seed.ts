@@ -14,6 +14,16 @@ const prisma = new PrismaClient();
 const PASSWORD = "elite123";
 
 async function main() {
+  // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
+  // database once, but never wipe live data on a redeploy/restart.
+  if (process.env.SEED_MODE === "if-empty") {
+    const existing = await prisma.user.count();
+    if (existing > 0) {
+      console.log(`Database already seeded (${existing} users) — skipping.`);
+      return;
+    }
+  }
+
   console.log("Seeding…");
 
   // Wipe in dependency order (idempotent re-seed).

@@ -9,7 +9,31 @@ import { RoleSchema, type Role } from "./domain";
  */
 
 const COOKIE_NAME = "elite_session";
-const secret = () => new TextEncoder().encode(process.env.AUTH_SECRET ?? "dev-secret-change-me-please-0123456789");
+const DEV_SECRET = "dev-secret-change-me-please-0123456789";
+
+/**
+ * Session signing key. In production the well-known dev secret must never be
+ * used — anyone could forge a session token with it. If no AUTH_SECRET is
+ * configured there, fall back to a random per-boot key: still safe, but
+ * sessions do not survive a restart, so set AUTH_SECRET on any real deploy.
+ */
+let resolvedSecret: Uint8Array | null = null;
+
+function secret(): Uint8Array {
+  if (resolvedSecret) return resolvedSecret;
+  const configured = process.env.AUTH_SECRET;
+  if (process.env.NODE_ENV === "production" && (!configured || configured === DEV_SECRET)) {
+    console.warn(
+      "[auth] AUTH_SECRET is not set (or still the dev default). Using a random " +
+        "per-boot secret — all sessions are invalidated on restart. Set AUTH_SECRET " +
+        "in your environment to keep users logged in across deploys."
+    );
+    resolvedSecret = crypto.getRandomValues(new Uint8Array(32));
+  } else {
+    resolvedSecret = new TextEncoder().encode(configured ?? DEV_SECRET);
+  }
+  return resolvedSecret;
+}
 
 export interface Session {
   userId: string;

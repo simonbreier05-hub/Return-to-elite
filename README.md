@@ -66,6 +66,35 @@ Covers:
 - **Priority engine** — each weighted signal, explainability invariant
   (score ≡ sum of reasons), and the `predictCleaningMinutes` baseline
 
+## Deployment on Railway
+
+The repo ships with `railway.json`, so Railway picks up the right build and
+start commands automatically:
+
+- **Build:** `npm run build:railway` — generates the Prisma client against the
+  **Postgres** schema, then `next build`
+- **Start:** `npm run start:railway` — `prisma db push`, seeds **only if the
+  database is empty** (`SEED_MODE=if-empty`, so a redeploy never wipes live
+  data), then boots the server
+- **Healthcheck:** `GET /api/health` (returns `{status:"ok",rooms:145}`)
+
+Steps:
+
+1. Railway → **New Project → Deploy from GitHub repo** → pick this repo.
+2. Add a **Postgres** database to the same project (New → Database → Postgres).
+3. In the app service, set the variables:
+   - `DATABASE_URL` = `${{Postgres.DATABASE_URL}}` (reference to the DB service)
+   - `AUTH_SECRET` = a long random value (`openssl rand -base64 32`)
+4. **Check the deployed branch** under Settings → Source. Railway uses the
+   repository's default branch; if the application code lives on a feature
+   branch, select it there.
+5. Generate a public domain under Settings → Networking. WebSockets work over
+   that domain without extra configuration.
+
+`PORT` is injected by Railway and read by `server.js`; the server binds
+`0.0.0.0`. SQLite is *not* suitable on Railway (ephemeral filesystem) — use the
+Postgres service, which the Railway scripts above already target.
+
 ## Room state machine
 
 ```
