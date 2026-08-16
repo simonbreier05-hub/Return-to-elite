@@ -98,13 +98,28 @@ async function main() {
       const occupied = count % 3 !== 0;
       const checkout = count % 4 === 0;
       const assignee = attendants[(floor + i) % attendants.length];
+
+      // A snapshot of mid-morning: the team started low and is working its way
+      // up, so floor 1 is largely released while floor 5 has not been touched.
+      // Without this every tile is red and the board shows nothing.
+      const progression: Record<number, string[]> = {
+        1: ["INSPECTED", "INSPECTED", "INSPECTED", "INSPECTED", "CLEAN", "DIRTY"],
+        2: ["INSPECTED", "INSPECTED", "CLEAN", "IN_PROGRESS", "DIRTY", "DIRTY"],
+        3: ["INSPECTED", "CLEAN", "IN_PROGRESS", "DIRTY", "DIRTY", "DIRTY"],
+        4: ["IN_PROGRESS", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
+        5: ["DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
+      };
+      const status = progression[floor][i % progression[floor].length];
+      const minutesAgo = status === "DIRTY" ? 0 : 10 + ((i * 7) % 90);
+
       const room = await prisma.room.create({
         data: {
           number,
           floor,
           section,
           type,
-          status: "DIRTY",
+          status,
+          statusSince: new Date(Date.now() - minutesAgo * 60_000),
           occupancy: occupied && !checkout ? "OCCUPIED" : "VACANT",
           isCheckoutToday: checkout,
           baseCleanMinutes: baseMinutes[type],

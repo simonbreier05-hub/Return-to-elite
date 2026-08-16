@@ -36,6 +36,14 @@ export const BLOCK_REASONS = ["DND", "GUEST_IN_ROOM", "DOUBLE_LOCKED", "REFUSED"
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 export const BlockReasonSchema = z.enum(BLOCK_REASONS);
 
+/** Short forms that fit inside a board tile without wrapping. */
+export const BLOCK_REASON_SHORT: Record<BlockReason, string> = {
+  DND: "DND",
+  GUEST_IN_ROOM: "Guest in",
+  DOUBLE_LOCKED: "Locked",
+  REFUSED: "Refused",
+};
+
 /** Categories of a five-star city hotel, smallest to largest. */
 export const ROOM_TYPES = [
   "CLASSIC",

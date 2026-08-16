@@ -7,7 +7,7 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import { STATUS_STYLES } from "@/components/status";
-import { STATUS_LABELS, type RoomStatus } from "@/lib/domain";
+import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type RoomStatus } from "@/lib/domain";
 
 interface Note {
   id: string;
@@ -197,8 +197,10 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                       title={`${room.number} — ${STATUS_LABELS[room.status]}`}
                     >
                       {room.number}
-                      <span className="text-[9px] font-normal opacity-80">
-                        {room.status === "BLOCKED" ? room.blockReason : room.section}
+                      <span className="max-w-full truncate px-1 text-[9px] font-normal opacity-80">
+                        {room.status === "BLOCKED" && room.blockReason
+                          ? BLOCK_REASON_SHORT[room.blockReason as BlockReason] ?? room.blockReason
+                          : room.section}
                       </span>
                       {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
                       {attHere && (

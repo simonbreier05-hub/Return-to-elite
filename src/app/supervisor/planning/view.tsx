@@ -154,7 +154,8 @@ export default function PlanningView() {
   }, [live]);
 
   return (
-    <div className="animate-rise">
+    // Bottom padding keeps the last cards clear of the sticky apply bar.
+    <div className="animate-rise pb-24">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">Morning Planning</h2>
