@@ -1,8 +1,8 @@
 {
-  "name": "elite-housekeeping",
+  "name": "stayclean",
   "version": "0.1.0",
   "private": true,
-  "description": "Cross-departmental real-time room-cleaning & room-release system for a 145-room luxury hotel (OPERA Cloud / OHIP integration-ready prototype)",
+  "description": "StayClean - cross-departmental real-time room-cleaning & room-release system for a 145-room luxury hotel (OPERA Cloud / OHIP integration-ready prototype)",
   "scripts": {
     "dev": "node server.js",
     "sync": "bash scripts/watch-remote.sh",

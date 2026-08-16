@@ -1,9 +1,13 @@
-# Elite Housekeeping — Real-Time Room Cleaning & Release
+# StayClean — Real-Time Room Cleaning & Release
 
 Production-quality **prototype** of a cross-departmental, real-time room-cleaning and
 room-release system for a 145-room luxury hotel. Built to later integrate with
 **Oracle OPERA Cloud via OHIP** (connector interface included); runs today on
 mock/local data.
+
+> **StayClean** is the system. **Elite** is the fictional hotel it is deployed
+> for in this prototype — that is the name you see in the app header and in the
+> seeded demo data.
 
 | | |
 |---|---|
