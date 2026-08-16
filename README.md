@@ -53,6 +53,27 @@ npm run dev
 (The schema stores enum-like fields as validated strings so the identical model set
 runs on both providers; `prisma/schema.postgres.prisma` is the pg variant.)
 
+### Live-Sync while someone else edits the code
+
+Next.js dev mode hot-reloads on file change, but only for files on *your*
+machine. To follow changes that are pushed to the branch, run the watcher in a
+second terminal — it fast-forwards your working copy, which triggers the hot
+reload:
+
+```bash
+# Terminal 1
+npm run dev
+
+# Terminal 2
+npm run sync            # polls origin/<current branch> every 10s
+npm run sync -- main 5  # optional: other branch / interval
+```
+
+The watcher prints a warning when a change needs more than a hot reload
+(`package.json` → `npm install`, Prisma schema → `npm run db:push`,
+`server.js` → restart). It only fast-forwards, so it never overwrites your own
+uncommitted edits — it tells you instead.
+
 ### Tests
 
 ```bash

@@ -5,6 +5,7 @@
   "description": "Cross-departmental real-time room-cleaning & room-release system for a 145-room luxury hotel (OPERA Cloud / OHIP integration-ready prototype)",
   "scripts": {
     "dev": "node server.js",
+    "sync": "bash scripts/watch-remote.sh",
     "build": "next build",
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
