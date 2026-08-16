@@ -3,8 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
+import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
+import Modal from "@/components/Modal";
 import { STATUS_STYLES } from "@/components/status";
 import { STATUS_LABELS, type RoomStatus } from "@/lib/domain";
+
+interface Note {
+  id: string;
+  body: string;
+  author: { name: string; role: string };
+  createdAt: string;
+  roomId?: string;
+}
 
 interface Room {
   id: string;
@@ -20,7 +30,7 @@ interface Room {
   isCheckoutToday: boolean;
   assignedTo?: { id: string; name: string } | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
-  notes: { id: string; body: string; author: { name: string; role: string }; createdAt: string }[];
+  notes: Note[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
 }
 
@@ -40,29 +50,55 @@ const LEGEND: RoomStatus[] = [
 export default function SupervisorView({ isDutyManager }: { isDutyManager: boolean }) {
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
-  const [selected, setSelected] = useState<Room | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
+  const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo"; room: Room } | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<{ rooms: Room[]; attendants: Attendant[] }>("/api/rooms");
     setRooms(data.rooms);
     setAttendants(data.attendants);
-    setSelected((sel) => (sel ? data.rooms.find((r) => r.id === sel.id) ?? null : null));
   }, []);
 
   useEffect(() => {
     load();
   }, [load]);
 
+  // Arrivals are nested inside the room payload and cannot be patched from an
+  // arrival event alone, so those fall back to a coalesced refetch.
+  const refetchSoon = useCoalescedRefetch(load, 2000);
+
   useSocket({
-    "room:update": () => load(),
+    // Patch the changed room in place. The broadcast carries only scalar room
+    // fields plus assignedTo, so spreading it preserves the nested arrivals,
+    // notes and defects already held in state.
+    "room:update": (p: { room: Room }) => {
+      setRooms((prev) => {
+        const known = prev.some((r) => r.id === p.room.id);
+        if (!known) {
+          refetchSoon();
+          return prev;
+        }
+        return prev.map((r) => (r.id === p.room.id ? { ...r, ...p.room } : r));
+      });
+    },
     "room:status": (p: { number: string; from: string; to: string; by: string }) => {
       setTicker(`Room ${p.number}: ${p.from} → ${p.to} (${p.by})`);
       setTimeout(() => setTicker(null), 6000);
     },
-    "attendant:location": () => load(),
-    "note:new": () => load(),
+    "attendant:location": (p: { userId: string; roomId: string }) => {
+      setAttendants((prev) =>
+        prev.map((a) => (a.id === p.userId ? { ...a, currentRoomId: p.roomId, lastSeenAt: new Date().toISOString() } : a))
+      );
+    },
+    "note:new": (p: { note: Note }) => {
+      setRooms((prev) =>
+        prev.map((r) => (r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3) } : r))
+      );
+    },
+    "arrival:update": () => refetchSoon(),
   });
 
   const byFloor = useMemo(() => {
@@ -75,25 +111,31 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   }, [rooms]);
 
   const roomById = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
+  const selected = selectedId ? roomById.get(selectedId) ?? null : null;
 
   const releaseQueue = rooms.filter((r) => r.status === "CLEAN");
   const inspected = rooms.filter((r) => r.status === "INSPECTED").length;
   const sellable = rooms.filter((r) => !["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status)).length;
   const progress = sellable ? Math.round((inspected / sellable) * 100) : 0;
 
+  /** Single place where a status change is issued, so busy-state and error handling are consistent. */
   const act = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
+    if (busyRoomId) return; // guards against a double tap while a request is in flight
+    setBusyRoomId(room.id);
     setError(null);
     try {
-      await api(`/api/rooms/${room.id}/status`, { body: { status, ...extra } });
-      load();
+      const res = await api<{ room: Room }>(`/api/rooms/${room.id}/status`, { body: { status, ...extra } });
+      // Apply immediately; the socket echo will simply re-apply the same values.
+      setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
     } catch (e) {
       setError(`Room ${room.number}: ${(e as Error).message}`);
+    } finally {
+      setBusyRoomId(null);
     }
   };
 
   return (
     <div>
-      {/* KPI strip */}
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Released / sellable" value={`${inspected}/${sellable}`} />
         <Kpi label="Daily progress" value={`${progress}%`} bar={progress} />
@@ -101,16 +143,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         <Kpi label="Blocked" value={String(rooms.filter((r) => r.status === "BLOCKED").length)} />
       </div>
 
-      {ticker && (
-        <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>
-      )}
+      {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
       {error && (
         <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>
       )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
         <div>
-          {/* Legend */}
           <div className="mb-3 flex flex-wrap gap-2 text-xs">
             {LEGEND.map((s) => (
               <span key={s} className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 shadow-sm">
@@ -120,7 +159,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             ))}
           </div>
 
-          {/* Floor grid */}
           {byFloor.map(([floor, floorRooms]) => (
             <div key={floor} className="mb-4">
               <h3 className="mb-2 font-serif text-xl">
@@ -135,17 +173,17 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                   return (
                     <button
                       key={room.id}
-                      onClick={() => setSelected(room)}
-                      className={`relative flex h-16 flex-col items-center justify-center rounded-lg border-b-4 text-sm font-semibold shadow-sm active:scale-95 ${STATUS_STYLES[room.status].tile}`}
+                      onClick={() => setSelectedId(room.id)}
+                      className={`relative flex h-16 flex-col items-center justify-center rounded-lg border-b-4 text-sm font-semibold shadow-sm transition active:scale-95 ${STATUS_STYLES[room.status].tile} ${
+                        busyRoomId === room.id ? "animate-pulse" : ""
+                      }`}
                       title={`${room.number} — ${STATUS_LABELS[room.status]}`}
                     >
                       {room.number}
                       <span className="text-[9px] font-normal opacity-80">
                         {room.status === "BLOCKED" ? room.blockReason : room.section}
                       </span>
-                      {room.arrivals.some((a) => a.vip) && (
-                        <span className="absolute left-1 top-0.5 text-[10px]">★</span>
-                      )}
+                      {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
                       {attHere && (
                         <span className="absolute right-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attHere.name}>
                           👤
@@ -159,47 +197,48 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           ))}
         </div>
 
-        {/* Right rail */}
         <div className="space-y-4">
           <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
             <h3 className="mb-2 font-serif text-xl">Release queue</h3>
             {releaseQueue.length === 0 && <p className="text-sm text-graphite/60">Nothing waiting for inspection.</p>}
             <div className="space-y-2">
-              {releaseQueue.map((room) => (
-                <div key={room.id} className="rounded-xl border border-yellow-300 bg-yellow-50 p-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-serif text-xl">{room.number}</span>
-                    <span className="text-xs text-graphite/60">
-                      waiting {Math.round((Date.now() - new Date(room.statusSince).getTime()) / 60000)} min
-                    </span>
+              {releaseQueue.map((room) => {
+                const busy = busyRoomId === room.id;
+                return (
+                  <div key={room.id} className="rounded-xl border border-yellow-300 bg-yellow-50 p-3">
+                    <div className="flex items-center justify-between">
+                      <span className="font-serif text-xl">{room.number}</span>
+                      <span className="text-xs text-graphite/60">
+                        waiting {Math.round((Date.now() - new Date(room.statusSince).getTime()) / 60000)} min
+                      </span>
+                    </div>
+                    {room.arrivals[0] && (
+                      <p className="mt-1 text-xs text-graphite/70">
+                        {room.arrivals[0].vip && "★ VIP · "}
+                        {room.arrivals[0].guestName}
+                        {room.arrivals[0].eta &&
+                          ` · ETA ${new Date(room.arrivals[0].eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                      </p>
+                    )}
+                    <div className="mt-2 grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => act(room, "INSPECTED")}
+                        disabled={busy}
+                        className="h-12 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {busy ? "…" : "✓ Inspect & release"}
+                      </button>
+                      <button
+                        onClick={() => setDialog({ kind: "rework", room })}
+                        disabled={busy}
+                        className="h-12 rounded-lg border-2 border-orange-500 text-sm font-semibold text-orange-700 transition active:scale-[0.98] disabled:opacity-50"
+                      >
+                        ↩ Rework
+                      </button>
+                    </div>
                   </div>
-                  {room.arrivals[0] && (
-                    <p className="mt-1 text-xs text-graphite/70">
-                      {room.arrivals[0].vip && "★ VIP · "}
-                      {room.arrivals[0].guestName}
-                      {room.arrivals[0].eta &&
-                        ` · ETA ${new Date(room.arrivals[0].eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-                    </p>
-                  )}
-                  <div className="mt-2 grid grid-cols-2 gap-2">
-                    <button
-                      onClick={() => act(room, "INSPECTED")}
-                      className="h-12 rounded-lg bg-emerald-600 text-sm font-semibold text-white active:scale-[0.98]"
-                    >
-                      ✓ Inspect &amp; release
-                    </button>
-                    <button
-                      onClick={() => {
-                        const note = window.prompt(`Rework note for room ${room.number}:`);
-                        if (note?.trim()) act(room, "PICKUP", { note });
-                      }}
-                      className="h-12 rounded-lg border-2 border-orange-500 text-sm font-semibold text-orange-700 active:scale-[0.98]"
-                    >
-                      ↩ Rework
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
 
@@ -227,9 +266,37 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           room={selected}
           attendants={attendants}
           isDutyManager={isDutyManager}
-          onClose={() => setSelected(null)}
+          busy={busyRoomId === selected.id}
+          onClose={() => setSelectedId(null)}
           onAct={act}
-          onReload={load}
+          onOpenDialog={(kind) => setDialog({ kind, room: selected })}
+          onNoteAdded={(note) =>
+            setRooms((prev) =>
+              prev.map((r) => (r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3) } : r))
+            )
+          }
+          onAssigned={(room) => setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, ...room } : r)))}
+        />
+      )}
+
+      {dialog?.kind === "rework" && (
+        <ReworkModal
+          room={dialog.room}
+          onClose={() => setDialog(null)}
+          onSubmit={async (note) => {
+            setDialog(null);
+            await act(dialog.room, "PICKUP", { note });
+          }}
+        />
+      )}
+      {dialog?.kind === "ooo" && (
+        <OooModal
+          room={dialog.room}
+          onClose={() => setDialog(null)}
+          onSubmit={async (until) => {
+            setDialog(null);
+            await act(dialog.room, "OUT_OF_ORDER", { oooUntil: until.toISOString() });
+          }}
         />
       )}
     </div>
@@ -243,10 +310,128 @@ function Kpi({ label, value, bar, accent }: { label: string; value: string; bar?
       <div className="mt-1 font-serif text-3xl">{value}</div>
       {bar !== undefined && (
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-parchment">
-          <div className="h-full rounded-full bg-gold" style={{ width: `${bar}%` }} />
+          <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${bar}%` }} />
         </div>
       )}
     </div>
+  );
+}
+
+/** Rework reasons a supervisor reaches for most often — one tap instead of typing. */
+const REWORK_PRESETS = [
+  "Bathroom not spotless",
+  "Minibar not restocked",
+  "Linen / turndown",
+  "Dust on surfaces",
+  "Amenities missing",
+  "Room needs airing",
+];
+
+function ReworkModal({
+  room,
+  onClose,
+  onSubmit,
+}: {
+  room: Room;
+  onClose: () => void;
+  onSubmit: (note: string) => void;
+}) {
+  const [note, setNote] = useState("");
+  const add = (preset: string) => setNote((n) => (n ? `${n}, ${preset.toLowerCase()}` : preset));
+
+  return (
+    <Modal
+      title={`Send room ${room.number} back`}
+      subtitle="The attendant sees this note on their device."
+      onClose={onClose}
+    >
+      <div className="mb-3 flex flex-wrap gap-2">
+        {REWORK_PRESETS.map((p) => (
+          <button
+            key={p}
+            onClick={() => add(p)}
+            className="h-11 rounded-full border border-charcoal/20 px-3 text-sm hover:border-gold hover:bg-parchment"
+          >
+            + {p}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={3}
+        autoFocus
+        placeholder="What needs to be redone?"
+        className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
+          Cancel
+        </button>
+        <button
+          onClick={() => onSubmit(note.trim())}
+          disabled={!note.trim()}
+          className="h-14 rounded-xl bg-orange-600 text-base font-semibold text-white disabled:opacity-40"
+        >
+          ↩ Send back
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
+const OOO_PRESETS: { label: string; hours: number }[] = [
+  { label: "4 hours", hours: 4 },
+  { label: "12 hours", hours: 12 },
+  { label: "24 hours", hours: 24 },
+  { label: "2 days", hours: 48 },
+  { label: "3 days", hours: 72 },
+  { label: "1 week", hours: 168 },
+];
+
+function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void; onSubmit: (until: Date) => void }) {
+  const [hours, setHours] = useState<number>(48);
+  const until = new Date(Date.now() + hours * 3600_000);
+
+  return (
+    <Modal
+      title={`Out of order · ${room.number}`}
+      subtitle="The room leaves sellable inventory until this time."
+      onClose={onClose}
+    >
+      <div className="mb-3 grid grid-cols-3 gap-2">
+        {OOO_PRESETS.map((p) => (
+          <button
+            key={p.hours}
+            onClick={() => setHours(p.hours)}
+            className={`h-14 rounded-xl border text-sm font-medium ${
+              hours === p.hours ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+      <label className="mb-1 block text-sm font-medium">Custom (hours)</label>
+      <input
+        type="number"
+        min={1}
+        value={hours}
+        onChange={(e) => setHours(Math.max(1, Number(e.target.value) || 1))}
+        className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 text-base outline-none focus:border-gold"
+      />
+      <p className="mb-4 rounded-lg bg-ivory p-3 text-sm text-graphite/70">
+        Back in inventory on <strong>{until.toLocaleString()}</strong>
+      </p>
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
+          Cancel
+        </button>
+        <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-gray-600 text-base font-semibold text-white">
+          Set out of order
+        </button>
+      </div>
+    </Modal>
   );
 }
 
@@ -254,25 +439,37 @@ function RoomDrawer({
   room,
   attendants,
   isDutyManager,
+  busy,
   onClose,
   onAct,
-  onReload,
+  onOpenDialog,
+  onNoteAdded,
+  onAssigned,
 }: {
   room: Room;
   attendants: Attendant[];
   isDutyManager: boolean;
+  busy: boolean;
   onClose: () => void;
   onAct: (room: Room, status: RoomStatus, extra?: Record<string, unknown>) => Promise<void>;
-  onReload: () => void;
+  onOpenDialog: (kind: "rework" | "ooo") => void;
+  onNoteAdded: (note: Note) => void;
+  onAssigned: (room: Room) => void;
 }) {
   const [noteBody, setNoteBody] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
   const style = STATUS_STYLES[room.status];
 
   const addNote = async () => {
-    if (!noteBody.trim()) return;
-    await api(`/api/rooms/${room.id}/notes`, { body: { body: noteBody } });
-    setNoteBody("");
-    onReload();
+    if (!noteBody.trim() || savingNote) return;
+    setSavingNote(true);
+    try {
+      const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body: noteBody } });
+      onNoteAdded({ ...res.note, roomId: room.id });
+      setNoteBody("");
+    } finally {
+      setSavingNote(false);
+    }
   };
 
   return (
@@ -299,62 +496,71 @@ function RoomDrawer({
           <p className="mt-2 rounded-lg bg-orange-50 p-2 text-sm text-orange-900">Rework: {room.reworkNote}</p>
         )}
 
-        {/* Supervisor actions */}
         <div className="mt-4 grid grid-cols-2 gap-2">
           {room.status === "CLEAN" && (
             <>
-              <button onClick={() => onAct(room, "INSPECTED")} className="col-span-2 h-14 rounded-xl bg-emerald-600 text-lg font-semibold text-white">
-                ✓ Inspect &amp; release
+              <button
+                onClick={() => onAct(room, "INSPECTED")}
+                disabled={busy}
+                className="col-span-2 h-14 rounded-xl bg-emerald-600 text-lg font-semibold text-white disabled:opacity-50"
+              >
+                {busy ? "Releasing…" : "✓ Inspect & release"}
               </button>
               <button
-                onClick={() => {
-                  const note = window.prompt("Rework note for the attendant:");
-                  if (note?.trim()) onAct(room, "PICKUP", { note });
-                }}
-                className="col-span-2 h-12 rounded-xl border-2 border-orange-500 font-medium text-orange-700"
+                onClick={() => onOpenDialog("rework")}
+                disabled={busy}
+                className="col-span-2 h-12 rounded-xl border-2 border-orange-500 font-medium text-orange-700 disabled:opacity-50"
               >
                 ↩ Send back (rework)
               </button>
             </>
           )}
           {room.status === "INSPECTED" && (
-            <button onClick={() => onAct(room, "DIRTY")} className="col-span-2 h-12 rounded-xl border-2 border-red-400 font-medium text-red-700">
+            <button
+              onClick={() => onAct(room, "DIRTY")}
+              disabled={busy}
+              className="col-span-2 h-12 rounded-xl border-2 border-red-400 font-medium text-red-700 disabled:opacity-50"
+            >
               Set DIRTY (new checkout)
             </button>
           )}
           {["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(room.status) ? (
-            <button onClick={() => onAct(room, "DIRTY")} className="col-span-2 h-12 rounded-xl border-2 border-charcoal/30 font-medium">
+            <button
+              onClick={() => onAct(room, "DIRTY")}
+              disabled={busy}
+              className="col-span-2 h-12 rounded-xl border-2 border-charcoal/30 font-medium disabled:opacity-50"
+            >
               Return to inventory (DIRTY)
             </button>
           ) : (
             <>
               <button
-                onClick={() => {
-                  const hours = window.prompt("Out of order for how many hours?", "48");
-                  const parsed = Number(hours);
-                  if (Number.isFinite(parsed) && parsed > 0) {
-                    onAct(room, "OUT_OF_ORDER", { oooUntil: new Date(Date.now() + parsed * 3600_000).toISOString() });
-                  }
-                }}
-                className="h-12 rounded-xl border-2 border-gray-400 text-sm font-medium text-gray-700"
+                onClick={() => onOpenDialog("ooo")}
+                disabled={busy}
+                className="h-12 rounded-xl border-2 border-gray-400 text-sm font-medium text-gray-700 disabled:opacity-50"
               >
                 Set OOO…
               </button>
-              <button onClick={() => onAct(room, "OUT_OF_SERVICE")} className="h-12 rounded-xl border-2 border-gray-300 text-sm font-medium text-gray-600">
+              <button
+                onClick={() => onAct(room, "OUT_OF_SERVICE")}
+                disabled={busy}
+                className="h-12 rounded-xl border-2 border-gray-300 text-sm font-medium text-gray-600 disabled:opacity-50"
+              >
                 Set OOS
               </button>
             </>
           )}
         </div>
 
-        {/* Assignment */}
         <div className="mt-4">
           <label className="mb-1 block text-sm font-medium">Assigned attendant</label>
           <select
             value={room.assignedTo?.id ?? ""}
             onChange={async (e) => {
-              await api(`/api/rooms/${room.id}/assign`, { body: { attendantId: e.target.value || null } });
-              onReload();
+              const res = await api<{ room: Room }>(`/api/rooms/${room.id}/assign`, {
+                body: { attendantId: e.target.value || null },
+              });
+              onAssigned(res.room);
             }}
             className="h-12 w-full rounded-lg border border-charcoal/20 bg-white px-3"
           >
@@ -365,7 +571,6 @@ function RoomDrawer({
           </select>
         </div>
 
-        {/* Arrivals */}
         {room.arrivals.length > 0 && (
           <div className="mt-4">
             <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Expected arrivals</h4>
@@ -379,7 +584,6 @@ function RoomDrawer({
           </div>
         )}
 
-        {/* Defects */}
         {room.defects.length > 0 && (
           <div className="mt-4">
             <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Defects</h4>
@@ -392,7 +596,6 @@ function RoomDrawer({
           </div>
         )}
 
-        {/* Notes */}
         <div className="mt-4">
           <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Notes</h4>
           {room.notes.map((n) => (
@@ -412,7 +615,13 @@ function RoomDrawer({
               placeholder="Add a note…"
               className="h-12 flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold"
             />
-            <button onClick={addNote} className="h-12 rounded-lg bg-charcoal px-4 text-ivory">Add</button>
+            <button
+              onClick={addNote}
+              disabled={savingNote || !noteBody.trim()}
+              className="h-12 rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40"
+            >
+              {savingNote ? "…" : "Add"}
+            </button>
           </div>
         </div>
 

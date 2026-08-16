@@ -3,8 +3,18 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
+import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
+import Modal from "@/components/Modal";
 import { STATUS_STYLES } from "@/components/status";
 import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
+
+interface Note {
+  id: string;
+  body: string;
+  author: { name: string; role: string };
+  createdAt: string;
+  roomId?: string;
+}
 
 interface Room {
   id: string;
@@ -16,7 +26,7 @@ interface Room {
   reworkNote?: string | null;
   blockReason?: string | null;
   isCheckoutToday: boolean;
-  notes: { id: string; body: string; author: { name: string; role: string }; createdAt: string }[];
+  notes: Note[];
 }
 
 interface Priority {
@@ -32,29 +42,58 @@ export default function AttendantView() {
   const [modal, setModal] = useState<{ kind: "block" | "defect" | "note"; room: Room } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState<string | null>(null);
+  const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const [roomData, prioData] = await Promise.all([
-      api<{ rooms: Room[] }>("/api/rooms?mine=1"),
-      api<{ priorities: Priority[] }>("/api/priority"),
-    ]);
-    setRooms(roomData.rooms);
-    setPriorities(Object.fromEntries(prioData.priorities.map((p) => [p.roomId, p])));
+  const loadRooms = useCallback(async () => {
+    const data = await api<{ rooms: Room[] }>("/api/rooms?mine=1");
+    setRooms(data.rooms);
+  }, []);
+
+  /** Priority is computed server-side, so it cannot be patched from an event. */
+  const loadPriorities = useCallback(async () => {
+    const data = await api<{ priorities: Priority[] }>("/api/priority");
+    setPriorities(Object.fromEntries(data.priorities.map((p) => [p.roomId, p])));
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadRooms();
+    loadPriorities();
+  }, [loadRooms, loadPriorities]);
 
-  useSocket({ "room:update": () => load(), "note:new": () => load() });
+  const refreshPrioritiesSoon = useCoalescedRefetch(loadPriorities, 2000);
+  const refreshRoomsSoon = useCoalescedRefetch(loadRooms, 2000);
+
+  useSocket({
+    "room:update": (p: { room: Room }) => {
+      setRooms((prev) => {
+        if (!prev.some((r) => r.id === p.room.id)) {
+          // Not one of my rooms yet — it may have just been assigned to me.
+          refreshRoomsSoon();
+          return prev;
+        }
+        return prev.map((r) => (r.id === p.room.id ? { ...r, ...p.room } : r));
+      });
+      refreshPrioritiesSoon();
+    },
+    "note:new": (p: { note: Note }) => {
+      setRooms((prev) =>
+        prev.map((r) => (r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3) } : r))
+      );
+    },
+  });
 
   const setStatus = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
+    if (busyRoomId) return; // one tap at a time; prevents a double tap firing twice
+    setBusyRoomId(room.id);
     setError(null);
     try {
-      await api(`/api/rooms/${room.id}/status`, { body: { status, ...extra } });
-      load();
+      const res = await api<{ room: Room }>(`/api/rooms/${room.id}/status`, { body: { status, ...extra } });
+      setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
+      refreshPrioritiesSoon();
     } catch (e) {
       setError(`Room ${room.number}: ${(e as Error).message}`);
+    } finally {
+      setBusyRoomId(null);
     }
   };
 
@@ -76,16 +115,18 @@ export default function AttendantView() {
         </div>
       </div>
 
-      {error && (
-        <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>
-      )}
+      {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {sorted.map((room) => {
           const prio = priorities[room.id];
           const style = STATUS_STYLES[room.status];
+          const busy = busyRoomId === room.id;
           return (
-            <div key={room.id} className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
+            <div
+              key={room.id}
+              className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm transition ${busy ? "opacity-60" : ""}`}
+            >
               <div className="mb-2 flex items-start justify-between">
                 <div>
                   <span className="font-serif text-3xl">{room.number}</span>
@@ -140,44 +181,48 @@ export default function AttendantView() {
                 {(room.status === "DIRTY" || room.status === "PICKUP") && (
                   <button
                     onClick={() => setStatus(room, "IN_PROGRESS")}
-                    className="col-span-2 h-14 rounded-xl bg-blue-600 text-lg font-semibold text-white active:scale-[0.98]"
+                    disabled={busy}
+                    className="col-span-2 h-14 rounded-xl bg-blue-600 text-lg font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
                   >
-                    ▶ Start cleaning
+                    {busy ? "…" : "▶ Start cleaning"}
                   </button>
                 )}
                 {room.status === "BLOCKED" && (
                   <button
                     onClick={() => setStatus(room, "IN_PROGRESS")}
-                    className="col-span-2 h-14 rounded-xl bg-blue-600 text-lg font-semibold text-white active:scale-[0.98]"
+                    disabled={busy}
+                    className="col-span-2 h-14 rounded-xl bg-blue-600 text-lg font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
                   >
-                    ▶ Unblock &amp; start
+                    {busy ? "…" : "▶ Unblock & start"}
                   </button>
                 )}
                 {room.status === "IN_PROGRESS" && (
                   <button
                     onClick={() => setStatus(room, "CLEAN")}
-                    className="col-span-2 h-14 rounded-xl bg-yellow-400 text-lg font-semibold text-charcoal active:scale-[0.98]"
+                    disabled={busy}
+                    className="col-span-2 h-14 rounded-xl bg-yellow-400 text-lg font-semibold text-charcoal transition active:scale-[0.98] disabled:opacity-50"
                   >
-                    ✓ Mark clean · to inspect
+                    {busy ? "…" : "✓ Mark clean · to inspect"}
                   </button>
                 )}
                 {["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status) && (
                   <button
                     onClick={() => setModal({ kind: "block", room })}
-                    className="h-12 rounded-xl border-2 border-purple-500 text-sm font-medium text-purple-700 active:scale-[0.98]"
+                    disabled={busy}
+                    className="h-12 rounded-xl border-2 border-purple-500 text-sm font-medium text-purple-700 transition active:scale-[0.98] disabled:opacity-50"
                   >
                     ⛔ Blocked…
                   </button>
                 )}
                 <button
                   onClick={() => setModal({ kind: "defect", room })}
-                  className="h-12 rounded-xl border-2 border-amber-500 text-sm font-medium text-amber-700 active:scale-[0.98]"
+                  className="h-12 rounded-xl border-2 border-amber-500 text-sm font-medium text-amber-700 transition active:scale-[0.98]"
                 >
                   🔧 Defect…
                 </button>
                 <button
                   onClick={() => setModal({ kind: "note", room })}
-                  className="col-span-2 h-11 rounded-xl border border-charcoal/20 text-sm text-graphite active:scale-[0.98]"
+                  className="col-span-2 h-11 rounded-xl border border-charcoal/20 text-sm text-graphite transition active:scale-[0.98]"
                 >
                   📝 Add note
                 </button>
@@ -192,39 +237,47 @@ export default function AttendantView() {
           room={modal.room}
           onClose={() => setModal(null)}
           onSubmit={async (reason) => {
-            await setStatus(modal.room, "BLOCKED", { blockReason: reason });
+            const room = modal.room;
             setModal(null);
+            await setStatus(room, "BLOCKED", { blockReason: reason });
           }}
         />
       )}
       {modal?.kind === "defect" && (
-        <DefectModal room={modal.room} onClose={() => setModal(null)} onDone={() => { setModal(null); load(); }} />
+        <DefectModal
+          room={modal.room}
+          onClose={() => setModal(null)}
+          onDone={() => {
+            setModal(null);
+            loadRooms();
+          }}
+        />
       )}
       {modal?.kind === "note" && (
-        <NoteModal room={modal.room} onClose={() => setModal(null)} onDone={() => { setModal(null); load(); }} />
+        <NoteModal
+          room={modal.room}
+          onClose={() => setModal(null)}
+          onDone={(note) => {
+            setModal(null);
+            setRooms((prev) =>
+              prev.map((r) => (r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3) } : r))
+            );
+          }}
+        />
       )}
     </div>
   );
 }
 
-function ModalFrame({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 sm:items-center" onClick={onClose}>
-      <div
-        className="w-full max-w-md rounded-t-2xl bg-white p-5 sm:rounded-2xl"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="mb-4 flex items-center justify-between">
-          <h3 className="font-serif text-2xl">{title}</h3>
-          <button onClick={onClose} className="h-11 w-11 rounded-lg hover:bg-parchment">✕</button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
-}
-
-function BlockModal({ room, onClose, onSubmit }: { room: { number: string }; onClose: () => void; onSubmit: (reason: string) => void }) {
+function BlockModal({
+  room,
+  onClose,
+  onSubmit,
+}: {
+  room: { number: string };
+  onClose: () => void;
+  onSubmit: (reason: string) => void;
+}) {
   const labels: Record<string, string> = {
     DND: "🚪 Do Not Disturb",
     GUEST_IN_ROOM: "🧍 Guest in room",
@@ -232,7 +285,11 @@ function BlockModal({ room, onClose, onSubmit }: { room: { number: string }; onC
     REFUSED: "🙅 Service refused",
   };
   return (
-    <ModalFrame title={`Block room ${room.number}`} onClose={onClose}>
+    <Modal
+      title={`Block room ${room.number}`}
+      subtitle="A re-check reminder and escalation timer start automatically."
+      onClose={onClose}
+    >
       <div className="grid gap-2">
         {BLOCK_REASONS.map((r) => (
           <button
@@ -244,12 +301,19 @@ function BlockModal({ room, onClose, onSubmit }: { room: { number: string }; onC
           </button>
         ))}
       </div>
-      <p className="mt-3 text-xs text-graphite/60">A re-check reminder and escalation timer starts automatically.</p>
-    </ModalFrame>
+    </Modal>
   );
 }
 
-function DefectModal({ room, onClose, onDone }: { room: { id: string; number: string }; onClose: () => void; onDone: () => void }) {
+function DefectModal({
+  room,
+  onClose,
+  onDone,
+}: {
+  room: { id: string; number: string };
+  onClose: () => void;
+  onDone: () => void;
+}) {
   const [category, setCategory] = useState<string>("PLUMBING");
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -257,6 +321,7 @@ function DefectModal({ room, onClose, onDone }: { room: { id: string; number: st
   const [error, setError] = useState<string | null>(null);
 
   const submit = async () => {
+    if (busy) return;
     setBusy(true);
     setError(null);
     try {
@@ -274,7 +339,7 @@ function DefectModal({ room, onClose, onDone }: { room: { id: string; number: st
   };
 
   return (
-    <ModalFrame title={`Report defect · ${room.number}`} onClose={onClose}>
+    <Modal title={`Report defect · ${room.number}`} subtitle="Creates a work order for engineering." onClose={onClose}>
       <label className="mb-1 block text-sm font-medium">Category</label>
       <div className="mb-3 grid grid-cols-2 gap-2">
         {DEFECT_CATEGORIES.map((c) => (
@@ -313,37 +378,50 @@ function DefectModal({ room, onClose, onDone }: { room: { id: string; number: st
       >
         {busy ? "Sending…" : "Send to engineering"}
       </button>
-    </ModalFrame>
+    </Modal>
   );
 }
 
-function NoteModal({ room, onClose, onDone }: { room: { id: string; number: string }; onClose: () => void; onDone: () => void }) {
+function NoteModal({
+  room,
+  onClose,
+  onDone,
+}: {
+  room: { id: string; number: string };
+  onClose: () => void;
+  onDone: (note: Note) => void;
+}) {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const save = async () => {
+    if (busy || !body.trim()) return;
+    setBusy(true);
+    try {
+      const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body } });
+      onDone({ ...res.note, roomId: room.id });
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
-    <ModalFrame title={`Note · room ${room.number}`} onClose={onClose}>
+    <Modal title={`Note · room ${room.number}`} subtitle="Visible to all departments." onClose={onClose}>
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={4}
+        autoFocus
         className="mb-3 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-        placeholder="Visible to all departments…"
+        placeholder="Add a note…"
       />
       <button
-        onClick={async () => {
-          setBusy(true);
-          try {
-            await api(`/api/rooms/${room.id}/notes`, { body: { body } });
-            onDone();
-          } finally {
-            setBusy(false);
-          }
-        }}
+        onClick={save}
         disabled={busy || !body.trim()}
-        className="h-12 w-full rounded-xl bg-charcoal text-base font-medium text-ivory disabled:opacity-40"
+        className="h-14 w-full rounded-xl bg-charcoal text-base font-medium text-ivory disabled:opacity-40"
       >
-        Save note
+        {busy ? "Saving…" : "Save note"}
       </button>
-    </ModalFrame>
+    </Modal>
   );
 }

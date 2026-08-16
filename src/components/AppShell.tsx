@@ -10,6 +10,7 @@ interface Notification {
   type: string;
   level: string;
   message: string;
+  targetRole: string;
   acknowledged: boolean;
   createdAt: string;
 }
@@ -49,7 +50,17 @@ export default function AppShell({
   }, []);
 
   useSocket({
-    "notification:new": () => load(),
+    // The payload carries the full notification, so prepend it instead of
+    // refetching the list on every alert. Socket events reach every connected
+    // client, so the role filter that /api/notifications applies server-side
+    // has to be repeated here — otherwise front office would see supervisor
+    // alerts. The server remains the authority; this only decides display.
+    "notification:new": (p: { notification: Notification }) => {
+      const n = p?.notification;
+      if (!n) return;
+      if (role !== "duty_manager" && n.targetRole !== role) return;
+      setNotifications((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50)));
+    },
   });
 
   const unread = notifications.filter((n) => !n.acknowledged).length;

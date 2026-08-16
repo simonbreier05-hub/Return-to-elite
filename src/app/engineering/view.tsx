@@ -34,6 +34,7 @@ const STATUS_CHIP: Record<string, string> = {
 export default function EngineeringView() {
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<{ workOrders: WorkOrder[] }>("/api/workorders");
@@ -44,17 +45,31 @@ export default function EngineeringView() {
     load();
   }, [load]);
 
-  useSocket({ "workorder:update": () => load(), "notification:new": () => load() });
+  /** Patch the affected work order; a brand-new one is prepended. */
+  const upsert = (wo: WorkOrder) =>
+    setOrders((prev) => (prev.some((o) => o.id === wo.id) ? prev.map((o) => (o.id === wo.id ? { ...o, ...wo } : o)) : [wo, ...prev]));
+
+  useSocket({
+    "workorder:update": (p: { workOrder: WorkOrder }) => {
+      if (p.workOrder?.id) upsert(p.workOrder);
+    },
+  });
 
   const advance = async (wo: WorkOrder) => {
     const next = NEXT[wo.status];
-    if (!next) return;
+    if (!next || busyId) return;
+    setBusyId(wo.id);
     setError(null);
     try {
-      await api(`/api/workorders/${wo.id}`, { method: "PATCH", body: { status: next.to } });
-      load();
+      const res = await api<{ workOrder: WorkOrder }>(`/api/workorders/${wo.id}`, {
+        method: "PATCH",
+        body: { status: next.to },
+      });
+      upsert(res.workOrder);
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -89,9 +104,12 @@ export default function EngineeringView() {
               {wo.assignedTo && ` · assigned to ${wo.assignedTo.name}`}
             </p>
             {NEXT[wo.status] && (
-              <button onClick={() => advance(wo)}
-                className={`mt-3 h-12 w-full rounded-xl text-base font-semibold active:scale-[0.98] ${NEXT[wo.status]!.cls}`}>
-                {NEXT[wo.status]!.label}
+              <button
+                onClick={() => advance(wo)}
+                disabled={busyId === wo.id}
+                className={`mt-3 h-12 w-full rounded-xl text-base font-semibold transition active:scale-[0.98] disabled:opacity-50 ${NEXT[wo.status]!.cls}`}
+              >
+                {busyId === wo.id ? "…" : NEXT[wo.status]!.label}
               </button>
             )}
           </div>

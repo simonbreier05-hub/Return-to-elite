@@ -19,15 +19,13 @@ interface Arrival {
 
 export default function FrontOfficeView() {
   const [arrivals, setArrivals] = useState<Arrival[]>([]);
-  const [readyCount, setReadyCount] = useState(0);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [released, setReleased] = useState<string | null>(null);
 
   const load = useCallback(async () => {
-    const data = await api<{ arrivals: Arrival[]; readyForArrival: number }>("/api/arrivals");
+    const data = await api<{ arrivals: Arrival[] }>("/api/arrivals");
     setArrivals(data.arrivals);
-    setReadyCount(data.readyForArrival);
   }, []);
 
   useEffect(() => {
@@ -35,8 +33,20 @@ export default function FrontOfficeView() {
   }, [load]);
 
   useSocket({
-    "arrival:update": () => load(),
-    "room:update": () => load(),
+    // Patch the affected arrival instead of refetching the whole board.
+    "arrival:update": (p: { arrival: Arrival }) => {
+      setArrivals((prev) =>
+        prev.some((a) => a.id === p.arrival.id)
+          ? prev.map((a) => (a.id === p.arrival.id ? { ...a, ...p.arrival } : a))
+          : [...prev, p.arrival]
+      );
+    },
+    // A room status change only affects the room nested in each arrival row.
+    "room:update": (p: { room: { id: string; status: RoomStatus } }) => {
+      setArrivals((prev) =>
+        prev.map((a) => (a.room.id === p.room.id ? { ...a, room: { ...a.room, status: p.room.status } } : a))
+      );
+    },
     "notification:new": (p: { notification?: { type: string; message: string; targetRole: string } }) => {
       if (p.notification?.type === "ROOM_RELEASED") {
         setReleased(p.notification.message);
@@ -48,12 +58,15 @@ export default function FrontOfficeView() {
   const patch = async (id: string, body: Record<string, unknown>) => {
     setError(null);
     try {
-      await api(`/api/arrivals/${id}`, { method: "PATCH", body });
-      load();
+      const res = await api<{ arrival: Arrival }>(`/api/arrivals/${id}`, { method: "PATCH", body });
+      setArrivals((prev) => prev.map((a) => (a.id === res.arrival.id ? { ...a, ...res.arrival } : a)));
     } catch (e) {
       setError((e as Error).message);
     }
   };
+
+  // Derived client-side, so it stays correct after a patch without another request.
+  const readyCount = arrivals.filter((a) => a.status === "EXPECTED" && a.room.status === "INSPECTED").length;
 
   const expected = arrivals.filter((a) => a.status === "EXPECTED");
 
@@ -69,6 +82,7 @@ export default function FrontOfficeView() {
         </div>
         <button
           onClick={() => setShowForm(true)}
+          type="button"
           className="h-12 rounded-xl bg-charcoal px-5 font-medium text-ivory active:scale-[0.98]"
         >
           + New arrival
@@ -155,7 +169,15 @@ export default function FrontOfficeView() {
         the moment a requested room is released.
       </p>
 
-      {showForm && <NewArrivalModal onClose={() => setShowForm(false)} onDone={() => { setShowForm(false); load(); }} />}
+      {showForm && (
+        <NewArrivalModal
+          onClose={() => setShowForm(false)}
+          onDone={(arrival) => {
+            setShowForm(false);
+            setArrivals((prev) => [...prev, arrival]);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -177,7 +199,7 @@ function Flag({ on, label, hot, onClick }: { on: boolean; label: string; hot?: b
   );
 }
 
-function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: () => void }) {
+function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (arrival: Arrival) => void }) {
   const [roomNumber, setRoomNumber] = useState("");
   const [guestName, setGuestName] = useState("");
   const [eta, setEta] = useState("");
@@ -198,8 +220,10 @@ function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: () 
         d.setHours(h, m, 0, 0);
         etaIso = d.toISOString();
       }
-      await api("/api/arrivals", { body: { roomNumber, guestName, eta: etaIso, vip, earlyCheckIn, neededNow } });
-      onDone();
+      const res = await api<{ arrival: Arrival }>("/api/arrivals", {
+        body: { roomNumber, guestName, eta: etaIso, vip, earlyCheckIn, neededNow },
+      });
+      onDone(res.arrival);
     } catch (e) {
       setError((e as Error).message);
     } finally {
