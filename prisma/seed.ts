@@ -6,12 +6,12 @@ import bcrypt from "bcryptjs";
  * 7 floors with sections & types, demo arrivals/excursions/defects so every
  * view has something to show on first login.
  *
- * All demo passwords: elite123
+ * All demo passwords: stayclean123
  */
 
 const prisma = new PrismaClient();
 
-const PASSWORD = "elite123";
+const PASSWORD = "stayclean123";
 
 async function main() {
   // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
@@ -206,7 +206,7 @@ async function main() {
     await prisma.setting.create({ data: { key, value } });
   }
 
-  console.log("Seed complete. Login with any seeded user / password 'elite123'.");
+  console.log("Seed complete. Login with any seeded user / password 'stayclean123'.");
   console.table(usersData.map((u) => ({ email: u.email, role: u.role })));
 }
 

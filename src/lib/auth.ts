@@ -8,7 +8,7 @@ import { RoleSchema, type Role } from "./domain";
  * RBAC is enforced server-side, never trusted from the client.
  */
 
-const COOKIE_NAME = "elite_session";
+const COOKIE_NAME = "stayclean_session";
 const DEV_SECRET = "dev-secret-change-me-please-0123456789";
 
 /**

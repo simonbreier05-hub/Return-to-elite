@@ -1,4 +1,4 @@
-// Elite Housekeeping — Prisma schema (Postgres variant — use with docker-compose)
+// StayClean — Prisma schema (Postgres variant — use with docker-compose)
 //
 // NOTE ON ENUMS: status/role fields are stored as String (not Prisma enum)
 // so the identical model set runs on both SQLite and Postgres. All values are

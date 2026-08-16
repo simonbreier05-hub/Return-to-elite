@@ -50,6 +50,6 @@ app.prepare().then(() => {
   setTimeout(tick, 5_000); // first run shortly after boot
 
   httpServer.listen(port, hostname, () => {
-    console.log(`> Elite Housekeeping ready on http://localhost:${port} (${dev ? "dev" : "prod"})`);
+    console.log(`> StayClean ready on http://localhost:${port} (${dev ? "dev" : "prod"})`);
   });
 });

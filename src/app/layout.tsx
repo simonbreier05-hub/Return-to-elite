@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Elite Housekeeping",
+  title: "StayClean",
   description: "Real-time room cleaning & release for a 145-room luxury hotel",
 };
 

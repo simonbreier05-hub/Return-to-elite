@@ -70,7 +70,7 @@ export default function AppShell({
       <header className="sticky top-0 z-40 bg-charcoal text-ivory shadow-lg">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-baseline gap-3">
-            <span className="font-serif text-2xl tracking-wide text-gold-soft">Elite</span>
+            <span className="font-serif text-2xl tracking-wide text-gold-soft">StayClean</span>
             <span className="hidden text-sm uppercase tracking-[0.2em] text-ivory/60 sm:inline">{title}</span>
           </div>
           <div className="flex items-center gap-2">

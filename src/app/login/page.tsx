@@ -38,7 +38,7 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-charcoal p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center text-ivory">
-          <h1 className="font-serif text-5xl tracking-wide text-gold-soft">Elite</h1>
+          <h1 className="font-serif text-5xl tracking-wide text-gold-soft">StayClean</h1>
           <p className="mt-2 text-sm uppercase tracking-[0.3em] text-ivory/60">Housekeeping &amp; Room Release</p>
         </div>
 
@@ -64,7 +64,7 @@ export default function LoginPage() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="mb-4 h-12 w-full rounded-lg border border-charcoal/20 bg-white px-4 text-base outline-none focus:border-gold"
-            placeholder="elite123"
+            placeholder="stayclean123"
             autoComplete="current-password"
           />
           {error && <p className="mb-3 text-sm text-red-600">{error}</p>}
@@ -77,13 +77,13 @@ export default function LoginPage() {
           </button>
 
           <div className="mt-6 border-t border-charcoal/10 pt-4">
-            <p className="mb-2 text-xs uppercase tracking-wider text-graphite/60">Demo users (password: elite123)</p>
+            <p className="mb-2 text-xs uppercase tracking-wider text-graphite/60">Demo users (password: stayclean123)</p>
             <div className="grid grid-cols-2 gap-2">
               {DEMO_USERS.map((u) => (
                 <button
                   key={u.email}
                   type="button"
-                  onClick={() => login(u.email, "elite123")}
+                  onClick={() => login(u.email, "stayclean123")}
                   className="h-11 rounded-lg border border-charcoal/15 bg-parchment px-2 text-xs hover:border-gold"
                 >
                   {u.label}

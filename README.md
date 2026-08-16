@@ -5,10 +5,6 @@ room-release system for a 145-room luxury hotel. Built to later integrate with
 **Oracle OPERA Cloud via OHIP** (connector interface included); runs today on
 mock/local data.
 
-> **StayClean** is the system. **Elite** is the fictional hotel it is deployed
-> for in this prototype — that is the name you see in the app header and in the
-> seeded demo data.
-
 | | |
 |---|---|
 | Framework | Next.js (App Router, TypeScript, React) — custom server with Socket.IO |
@@ -30,7 +26,7 @@ npm run dev                   # custom server: Next.js + Socket.IO on :3000
 ```
 
 Open http://localhost:3000 — the login screen has one-tap demo users.
-**All seeded passwords: `elite123`.**
+**All seeded passwords: `stayclean123`.**
 
 | Email | Role |
 |---|---|
@@ -48,7 +44,7 @@ Try it live: open the **supervisor board** in one browser and the **attendant vi
 
 ```bash
 docker compose up -d
-export DATABASE_URL="postgresql://elite:elite@localhost:5432/elite_hk?schema=public"
+export DATABASE_URL="postgresql://stayclean:stayclean@localhost:5432/stayclean?schema=public"
 npm run db:push:postgres && npm run db:generate:postgres
 npm run db:seed
 npm run dev
