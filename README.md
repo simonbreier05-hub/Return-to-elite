@@ -206,5 +206,3 @@ tests/  stateMachine.test.ts  priority.test.ts
 - Defect photos are stored under `public/uploads/` (local S3 mock).
 - The audit trail (`GET /api/audit`, supervisor/DM) records logins, every status
   change **and every denied attempt**, assignments, PMS pushes, and settings edits.
-- The legacy `index.html` in the repo root is an unrelated earlier prototype and
-  not part of this app.
