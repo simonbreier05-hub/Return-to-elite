@@ -36,8 +36,33 @@ export const BLOCK_REASONS = ["DND", "GUEST_IN_ROOM", "DOUBLE_LOCKED", "REFUSED"
 export type BlockReason = (typeof BLOCK_REASONS)[number];
 export const BlockReasonSchema = z.enum(BLOCK_REASONS);
 
-export const ROOM_TYPES = ["STANDARD", "DELUXE", "JUNIOR_SUITE", "SUITE", "PENTHOUSE"] as const;
+/** Categories of a five-star city hotel, smallest to largest. */
+export const ROOM_TYPES = [
+  "CLASSIC",
+  "SUPERIOR",
+  "DELUXE",
+  "JUNIOR_SUITE",
+  "SUITE",
+  "PENTHOUSE",
+] as const;
 export type RoomType = (typeof ROOM_TYPES)[number];
+
+export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
+  CLASSIC: "Classic",
+  SUPERIOR: "Superior",
+  DELUXE: "Deluxe",
+  JUNIOR_SUITE: "Junior Suite",
+  SUITE: "Suite",
+  PENTHOUSE: "Penthouse",
+};
+
+/** The property: five guest floors, 29 rooms each = 145 keys. */
+export const HOTEL = {
+  floors: [1, 2, 3, 4, 5],
+  roomsPerFloor: 29,
+  /** Rooms 01–15 form section A, 16–29 section B. */
+  sectionSplit: 15,
+} as const;
 
 export const DEFECT_CATEGORIES = [
   "PLUMBING",

@@ -38,8 +38,9 @@ export default function LoginPage() {
     <div className="flex min-h-screen items-center justify-center bg-charcoal p-4">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center text-ivory">
-          <h1 className="font-serif text-5xl tracking-wide text-gold-soft">StayClean</h1>
-          <p className="mt-2 text-sm uppercase tracking-[0.3em] text-ivory/60">Housekeeping &amp; Room Release</p>
+          <h1 className="font-serif text-6xl tracking-[0.04em] text-gold-soft">StayClean</h1>
+          <div className="mx-auto my-4 h-px w-24 bg-gradient-to-r from-transparent via-gold-line to-transparent" />
+          <p className="text-[0.7rem] uppercase tracking-[0.32em] text-ivory/55">Housekeeping &amp; Room Release</p>
         </div>
 
         <form

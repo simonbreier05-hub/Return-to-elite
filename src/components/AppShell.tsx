@@ -78,11 +78,12 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 bg-charcoal text-ivory shadow-lg">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-baseline gap-3">
-            <span className="font-serif text-2xl tracking-wide text-gold-soft">StayClean</span>
-            <span className="hidden text-sm uppercase tracking-[0.2em] text-ivory/60 sm:inline">{title}</span>
+      <header className="sticky top-0 z-40 bg-charcoal text-ivory shadow-lift">
+        <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6">
+          <div className="flex items-baseline gap-4">
+            <span className="font-serif text-[1.7rem] tracking-[0.06em] text-gold-soft">StayClean</span>
+            <span className="hidden h-4 w-px bg-ivory/20 sm:block" />
+            <span className="hidden text-[0.72rem] uppercase tracking-[0.24em] text-ivory/55 sm:inline">{title}</span>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -101,11 +102,11 @@ export default function AppShell({
             </button>
             <div className="hidden text-right sm:block">
               <div className="text-sm font-medium">{userName}</div>
-              <div className="text-xs uppercase tracking-wider text-gold-soft">{role.replace(/_/g, " ")}</div>
+              <div className="text-[0.68rem] uppercase tracking-[0.16em] text-gold-soft">{role.replace(/_/g, " ")}</div>
             </div>
             <button
               onClick={logout}
-              className="ml-2 h-12 rounded-lg border border-white/20 px-4 text-sm hover:bg-white/10"
+              className="ml-2 h-12 rounded-xl border border-white/20 px-4 text-sm transition hover:bg-white/10"
             >
               Sign out
             </button>
@@ -143,7 +144,9 @@ export default function AppShell({
         </div>
       )}
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-4 sm:px-6">{children}</main>
+      <div className="h-px w-full bg-gradient-to-r from-gold-line/70 via-gold-line/20 to-transparent" />
+
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-6 sm:px-6">{children}</main>
     </div>
   );
 }

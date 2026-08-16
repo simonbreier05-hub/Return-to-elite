@@ -2,8 +2,8 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 
 /**
- * Seed: one user per role (+ extra room attendants), 145 rooms across
- * 7 floors with sections & types, demo arrivals/excursions/defects so every
+ * Seed: one user per role, ten room attendants, 145 rooms across
+ * 5 floors with sections & types, demo arrivals/excursions/defects so every
  * view has something to show on first login.
  *
  * All demo passwords: stayclean123
@@ -41,11 +41,20 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   // --- Users -------------------------------------------------------------
+  // Ten attendants for 145 keys — roughly 14 rooms each, which is what a
+  // five-star house actually rosters. With four, every plan comes out at
+  // three shifts' worth of work and the planning board is meaningless.
   const usersData = [
     { email: "maria@hotel.test", name: "Maria Silva", role: "room_attendant", section: "2A" },
     { email: "aylin@hotel.test", name: "Aylin Kaya", role: "room_attendant", section: "3A" },
     { email: "petra@hotel.test", name: "Petra Novak", role: "room_attendant", section: "5B" },
     { email: "hausdame@hotel.test", name: "Ingrid Hausmann", role: "room_attendant", section: "1A" },
+    { email: "lucia@hotel.test", name: "Lucia Ferrari", role: "room_attendant", section: "1B" },
+    { email: "elena@hotel.test", name: "Elena Popescu", role: "room_attendant", section: "2B" },
+    { email: "fatima@hotel.test", name: "Fatima Benali", role: "room_attendant", section: "3B" },
+    { email: "joanna@hotel.test", name: "Joanna Kowalska", role: "room_attendant", section: "4A" },
+    { email: "sena@hotel.test", name: "Sena Demir", role: "room_attendant", section: "4B" },
+    { email: "grace@hotel.test", name: "Grace Okafor", role: "room_attendant", section: "5A" },
     { email: "supervisor@hotel.test", name: "Sofia Marchetti", role: "supervisor" },
     { email: "frontoffice@hotel.test", name: "Felix Ott", role: "front_office" },
     { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
@@ -59,25 +68,30 @@ async function main() {
   }
   const attendants = usersData.filter((u) => u.role === "room_attendant").map((u) => users[u.email]);
 
-  // --- Rooms: 145 across 7 floors ---------------------------------------
-  // Floors 1–6: 22 rooms each (sections A: 01–11, B: 12–22) = 132
-  // Floor 7:    13 suites (section A) = 145 total
+  // --- Rooms: 145 keys across 5 guest floors -----------------------------
+  // 29 rooms per floor; 01–15 is section A, 16–29 section B.
+  // Categories climb with the floor, the way a city hotel is usually stacked.
   const typeFor = (floor: number, idx: number): string => {
-    if (floor === 7) return idx <= 2 ? "PENTHOUSE" : "SUITE";
-    if (floor >= 5) return idx % 4 === 0 ? "JUNIOR_SUITE" : "DELUXE";
-    return idx % 5 === 0 ? "DELUXE" : "STANDARD";
+    if (floor === 5) {
+      if (idx <= 2) return "PENTHOUSE";
+      return idx % 3 === 0 ? "JUNIOR_SUITE" : "SUITE";
+    }
+    if (floor === 4) return idx % 4 === 0 ? "SUITE" : idx % 2 === 0 ? "JUNIOR_SUITE" : "DELUXE";
+    if (floor === 3) return idx % 5 === 0 ? "JUNIOR_SUITE" : "DELUXE";
+    if (floor === 2) return idx % 3 === 0 ? "DELUXE" : "SUPERIOR";
+    return idx % 4 === 0 ? "SUPERIOR" : "CLASSIC";
   };
   const baseMinutes: Record<string, number> = {
-    STANDARD: 25, DELUXE: 30, JUNIOR_SUITE: 40, SUITE: 50, PENTHOUSE: 75,
+    CLASSIC: 25, SUPERIOR: 28, DELUXE: 32, JUNIOR_SUITE: 40, SUITE: 55, PENTHOUSE: 80,
   };
 
   const roomIds: { id: string; number: string; floor: number; section: string }[] = [];
   let count = 0;
-  for (let floor = 1; floor <= 7; floor++) {
-    const roomsOnFloor = floor === 7 ? 13 : 22;
+  for (let floor = 1; floor <= 5; floor++) {
+    const roomsOnFloor = 29;
     for (let i = 1; i <= roomsOnFloor; i++) {
       const number = `${floor}${String(i).padStart(2, "0")}`;
-      const section = `${floor}${floor === 7 ? "A" : i <= 11 ? "A" : "B"}`;
+      const section = `${floor}${i <= 15 ? "A" : "B"}`;
       const type = typeFor(floor, i);
       count++;
       // Deterministic-ish demo distribution of statuses & occupancy
@@ -141,7 +155,7 @@ async function main() {
     { room: "205", guestName: "Dr. Amelie Winter", eta: at(40), vip: true, earlyCheckIn: true, neededNow: false },
     { room: "206", guestName: "Jonas Berg", eta: at(90), vip: false, earlyCheckIn: false, neededNow: true },
     { room: "312", guestName: "Familie Rossi", eta: at(180), vip: false, earlyCheckIn: false, neededNow: false },
-    { room: "704", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
+    { room: "524", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
     { room: "118", guestName: "Nina Larsen", eta: at(300), vip: false, earlyCheckIn: false, neededNow: false },
   ];
   for (const a of arrivals) {
@@ -169,7 +183,7 @@ async function main() {
   });
   await prisma.excursion.create({
     data: {
-      roomId: byNumber["605"].id, guestName: "Sig. Bianchi",
+      roomId: byNumber["305"].id, guestName: "Sig. Bianchi",
       startsAt: at(30), endsAt: at(240), note: "Golf outing.",
       createdById: concierge.id,
     },

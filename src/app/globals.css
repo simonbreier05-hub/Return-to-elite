@@ -1,15 +1,29 @@
 @import "tailwindcss";
 
+/*
+ * StayClean — visual language.
+ *
+ * Warm off-white paper, deep espresso ink and a muted brass accent: the
+ * palette of a five-star property's printed collateral rather than a SaaS
+ * dashboard. Status colours stay saturated on purpose — on a housekeeping
+ * board they are information, not decoration, and must read across a corridor.
+ */
 @theme {
-  --color-ivory: #faf8f4;
-  --color-parchment: #f2eee6;
-  --color-charcoal: #1c1b18;
-  --color-graphite: #3a382f;
-  --color-gold: #b08d3f;
-  --color-gold-soft: #d9c69a;
+  --color-ivory: #f7f4ee;
+  --color-parchment: #ece5d8;
+  --color-linen: #fffdf9;
+  --color-charcoal: #1a1714;
+  --color-espresso: #2c2620;
+  --color-graphite: #4a4239;
+  --color-gold: #a8843c;
+  --color-gold-soft: #d8c194;
+  --color-gold-line: #c9ab6a;
 
-  --font-serif: "Cormorant Garamond", Georgia, "Times New Roman", serif;
-  --font-sans: "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-display), "Hoefler Text", Garamond, Georgia, serif;
+  --font-sans: var(--font-body), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+
+  --shadow-card: 0 1px 2px rgb(26 23 20 / 0.04), 0 8px 24px -12px rgb(26 23 20 / 0.18);
+  --shadow-lift: 0 2px 4px rgb(26 23 20 / 0.06), 0 18px 40px -16px rgb(26 23 20 / 0.28);
 }
 
 html {
@@ -17,9 +31,39 @@ html {
   color: var(--color-charcoal);
   font-family: var(--font-sans);
   -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
 }
 
-/* Tablet-first: comfortable touch targets everywhere */
+/* Tablet-first: comfortable touch targets, no accidental text selection
+   when a housekeeper taps quickly with gloves on. */
 button {
   touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* A faint paper grain keeps large ivory areas from looking flat on a big
+   iPad screen, without costing an image request. */
+body {
+  background-image: radial-gradient(circle at 1px 1px, rgb(26 23 20 / 0.022) 1px, transparent 0);
+  background-size: 22px 22px;
+}
+
+/* Hairline rule used under section headings — the printed-menu detail. */
+.rule-gold {
+  background: linear-gradient(90deg, var(--color-gold-line), transparent);
+  height: 1px;
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: none; }
+}
+.animate-rise {
+  animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise { animation: none; }
+  * { transition-duration: 0.01ms !important; }
 }

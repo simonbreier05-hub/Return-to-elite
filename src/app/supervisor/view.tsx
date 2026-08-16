@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
@@ -99,6 +100,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       );
     },
     "arrival:update": () => refetchSoon(),
+    // A whole plan changed at once — one refetch instead of 145 patches.
+    "assignments:applied": () => refetchSoon(),
   });
 
   const byFloor = useMemo(() => {
@@ -135,7 +138,21 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   };
 
   return (
-    <div>
+    <div className="animate-rise">
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-4xl leading-none">Live Board</h2>
+          <div className="rule-gold my-2 w-40" />
+          <p className="text-sm text-graphite/70">Five floors · {rooms.length} keys</p>
+        </div>
+        <Link
+          href="/supervisor/planning"
+          className="flex h-14 items-center rounded-xl bg-charcoal px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-espresso"
+        >
+          Morning planning →
+        </Link>
+      </div>
+
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Released / sellable" value={`${inspected}/${sellable}`} />
         <Kpi label="Daily progress" value={`${progress}%`} bar={progress} />

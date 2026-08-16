@@ -97,28 +97,58 @@ export default function AttendantView() {
     }
   };
 
-  const sorted = useMemo(
-    () => [...rooms].sort((a, b) => (priorities[b.id]?.score ?? -1) - (priorities[a.id]?.score ?? -1)),
-    [rooms, priorities]
+  const byPriority = useCallback(
+    (a: Room, b: Room) => (priorities[b.id]?.score ?? -1) - (priorities[a.id]?.score ?? -1),
+    [priorities]
   );
 
+  /**
+   * Grouped by floor, because that is how the work is actually walked — you
+   * finish a floor before taking the stairs. Within a floor the most urgent
+   * room comes first.
+   */
+  const floors = useMemo(() => {
+    const map = new Map<number, Room[]>();
+    for (const room of rooms) {
+      if (!map.has(room.floor)) map.set(room.floor, []);
+      map.get(room.floor)!.push(room);
+    }
+    for (const list of map.values()) list.sort(byPriority);
+    return [...map.entries()]
+      .sort((a, b) => {
+        // Floors with the most urgent room first, so the next stop is obvious.
+        const topA = priorities[a[1][0]?.id]?.score ?? -1;
+        const topB = priorities[b[1][0]?.id]?.score ?? -1;
+        return topB - topA || a[0] - b[0];
+      });
+  }, [rooms, byPriority, priorities]);
+
   const done = rooms.filter((r) => r.status === "INSPECTED").length;
+  const openCount = rooms.filter((r) => ["DIRTY", "PICKUP", "BLOCKED"].includes(r.status)).length;
 
   return (
-    <div>
-      <div className="mb-4 flex items-center justify-between">
-        <div>
-          <h2 className="font-serif text-3xl">My Assigned Rooms</h2>
-          <p className="text-sm text-graphite/70">
-            Sorted by priority · {done}/{rooms.length} released
-          </p>
-        </div>
+    <div className="animate-rise">
+      <div className="mb-5">
+        <h2 className="font-serif text-4xl leading-none">My Rooms</h2>
+        <div className="rule-gold my-2 w-40" />
+        <p className="text-sm text-graphite/70">
+          {openCount} still to do · {done} of {rooms.length} released · most urgent floor first
+        </p>
       </div>
 
       {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
+      {floors.map(([floor, floorRooms]) => (
+      <section key={floor} className="mb-6">
+        <div className="mb-2 flex items-baseline gap-3">
+          <h3 className="font-serif text-2xl">Floor {floor}</h3>
+          <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
+            {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} done
+          </span>
+          <div className="rule-gold ml-1 hidden flex-1 sm:block" />
+        </div>
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {sorted.map((room) => {
+        {floorRooms.map((room) => {
           const prio = priorities[room.id];
           const style = STATUS_STYLES[room.status];
           const busy = busyRoomId === room.id;
@@ -231,6 +261,14 @@ export default function AttendantView() {
           );
         })}
       </div>
+      </section>
+      ))}
+
+      {rooms.length === 0 && (
+        <p className="rounded-2xl border border-charcoal/10 bg-linen p-8 text-center text-graphite/60 shadow-card">
+          No rooms assigned to you yet — your supervisor is still planning the shift.
+        </p>
+      )}
 
       {modal?.kind === "block" && (
         <BlockModal

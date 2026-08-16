@@ -23,11 +23,12 @@ export interface GuestProfile {
 }
 
 const BASE_MINUTES_BY_TYPE: Record<string, number> = {
-  STANDARD: 25,
-  DELUXE: 30,
+  CLASSIC: 25,
+  SUPERIOR: 28,
+  DELUXE: 32,
   JUNIOR_SUITE: 40,
-  SUITE: 50,
-  PENTHOUSE: 75,
+  SUITE: 55,
+  PENTHOUSE: 80,
 };
 
 export function predictCleaningMinutes(room: CleaningPredictionRoom, guest: GuestProfile = {}): number {

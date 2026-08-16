@@ -124,7 +124,7 @@ describe("computePriority — explainable scoring", () => {
 
 describe("predictCleaningMinutes — baseline ML hook", () => {
   it("scales with room type", () => {
-    const std = predictCleaningMinutes({ type: "STANDARD", isCheckoutToday: true });
+    const std = predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: true });
     const suite = predictCleaningMinutes({ type: "SUITE", isCheckoutToday: true });
     const pent = predictCleaningMinutes({ type: "PENTHOUSE", isCheckoutToday: true });
     expect(std).toBeLessThan(suite);
@@ -138,16 +138,16 @@ describe("predictCleaningMinutes — baseline ML hook", () => {
   });
 
   it("longer stays and more guests increase the estimate", () => {
-    const short = predictCleaningMinutes({ type: "STANDARD", isCheckoutToday: true }, { stayLengthNights: 1 });
-    const long = predictCleaningMinutes({ type: "STANDARD", isCheckoutToday: true }, { stayLengthNights: 7 });
+    const short = predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: true }, { stayLengthNights: 1 });
+    const long = predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: true }, { stayLengthNights: 7 });
     expect(long).toBeGreaterThan(short);
-    const family = predictCleaningMinutes({ type: "STANDARD", isCheckoutToday: true }, { adults: 2, children: 2 });
+    const family = predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: true }, { adults: 2, children: 2 });
     expect(family).toBeGreaterThan(short);
   });
 
   it("respects a per-room baseline override", () => {
-    const custom = predictCleaningMinutes({ type: "STANDARD", isCheckoutToday: false, baseCleanMinutes: 60 });
-    const def = predictCleaningMinutes({ type: "STANDARD", isCheckoutToday: false });
+    const custom = predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: false, baseCleanMinutes: 60 });
+    const def = predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: false });
     expect(custom).toBeGreaterThan(def);
   });
 });

@@ -13,7 +13,7 @@ mock/local data.
 | Auth | Credentials login → signed JWT (httpOnly cookie), role-based |
 | Validation | Zod on every API boundary; RBAC + state machine enforced **server-side** |
 | UI | Tailwind CSS, tablet-first (large touch targets, iPad-landscape friendly) |
-| Tests | Vitest — state machine, permission rule, priority engine (32 tests) |
+| Tests | Vitest — state machine, permission rule, priority engine, assignment planner (47 tests) |
 
 ## Quick start (SQLite, no Docker needed)
 
@@ -21,7 +21,7 @@ mock/local data.
 npm install
 cp .env.example .env          # defaults are fine
 npm run db:push               # create SQLite schema (prisma/dev.db)
-npm run db:seed               # 145 rooms, users, demo arrivals/defects
+npm run db:seed               # 145 rooms over 5 floors, 10 attendants, demo data
 npm run dev                   # custom server: Next.js + Socket.IO on :3000
 ```
 
@@ -30,7 +30,7 @@ Open http://localhost:3000 — the login screen has one-tap demo users.
 
 | Email | Role |
 |---|---|
-| maria@ / aylin@ / petra@ / hausdame@hotel.test | room_attendant |
+| maria@ · aylin@ · petra@ · hausdame@ · lucia@ · elena@ · fatima@ · joanna@ · sena@ · grace@ | room_attendant (10) |
 | supervisor@hotel.test | supervisor |
 | frontoffice@hotel.test | front_office |
 | concierge@hotel.test | concierge |
@@ -144,7 +144,7 @@ BLOCKED purple · OOO/OOS grey (plus PICKUP orange, DEFECT amber, GREEN teal).
 | engineering | DEFECT_REPORTED (work orders via own queue) |
 | front_office / concierge | **no cleaning-status changes** (403) |
 
-## Priority engine (the AI feature)
+## Priority engine (explainable scoring)
 
 `src/lib/priority/computePriority.ts` — a **pure, unit-tested** scoring function
 returning `{ score, reasons[] }` where every reason is human-readable
@@ -158,6 +158,69 @@ attendant list is sorted by it and shows the "why?" breakdown.
 hook** (Optii-style per-room cleaning-time prediction) with a transparent
 baseline (room type × checkout/stayover × stay length × occupancy) and a
 `TODO(ml)` marker where a trained model plugs in without changing callers.
+
+## Morning planning (room assignment)
+
+`/supervisor/planning` turns the 07:00 hand-out into three taps: pick who is on
+shift, pick the shift length, generate a proposal. Nothing is written until the
+supervisor presses apply, and any room can be moved by hand first.
+
+`src/lib/assignment/planAssignments.ts` is a pure, deterministic function
+(15 unit tests). It works in three steps:
+
+1. **Walking order** — every room that still needs an attendant is laid out by
+   floor, then section, then room number. Neighbours in that list are
+   neighbours in the building.
+2. **Contiguous rounds** — the list is cut into as many blocks as there are
+   attendants, each cut placed where it lands closest to its share of the total
+   predicted minutes. Balancing *contiguous* blocks is the whole point: an
+   earlier version balanced room by room, produced perfectly even workloads,
+   and sent one attendant across all five floors. Even and useless.
+3. **Hand-out** — an attendant who normally works 3A gets the round containing
+   3A. Inside a round, urgent rooms (priority engine) come first.
+
+Workload is measured in **predicted cleaning minutes**, not room count — a
+penthouse is not a classic room. Overbooking is shown, never hidden: if the
+work exceeds the shift, the bar turns red and says by how much, so the
+supervisor can call in help instead of discovering it at 14:00.
+
+Every round explains itself in plain language ("14 rooms · 425 min predicted ·
+floor 3"), which is also what makes it defensible in a report.
+
+## Where AI belongs in this system — and where it does not
+
+A deliberate design position, since "add AI" is the obvious reflex here.
+
+**Not the assignment planner.** Distributing rooms is a constrained
+optimisation problem with a known objective. A deterministic algorithm gives
+the same plan every morning, runs in milliseconds, is unit-tested, and can be
+explained to a works council. A language model would be slower, would vary
+between runs, and could not be audited when someone asks why a room was
+assigned. Rules win here on every axis that matters.
+
+**Not the priority engine either** — the weighted, explainable score in
+`computePriority` is what lets staff trust the order. A black box that says
+"clean 412 next" without a reason gets ignored on the floor.
+
+**Classical machine learning, yes:** `predictCleaningMinutes` is a supervised
+regression problem (gradient boosting on historical per-room times, per the
+Optii approach), not a language model. The hook is already isolated so the
+baseline can be swapped for a trained model without touching callers.
+
+**Where a language model genuinely earns its place** — all of these are
+open-ended language problems that rules handle badly:
+
+| Use case | Why an LLM fits |
+|---|---|
+| Shift handover briefing | Turn a day of audit log, notes and work orders into a paragraph the evening supervisor can read in 30 seconds |
+| Multilingual room notes | Housekeeping teams are rarely monolingual; translate notes both ways so a note is never lost in the language it was written in |
+| Defect triage from photo + free text | Vision model suggests category and urgency, and whether the room must go out of order — the attendant confirms |
+| Voice input on the floor | Hands full, gloves on: "room 214 done, minibar restocked" parsed into a status change and a note |
+| Asking the board questions | "Why is floor 3 behind today?" answered from the audit trail, instead of a report nobody builds |
+
+The pattern: **rules and classical ML for decisions that must be repeatable and
+defensible, language models for turning messy human language into structure and
+back.** Assignment is the former. Handover notes are the latter.
 
 ## PMS integration (stub now, OHIP later)
 
@@ -193,12 +256,14 @@ src/lib/
   audit.ts / settings.ts / realtime.ts / escalations.ts
   priority/computePriority.ts   # explainable scoring (pure, tested)
   priority/predictCleaningMinutes.ts  # optional ML hook (baseline)
+  assignment/planAssignments.ts # morning round planner (pure, tested)
   pms/PMSConnector.ts           # interface · MockPMSConnector · OHIPConnector stub
 src/app/
   login/ attendant/ supervisor/ front-office/ concierge/ engineering/
-  api/  auth/ rooms/ arrivals/ excursions/ workorders/ notifications/
+  supervisor/planning/          # morning assignment board
+  api/  auth/ rooms/ arrivals/ excursions/ workorders/ notifications/ assignments/
         priority/ audit/ settings/ internal/escalations/
-tests/  stateMachine.test.ts  priority.test.ts
+tests/  stateMachine.test.ts  priority.test.ts  assignment.test.ts
 ```
 
 ## Notes
