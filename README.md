@@ -212,6 +212,13 @@ supervisor presses apply, and any room can be moved by hand first.
 `src/lib/assignment/planAssignments.ts` is a pure, deterministic function
 (15 unit tests). It works in three steps:
 
+Steppers, team toggles and shift-length presets all recalculate the moment
+they are tapped — no debounce, no "Recalculate" button in the way. A tap
+answers in well under 100 ms, since planning is pure computation with no
+external calls; the earlier 500 ms debounce before every change was UI
+overhead, not the server. A short debounce remains only while typing a
+number by hand.
+
 1. **Walking order** — every room that still needs an attendant is laid out by
    floor, then section, then room number. Neighbours in that list are
    neighbours in the building.

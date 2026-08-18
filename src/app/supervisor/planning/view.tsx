@@ -77,6 +77,7 @@ export default function PlanningView() {
   const [result, setResult] = useState<PlanResponse | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
   const [busy, setBusy] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [applied, setApplied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState<{ roomId: string; fromId: string } | null>(null);
@@ -93,27 +94,46 @@ export default function PlanningView() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
+  /**
+   * Guards against an out-of-order answer: turning a stepper quickly fires
+   * several requests, and without this a slower earlier one could land last
+   * and show figures the supervisor has already moved past.
+   */
+  const requestSeq = useRef(0);
+
   const createPlan = useCallback(
-    async (override?: DayFigures) => {
-      setBusy(true);
+    async (
+      overrides: { dayFigures?: DayFigures; onShift?: Set<string>; capacity?: number } = {},
+      mode: "full" | "refresh" = "full"
+    ) => {
+      const seq = ++requestSeq.current;
+      if (mode === "full") setBusy(true);
+      else setRefreshing(true);
       setError(null);
       setApplied(null);
       try {
+        // Explicit values, not the closured state: setOnShift/setCapacity are
+        // async, so a team toggle followed straight by a recalc would otherwise
+        // read the value from before the toggle.
         const res = await api<PlanResponse>("/api/assignments/plan", {
           body: {
-            attendantIds: [...onShift],
-            capacityMinutes: capacity,
-            dayFigures: override ?? figures ?? undefined,
+            attendantIds: [...(overrides.onShift ?? onShift)],
+            capacityMinutes: overrides.capacity ?? capacity,
+            dayFigures: overrides.dayFigures ?? figures ?? undefined,
           },
         });
+        if (seq !== requestSeq.current) return; // a newer request is already on its way
         setResult(res);
         setPlan(res.plan);
         setFigures(res.figures);
         setEdited(false);
       } catch (e) {
-        setError((e as Error).message);
+        if (seq === requestSeq.current) setError((e as Error).message);
       } finally {
-        setBusy(false);
+        if (seq === requestSeq.current) {
+          setBusy(false);
+          setRefreshing(false);
+        }
       }
     },
     [onShift, capacity, figures]
@@ -122,26 +142,75 @@ export default function PlanningView() {
   // Load the night-audit figures once, so the panel opens filled in rather
   // than empty — the supervisor adjusts, they do not type from scratch.
   useEffect(() => {
-    if (attendants.length > 0 && !result) createPlan();
+    if (attendants.length > 0 && !result) createPlan();  // uses current onShift/capacity, both freshly set above
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [attendants.length]);
 
-  // Turning a knob should show its effect, not wait for a button.
+  /**
+   * Turning a knob should show its effect immediately.
+   *
+   * A tap on +/− is a finished intent, so it fires at once — the plan endpoint
+   * answers in well under 50 ms, and waiting half a second first was the whole
+   * reason this felt sluggish. Typing into the field is not finished until the
+   * typing stops, so that stays debounced, but only briefly.
+   */
   const recalcTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const scheduleRecalc = useCallback(
-    (next: DayFigures) => {
+  const applyFigures = useCallback(
+    (next: DayFigures, immediate: boolean) => {
       setFigures(next);
       setEdited(false);
       if (recalcTimer.current) clearTimeout(recalcTimer.current);
-      recalcTimer.current = setTimeout(() => createPlan(next), 500);
+      if (immediate) {
+        createPlan({ dayFigures: next }, "refresh");
+      } else {
+        recalcTimer.current = setTimeout(() => createPlan({ dayFigures: next }, "refresh"), 250);
+      }
     },
     [createPlan]
   );
   useEffect(() => () => { if (recalcTimer.current) clearTimeout(recalcTimer.current); }, []);
 
-  const setFigure = (field: keyof DayFigures, value: number) => {
+  const setFigure = (field: keyof DayFigures, value: number, immediate = false) => {
     if (!figures) return;
-    scheduleRecalc({ ...figures, [field]: Math.max(0, value) });
+    applyFigures({ ...figures, [field]: Math.max(0, value) }, immediate);
+  };
+
+  // Team and shift length feed the same planner, so changing either recalculates
+  // too — a supervisor toggling three attendants off should not also have to
+  // remember to press a button afterwards. Individual toggles debounce briefly
+  // in case several are tapped in a row; the presets and All/None are one clear
+  // action each and fire at once.
+  const teamTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleTeamRecalc = useCallback(
+    (next: { onShift?: Set<string>; capacity?: number }, immediate: boolean) => {
+      if (!result) return; // nothing to refresh before the first proposal exists
+      if (teamTimer.current) clearTimeout(teamTimer.current);
+      if (immediate) createPlan(next, "refresh");
+      else teamTimer.current = setTimeout(() => createPlan(next, "refresh"), 250);
+    },
+    [createPlan, result]
+  );
+  useEffect(() => () => { if (teamTimer.current) clearTimeout(teamTimer.current); }, []);
+
+  const toggleAttendant = (id: string) => {
+    const next = new Set(onShift);
+    if (next.has(id)) next.delete(id);
+    else next.add(id);
+    setOnShift(next);
+    scheduleTeamRecalc({ onShift: next }, false);
+  };
+  const selectAllAttendants = () => {
+    const next = new Set(attendants.map((a) => a.id));
+    setOnShift(next);
+    scheduleTeamRecalc({ onShift: next }, true);
+  };
+  const selectNoAttendants = () => {
+    setOnShift(new Set());
+    scheduleTeamRecalc({ onShift: new Set() }, true);
+  };
+  const selectCapacity = (minutes: number) => {
+    setCapacity(minutes);
+    scheduleTeamRecalc({ capacity: minutes }, true);
   };
 
   const moveRoom = (roomId: string, fromId: string, toId: string) => {
@@ -233,7 +302,7 @@ export default function PlanningView() {
           <h3 className="font-serif text-2xl">1 · Today&apos;s figures</h3>
           {result && (
             <button
-              onClick={() => scheduleRecalc(result.defaults)}
+              onClick={() => applyFigures(result.defaults, true)}
               className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment"
             >
               Reset to system data
@@ -252,7 +321,7 @@ export default function PlanningView() {
               hint="check out today · full clean"
               value={figures.departures}
               step={1}
-              onChange={(v) => setFigure("departures", v)}
+              onChange={(v, immediate) => setFigure("departures", v, immediate)}
               warning={warn("departures")}
             />
             <Stepper
@@ -260,7 +329,7 @@ export default function PlanningView() {
               hint="must be released today"
               value={figures.arrivals}
               step={1}
-              onChange={(v) => setFigure("arrivals", v)}
+              onChange={(v, immediate) => setFigure("arrivals", v, immediate)}
               warning={warn("arrivals")}
             />
             <Stepper
@@ -268,7 +337,7 @@ export default function PlanningView() {
               hint={`${result?.stayovers ?? 0} stayovers included`}
               value={figures.eveningOccupancy}
               step={1}
-              onChange={(v) => setFigure("eveningOccupancy", v)}
+              onChange={(v, immediate) => setFigure("eveningOccupancy", v, immediate)}
               warning={warn("eveningOccupancy")}
             />
           </div>
@@ -283,12 +352,12 @@ export default function PlanningView() {
           <h3 className="font-serif text-2xl">2 · Who is on shift?</h3>
           <div className="flex gap-1">
             <button
-              onClick={() => setOnShift(new Set(attendants.map((a) => a.id)))}
+              onClick={selectAllAttendants}
               className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment"
             >
               All
             </button>
-            <button onClick={() => setOnShift(new Set())} className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment">
+            <button onClick={selectNoAttendants} className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment">
               None
             </button>
           </div>
@@ -302,14 +371,7 @@ export default function PlanningView() {
             return (
               <button
                 key={a.id}
-                onClick={() =>
-                  setOnShift((prev) => {
-                    const next = new Set(prev);
-                    if (next.has(a.id)) next.delete(a.id);
-                    else next.add(a.id);
-                    return next;
-                  })
-                }
+                onClick={() => toggleAttendant(a.id)}
                 aria-pressed={on}
                 className={`h-14 rounded-xl border px-5 text-left transition ${
                   on ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white opacity-45"
@@ -330,7 +392,7 @@ export default function PlanningView() {
           {SHIFT_PRESETS.map((p) => (
             <button
               key={p.minutes}
-              onClick={() => setCapacity(p.minutes)}
+              onClick={() => selectCapacity(p.minutes)}
               className={`h-14 rounded-xl border px-5 text-sm transition ${
                 capacity === p.minutes ? "border-gold-line bg-parchment font-semibold" : "border-charcoal/15 bg-white"
               }`}
@@ -342,13 +404,33 @@ export default function PlanningView() {
         </div>
       </section>
 
-      <button
-        onClick={() => createPlan()}
-        disabled={busy || onShift.size === 0}
-        className="mb-4 h-14 w-full rounded-xl bg-charcoal text-base font-semibold tracking-wide text-ivory transition hover:bg-espresso disabled:opacity-40 sm:w-auto sm:px-12"
-      >
-        {busy ? "Calculating…" : plan ? "Recalculate proposal" : "Create proposal"}
-      </button>
+      {/* The panels above already recalculate themselves on every change; this
+          stays as an explicit fallback for the very first proposal and for
+          forcing a fresh read if the underlying board moved on. */}
+      {!plan ? (
+        <button
+          onClick={() => createPlan()}
+          disabled={busy || onShift.size === 0}
+          className="mb-4 h-14 w-full rounded-xl bg-charcoal text-base font-semibold tracking-wide text-ivory transition hover:bg-espresso disabled:opacity-40 sm:w-auto sm:px-12"
+        >
+          {busy ? "Calculating…" : "Create proposal"}
+        </button>
+      ) : (
+        <div className="mb-4 flex items-center gap-3">
+          <button
+            onClick={() => createPlan()}
+            disabled={busy || onShift.size === 0}
+            className="h-11 rounded-xl border border-charcoal/15 bg-white px-5 text-sm transition hover:border-gold-line disabled:opacity-40"
+          >
+            Refresh from the live board
+          </button>
+          {refreshing && (
+            <span className="flex items-center gap-1.5 text-sm text-graphite/60">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-gold" /> Updating…
+            </span>
+          )}
+        </div>
+      )}
       {onShift.size === 0 && <p className="mb-4 text-sm text-amber-700">Select at least one attendant.</p>}
 
       {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
@@ -358,7 +440,9 @@ export default function PlanningView() {
 
       {plan && (
         <>
-          <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <section
+            className={`mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 transition-opacity ${refreshing ? "opacity-60" : ""}`}
+          >
             <Stat label="Rooms to clean" value={String(plan.summary.totalRooms)} sub={`of ${result?.totalRooms ?? 0} keys`} />
             <Stat label="Total work" value={fmt(plan.summary.totalMinutes)} sub={`${figures?.departures ?? 0} departure cleans`} />
             <Stat
@@ -377,7 +461,18 @@ export default function PlanningView() {
             </div>
           )}
 
-          <div className="mb-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
+          {/* The shading on room chips below means something — say what before
+              the grid, not buried inside every card's collapsed explanation. */}
+          <div className="mb-2 flex flex-wrap items-center gap-4 text-xs text-graphite/60">
+            <span className="flex items-center gap-1.5">
+              <span className="h-3.5 w-3.5 rounded border border-charcoal/30 bg-parchment" /> Departure clean (full turn)
+            </span>
+            <span className="flex items-center gap-1.5">
+              <span className="h-3.5 w-3.5 rounded border border-charcoal/15 bg-white" /> Stayover service
+            </span>
+          </div>
+
+          <div className={`mb-4 grid gap-3 transition-opacity lg:grid-cols-2 xl:grid-cols-3 ${refreshing ? "opacity-60" : ""}`}>
             {live.map((a) => (
               <AttendantCard
                 key={a.attendantId}
@@ -446,7 +541,8 @@ function Stepper({
   hint: string;
   value: number;
   step: number;
-  onChange: (v: number) => void;
+  /** `immediate` marks a finished intent (a tap) versus in-progress typing. */
+  onChange: (v: number, immediate: boolean) => void;
   warning?: string;
 }) {
   return (
@@ -454,7 +550,7 @@ function Stepper({
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
       <div className="mt-2 flex items-center gap-2">
         <button
-          onClick={() => onChange(value - step)}
+          onClick={() => onChange(value - step, true)}
           aria-label={`${label} minus`}
           className="h-14 w-14 shrink-0 rounded-xl border border-charcoal/20 text-2xl leading-none hover:border-gold-line"
         >
@@ -464,12 +560,13 @@ function Stepper({
           type="number"
           inputMode="numeric"
           value={value}
-          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          onChange={(e) => onChange(Number(e.target.value) || 0, false)}
+          onBlur={(e) => onChange(Number(e.target.value) || 0, true)}
           aria-label={label}
           className="h-14 w-full min-w-0 rounded-xl border border-charcoal/15 bg-transparent text-center font-serif text-3xl outline-none focus:border-gold"
         />
         <button
-          onClick={() => onChange(value + step)}
+          onClick={() => onChange(value + step, true)}
           aria-label={`${label} plus`}
           className="h-14 w-14 shrink-0 rounded-xl border border-charcoal/20 text-2xl leading-none hover:border-gold-line"
         >
