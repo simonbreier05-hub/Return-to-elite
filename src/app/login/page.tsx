@@ -192,8 +192,8 @@ function PasswordForm({
         {busy ? "Signing in…" : "Sign in"}
       </button>
       <p className="mt-2 text-center text-xs text-graphite/60">
-        Development: <strong>123</strong> / <strong>123</strong> signs in as duty manager. Any seeded address also works
-        with the password <strong>123</strong>.
+        Development: type a <strong>position</strong> — supervisor, front office, concierge, engineering, attendant,
+        manager — password <strong>123</strong>. Any seeded address also works, same password.
       </p>
     </form>
   );

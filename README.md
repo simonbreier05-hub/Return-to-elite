@@ -31,11 +31,15 @@ header then carries a role switcher, so you can jump between supervisor,
 housekeeping and front office without signing out.
 
 Password sign-in still works. **All seeded passwords are `123`**, and outside
-production the handle **`123` / `123`** signs in as the duty manager — handy on a
-tablet keyboard. Both the handle and the quick login are off in production unless
-`ALLOW_DEV_LOGIN=true` is set (see `.env.example`); there, only a real address is
-accepted. Setting that flag on a public instance lets anyone sign in as the duty
-manager, so use it only for a throwaway demo.
+production the email field also accepts a **position** — `supervisor`,
+`front office`, `concierge`, `engineering`, `attendant`, `manager` (spacing,
+underscores and case are ignored) — so typing a department and `123` twice
+reaches it. Room attendant has ten people; the handle reaches one of them
+(Maria), the quick-login screen or header switcher reach the rest. Position
+handles are off in production unless `ALLOW_DEV_LOGIN=true` is set (see
+`.env.example`); there, only a real address is accepted. Setting that flag on
+a public instance lets anyone sign in as the duty manager, so use it only for
+a throwaway demo.
 
 | Email | Role |
 |---|---|
