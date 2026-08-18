@@ -56,6 +56,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
   const [dialog, setDialog] = useState<{ kind: "rework" | "ooo"; room: Room } | null>(null);
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<RoomStatus | "ALL">("ALL");
+  const [floorFilter, setFloorFilter] = useState<number | "ALL">("ALL");
+  const [attendantFilter, setAttendantFilter] = useState<string>("ALL");
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [bulkResult, setBulkResult] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<{ rooms: Room[]; attendants: Attendant[] }>("/api/rooms");
@@ -104,14 +110,38 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     "assignments:applied": () => refetchSoon(),
   });
 
+  /**
+   * The grid is filtered; the KPIs above it are not. A supervisor narrowing to
+   * floor 3 still needs the house-wide release count to stay honest.
+   */
+  const visible = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return rooms.filter((room) => {
+      if (statusFilter !== "ALL" && room.status !== statusFilter) return false;
+      if (floorFilter !== "ALL" && room.floor !== floorFilter) return false;
+      if (attendantFilter === "NONE" && room.assignedTo) return false;
+      if (attendantFilter !== "ALL" && attendantFilter !== "NONE" && room.assignedTo?.id !== attendantFilter) return false;
+      if (!q) return true;
+      return (
+        room.number.toLowerCase().includes(q) ||
+        room.section.toLowerCase().includes(q) ||
+        room.assignedTo?.name.toLowerCase().includes(q) ||
+        room.arrivals.some((a) => a.guestName.toLowerCase().includes(q))
+      );
+    });
+  }, [rooms, search, statusFilter, floorFilter, attendantFilter]);
+
+  const filtersActive =
+    search.trim() !== "" || statusFilter !== "ALL" || floorFilter !== "ALL" || attendantFilter !== "ALL";
+
   const byFloor = useMemo(() => {
     const map = new Map<number, Room[]>();
-    for (const room of rooms) {
+    for (const room of visible) {
       if (!map.has(room.floor)) map.set(room.floor, []);
       map.get(room.floor)!.push(room);
     }
     return [...map.entries()].sort((a, b) => b[0] - a[0]);
-  }, [rooms]);
+  }, [visible]);
 
   const roomById = useMemo(() => new Map(rooms.map((r) => [r.id, r])), [rooms]);
   const selected = selectedId ? roomById.get(selectedId) ?? null : null;
@@ -134,6 +164,37 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       setError(`Room ${room.number}: ${(e as Error).message}`);
     } finally {
       setBusyRoomId(null);
+    }
+  };
+
+  /**
+   * Release the whole queue in one action. Each room still passes the same
+   * server-side checks, so a room someone else touched meanwhile is reported
+   * rather than silently skipped.
+   */
+  const releaseAll = async () => {
+    if (bulkBusy || releaseQueue.length === 0) return;
+    setBulkBusy(true);
+    setError(null);
+    setBulkResult(null);
+    try {
+      const res = await api<{
+        changed: number;
+        rejected: number;
+        failed: { error: string }[];
+      }>("/api/rooms/bulk-status", {
+        body: { roomIds: releaseQueue.map((r) => r.id), status: "INSPECTED" },
+      });
+      setBulkResult(
+        res.rejected === 0
+          ? `${res.changed} rooms released and pushed to the PMS.`
+          : `${res.changed} released, ${res.rejected} could not be: ${res.failed[0]?.error ?? ""}`
+      );
+      load();
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBulkBusy(false);
     }
   };
 
@@ -165,8 +226,84 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>
       )}
 
+      {bulkResult && (
+        <div className="mb-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-900">
+          {bulkResult}
+        </div>
+      )}
+
       <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
         <div>
+          {/* Finding one room among 145 tiles should not mean scrolling. */}
+          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-charcoal/10 bg-linen p-3 shadow-card">
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search room, section, guest or attendant…"
+              className="h-12 min-w-[14rem] flex-1 rounded-xl border border-charcoal/15 bg-white px-4 outline-none focus:border-gold"
+            />
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as RoomStatus | "ALL")}
+              aria-label="Filter by status"
+              className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
+            >
+              <option value="ALL">All statuses</option>
+              {LEGEND.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS_LABELS[s]}
+                </option>
+              ))}
+            </select>
+            <select
+              value={String(floorFilter)}
+              onChange={(e) => setFloorFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))}
+              aria-label="Filter by floor"
+              className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
+            >
+              <option value="ALL">All floors</option>
+              {[...new Set(rooms.map((r) => r.floor))]
+                .sort((a, b) => a - b)
+                .map((f) => (
+                  <option key={f} value={f}>
+                    Floor {f}
+                  </option>
+                ))}
+            </select>
+            <select
+              value={attendantFilter}
+              onChange={(e) => setAttendantFilter(e.target.value)}
+              aria-label="Filter by attendant"
+              className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
+            >
+              <option value="ALL">Anyone</option>
+              <option value="NONE">Unassigned</option>
+              {attendants.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                </option>
+              ))}
+            </select>
+            {filtersActive && (
+              <>
+                <span className="text-sm text-graphite/60">
+                  {visible.length} of {rooms.length}
+                </span>
+                <button
+                  onClick={() => {
+                    setSearch("");
+                    setStatusFilter("ALL");
+                    setFloorFilter("ALL");
+                    setAttendantFilter("ALL");
+                  }}
+                  className="h-12 rounded-xl border border-charcoal/15 px-4 text-sm"
+                >
+                  Clear
+                </button>
+              </>
+            )}
+          </div>
+
           <div className="mb-3 flex flex-wrap gap-2 text-xs">
             {LEGEND.map((s) => (
               <span key={s} className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 shadow-sm">
@@ -220,6 +357,16 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
             <h3 className="mb-2 font-serif text-xl">Release queue</h3>
             {releaseQueue.length === 0 && <p className="text-sm text-graphite/60">Nothing waiting for inspection.</p>}
+
+            {releaseQueue.length > 1 && (
+              <button
+                onClick={() => releaseAll()}
+                disabled={bulkBusy}
+                className="mb-3 h-14 w-full rounded-xl bg-emerald-600 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+              >
+                {bulkBusy ? "Releasing…" : `✓ Release all ${releaseQueue.length}`}
+              </button>
+            )}
             <div className="space-y-2">
               {releaseQueue.map((room) => {
                 const busy = busyRoomId === room.id;
