@@ -25,8 +25,15 @@ npm run db:seed               # 145 rooms over 5 floors, 10 attendants, demo dat
 npm run dev                   # custom server: Next.js + Socket.IO on :3000
 ```
 
-Open http://localhost:3000 — the login screen has one-tap demo users.
-**All seeded passwords: `stayclean123`.**
+Open http://localhost:3000 — outside production the login screen lists every
+seeded user grouped by role and signs you in with **one tap, no password**. The
+header then carries a role switcher, so you can jump between supervisor,
+housekeeping and front office without signing out.
+
+Password sign-in still works (**all seeded passwords: `stayclean123`**), and the
+quick login is off in production unless `ALLOW_DEV_LOGIN=true` is set — see
+`.env.example`. Setting it on a public instance lets anyone sign in as the duty
+manager, so use it only for a throwaway demo.
 
 | Email | Role |
 |---|---|

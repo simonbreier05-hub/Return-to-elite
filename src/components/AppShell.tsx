@@ -39,6 +39,26 @@ export default function AppShell({
   const router = useRouter();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
+
+  // Quick role switching, dev only. The endpoint 404s when it is disabled, so
+  // nothing renders on a locked-down deployment.
+  useEffect(() => {
+    fetch("/api/auth/dev-login")
+      .then((r) => (r.ok ? r.json() : { enabled: false }))
+      .then((d) => setDevUsers(d.enabled ? d.users : null))
+      .catch(() => setDevUsers(null));
+  }, []);
+
+  const switchTo = async (email: string) => {
+    if (!email) return;
+    await api("/api/auth/dev-login", { body: { email } });
+    // A hard navigation, not router.push: the App Router caches rendered
+    // segments per client, and after an identity change that cache still
+    // belongs to the previous user. Reloading drops it along with any state
+    // the old role's views were holding.
+    window.location.assign("/");
+  };
 
   const load = () =>
     api<{ notifications: Notification[] }>("/api/notifications")
@@ -86,6 +106,24 @@ export default function AppShell({
             <span className="hidden text-[0.72rem] uppercase tracking-[0.24em] text-ivory/55 sm:inline">{title}</span>
           </div>
           <div className="flex items-center gap-2">
+            {devUsers && (
+              <select
+                aria-label="Switch role (dev)"
+                value=""
+                onChange={(e) => switchTo(e.target.value)}
+                className="hidden h-12 max-w-[11rem] rounded-xl border border-gold-line/40 bg-white/10 px-3 text-sm text-ivory outline-none md:block"
+                title="Development: switch role without signing out"
+              >
+                <option value="" className="text-charcoal">
+                  Switch role…
+                </option>
+                {devUsers.map((u) => (
+                  <option key={u.email} value={u.email} className="text-charcoal">
+                    {u.name} · {u.role.replace(/_/g, " ")}
+                  </option>
+                ))}
+              </select>
+            )}
             <button
               onClick={() => setOpen((o) => !o)}
               className="relative flex h-12 w-12 items-center justify-center rounded-full hover:bg-white/10"
