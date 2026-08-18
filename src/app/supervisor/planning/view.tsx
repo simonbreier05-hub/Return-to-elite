@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
@@ -16,6 +16,7 @@ interface RoomDetail {
   floor: number;
   section: string;
   minutes: number;
+  isDeparture: boolean;
 }
 
 interface Assignment {
@@ -31,6 +32,12 @@ interface Assignment {
   reasons: string[];
 }
 
+interface DayFigures {
+  departures: number;
+  arrivals: number;
+  eveningOccupancy: number;
+}
+
 interface Plan {
   assignments: Assignment[];
   unassigned: { roomId: string; number: string; reason: string }[];
@@ -43,24 +50,39 @@ interface Plan {
   };
 }
 
+interface PlanResponse {
+  plan: Plan;
+  rooms: Record<string, RoomDetail>;
+  figures: DayFigures;
+  defaults: DayFigures;
+  warnings: { field: keyof DayFigures; message: string }[];
+  stayovers: number;
+  totalRooms: number;
+  roomsNeedingWork: number;
+}
+
 const SHIFT_PRESETS = [
-  { label: "Short · 4 h", minutes: 240 },
-  { label: "Standard · 6.5 h", minutes: 390 },
-  { label: "Long · 8 h", minutes: 480 },
+  { label: "Short", detail: "4 h", minutes: 240 },
+  { label: "Standard", detail: "6.5 h", minutes: 390 },
+  { label: "Long", detail: "8 h", minutes: 480 },
 ];
 
-const fmt = (min: number) => `${Math.floor(min / 60)} h ${String(min % 60).padStart(2, "0")}`;
+const fmt = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")}`;
 
 export default function PlanningView() {
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [onShift, setOnShift] = useState<Set<string>>(new Set());
   const [capacity, setCapacity] = useState(390);
+  const [figures, setFigures] = useState<DayFigures | null>(null);
+  const [result, setResult] = useState<PlanResponse | null>(null);
   const [plan, setPlan] = useState<Plan | null>(null);
-  const [rooms, setRooms] = useState<Record<string, RoomDetail>>({});
   const [busy, setBusy] = useState(false);
   const [applied, setApplied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState<{ roomId: string; fromId: string } | null>(null);
+  const [edited, setEdited] = useState(false);
+
+  const rooms = result?.rooms ?? {};
 
   useEffect(() => {
     api<{ attendants: Attendant[] }>("/api/rooms")
@@ -71,42 +93,75 @@ export default function PlanningView() {
       .catch((e) => setError((e as Error).message));
   }, []);
 
-  const createPlan = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    setApplied(null);
-    try {
-      const res = await api<{ plan: Plan; rooms: Record<string, RoomDetail> }>("/api/assignments/plan", {
-        body: { attendantIds: [...onShift], capacityMinutes: capacity },
-      });
-      setPlan(res.plan);
-      setRooms(res.rooms);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy(false);
-    }
-  }, [onShift, capacity]);
+  const createPlan = useCallback(
+    async (override?: DayFigures) => {
+      setBusy(true);
+      setError(null);
+      setApplied(null);
+      try {
+        const res = await api<PlanResponse>("/api/assignments/plan", {
+          body: {
+            attendantIds: [...onShift],
+            capacityMinutes: capacity,
+            dayFigures: override ?? figures ?? undefined,
+          },
+        });
+        setResult(res);
+        setPlan(res.plan);
+        setFigures(res.figures);
+        setEdited(false);
+      } catch (e) {
+        setError((e as Error).message);
+      } finally {
+        setBusy(false);
+      }
+    },
+    [onShift, capacity, figures]
+  );
 
-  /** Moving a room is a local edit; nothing is written until Apply. */
+  // Load the night-audit figures once, so the panel opens filled in rather
+  // than empty — the supervisor adjusts, they do not type from scratch.
+  useEffect(() => {
+    if (attendants.length > 0 && !result) createPlan();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [attendants.length]);
+
+  // Turning a knob should show its effect, not wait for a button.
+  const recalcTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleRecalc = useCallback(
+    (next: DayFigures) => {
+      setFigures(next);
+      setEdited(false);
+      if (recalcTimer.current) clearTimeout(recalcTimer.current);
+      recalcTimer.current = setTimeout(() => createPlan(next), 500);
+    },
+    [createPlan]
+  );
+  useEffect(() => () => { if (recalcTimer.current) clearTimeout(recalcTimer.current); }, []);
+
+  const setFigure = (field: keyof DayFigures, value: number) => {
+    if (!figures) return;
+    scheduleRecalc({ ...figures, [field]: Math.max(0, value) });
+  };
+
   const moveRoom = (roomId: string, fromId: string, toId: string) => {
     setPlan((prev) => {
       if (!prev || fromId === toId) return prev;
       const minutes = rooms[roomId]?.minutes ?? 0;
+      const cap = prev.summary.capacityMinutes;
       return {
         ...prev,
         assignments: prev.assignments.map((a) => {
           if (a.attendantId === fromId) {
             const roomIds = a.roomIds.filter((r) => r !== roomId);
-            return recalc(a, roomIds, a.totalMinutes - minutes, prev.summary.capacityMinutes);
+            return recalc(a, roomIds, a.totalMinutes - minutes, cap);
           }
-          if (a.attendantId === toId) {
-            return recalc(a, [...a.roomIds, roomId], a.totalMinutes + minutes, prev.summary.capacityMinutes);
-          }
+          if (a.attendantId === toId) return recalc(a, [...a.roomIds, roomId], a.totalMinutes + minutes, cap);
           return a;
         }),
       };
     });
+    setEdited(true);
     setMoving(null);
   };
 
@@ -120,9 +175,6 @@ export default function PlanningView() {
       floors,
       load: cap > 0 ? totalMinutes / cap : 0,
       overbooked: totalMinutes > cap,
-      reasons: [...a.reasons.filter((r) => !r.startsWith("Adjusted")), "Adjusted by hand before applying."].filter(
-        (r, i, arr) => arr.indexOf(r) === i
-      ),
     };
   };
 
@@ -153,15 +205,18 @@ export default function PlanningView() {
     return Math.max(...m) - Math.min(...m);
   }, [live]);
 
+  const totalCapacity = capacity * onShift.size;
+  const coverage = totalCapacity > 0 && plan ? plan.summary.totalMinutes / totalCapacity : 0;
+  const warn = (field: keyof DayFigures) => result?.warnings.find((w) => w.field === field)?.message;
+
   return (
-    // Bottom padding keeps the last cards clear of the sticky apply bar.
-    <div className="animate-rise pb-24">
+    <div className="animate-rise pb-28">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">Morning Planning</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">
-            Balanced by predicted cleaning time, kept within sections to save walking.
+            Set the day, pick the team, get a balanced round for each attendant.
           </p>
         </div>
         <Link
@@ -172,10 +227,75 @@ export default function PlanningView() {
         </Link>
       </div>
 
-      {/* Step 1 — who is on shift */}
+      {/* ---- 1 · The day ---------------------------------------------------- */}
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-        <h3 className="mb-1 font-serif text-xl">1 · Who is on shift?</h3>
-        <p className="mb-3 text-sm text-graphite/60">Tap to include or exclude. Preferred sections are honoured.</p>
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="font-serif text-2xl">1 · Today&apos;s figures</h3>
+          {result && (
+            <button
+              onClick={() => scheduleRecalc(result.defaults)}
+              className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment"
+            >
+              Reset to system data
+            </button>
+          )}
+        </div>
+        <p className="mb-4 text-sm text-graphite/60">
+          Prefilled from the house data — adjust anything the night audit says differently. The workload updates as you
+          change it.
+        </p>
+
+        {figures ? (
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Stepper
+              label="Departures"
+              hint="check out today · full clean"
+              value={figures.departures}
+              step={1}
+              onChange={(v) => setFigure("departures", v)}
+              warning={warn("departures")}
+            />
+            <Stepper
+              label="Arrivals"
+              hint="must be released today"
+              value={figures.arrivals}
+              step={1}
+              onChange={(v) => setFigure("arrivals", v)}
+              warning={warn("arrivals")}
+            />
+            <Stepper
+              label="Occupied tonight"
+              hint={`${result?.stayovers ?? 0} stayovers included`}
+              value={figures.eveningOccupancy}
+              step={1}
+              onChange={(v) => setFigure("eveningOccupancy", v)}
+              warning={warn("eveningOccupancy")}
+            />
+          </div>
+        ) : (
+          <p className="text-sm text-graphite/50">Loading the day…</p>
+        )}
+      </section>
+
+      {/* ---- 2 · The team --------------------------------------------------- */}
+      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
+          <h3 className="font-serif text-2xl">2 · Who is on shift?</h3>
+          <div className="flex gap-1">
+            <button
+              onClick={() => setOnShift(new Set(attendants.map((a) => a.id)))}
+              className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment"
+            >
+              All
+            </button>
+            <button onClick={() => setOnShift(new Set())} className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment">
+              None
+            </button>
+          </div>
+        </div>
+        <p className="mb-3 text-sm text-graphite/60">
+          {onShift.size} of {attendants.length} selected · preferred sections are honoured.
+        </p>
         <div className="mb-4 flex flex-wrap gap-2">
           {attendants.map((a) => {
             const on = onShift.has(a.id);
@@ -190,45 +310,48 @@ export default function PlanningView() {
                     return next;
                   })
                 }
+                aria-pressed={on}
                 className={`h-14 rounded-xl border px-5 text-left transition ${
-                  on ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white opacity-50"
+                  on ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white opacity-45"
                 }`}
               >
-                <div className="text-sm font-semibold">{a.name}</div>
+                <div className="text-sm font-semibold">
+                  {on ? "✓ " : ""}
+                  {a.name}
+                </div>
                 <div className="text-xs text-graphite/60">{a.section ? `prefers ${a.section}` : "no preference"}</div>
               </button>
             );
           })}
         </div>
 
-        <h3 className="mb-1 font-serif text-xl">2 · Shift length</h3>
-        <div className="mb-4 flex flex-wrap gap-2">
+        <h4 className="mb-2 font-serif text-xl">Shift length</h4>
+        <div className="flex flex-wrap gap-2">
           {SHIFT_PRESETS.map((p) => (
             <button
               key={p.minutes}
               onClick={() => setCapacity(p.minutes)}
-              className={`h-12 rounded-xl border px-5 text-sm font-medium transition ${
+              className={`h-14 rounded-xl border px-5 text-sm transition ${
                 capacity === p.minutes ? "border-gold-line bg-parchment font-semibold" : "border-charcoal/15 bg-white"
               }`}
             >
-              {p.label}
+              <div>{p.label}</div>
+              <div className="text-xs text-graphite/60">{p.detail}</div>
             </button>
           ))}
         </div>
-
-        <button
-          onClick={createPlan}
-          disabled={busy || onShift.size === 0}
-          className="h-14 w-full rounded-xl bg-charcoal text-base font-semibold tracking-wide text-ivory transition hover:bg-espresso disabled:opacity-40 sm:w-auto sm:px-10"
-        >
-          {busy ? "Calculating…" : plan ? "Recalculate proposal" : "Create proposal"}
-        </button>
-        {onShift.size === 0 && <p className="mt-2 text-sm text-amber-700">Select at least one attendant.</p>}
       </section>
 
-      {error && (
-        <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>
-      )}
+      <button
+        onClick={() => createPlan()}
+        disabled={busy || onShift.size === 0}
+        className="mb-4 h-14 w-full rounded-xl bg-charcoal text-base font-semibold tracking-wide text-ivory transition hover:bg-espresso disabled:opacity-40 sm:w-auto sm:px-12"
+      >
+        {busy ? "Calculating…" : plan ? "Recalculate proposal" : "Create proposal"}
+      </button>
+      {onShift.size === 0 && <p className="mb-4 text-sm text-amber-700">Select at least one attendant.</p>}
+
+      {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
       {applied && (
         <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900">✓ {applied}</div>
       )}
@@ -236,15 +359,23 @@ export default function PlanningView() {
       {plan && (
         <>
           <section className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-            <Stat label="Rooms to clean" value={String(plan.summary.totalRooms)} />
-            <Stat label="Total work" value={fmt(plan.summary.totalMinutes)} />
-            <Stat label="Average per person" value={fmt(plan.summary.averageMinutes)} />
+            <Stat label="Rooms to clean" value={String(plan.summary.totalRooms)} sub={`of ${result?.totalRooms ?? 0} keys`} />
+            <Stat label="Total work" value={fmt(plan.summary.totalMinutes)} sub={`${figures?.departures ?? 0} departure cleans`} />
             <Stat
-              label="Spread busiest ↔ quietest"
-              value={`${spread} min`}
-              tone={spread > 90 ? "warn" : "good"}
+              label="Team capacity"
+              value={fmt(totalCapacity)}
+              sub={`${onShift.size} × ${fmt(capacity)}`}
+              tone={coverage > 1 ? "warn" : "good"}
             />
+            <Stat label="Busiest ↔ quietest" value={`${spread} min`} tone={spread > 90 ? "warn" : "good"} />
           </section>
+
+          {coverage > 1 && (
+            <div className="mb-4 rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
+              The day needs <strong>{fmt(plan.summary.totalMinutes - totalCapacity)}</strong> more than the team can
+              cover. Add someone to the shift, choose a longer shift, or defer stayover service.
+            </div>
+          )}
 
           <div className="mb-4 grid gap-3 lg:grid-cols-2 xl:grid-cols-3">
             {live.map((a) => (
@@ -258,16 +389,10 @@ export default function PlanningView() {
             ))}
           </div>
 
-          {plan.unassigned.length > 0 && (
-            <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900">
-              {plan.unassigned.length} rooms could not be placed: {plan.unassigned[0].reason}
-            </div>
-          )}
-
           <div className="sticky bottom-3 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-graphite/70">
-                Nothing is saved yet — review the proposal, move rooms if you like, then apply.
+                {edited ? "Moved by hand — " : ""}Nothing is saved yet. Review, adjust, then apply.
               </p>
               <button
                 onClick={apply}
@@ -308,7 +433,56 @@ export default function PlanningView() {
   );
 }
 
-function Stat({ label, value, tone }: { label: string; value: string; tone?: "good" | "warn" }) {
+/** Big touch targets: a supervisor sets these standing at a desk with an iPad. */
+function Stepper({
+  label,
+  hint,
+  value,
+  step,
+  onChange,
+  warning,
+}: {
+  label: string;
+  hint: string;
+  value: number;
+  step: number;
+  onChange: (v: number) => void;
+  warning?: string;
+}) {
+  return (
+    <div className={`rounded-2xl border p-4 ${warning ? "border-amber-400 bg-amber-50" : "border-charcoal/15 bg-white"}`}>
+      <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
+      <div className="mt-2 flex items-center gap-2">
+        <button
+          onClick={() => onChange(value - step)}
+          aria-label={`${label} minus`}
+          className="h-14 w-14 shrink-0 rounded-xl border border-charcoal/20 text-2xl leading-none hover:border-gold-line"
+        >
+          −
+        </button>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={value}
+          onChange={(e) => onChange(Number(e.target.value) || 0)}
+          aria-label={label}
+          className="h-14 w-full min-w-0 rounded-xl border border-charcoal/15 bg-transparent text-center font-serif text-3xl outline-none focus:border-gold"
+        />
+        <button
+          onClick={() => onChange(value + step)}
+          aria-label={`${label} plus`}
+          className="h-14 w-14 shrink-0 rounded-xl border border-charcoal/20 text-2xl leading-none hover:border-gold-line"
+        >
+          +
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-graphite/60">{hint}</p>
+      {warning && <p className="mt-1 text-xs font-medium text-amber-800">{warning}</p>}
+    </div>
+  );
+}
+
+function Stat({ label, value, sub, tone }: { label: string; value: string; sub?: string; tone?: "good" | "warn" }) {
   return (
     <div className="rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
@@ -319,6 +493,7 @@ function Stat({ label, value, tone }: { label: string; value: string; tone?: "go
       >
         {value}
       </div>
+      {sub && <div className="mt-0.5 text-xs text-graphite/55">{sub}</div>}
     </div>
   );
 }
@@ -347,6 +522,7 @@ function AttendantCard({
     return [...map.entries()].sort((a, b) => a[0] - b[0]);
   }, [assignment.roomIds, rooms]);
 
+  const departures = assignment.roomIds.filter((id) => rooms[id]?.isDeparture).length;
   const pct = Math.min(100, Math.round(assignment.load * 100));
 
   return (
@@ -366,7 +542,7 @@ function AttendantCard({
       </div>
 
       <p className="mt-2 text-xs text-graphite/60">
-        {assignment.roomCount} rooms · {assignment.sections.join(", ")}
+        {assignment.roomCount} rooms · {departures} departures · {assignment.sections.join(", ")}
       </p>
 
       <div className="mt-3 space-y-2">
@@ -380,8 +556,12 @@ function AttendantCard({
                 <button
                   key={id}
                   onClick={() => onMoveRoom(id)}
-                  title={`${detail.number} · ~${detail.minutes} min — tap to move`}
-                  className="h-10 rounded-lg border border-charcoal/15 bg-white px-2.5 text-sm font-medium tabular-nums hover:border-gold-line"
+                  title={`${detail.number} · ~${detail.minutes} min · ${
+                    detail.isDeparture ? "departure clean" : "stayover service"
+                  } — tap to move`}
+                  className={`h-10 rounded-lg border px-2.5 text-sm font-medium tabular-nums hover:border-gold-line ${
+                    detail.isDeparture ? "border-charcoal/30 bg-parchment" : "border-charcoal/15 bg-white"
+                  }`}
                 >
                   {detail.number}
                 </button>
@@ -397,6 +577,7 @@ function AttendantCard({
           {assignment.reasons.map((r, i) => (
             <li key={i}>· {r}</li>
           ))}
+          <li>· Shaded room numbers are departure cleans, plain ones stayover service.</li>
         </ul>
       </details>
     </div>

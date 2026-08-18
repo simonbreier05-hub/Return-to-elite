@@ -6,6 +6,15 @@ import { getSettings } from "@/lib/settings";
 import { computePriority } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 import { planAssignments } from "@/lib/assignment/planAssignments";
+import {
+  checkDayFigures,
+  classifyDepartures,
+  defaultDayFigures,
+  stayoversFrom,
+} from "@/lib/assignment/dayFigures";
+
+/** Mirrors the planner's own definition of a room that still needs an attendant. */
+const NEEDS_WORK = new Set(["DIRTY", "PICKUP", "BLOCKED", "IN_PROGRESS"]);
 
 /**
  * POST /api/assignments/plan — builds a morning proposal. Read-only: nothing
@@ -15,6 +24,14 @@ const Body = z
   .object({
     attendantIds: z.array(z.string()).optional(),
     capacityMinutes: z.number().int().positive().max(1440).optional(),
+    /** Hand-entered night-audit figures; omitted means "use the live data". */
+    dayFigures: z
+      .object({
+        departures: z.number().int().min(0).max(1000),
+        arrivals: z.number().int().min(0).max(1000),
+        eveningOccupancy: z.number().int().min(0).max(1000),
+      })
+      .optional(),
   })
   .optional();
 
@@ -46,18 +63,10 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  // Urgency and predicted duration come from the same explainable modules the
-  // rest of the app uses, so the plan cannot drift from the live board.
-  const assignable = rooms.map((room) => ({
-    id: room.id,
-    number: room.number,
-    floor: room.floor,
-    section: room.section,
-    status: room.status,
-    estimatedMinutes: predictCleaningMinutes(
-      { type: room.type, isCheckoutToday: room.isCheckoutToday, baseCleanMinutes: room.baseCleanMinutes },
-      { stayLengthNights: 2 }
-    ),
+  // Urgency comes from the same explainable module the rest of the app uses,
+  // so the plan cannot drift from the live board.
+  const scored = rooms.map((room) => ({
+    room,
     priorityScore: computePriority(
       {
         id: room.id,
@@ -79,6 +88,40 @@ export async function POST(req: NextRequest) {
     ).score,
   }));
 
+  // --- The day's figures ---------------------------------------------------
+  // Either what the supervisor typed, or what the live data says.
+  const classifiable = scored.map(({ room, priorityScore }) => ({
+    id: room.id,
+    number: room.number,
+    isCheckoutToday: room.isCheckoutToday,
+    occupancy: room.occupancy,
+    priorityScore,
+  }));
+  const expectedArrivals = await prisma.arrival.count({ where: { status: "EXPECTED" } });
+  const defaults = defaultDayFigures(classifiable, expectedArrivals);
+  const figures = opts.dayFigures ?? defaults;
+
+  // Only rooms that still need an attendant can be planned as departure cleans.
+  const workRooms = classifiable.filter((r) => NEEDS_WORK.has(scored.find((s) => s.room.id === r.id)!.room.status));
+  const departureIds = classifyDepartures(workRooms, figures.departures);
+  const warnings = checkDayFigures(figures, rooms.length, workRooms.length);
+
+  // A departure clean is substantially longer than stayover service, so the
+  // split the supervisor entered is what actually moves the workload.
+  const assignable = scored.map(({ room, priorityScore }) => ({
+    id: room.id,
+    number: room.number,
+    floor: room.floor,
+    section: room.section,
+    status: room.status,
+    isDeparture: departureIds.has(room.id),
+    estimatedMinutes: predictCleaningMinutes(
+      { type: room.type, isCheckoutToday: departureIds.has(room.id), baseCleanMinutes: room.baseCleanMinutes },
+      { stayLengthNights: 2 }
+    ),
+    priorityScore,
+  }));
+
   const plan = planAssignments(
     assignable,
     attendants.map((a) => ({ id: a.id, name: a.name, preferredSection: a.section })),
@@ -87,8 +130,21 @@ export async function POST(req: NextRequest) {
 
   // Room detail the planning board needs to render the proposal.
   const roomDetail = Object.fromEntries(
-    assignable.map((r) => [r.id, { number: r.number, floor: r.floor, section: r.section, minutes: r.estimatedMinutes }])
+    assignable.map((r) => [
+      r.id,
+      { number: r.number, floor: r.floor, section: r.section, minutes: r.estimatedMinutes, isDeparture: r.isDeparture },
+    ])
   );
 
-  return NextResponse.json({ plan, rooms: roomDetail, computedAt: now.toISOString() });
+  return NextResponse.json({
+    plan,
+    rooms: roomDetail,
+    figures,
+    defaults,
+    warnings,
+    stayovers: stayoversFrom(figures),
+    totalRooms: rooms.length,
+    roomsNeedingWork: workRooms.length,
+    computedAt: now.toISOString(),
+  });
 }
