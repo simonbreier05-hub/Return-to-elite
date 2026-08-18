@@ -163,13 +163,16 @@ function PasswordForm({
       }}
       className="mt-4 border-t border-charcoal/10 pt-4"
     >
-      <label className="mb-1 block text-sm font-medium">Email</label>
+      <label className="mb-1 block text-sm font-medium">Email or handle</label>
+      {/* Deliberately type="text": the development handle "123" is not an
+          address, and type="email" would have the browser reject it. */}
       <input
-        type="email"
+        type="text"
+        inputMode="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
         className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 bg-white px-4 text-base outline-none focus:border-gold"
-        placeholder="you@hotel.test"
+        placeholder="123"
         autoComplete="username"
       />
       <label className="mb-1 block text-sm font-medium">Password</label>
@@ -178,7 +181,7 @@ function PasswordForm({
         value={password}
         onChange={(e) => setPassword(e.target.value)}
         className="mb-4 h-12 w-full rounded-lg border border-charcoal/20 bg-white px-4 text-base outline-none focus:border-gold"
-        placeholder="stayclean123"
+        placeholder="123"
         autoComplete="current-password"
       />
       <button
@@ -188,6 +191,10 @@ function PasswordForm({
       >
         {busy ? "Signing in…" : "Sign in"}
       </button>
+      <p className="mt-2 text-center text-xs text-graphite/60">
+        Development: <strong>123</strong> / <strong>123</strong> signs in as duty manager. Any seeded address also works
+        with the password <strong>123</strong>.
+      </p>
     </form>
   );
 }

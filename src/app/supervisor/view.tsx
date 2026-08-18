@@ -206,7 +206,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">Five floors · {rooms.length} keys</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Link
+            href="/supervisor/handover"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            Handover
+          </Link>
           {isDutyManager && (
             <Link
               href="/settings"

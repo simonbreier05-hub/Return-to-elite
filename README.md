@@ -13,7 +13,7 @@ mock/local data.
 | Auth | Credentials login → signed JWT (httpOnly cookie), role-based |
 | Validation | Zod on every API boundary; RBAC + state machine enforced **server-side** |
 | UI | Tailwind CSS, tablet-first (large touch targets, iPad-landscape friendly) |
-| Tests | Vitest — state machine, permission rule, priority engine, assignment planner, day figures, offline queue (68 tests) |
+| Tests | Vitest — state machine, permission rule, priority engine, assignment planner, day figures, offline queue, handover (77 tests) |
 
 ## Quick start (SQLite, no Docker needed)
 
@@ -30,9 +30,11 @@ seeded user grouped by role and signs you in with **one tap, no password**. The
 header then carries a role switcher, so you can jump between supervisor,
 housekeeping and front office without signing out.
 
-Password sign-in still works (**all seeded passwords: `stayclean123`**), and the
-quick login is off in production unless `ALLOW_DEV_LOGIN=true` is set — see
-`.env.example`. Setting it on a public instance lets anyone sign in as the duty
+Password sign-in still works. **All seeded passwords are `123`**, and outside
+production the handle **`123` / `123`** signs in as the duty manager — handy on a
+tablet keyboard. Both the handle and the quick login are off in production unless
+`ALLOW_DEV_LOGIN=true` is set (see `.env.example`); there, only a real address is
+accepted. Setting that flag on a public instance lets anyone sign in as the duty
 manager, so use it only for a throwaway demo.
 
 | Email | Role |
@@ -228,6 +230,32 @@ supervisor can call in help instead of discovering it at 14:00.
 
 Every round explains itself in plain language ("14 rooms · 425 min predicted ·
 floor 3"), which is also what makes it defensible in a report.
+
+## Shift handover — the one place a language model is used
+
+`/supervisor/handover` writes the note the evening supervisor reads in thirty
+seconds: what needs a decision, which arrivals are at risk, what engineering
+still has open, which notes were left.
+
+It is built in two halves, and the split is the whole point:
+
+1. **`collectFacts.ts` counts.** Every number, room number and name is computed
+   in ordinary code from the board and the audit log.
+2. **`generate.ts` phrases.** It receives those facts and nothing else.
+
+Two writers sit behind one interface. Without an `ANTHROPIC_API_KEY` the
+**deterministic writer** runs — it is not a language model, is never labelled as
+one in the UI, costs nothing and gives the same text for the same board. Set the
+key and the **language model** takes over, given the same facts and told
+explicitly that it may not add any; if it is unreachable the deterministic
+writer answers instead, with a note saying so.
+
+A unit test extracts every digit from the generated prose and fails if one of
+them is not traceable to the facts. That is the guard against a handover
+inventing "room 412 is still blocked" — the evening supervisor would act on it.
+
+The UI carries an expandable "the facts behind this text" panel, so any sentence
+can be checked against the counted lines that produced it.
 
 ## Where AI belongs in this system — and where it does not
 
