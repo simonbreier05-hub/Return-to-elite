@@ -13,7 +13,7 @@ mock/local data.
 | Auth | Credentials login → signed JWT (httpOnly cookie), role-based |
 | Validation | Zod on every API boundary; RBAC + state machine enforced **server-side** |
 | UI | Tailwind CSS, tablet-first (large touch targets, iPad-landscape friendly) |
-| Tests | Vitest — state machine, permission rule, priority engine, assignment planner (47 tests) |
+| Tests | Vitest — state machine, permission rule, priority engine, assignment planner, day figures, offline queue (68 tests) |
 
 ## Quick start (SQLite, no Docker needed)
 
@@ -94,6 +94,35 @@ Covers:
 - **Priority engine** — each weighted signal, explainability invariant
   (score ≡ sum of reasons), and the `predictCleaningMinutes` baseline
 
+### Working offline
+
+Housekeeping wifi dies in stairwells and service lifts. Writes from the
+attendant view go through an offline queue (`src/lib/offline/actionQueue.ts`):
+on a network failure the tap is stored on the device, the card shows the new
+status immediately so nobody taps twice, and a bar reports what is waiting.
+Replay happens on reconnect, on a 15 s timer, or on demand.
+
+Order is preserved and the flush stops at the first undeliverable action — a
+room walks DIRTY → IN_PROGRESS → CLEAN and replaying that out of order would be
+refused by the state machine. Anything the server *answered* (403, 409, 400) is
+final: it is dropped with a message rather than retried forever.
+
+The queue covers taps, not page loads. Reloading while offline still needs the
+network; a service worker would be the next step.
+
+## Settings (duty manager)
+
+`/settings` — escalation thresholds and the **priority weights**. Every signal
+in the scoring engine has a weight the duty manager can tune, and setting one to
+`0` switches that signal off. A resort with heavy excursion traffic weighs that
+window differently to a city hotel living off early check-ins; that is a
+management decision, not a code change. Weights are stored in the `Setting`
+table under `priorityWeight.*`, unknown names are ignored, and anything unset
+falls back to the code default so a bad row cannot take scoring offline.
+
+Changes are audit-logged and show up in the attendants' "why?" breakdown, so a
+weight change is visible on the floor.
+
 ## Deployment on Railway
 
 The repo ships with `railway.json`, so Railway picks up the right build and
@@ -137,6 +166,12 @@ INSPECTED         → DIRTY (checkout / PMS event)
 Illegal transitions are rejected with **409**, role violations with **403** — both
 in `src/lib/stateMachine.ts`, enforced in `src/app/api/rooms/[id]/status/route.ts`,
 and every attempt (allowed or denied) is written to the `AuditLog` table.
+
+The board has a search across room number, section, guest and attendant, plus
+filters for status, floor and assignment; KPIs stay house-wide while the grid
+narrows. The release queue can be cleared in one action — each room still passes
+the same server-side checks individually via `applyStatusChange`, so a bulk
+release produces the same audit entries and PMS pushes as doing them one by one.
 
 **Board colors:** DIRTY red · IN_PROGRESS blue · CLEAN yellow · INSPECTED green ·
 BLOCKED purple · OOO/OOS grey (plus PICKUP orange, DEFECT amber, GREEN teal).

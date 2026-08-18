@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
-import { getSettings } from "@/lib/settings";
+import { getPriorityWeights, getSettings } from "@/lib/settings";
 import { computePriority } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 import { planAssignments } from "@/lib/assignment/planAssignments";
@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
   const opts = parsed.data ?? {};
 
   const settings = await getSettings();
+  const weights = await getPriorityWeights();
   const now = new Date();
 
   const attendants = await prisma.user.findMany({
@@ -84,6 +85,7 @@ export async function POST(req: NextRequest) {
         })),
         excursions: room.excursions.map((e) => ({ startsAt: e.startsAt, endsAt: e.endsAt })),
         blockedRecheckMinutes: settings.blockedRecheckMinutes,
+        weights,
       }
     ).score,
   }));

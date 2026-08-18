@@ -206,12 +206,22 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">Five floors · {rooms.length} keys</p>
         </div>
-        <Link
-          href="/supervisor/planning"
-          className="flex h-14 items-center rounded-xl bg-charcoal px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-espresso"
-        >
-          Morning planning →
-        </Link>
+        <div className="flex gap-2">
+          {isDutyManager && (
+            <Link
+              href="/settings"
+              className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+            >
+              Settings
+            </Link>
+          )}
+          <Link
+            href="/supervisor/planning"
+            className="flex h-14 items-center rounded-xl bg-charcoal px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-espresso"
+          >
+            Morning planning →
+          </Link>
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">

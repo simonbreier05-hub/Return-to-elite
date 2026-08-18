@@ -48,6 +48,14 @@ export interface PriorityContext {
   attendantFloor?: number | null;
   /** Escalation threshold for blocked-room aging, minutes. */
   blockedRecheckMinutes?: number;
+  /**
+   * House-specific weights, set by the duty manager. Only the values that
+   * differ need to be passed; anything omitted keeps the default. A resort
+   * with heavy excursion traffic weighs that window differently to a city
+   * hotel living off early check-ins, and that is a management decision, not
+   * a code change.
+   */
+  weights?: Partial<PriorityWeights>;
 }
 
 export interface PriorityReason {
@@ -60,6 +68,9 @@ export interface PriorityResult {
   score: number;
   reasons: PriorityReason[];
 }
+
+/** Mutable mirror of the defaults — the stored, per-house values are editable. */
+export type PriorityWeights = { -readonly [K in keyof typeof PRIORITY_WEIGHTS]: number };
 
 export const PRIORITY_WEIGHTS = {
   neededNow: 100,
@@ -82,7 +93,7 @@ const ACTIONABLE = new Set(["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"
 
 export function computePriority(room: PriorityRoomInput, ctx: PriorityContext): PriorityResult {
   const reasons: PriorityReason[] = [];
-  const W = PRIORITY_WEIGHTS;
+  const W: PriorityWeights = ctx.weights ? { ...PRIORITY_WEIGHTS, ...ctx.weights } : PRIORITY_WEIGHTS;
   const now = ctx.now.getTime();
 
   if (!ACTIONABLE.has(room.status)) {

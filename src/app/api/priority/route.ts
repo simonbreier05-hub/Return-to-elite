@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
-import { getSettings } from "@/lib/settings";
+import { getPriorityWeights, getSettings } from "@/lib/settings";
 import { computePriority } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
   }
 
   const settings = await getSettings();
+  const weights = await getPriorityWeights();
   const now = new Date();
   const rooms = await prisma.room.findMany({
     where: { status: { in: ["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"] } },
@@ -63,6 +64,7 @@ export async function GET(req: NextRequest) {
           attendantSection,
           attendantFloor,
           blockedRecheckMinutes: settings.blockedRecheckMinutes,
+          weights,
         }
       );
       const estimatedMinutes = predictCleaningMinutes(
