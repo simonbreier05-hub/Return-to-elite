@@ -1,9 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api } from "@/components/api";
+import { ApiError, NetworkError, api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
+import { useOfflineQueue } from "@/components/useOfflineQueue";
+import OfflineBar from "@/components/OfflineBar";
 import Modal from "@/components/Modal";
 import { STATUS_STYLES } from "@/components/status";
 import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
@@ -43,6 +45,7 @@ export default function AttendantView() {
   const [error, setError] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
+  const offline = useOfflineQueue();
 
   const loadRooms = useCallback(async () => {
     const data = await api<{ rooms: Room[] }>("/api/rooms?mine=1");
@@ -86,12 +89,28 @@ export default function AttendantView() {
     if (busyRoomId) return; // one tap at a time; prevents a double tap firing twice
     setBusyRoomId(room.id);
     setError(null);
+    const url = `/api/rooms/${room.id}/status`;
+    const body = { status, ...extra };
     try {
-      const res = await api<{ room: Room }>(`/api/rooms/${room.id}/status`, { body: { status, ...extra } });
+      const res = await api<{ room: Room }>(url, { body });
       setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
       refreshPrioritiesSoon();
     } catch (e) {
-      setError(`Room ${room.number}: ${(e as Error).message}`);
+      if (e instanceof NetworkError) {
+        // Dead spot. Keep the tap, show the new status locally, deliver later.
+        // The attendant carries on; the queue replays in order when signal
+        // returns, and the offline bar reports anything the server refuses.
+        offline.enqueue({ url, body, label: `Room ${room.number} · ${STATUS_LABELS[status]}` });
+        setRooms((prev) =>
+          prev.map((r) =>
+            r.id === room.id
+              ? { ...r, status, blockReason: status === "BLOCKED" ? String(extra.blockReason ?? "") : r.blockReason }
+              : r
+          )
+        );
+      } else {
+        setError(`Room ${room.number}: ${e instanceof ApiError ? e.message : String(e)}`);
+      }
     } finally {
       setBusyRoomId(null);
     }
@@ -135,6 +154,8 @@ export default function AttendantView() {
           {openCount} still to do · {done} of {rooms.length} released · most urgent floor first
         </p>
       </div>
+
+      <OfflineBar state={offline} />
 
       {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
