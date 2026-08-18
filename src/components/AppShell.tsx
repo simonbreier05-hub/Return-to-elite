@@ -98,7 +98,10 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="sticky top-0 z-40 bg-charcoal text-ivory shadow-lift">
+      {/* A slim garnet edge — the house's own accent, kept to this one line;
+          border rather than a second sticky element, so scrolling never
+          risks a gap or a stacking mismatch between the two. */}
+      <header className="sticky top-0 z-40 border-t-[3px] border-garnet-line bg-charcoal text-ivory shadow-lift">
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-baseline gap-4">
             <span className="font-serif text-[1.7rem] tracking-[0.06em] text-gold-soft">StayClean</span>

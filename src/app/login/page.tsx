@@ -73,7 +73,9 @@ export default function LoginPage() {
       <div className="w-full max-w-3xl">
         <div className="mb-8 text-center text-ivory">
           <h1 className="font-serif text-6xl tracking-[0.04em] text-gold-soft">StayClean</h1>
-          <div className="mx-auto my-4 h-px w-24 bg-gradient-to-r from-transparent via-gold-line to-transparent" />
+          {/* Garnet at the front door, gold everywhere else inside — the one
+              deliberate brand touch, kept to where a mark would sit anyway. */}
+          <div className="mx-auto my-4 h-px w-24 bg-gradient-to-r from-transparent via-garnet-line to-transparent" />
           <p className="text-[0.7rem] uppercase tracking-[0.32em] text-ivory/55">Housekeeping &amp; Room Release</p>
         </div>
 

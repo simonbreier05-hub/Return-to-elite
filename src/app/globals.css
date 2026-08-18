@@ -1,29 +1,44 @@
 @import "tailwindcss";
 
 /*
- * StayClean — visual language.
+ * StayClean — visual language, tuned to the house.
  *
- * Warm off-white paper, deep espresso ink and a muted brass accent: the
- * palette of a five-star property's printed collateral rather than a SaaS
- * dashboard. Status colours stay saturated on purpose — on a housekeeping
- * board they are information, not decoration, and must read across a corridor.
+ * This property occupies an 1889 former Dresdner Bank headquarters:
+ * repurposed bank vaults, original wood panelling, a stone entrance, and an
+ * interior kept deliberately elegant-minimalist rather than ornate. The
+ * palette below leans into that — deeper stone/marble neutrals, a near-black
+ * "vault" ink, warm antique brass, and a single restrained garnet accent
+ * echoing the house's red identity mark. Garnet is used sparingly and only
+ * in chrome (header, dividers, the odd highlight) — never on anything that
+ * doubles as operational signal.
+ *
+ * Status colours are a SEPARATE, functional system and stay untouched by any
+ * of this: DIRTY is red because the spec says DIRTY is red, and a supervisor
+ * reading the board at a glance must never wonder whether a red tile means
+ * "needs cleaning" or "brand accent". Decoration does not get to complicate
+ * an operational signal.
  */
 @theme {
-  --color-ivory: #f7f4ee;
-  --color-parchment: #ece5d8;
-  --color-linen: #fffdf9;
-  --color-charcoal: #1a1714;
-  --color-espresso: #2c2620;
-  --color-graphite: #4a4239;
-  --color-gold: #a8843c;
-  --color-gold-soft: #d8c194;
-  --color-gold-line: #c9ab6a;
+  --color-ivory: #f5f0e6;
+  --color-parchment: #e6dabd;
+  --color-linen: #fcfaf4;
+  --color-charcoal: #16130f;
+  --color-espresso: #2a1f17;
+  --color-graphite: #4a4033;
+  --color-gold: #a3763c;
+  --color-gold-soft: #d9bd86;
+  --color-gold-line: #c39a63;
+  /* A single deep garnet, the house's red identity mark restrained to
+     chrome-only use — see the note above. Never applied to a status tile,
+     a button that changes room state, or an error message. */
+  --color-garnet: #6b1f2b;
+  --color-garnet-line: #8a3341;
 
   --font-serif: var(--font-display), "Hoefler Text", Garamond, Georgia, serif;
   --font-sans: var(--font-body), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
 
-  --shadow-card: 0 1px 2px rgb(26 23 20 / 0.04), 0 8px 24px -12px rgb(26 23 20 / 0.18);
-  --shadow-lift: 0 2px 4px rgb(26 23 20 / 0.06), 0 18px 40px -16px rgb(26 23 20 / 0.28);
+  --shadow-card: 0 1px 2px rgb(22 19 15 / 0.05), 0 8px 24px -12px rgb(22 19 15 / 0.2);
+  --shadow-lift: 0 2px 4px rgb(22 19 15 / 0.07), 0 18px 40px -16px rgb(22 19 15 / 0.3);
 }
 
 html {
@@ -42,16 +57,24 @@ button {
   user-select: none;
 }
 
-/* A faint paper grain keeps large ivory areas from looking flat on a big
-   iPad screen, without costing an image request. */
+/* A faint stone grain keeps large ivory areas from looking flat on a big
+   iPad screen, without costing an image request — the marble-entrance cue
+   rather than plain paper. */
 body {
-  background-image: radial-gradient(circle at 1px 1px, rgb(26 23 20 / 0.022) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, rgb(22 19 15 / 0.026) 1px, transparent 0);
   background-size: 22px 22px;
 }
 
 /* Hairline rule used under section headings — the printed-menu detail. */
 .rule-gold {
   background: linear-gradient(90deg, var(--color-gold-line), transparent);
+  height: 1px;
+}
+
+/* The rarer garnet counterpart — reserved for the header top edge and the
+   login screen, the two places a brand mark would traditionally sit. */
+.rule-garnet {
+  background: linear-gradient(90deg, transparent, var(--color-garnet-line), transparent);
   height: 1px;
 }
 
