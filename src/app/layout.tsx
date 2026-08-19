@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 /**
@@ -23,6 +24,14 @@ const sans = Inter({
 export const metadata: Metadata = {
   title: "StayClean",
   description: "Real-time room cleaning & release for a 145-room luxury hotel",
+  manifest: "/manifest.json",
+  icons: {
+    icon: [
+      { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: "/icons/icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {
@@ -34,7 +43,23 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
-      <body className="min-h-screen bg-ivory text-charcoal antialiased">{children}</body>
+      <body className="min-h-screen bg-ivory text-charcoal antialiased">
+        {children}
+        {/* Registers the static-asset service worker (public/sw.js) after
+            the page is interactive. The Socket.IO connection and all
+            /api/** calls stay online-only — see public/sw.js for scope. */}
+        <Script id="register-sw" strategy="afterInteractive">
+          {`
+            if ('serviceWorker' in navigator) {
+              window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/sw.js').catch((err) => {
+                  console.error('[sw] registration failed:', err);
+                });
+              });
+            }
+          `}
+        </Script>
+      </body>
     </html>
   );
 }
