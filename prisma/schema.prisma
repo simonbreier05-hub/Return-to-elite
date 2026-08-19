@@ -53,6 +53,11 @@ model Room {
   baseCleanMinutes Int       @default(30) // baseline used by predictCleaningMinutes
   assignedToId     String?
   assignedTo       User?     @relation("RoomAssignee", fields: [assignedToId], references: [id])
+  // Position in the assigned attendant's running order ("Laufplan"), 0-based.
+  // Set when a plan is applied (priority/floor/section-driven default order)
+  // and freely reorderable afterwards by drag — see /api/rooms/reorder.
+  // Null for an unassigned room or one outside today's route.
+  routeOrder       Int?
   updatedAt        DateTime  @updatedAt
 
   notes      RoomNote[]

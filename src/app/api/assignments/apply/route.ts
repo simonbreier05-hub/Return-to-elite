@@ -50,9 +50,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "One or more rooms no longer exist." }, { status: 404 });
   }
 
+  // Per-room updates (not updateMany) because each room also gets its
+  // position in the attendant's running order — the plan's roomIds are
+  // already priority/floor/section-walked (see planAssignments), so that
+  // position becomes the attendant's starting Laufplan, freely
+  // reorderable afterwards via /api/rooms/reorder.
   await prisma.$transaction(
-    assignments.map((a) =>
-      prisma.room.updateMany({ where: { id: { in: a.roomIds } }, data: { assignedToId: a.attendantId } })
+    assignments.flatMap((a) =>
+      a.roomIds.map((roomId, index) =>
+        prisma.room.update({ where: { id: roomId }, data: { assignedToId: a.attendantId, routeOrder: index } })
+      )
     )
   );
 

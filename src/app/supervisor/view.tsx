@@ -6,6 +6,7 @@ import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
+import Collapsible from "@/components/Collapsible";
 import { STATUS_STYLES } from "@/components/status";
 import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type RoomStatus } from "@/lib/domain";
 
@@ -330,13 +331,18 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           </div>
 
           {byFloor.map(([floor, floorRooms]) => (
-            <div key={floor} className="mb-4">
-              <h3 className="mb-2 font-serif text-xl">
-                Floor {floor}
-                <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
-                  {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} released
-                </span>
-              </h3>
+            <Collapsible
+              key={`${floor}-${filtersActive}`}
+              defaultOpen={filtersActive}
+              summary={
+                <h3 className="font-serif text-xl">
+                  Floor {floor}
+                  <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
+                    {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} released
+                  </span>
+                </h3>
+              }
+            >
               <div className="grid grid-cols-[repeat(auto-fill,minmax(4.6rem,1fr))] gap-1.5">
                 {floorRooms.map((room) => {
                   const attHere = attendants.find((a) => a.currentRoomId === room.id);
@@ -365,7 +371,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                   );
                 })}
               </div>
-            </div>
+            </Collapsible>
           ))}
         </div>
 

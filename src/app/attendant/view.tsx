@@ -7,8 +7,11 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useOfflineQueue } from "@/components/useOfflineQueue";
 import OfflineBar from "@/components/OfflineBar";
 import Modal from "@/components/Modal";
+import Collapsible from "@/components/Collapsible";
+import DragReorderList from "@/components/DragReorderList";
 import { STATUS_STYLES } from "@/components/status";
 import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
+import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 
 interface Note {
   id: string;
@@ -28,6 +31,7 @@ interface Room {
   reworkNote?: string | null;
   blockReason?: string | null;
   isCheckoutToday: boolean;
+  routeOrder?: number | null;
   notes: Note[];
 }
 
@@ -145,6 +149,44 @@ export default function AttendantView() {
   const done = rooms.filter((r) => r.status === "INSPECTED").length;
   const openCount = rooms.filter((r) => ["DIRTY", "PICKUP", "BLOCKED"].includes(r.status)).length;
 
+  /**
+   * The Laufplan: every room actually worth a visit today (the same set the
+   * priority feed serves — a housekeeping-relevant room with a still-open
+   * status), in the order to walk them. A persisted routeOrder wins — it was
+   * either set when the morning plan was applied (priority + floor/section
+   * walking order, already calculated) or by a previous drag. Anything
+   * without one yet (assigned outside a plan, e.g. via the board) falls back
+   * to the same calculation, live.
+   */
+  const routeRooms = useMemo(() => {
+    const eligible = rooms.filter((r) => priorities[r.id]);
+    const ordered = eligible.filter((r) => r.routeOrder != null).sort((a, b) => a.routeOrder! - b.routeOrder!);
+    const unordered = defaultRouteOrder(
+      eligible
+        .filter((r) => r.routeOrder == null)
+        .map((r) => ({ id: r.id, number: r.number, floor: r.floor, section: r.section, priorityScore: priorities[r.id]?.score ?? 0 }))
+    );
+    const byId = new Map(eligible.map((r) => [r.id, r]));
+    return [...ordered.map((r) => r.id), ...unordered.map((r) => r.id)].map((id) => byId.get(id)!);
+  }, [rooms, priorities]);
+
+  const routeChunks = useMemo(() => chunkByFloor(routeRooms), [routeRooms]);
+  const routeLoad = routeLoadLabel(routeRooms.length);
+
+  /** One floor-chunk was locally reordered — splice it back into the full sequence and persist. */
+  const reorderChunk = async (chunkIndex: number, newChunkItems: Room[]) => {
+    const nextChunks = routeChunks.map((c, i) => (i === chunkIndex ? { ...c, items: newChunkItems } : c));
+    const newOrder = nextChunks.flatMap((c) => c.items).map((r) => r.id);
+    const orderIndex = new Map(newOrder.map((id, idx) => [id, idx]));
+    setRooms((prev) => prev.map((r) => (orderIndex.has(r.id) ? { ...r, routeOrder: orderIndex.get(r.id)! } : r)));
+    try {
+      await api("/api/rooms/reorder", { method: "PATCH", body: { roomIds: newOrder } });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not save the new order.");
+      loadRooms();
+    }
+  };
+
   return (
     <div className="animate-rise">
       <div className="mb-5">
@@ -159,15 +201,101 @@ export default function AttendantView() {
 
       {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
-      {floors.map(([floor, floorRooms]) => (
-      <section key={floor} className="mb-6">
-        <div className="mb-2 flex items-baseline gap-3">
-          <h3 className="font-serif text-2xl">Floor {floor}</h3>
-          <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-            {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} done
-          </span>
-          <div className="rule-gold ml-1 hidden flex-1 sm:block" />
-        </div>
+      {routeRooms.length > 0 && (
+        <Collapsible
+          defaultOpen
+          summary={
+            <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+              <h3 className="font-serif text-2xl">Recommended route</h3>
+              <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
+                {routeRooms.length} rooms today
+              </span>
+              <span
+                className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wider ${
+                  routeLoad === "heavy"
+                    ? "bg-red-100 text-red-800"
+                    : routeLoad === "typical"
+                      ? "bg-emerald-100 text-emerald-800"
+                      : "bg-parchment text-graphite/70"
+                }`}
+              >
+                {routeLoad === "heavy"
+                  ? `above the typical ${TYPICAL_DAILY_ROOMS.low}–${TYPICAL_DAILY_ROOMS.high}/day`
+                  : `typical day is ${TYPICAL_DAILY_ROOMS.low}–${TYPICAL_DAILY_ROOMS.high} rooms`}
+              </span>
+            </div>
+          }
+        >
+          <p className="mb-3 text-xs text-graphite/60">
+            Calculated from priority, floor & section, and everything that feeds it — drag the handle to reorder
+            within a floor. Numbers are the walking order.
+          </p>
+          <div className="space-y-2">
+            {routeChunks.map((chunk, chunkIdx) => {
+              const startIndex = routeChunks.slice(0, chunkIdx).reduce((n, c) => n + c.items.length, 0);
+              return (
+                <Collapsible
+                  key={`${chunk.floor}-${chunkIdx}`}
+                  defaultOpen={chunkIdx === 0}
+                  summary={
+                    <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
+                      Floor {chunk.floor} · stops {startIndex + 1}–{startIndex + chunk.items.length}
+                    </div>
+                  }
+                >
+                  <DragReorderList
+                    items={chunk.items}
+                    getId={(r) => r.id}
+                    onReorder={(next) => reorderChunk(chunkIdx, next)}
+                    className="space-y-1.5"
+                    renderItem={(room, i, handle) => {
+                      const style = STATUS_STYLES[room.status];
+                      const prio = priorities[room.id];
+                      return (
+                        <div className="flex items-center gap-2 rounded-lg border border-charcoal/10 bg-white px-2.5 py-2">
+                          <button
+                            {...handle}
+                            aria-label={`Drag to reorder room ${room.number}`}
+                            className="flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-graphite/40 hover:bg-parchment active:cursor-grabbing"
+                          >
+                            <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
+                              <circle cx="4" cy="3" r="1.3" /><circle cx="10" cy="3" r="1.3" />
+                              <circle cx="4" cy="7" r="1.3" /><circle cx="10" cy="7" r="1.3" />
+                              <circle cx="4" cy="11" r="1.3" /><circle cx="10" cy="11" r="1.3" />
+                            </svg>
+                          </button>
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-charcoal text-xs font-semibold text-ivory tabular-nums">
+                            {startIndex + i + 1}
+                          </span>
+                          <span className="font-serif text-lg">{room.number}</span>
+                          <span className={`ml-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
+                            {STATUS_LABELS[room.status]}
+                          </span>
+                          {prio && <span className="ml-auto text-xs text-graphite/50">priority {prio.score}</span>}
+                        </div>
+                      );
+                    }}
+                  />
+                </Collapsible>
+              );
+            })}
+          </div>
+        </Collapsible>
+      )}
+
+      {floors.map(([floor, floorRooms], floorIdx) => (
+      <Collapsible
+        key={floor}
+        defaultOpen={floorIdx === 0}
+        summary={
+          <div className="flex items-baseline gap-3">
+            <h3 className="font-serif text-2xl">Floor {floor}</h3>
+            <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
+              {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} done
+            </span>
+          </div>
+        }
+      >
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {floorRooms.map((room) => {
           const prio = priorities[room.id];
@@ -282,7 +410,7 @@ export default function AttendantView() {
           );
         })}
       </div>
-      </section>
+      </Collapsible>
       ))}
 
       {rooms.length === 0 && (

@@ -13,6 +13,7 @@ import type { Server as SocketIOServer } from "socket.io";
  *   workorder:update   { workOrder }            — engineering queue changes
  *   arrival:update     { arrival }              — front office arrivals board
  *   note:new           { note }                 — cross-department room notes
+ *   route:reordered    { attendantId, roomIds } — attendant's Laufplan reordered
  */
 
 declare global {

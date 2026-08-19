@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
+import Collapsible from "@/components/Collapsible";
 
 interface Attendant {
   id: string;
@@ -642,12 +643,17 @@ function AttendantCard({
         {assignment.roomCount} rooms · {departures} departures · {assignment.sections.join(", ")}
       </p>
 
-      <div className="mt-3 space-y-2">
-        {byFloor.map(([floor, list]) => (
-          <div key={floor}>
-            <div className="mb-1 text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-              Floor {floor} · {list.length} rooms
-            </div>
+      <div className="mt-3 space-y-1.5">
+        {byFloor.map(([floor, list], floorIdx) => (
+          <Collapsible
+            key={floor}
+            defaultOpen={floorIdx === 0}
+            summary={
+              <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
+                Floor {floor} · {list.length} rooms
+              </div>
+            }
+          >
             <div className="flex flex-wrap gap-1.5">
               {list.map(({ id, detail }) => (
                 <button
@@ -664,7 +670,7 @@ function AttendantCard({
                 </button>
               ))}
             </div>
-          </div>
+          </Collapsible>
         ))}
       </div>
 
