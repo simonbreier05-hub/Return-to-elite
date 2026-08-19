@@ -53,26 +53,71 @@ Jede UX-Entscheidung wird gegen diese 4 Kriterien geprüft:
 
 ## 5. UX-Backlog (priorisiert, Agenten arbeiten von oben nach unten ab)
 
+> **Stand 2026-08-19:** Die produktive Next.js-App (siehe `CLAUDE.md` und
+> `README.md`) ist inzwischen weit über diesen ursprünglichen Klick-Prototyp
+> hinausgewachsen — P0 und der Großteil von P1/P2 sind in echtem Code
+> umgesetzt, nicht nur als Prototyp. Der Rollen- und Statusraum ist dabei
+> größer geworden als in Abschnitt 3/4 beschrieben (6 Rollen statt 4, ein
+> 10-Status-Statemachine statt 4 Status — siehe `src/lib/domain.ts` /
+> `src/lib/stateMachine.ts`). Häkchen unten spiegeln den echten
+> Implementierungsstand, nicht den Prototyp-Stand.
+
 ### 🔴 P0 — Fundament (blockiert alles andere)
-- [ ] Wireframes für die 4 Core-Flows oben (Mobile: Cleaner-View, Desktop: Manager-Dashboard)
-- [ ] Design-System definieren (Farben für Status, Typografie, Spacing) — siehe frontend-design Skill
-- [ ] Klickbarer Prototyp Cleaner-View (Zimmerliste + Status-Update)
+- [x] Wireframes für die 4 Core-Flows oben (Mobile: Cleaner-View, Desktop: Manager-Dashboard)
+      — überholt durch die produktive App: `src/app/attendant/` (Cleaner) und
+      `src/app/supervisor/` (Manager-Dashboard)
+- [x] Design-System definieren (Farben für Status, Typografie, Spacing)
+      — `STATUS_COLORS`/`STATUS_LABELS` in `src/lib/domain.ts`, Tailwind-Setup,
+      siehe "Visual design" in `README.md` für die Farb-/Typo-Entscheidungen
+      am Haus (Vault-Ink, Brass, Garnet-Akzent)
+- [x] Klickbarer Prototyp Cleaner-View (Zimmerliste + Status-Update)
+      — ersetzt durch die echte, funktionale Attendant-View inkl. Offline-Queue
 
 ### 🟡 P1 — Kernfunktionen
 - [ ] Task-Detail-Ansicht (Checkliste pro Zimmertyp)
-- [ ] Foto-Upload-Flow (max. 2 Taps bis Kamera offen)
-- [ ] Manager-Dashboard Grid-View mit Live-Status
-- [ ] Supervisor Quality-Check-Flow
+      — **nicht umgesetzt.** Die App hat stattdessen freie `RoomNote`s und
+      strukturierte `Defect`-Meldungen pro Zimmer statt einer festen
+      Checkliste pro Zimmertyp; offen, ob eine Checkliste zusätzlich noch
+      gebraucht wird oder ob Notes/Defects den Bedarf abdecken
+- [x] Foto-Upload-Flow (max. 2 Taps bis Kamera offen)
+      — Foto ist Teil der Defect-Meldung (`POST /api/rooms/[id]/defects`,
+      multipart, optional, max. 8 MB, abgelegt unter `public/uploads`);
+      Foto ist bewusst **optional**, siehe Anti-Pattern in Abschnitt 6
+- [x] Manager-Dashboard Grid-View mit Live-Status
+      — Supervisor-Board mit Etagen-/Sektions-Grid, Suche, Filtern, KPIs,
+      Live-Updates per Socket.IO (`src/app/supervisor/view.tsx`)
+- [~] Supervisor Quality-Check-Flow
+      — teilweise: `INSPECTED` (Freigabe) / `PICKUP` (Nacharbeit mit Notiz)
+      sind umgesetzt und rollenscharf erzwungen (`checkTransition`), aber
+      **kein** dediziertes Foto+Pass/Fail-UI wie ursprünglich hier skizziert
+      — die Quality-Gate-Logik läuft heute über Statuswechsel + Notiz
 
 ### 🟢 P2 — Effizienz-Features
-- [ ] Auto-Zuweisung nach Verfügbarkeit/Nähe
-- [ ] Push-Benachrichtigungen (nur kritische: überfällige Zimmer)
-- [ ] Offline-Modus (Hotels haben oft schlechtes WLAN in Fluren)
+- [x] Auto-Zuweisung nach Verfügbarkeit/Nähe
+      — `src/lib/assignment/planAssignments.ts`: deterministischer
+      Round-Planer (zusammenhängende Blöcke nach Etage/Sektion/Zimmernummer,
+      gewichtet nach vorhergesagten Reinigungsminuten), `/supervisor/planning`
+- [~] Push-Benachrichtigungen (nur kritische: überfällige Zimmer)
+      — teilweise: In-App-Echtzeit-Alerts (kritisch/warnung/info) über
+      Socket.IO + `Notification`-Tabelle und den 60s-Eskalations-Ticker
+      (BLOCKED-Recheck, Welfare-Check, ETA-at-risk, Release-Queue-Backlog)
+      sind da; **echte Browser-/Mobile-Push** (Service Worker, Web Push)
+      fehlt noch — die App muss offen sein, um Alerts zu sehen
+- [x] Offline-Modus (Hotels haben oft schlechtes WLAN in Fluren)
+      — `src/lib/offline/actionQueue.ts`, unit-getestet
+      (`tests/offlineQueue.test.ts`); deckt Taps ab, nicht Seitenladungen im
+      Offline-Zustand (ein Service Worker wäre der nächste Schritt dafür)
 
 ### ⚪ P3 — Später
 - [ ] Mehrsprachigkeit (Housekeeping-Teams oft international)
+      — **nicht umgesetzt.** UI ist durchgängig Englisch, kein i18n-Framework
+      eingebunden
 - [ ] Analytics/Reporting für Management
+      — **nicht umgesetzt** im Sinne einer aggregierten Auswertung. Es gibt
+      einen rohen Audit-Trail (`GET /api/audit`, supervisor/DM), aber kein
+      Reporting/Analytics-Dashboard darüber
 - [ ] Gäste-Self-Service
+      — **nicht umgesetzt**, keine Gast-Rolle/kein Gast-Flow vorhanden
 
 ---
 
@@ -92,3 +137,4 @@ Jede UX-Entscheidung wird gegen diese 4 Kriterien geprüft:
 |---|---|---|
 | — | Initiales PRD erstellt | P0: Wireframes + Prototyp |
 | 2026-08-19 | PRD-Dokument ins Repo übernommen (`docs/PRD_und_Backlog.md`); CLAUDE.md verweist jetzt darauf und verlangt einen Session-Log-Eintrag pro Session | P0-Backlog abarbeiten: Wireframes für die 4 Core-Flows, Design-System, klickbarer Cleaner-View-Prototyp — Hinweis: die produktive Next.js-App (siehe Haupt-CLAUDE.md) hat P0/P1 inhaltlich bereits überholt, P3-Punkte (Mehrsprachigkeit, Analytics, Gäste-Self-Service) bleiben offen |
+| 2026-08-19 | Backlog (Abschnitt 5) auf echten Implementierungsstand abgeglichen: P0 komplett erledigt (echte App statt Prototyp), P1 größtenteils erledigt (Quality-Check-Flow nur teilweise wie ursprünglich skizziert, Zimmertyp-Checkliste fehlt), P2 größtenteils erledigt (echte Browser-/Mobile-Push fehlt noch, In-App-Alerts + Eskalationen sind da) | P3 ist der noch offene Rest: Mehrsprachigkeit (i18n), aggregiertes Analytics/Reporting über den Audit-Trail hinaus, Gäste-Self-Service — plus die im P1-Abschnitt offene Frage, ob eine feste Zimmertyp-Checkliste zusätzlich zu Notes/Defects gebraucht wird |
