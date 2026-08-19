@@ -6,6 +6,7 @@ import { getPriorityWeights, getSettings } from "@/lib/settings";
 import { computePriority } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 import { planAssignments } from "@/lib/assignment/planAssignments";
+import { isHousekeepingRelevant } from "@/lib/rooms/isHousekeepingRelevant";
 import {
   checkDayFigures,
   classifyDepartures,
@@ -95,6 +96,7 @@ export async function POST(req: NextRequest) {
   const classifiable = scored.map(({ room, priorityScore }) => ({
     id: room.id,
     number: room.number,
+    status: room.status,
     isCheckoutToday: room.isCheckoutToday,
     occupancy: room.occupancy,
     priorityScore,
@@ -103,26 +105,31 @@ export async function POST(req: NextRequest) {
   const defaults = defaultDayFigures(classifiable, expectedArrivals);
   const figures = opts.dayFigures ?? defaults;
 
-  // Only rooms that still need an attendant can be planned as departure cleans.
-  const workRooms = classifiable.filter((r) => NEEDS_WORK.has(scored.find((s) => s.room.id === r.id)!.room.status));
+  // Only rooms that still need an attendant, AND that a current or departing
+  // guest actually makes relevant, can be planned. A vacant room nobody is
+  // staying in or checking out of today never enters the work pool — see
+  // isHousekeepingRelevant for why this is a single shared gate.
+  const workRooms = classifiable.filter((r) => NEEDS_WORK.has(r.status) && isHousekeepingRelevant(r));
   const departureIds = classifyDepartures(workRooms, figures.departures);
   const warnings = checkDayFigures(figures, rooms.length, workRooms.length);
 
   // A departure clean is substantially longer than stayover service, so the
   // split the supervisor entered is what actually moves the workload.
-  const assignable = scored.map(({ room, priorityScore }) => ({
-    id: room.id,
-    number: room.number,
-    floor: room.floor,
-    section: room.section,
-    status: room.status,
-    isDeparture: departureIds.has(room.id),
-    estimatedMinutes: predictCleaningMinutes(
-      { type: room.type, isCheckoutToday: departureIds.has(room.id), baseCleanMinutes: room.baseCleanMinutes },
-      { stayLengthNights: 2 }
-    ),
-    priorityScore,
-  }));
+  const assignable = scored
+    .filter(({ room }) => isHousekeepingRelevant(room))
+    .map(({ room, priorityScore }) => ({
+      id: room.id,
+      number: room.number,
+      floor: room.floor,
+      section: room.section,
+      status: room.status,
+      isDeparture: departureIds.has(room.id),
+      estimatedMinutes: predictCleaningMinutes(
+        { type: room.type, isCheckoutToday: departureIds.has(room.id), baseCleanMinutes: room.baseCleanMinutes },
+        { stayLengthNights: 2 }
+      ),
+      priorityScore,
+    }));
 
   const plan = planAssignments(
     assignable,

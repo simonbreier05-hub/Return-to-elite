@@ -36,7 +36,14 @@ export async function GET(req: NextRequest) {
   const weights = await getPriorityWeights();
   const now = new Date();
   const rooms = await prisma.room.findMany({
-    where: { status: { in: ["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"] } },
+    where: {
+      status: { in: ["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"] },
+      // Only a current guest's room or a same-day departure is actually
+      // relevant to clean — mirrors isHousekeepingRelevant. A vacant room
+      // with nobody staying and nobody checking out never feeds the
+      // priority list, even if its status was left dirty from before.
+      OR: [{ occupancy: "OCCUPIED" }, { isCheckoutToday: true }],
+    },
     include: {
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: now } } },

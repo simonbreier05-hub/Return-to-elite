@@ -7,10 +7,14 @@
  * repurposed bank vaults, original wood panelling, a stone entrance, and an
  * interior kept deliberately elegant-minimalist rather than ornate. The
  * palette below leans into that — deeper stone/marble neutrals, a near-black
- * "vault" ink, warm antique brass, and a single restrained garnet accent
- * echoing the house's red identity mark. Garnet is used sparingly and only
- * in chrome (header, dividers, the odd highlight) — never on anything that
- * doubles as operational signal.
+ * "vault" ink, warm antique brass, and a single restrained navy accent
+ * echoing the house's current mark. The house is independent today and is
+ * slated to join Four Seasons within the year; the accent is therefore a
+ * generic, well-reasoned "luxury hospitality" navy — never a copy of any
+ * real chain's protected brand colours — so it reads as elegant now and
+ * won't need excusing later. Navy is used sparingly and only in chrome
+ * (header, dividers, the odd highlight) — never on anything that doubles as
+ * operational signal.
  *
  * Status colours are a SEPARATE, functional system and stay untouched by any
  * of this: DIRTY is red because the spec says DIRTY is red, and a supervisor
@@ -28,11 +32,11 @@
   --color-gold: #a3763c;
   --color-gold-soft: #d9bd86;
   --color-gold-line: #c39a63;
-  /* A single deep garnet, the house's red identity mark restrained to
+  /* A single deep navy, the house's own identity mark restrained to
      chrome-only use — see the note above. Never applied to a status tile,
      a button that changes room state, or an error message. */
-  --color-garnet: #6b1f2b;
-  --color-garnet-line: #8a3341;
+  --color-navy: #16283f;
+  --color-navy-line: #3a6ea8;
 
   --font-serif: var(--font-display), "Hoefler Text", Garamond, Georgia, serif;
   --font-sans: var(--font-body), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
@@ -71,10 +75,10 @@ body {
   height: 1px;
 }
 
-/* The rarer garnet counterpart — reserved for the header top edge and the
+/* The rarer navy counterpart — reserved for the header top edge and the
    login screen, the two places a brand mark would traditionally sit. */
-.rule-garnet {
-  background: linear-gradient(90deg, transparent, var(--color-garnet-line), transparent);
+.rule-navy {
+  background: linear-gradient(90deg, transparent, var(--color-navy-line), transparent);
   height: 1px;
 }
 

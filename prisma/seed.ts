@@ -1,10 +1,12 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { roomNumbersForFloor } from "../src/lib/domain";
+import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
 
 /**
  * Seed: one user per role, ten room attendants, 145 rooms across
- * 5 floors with sections & types, demo arrivals/excursions/defects so every
- * view has something to show on first login.
+ * 5 floors (101–530) with sections & types, demo arrivals/excursions/defects
+ * so every view has something to show on first login.
  *
  * All demo passwords: 123
  */
@@ -85,12 +87,25 @@ async function main() {
     CLASSIC: 25, SUPERIOR: 28, DELUXE: 32, JUNIOR_SUITE: 40, SUITE: 55, PENTHOUSE: 80,
   };
 
+  // A snapshot of mid-morning: the team started low and is working its way
+  // up, so floor 1 is largely released while floor 5 has not been touched.
+  // Without this every tile is red and the board shows nothing. This only
+  // ever applies to rooms housekeeping actually has reason to touch today —
+  // see isHousekeepingRelevant below.
+  const progression: Record<number, string[]> = {
+    1: ["INSPECTED", "INSPECTED", "INSPECTED", "INSPECTED", "CLEAN", "DIRTY"],
+    2: ["INSPECTED", "INSPECTED", "CLEAN", "IN_PROGRESS", "DIRTY", "DIRTY"],
+    3: ["INSPECTED", "CLEAN", "IN_PROGRESS", "DIRTY", "DIRTY", "DIRTY"],
+    4: ["IN_PROGRESS", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
+    5: ["DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
+  };
+
   const roomIds: { id: string; number: string; floor: number; section: string }[] = [];
   let count = 0;
-  for (let floor = 1; floor <= 5; floor++) {
-    const roomsOnFloor = 29;
-    for (let i = 1; i <= roomsOnFloor; i++) {
-      const number = `${floor}${String(i).padStart(2, "0")}`;
+  for (const floor of [1, 2, 3, 4, 5]) {
+    const numbers = roomNumbersForFloor(floor);
+    for (const [idx, number] of numbers.entries()) {
+      const i = idx + 1; // 1-based position on the floor, not the literal room number
       const section = `${floor}${i <= 15 ? "A" : "B"}`;
       const type = typeFor(floor, i);
       count++;
@@ -99,18 +114,15 @@ async function main() {
       const checkout = count % 4 === 0;
       const assignee = attendants[(floor + i) % attendants.length];
 
-      // A snapshot of mid-morning: the team started low and is working its way
-      // up, so floor 1 is largely released while floor 5 has not been touched.
-      // Without this every tile is red and the board shows nothing.
-      const progression: Record<number, string[]> = {
-        1: ["INSPECTED", "INSPECTED", "INSPECTED", "INSPECTED", "CLEAN", "DIRTY"],
-        2: ["INSPECTED", "INSPECTED", "CLEAN", "IN_PROGRESS", "DIRTY", "DIRTY"],
-        3: ["INSPECTED", "CLEAN", "IN_PROGRESS", "DIRTY", "DIRTY", "DIRTY"],
-        4: ["IN_PROGRESS", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
-        5: ["DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
-      };
-      const status = progression[floor][i % progression[floor].length];
-      const minutesAgo = status === "DIRTY" ? 0 : 10 + ((i * 7) % 90);
+      // Only a current guest's room (stayover) or a same-day departure is in
+      // scope for housekeeping — a vacant room with nobody arriving today is
+      // simply released and gets no attention, not an arbitrary status.
+      const occupancy = occupied && !checkout ? "OCCUPIED" : "VACANT";
+      const relevant = isHousekeepingRelevant({ occupancy, isCheckoutToday: checkout });
+      const status = relevant ? progression[floor][i % progression[floor].length] : "INSPECTED";
+      const minutesAgo = relevant
+        ? status === "DIRTY" ? 0 : 10 + ((i * 7) % 90)
+        : 240 + ((i * 11) % 600); // released a while ago, nothing pending
 
       const room = await prisma.room.create({
         data: {
@@ -120,7 +132,7 @@ async function main() {
           type,
           status,
           statusSince: new Date(Date.now() - minutesAgo * 60_000),
-          occupancy: occupied && !checkout ? "OCCUPIED" : "VACANT",
+          occupancy,
           isCheckoutToday: checkout,
           baseCleanMinutes: baseMinutes[type],
           assignedToId: assignee.id,
@@ -135,27 +147,54 @@ async function main() {
   const now = Date.now();
   const at = (minFromNow: number) => new Date(now + minFromNow * 60_000);
 
-  // A few rooms in interesting states for the demo
-  await prisma.room.update({ where: { number: "204" }, data: { status: "IN_PROGRESS", statusSince: at(-15) } });
-  await prisma.room.update({ where: { number: "205" }, data: { status: "CLEAN", statusSince: at(-30) } });
-  await prisma.room.update({ where: { number: "206" }, data: { status: "CLEAN", statusSince: at(-50) } });
+  // A few rooms in interesting states for the demo. Each override also pins
+  // occupancy/isCheckoutToday so the forced status stays consistent with
+  // isHousekeepingRelevant — a BLOCKED or PICKUP room implies a guest is
+  // actually there, a CLEAN room being prepped for a later arrival implies
+  // today's departure already happened.
+  await prisma.room.update({
+    where: { number: "204" },
+    data: { status: "IN_PROGRESS", statusSince: at(-15), occupancy: "OCCUPIED", isCheckoutToday: false },
+  });
+  // 205 / 206 are being turned around for the arrivals seeded below —
+  // today's departure clean, guest not there yet.
+  await prisma.room.update({
+    where: { number: "205" },
+    data: { status: "CLEAN", statusSince: at(-30), occupancy: "VACANT", isCheckoutToday: true },
+  });
+  await prisma.room.update({
+    where: { number: "206" },
+    data: { status: "CLEAN", statusSince: at(-50), occupancy: "VACANT", isCheckoutToday: true },
+  });
   await prisma.room.update({ where: { number: "301" }, data: { status: "INSPECTED", statusSince: at(-60) } });
   await prisma.room.update({
     where: { number: "302" },
-    data: { status: "BLOCKED", blockReason: "DND", blockedSince: at(-45), statusSince: at(-45) },
+    data: {
+      status: "BLOCKED", blockReason: "DND", blockedSince: at(-45), statusSince: at(-45),
+      occupancy: "OCCUPIED", isCheckoutToday: false,
+    },
   });
   await prisma.room.update({
     where: { number: "410" },
-    data: { status: "BLOCKED", blockReason: "DOUBLE_LOCKED", blockedSince: at(-10), statusSince: at(-10) },
+    data: {
+      status: "BLOCKED", blockReason: "DOUBLE_LOCKED", blockedSince: at(-10), statusSince: at(-10),
+      occupancy: "OCCUPIED", isCheckoutToday: false,
+    },
   });
   await prisma.room.update({
     where: { number: "512" },
     data: { status: "OUT_OF_ORDER", oooUntil: at(60 * 24 * 3), statusSince: at(-60 * 24) },
   });
-  await prisma.room.update({ where: { number: "108" }, data: { status: "GREEN_OPT_OUT", statusSince: at(-120) } });
+  await prisma.room.update({
+    where: { number: "108" },
+    data: { status: "GREEN_OPT_OUT", statusSince: at(-120), occupancy: "OCCUPIED", isCheckoutToday: false },
+  });
   await prisma.room.update({
     where: { number: "515" },
-    data: { status: "PICKUP", reworkNote: "Bathroom mirror streaky, minibar not restocked.", statusSince: at(-20) },
+    data: {
+      status: "PICKUP", reworkNote: "Bathroom mirror streaky, minibar not restocked.", statusSince: at(-20),
+      occupancy: "OCCUPIED", isCheckoutToday: false,
+    },
   });
 
   // Attendant live location demo

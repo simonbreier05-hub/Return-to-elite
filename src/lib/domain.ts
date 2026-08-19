@@ -72,6 +72,23 @@ export const HOTEL = {
   sectionSplit: 15,
 } as const;
 
+/**
+ * Room numbers for a floor, low to high. Every floor carries
+ * `HOTEL.roomsPerFloor` rooms, numbered `{floor}01`…, with one exception:
+ * floor 5 skips "513" (the common hotel superstition skip, same idea as a
+ * lift with no 13th-floor button) so the top floor still runs up to room
+ * "530" instead of stopping at "529" — matching how the house is actually
+ * numbered, door to door.
+ */
+export function roomNumbersForFloor(floor: number): string[] {
+  const numbers: string[] = [];
+  for (let i = 1; numbers.length < HOTEL.roomsPerFloor; i++) {
+    if (floor === 5 && i === 13) continue;
+    numbers.push(`${floor}${String(i).padStart(2, "0")}`);
+  }
+  return numbers;
+}
+
 export const DEFECT_CATEGORIES = [
   "PLUMBING",
   "ELECTRICAL",

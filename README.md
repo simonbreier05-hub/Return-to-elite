@@ -162,25 +162,23 @@ Postgres service, which the Railway scripts above already target.
 
 The property occupies an 1889 former Dresdner Bank headquarters: repurposed
 bank vaults, original wood panelling, a stone entrance, and an
-elegant-minimalist interior (Tommaso Ziffer / Olga Polizzi) rather than an
-ornate one. The palette leans into that: deeper stone and marble neutrals, a
+elegant-minimalist interior rather than an ornate one. The house is
+independent today and is slated to join Four Seasons within the year, so the
+palette is deliberately a generic, well-reasoned "five-star luxury" language
+rather than any one chain's identity — deeper stone and marble neutrals, a
 near-black "vault" ink for the header and primary text, warm antique brass
-for interactive chrome, and one restrained garnet accent — echoing the
-house's own red identity mark — kept to exactly two places: the header's top
-edge and the login screen's divider, the two spots a mark would traditionally
-sit.
-
-This session could not fetch the live hotelberlin/roccofortehotels pages
-directly — those domains sit outside this environment's network policy — so
-the palette is built from well-corroborated public descriptions of the
-building and interior (not a pixel copy of the site) rather than exact brand
-hex values.
+for interactive chrome, and one restrained navy accent — the house's own
+current mark — kept to exactly two places: the header's top edge and the
+login screen's divider, the two spots a mark would traditionally sit. It is
+not, and must never become, a copy of any real chain's protected brand
+colours (previously Rocco Forte's red, and — as the house transitions —
+Four Seasons' own identity).
 
 **The status-tile colours are untouched by any of this.** DIRTY is red,
 IN_PROGRESS is blue, BLOCKED is purple because the spec says so — that
 system is operational signal, not brand chrome, and a supervisor reading the
 board at a glance must never wonder whether a red tile means "needs
-cleaning" or "brand accent". Garnet never appears on a status tile, a
+cleaning" or "brand accent". Navy never appears on a status tile, a
 room-status button, or an error message.
 
 ## Room state machine
