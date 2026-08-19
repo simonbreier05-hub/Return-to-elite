@@ -17,6 +17,19 @@ system is built around: **only `supervisor`/`duty_manager` may set
 `INSPECTED`** (release a room as sellable to the PMS) — `front_office` and
 `concierge` cannot change housekeeping status at all.
 
+## Product backlog & session log
+
+**`docs/PRD_und_Backlog.md`** is the source of truth for product scope and
+priority — read it before picking up work, not just this file. It holds the
+product vision, the 4 North Star UX criteria, the prioritized UX backlog
+(P0–P3), and the anti-patterns list (no feature overload on the cleaner
+view, no required fields that block a task, no cleaner logins/passwords).
+
+**Every session must add a row to that document's Session-Log (section 7)**
+before finishing: what was implemented and what the next step is. That log
+is how one session hands off to the next without a human re-briefing it —
+don't skip it even for a small change.
+
 ## Commands
 
 ```bash
