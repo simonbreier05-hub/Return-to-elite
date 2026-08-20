@@ -9,9 +9,13 @@ import OfflineBar from "@/components/OfflineBar";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
 import DragReorderList from "@/components/DragReorderList";
+import PriorityBanner from "@/components/PriorityBanner";
+import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES } from "@/components/status";
-import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
+import { BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { TKey } from "@/lib/i18n/translations";
 
 interface Note {
   id: string;
@@ -43,6 +47,7 @@ interface Priority {
 }
 
 export default function AttendantView() {
+  const { t } = useLocale();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [priorities, setPriorities] = useState<Record<string, Priority>>({});
   const [modal, setModal] = useState<{ kind: "block" | "defect" | "note"; room: Room } | null>(null);
@@ -104,7 +109,7 @@ export default function AttendantView() {
         // Dead spot. Keep the tap, show the new status locally, deliver later.
         // The attendant carries on; the queue replays in order when signal
         // returns, and the offline bar reports anything the server refuses.
-        offline.enqueue({ url, body, label: `Room ${room.number} · ${STATUS_LABELS[status]}` });
+        offline.enqueue({ url, body, label: `${room.number} · ${t(`status.${status}` as TKey)}` });
         setRooms((prev) =>
           prev.map((r) =>
             r.id === room.id
@@ -113,7 +118,7 @@ export default function AttendantView() {
           )
         );
       } else {
-        setError(`Room ${room.number}: ${e instanceof ApiError ? e.message : String(e)}`);
+        setError(`${room.number}: ${e instanceof ApiError ? e.message : String(e)}`);
       }
     } finally {
       setBusyRoomId(null);
@@ -148,6 +153,23 @@ export default function AttendantView() {
 
   const done = rooms.filter((r) => r.status === "INSPECTED").length;
   const openCount = rooms.filter((r) => ["DIRTY", "PICKUP", "BLOCKED"].includes(r.status)).length;
+
+  /**
+   * "What's important now": rooms a guest or front office is actively
+   * waiting on (needed-now / VIP), and BLOCKED rooms that have aged past at
+   * least one re-check interval — both drawn straight from the same
+   * explainable priority signals the "why?" panel already shows, so the
+   * banner and the per-room reasoning never disagree with each other.
+   */
+  const urgentCount = useMemo(
+    () => rooms.filter((r) => priorities[r.id]?.reasons.some((rs) => rs.signal === "needed_now" || rs.signal === "vip")).length,
+    [rooms, priorities]
+  );
+  const agingBlockedCount = useMemo(
+    () =>
+      rooms.filter((r) => r.status === "BLOCKED" && priorities[r.id]?.reasons.some((rs) => rs.signal === "blocked_age")).length,
+    [rooms, priorities]
+  );
 
   /**
    * The Laufplan: every room actually worth a visit today (the same set the
@@ -190,12 +212,20 @@ export default function AttendantView() {
   return (
     <div className="animate-rise">
       <div className="mb-5">
-        <h2 className="font-serif text-4xl leading-none">My Rooms</h2>
+        <h2 className="font-serif text-4xl leading-none">{t("attendant.myRooms")}</h2>
         <div className="rule-gold my-2 w-40" />
         <p className="text-sm text-graphite/70">
-          {openCount} still to do · {done} of {rooms.length} released · most urgent floor first
+          {t("attendant.stillToDo", { count: openCount })} · {t("attendant.releasedOfTotal", { done, total: rooms.length })} ·{" "}
+          {t("attendant.mostUrgentFirst")}
         </p>
       </div>
+
+      <PriorityBanner
+        items={[
+          { count: urgentCount, label: t("priority.urgentRooms"), icon: "warning", tone: "urgent" },
+          { count: agingBlockedCount, label: t("priority.blockedNeedsRecheck"), icon: "ban", tone: "urgent" },
+        ]}
+      />
 
       <OfflineBar state={offline} />
 
@@ -210,9 +240,9 @@ export default function AttendantView() {
           defaultOpen
           summary={
             <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <h3 className="font-serif text-2xl">Recommended route</h3>
+              <h3 className="font-serif text-2xl">{t("attendant.recommendedRoute")}</h3>
               <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-                {routeRooms.length} rooms today
+                {t("attendant.roomsToday", { count: routeRooms.length })}
               </span>
               <span
                 className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wider ${
@@ -224,16 +254,13 @@ export default function AttendantView() {
                 }`}
               >
                 {routeLoad === "heavy"
-                  ? `above the typical ${TYPICAL_DAILY_ROOMS.low}–${TYPICAL_DAILY_ROOMS.high}/day`
-                  : `typical day is ${TYPICAL_DAILY_ROOMS.low}–${TYPICAL_DAILY_ROOMS.high} rooms`}
+                  ? t("attendant.aboveTypical", { low: TYPICAL_DAILY_ROOMS.low, high: TYPICAL_DAILY_ROOMS.high })
+                  : t("attendant.typicalDay", { low: TYPICAL_DAILY_ROOMS.low, high: TYPICAL_DAILY_ROOMS.high })}
               </span>
             </div>
           }
         >
-          <p className="mb-3 text-xs text-graphite/60">
-            Calculated from priority, floor & section, and everything that feeds it — drag the handle to reorder
-            within a floor. Numbers are the walking order.
-          </p>
+          <p className="mb-3 text-xs text-graphite/60">{t("attendant.routeExplain")}</p>
           <div className="space-y-2">
             {routeChunks.map((chunk, chunkIdx) => {
               const startIndex = routeChunks.slice(0, chunkIdx).reduce((n, c) => n + c.items.length, 0);
@@ -243,7 +270,7 @@ export default function AttendantView() {
                   defaultOpen={chunkIdx === 0}
                   summary={
                     <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-                      Floor {chunk.floor} · stops {startIndex + 1}–{startIndex + chunk.items.length}
+                      {t("attendant.floorStops", { floor: chunk.floor, from: startIndex + 1, to: startIndex + chunk.items.length })}
                     </div>
                   }
                 >
@@ -259,7 +286,7 @@ export default function AttendantView() {
                         <div className="flex items-center gap-2 rounded-lg border border-charcoal/10 bg-white px-2.5 py-2">
                           <button
                             {...handle}
-                            aria-label={`Drag to reorder room ${room.number}`}
+                            aria-label={t("attendant.dragToReorder", { number: room.number })}
                             className="flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-graphite/40 hover:bg-parchment active:cursor-grabbing"
                           >
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
@@ -272,10 +299,11 @@ export default function AttendantView() {
                             {startIndex + i + 1}
                           </span>
                           <span className="font-serif text-lg">{room.number}</span>
-                          <span className={`ml-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
-                            {STATUS_LABELS[room.status]}
+                          <span className={`ml-1 flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
+                            <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
+                            {t(`status.${room.status}` as TKey)}
                           </span>
-                          {prio && <span className="ml-auto text-xs text-graphite/50">priority {prio.score}</span>}
+                          {prio && <span className="ml-auto text-xs text-graphite/50">{prio.score}</span>}
                         </div>
                       );
                     }}
@@ -288,138 +316,38 @@ export default function AttendantView() {
       )}
 
       {floors.map(([floor, floorRooms], floorIdx) => (
-      <Collapsible
-        key={floor}
-        defaultOpen={floorIdx === 0}
-        summary={
-          <div className="flex items-baseline gap-3">
-            <h3 className="font-serif text-2xl">Floor {floor}</h3>
-            <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-              {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} done
-            </span>
-          </div>
-        }
-      >
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {floorRooms.map((room) => {
-          const prio = priorities[room.id];
-          const style = STATUS_STYLES[room.status];
-          const busy = busyRoomId === room.id;
-          return (
-            <div
-              key={room.id}
-              className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm transition ${busy ? "opacity-60" : ""}`}
-            >
-              <div className="mb-2 flex items-start justify-between">
-                <div>
-                  <span className="font-serif text-3xl">{room.number}</span>
-                  <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
-                    {room.type.replace(/_/g, " ")}
-                    {room.isCheckoutToday && " · due-out"}
-                  </span>
-                </div>
-                <span className={`rounded-full border px-3 py-1 text-xs font-medium ${style.chip}`}>
-                  {STATUS_LABELS[room.status]}
-                </span>
-              </div>
-
-              {prio && prio.score > 0 && (
-                <button
-                  onClick={() => setWhyOpen(whyOpen === room.id ? null : room.id)}
-                  className="mb-2 flex w-full items-center justify-between rounded-lg bg-parchment px-3 py-2 text-left text-sm"
-                >
-                  <span>
-                    Priority <strong>{prio.score}</strong> · ~{prio.estimatedMinutes} min
-                  </span>
-                  <span className="text-gold">{whyOpen === room.id ? "hide why ▲" : "why? ▼"}</span>
-                </button>
-              )}
-              {whyOpen === room.id && prio && (
-                <ul className="mb-2 space-y-1 rounded-lg border border-gold/30 bg-ivory p-3 text-xs text-graphite">
-                  {prio.reasons.map((r, i) => (
-                    <li key={i}>
-                      <span className="font-semibold text-gold">+{r.points}</span> {r.reason}
-                    </li>
-                  ))}
-                </ul>
-              )}
-
-              {room.status === "PICKUP" && room.reworkNote && (
-                <div className="mb-2 rounded-lg border border-status-pickup/30 bg-status-pickup/10 p-2 text-sm text-status-pickup">
-                  <strong>Rework:</strong> {room.reworkNote}
-                </div>
-              )}
-              {room.status === "BLOCKED" && (
-                <div className="mb-2 rounded-lg border border-status-blocked/30 bg-status-blocked/10 p-2 text-sm text-status-blocked">
-                  Blocked: {room.blockReason?.replace(/_/g, " ")}
-                </div>
-              )}
-              {room.notes[0] && (
-                <p className="mb-2 truncate text-xs text-graphite/60" title={room.notes[0].body}>
-                  📝 {room.notes[0].author.name}: {room.notes[0].body}
-                </p>
-              )}
-
-              <div className="grid grid-cols-2 gap-2">
-                {(room.status === "DIRTY" || room.status === "PICKUP") && (
-                  <button
-                    onClick={() => setStatus(room, "IN_PROGRESS")}
-                    disabled={busy}
-                    className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {busy ? "…" : "▶ Start cleaning"}
-                  </button>
-                )}
-                {room.status === "BLOCKED" && (
-                  <button
-                    onClick={() => setStatus(room, "IN_PROGRESS")}
-                    disabled={busy}
-                    className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {busy ? "…" : "▶ Unblock & start"}
-                  </button>
-                )}
-                {room.status === "IN_PROGRESS" && (
-                  <button
-                    onClick={() => setStatus(room, "CLEAN")}
-                    disabled={busy}
-                    className="col-span-2 h-14 rounded-xl bg-status-clean text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {busy ? "…" : "✓ Mark clean · to inspect"}
-                  </button>
-                )}
-                {["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status) && (
-                  <button
-                    onClick={() => setModal({ kind: "block", room })}
-                    disabled={busy}
-                    className="h-12 rounded-xl border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    ⛔ Blocked…
-                  </button>
-                )}
-                <button
-                  onClick={() => setModal({ kind: "defect", room })}
-                  className="h-12 rounded-xl border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
-                >
-                  🔧 Defect…
-                </button>
-                <button
-                  onClick={() => setModal({ kind: "note", room })}
-                  className="col-span-2 h-11 rounded-xl border border-charcoal/20 text-sm text-graphite transition active:scale-[0.98]"
-                >
-                  📝 Add note
-                </button>
-              </div>
+        <Collapsible
+          key={floor}
+          defaultOpen={floorIdx === 0}
+          summary={
+            <div className="flex items-baseline gap-3">
+              <h3 className="font-serif text-2xl">{t("attendant.floor", { floor })}</h3>
+              <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
+                {t("attendant.doneOfTotal", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
+              </span>
             </div>
-          );
-        })}
-      </div>
-      </Collapsible>
+          }
+        >
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {floorRooms.map((room) => (
+              <RoomCard
+                key={room.id}
+                room={room}
+                prio={priorities[room.id]}
+                busy={busyRoomId === room.id}
+                whyOpen={whyOpen === room.id}
+                onToggleWhy={() => setWhyOpen(whyOpen === room.id ? null : room.id)}
+                onSetStatus={setStatus}
+                onOpenModal={(kind) => setModal({ kind, room })}
+              />
+            ))}
+          </div>
+        </Collapsible>
       ))}
 
       {rooms.length === 0 && (
         <p className="rounded-2xl border border-charcoal/10 bg-linen p-8 text-center text-graphite/60 shadow-card">
-          No rooms assigned to you yet — your supervisor is still planning the shift.
+          {t("attendant.noRoomsAssigned")}
         </p>
       )}
 
@@ -460,6 +388,158 @@ export default function AttendantView() {
   );
 }
 
+/**
+ * One room card. Progressive disclosure: the single next action (start
+ * cleaning / mark clean / unblock) stays big and always visible — that is
+ * the 90% case, one tap. Everything else (block, defect, note) lives behind
+ * "More…" so a floor of six cards reads as six clear next-steps rather than
+ * twenty-four buttons.
+ */
+function RoomCard({
+  room,
+  prio,
+  busy,
+  whyOpen,
+  onToggleWhy,
+  onSetStatus,
+  onOpenModal,
+}: {
+  room: Room;
+  prio: Priority | undefined;
+  busy: boolean;
+  whyOpen: boolean;
+  onToggleWhy: () => void;
+  onSetStatus: (room: Room, status: RoomStatus) => void;
+  onOpenModal: (kind: "block" | "defect" | "note") => void;
+}) {
+  const { t } = useLocale();
+  const [moreOpen, setMoreOpen] = useState(false);
+  const style = STATUS_STYLES[room.status];
+  const canBlock = ["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status);
+
+  return (
+    <div className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm transition ${busy ? "opacity-60" : ""}`}>
+      <div className="mb-2 flex items-start justify-between">
+        <div>
+          <span className="font-serif text-3xl">{room.number}</span>
+          <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
+            {t(`roomType.${room.type}` as TKey)}
+            {room.isCheckoutToday && ` · ${t("attendant.dueOut")}`}
+          </span>
+        </div>
+        <span className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${style.chip}`}>
+          <StatusIcon iconKey={style.iconKey} className="h-3.5 w-3.5 shrink-0" />
+          {t(`status.${room.status}` as TKey)}
+        </span>
+      </div>
+
+      {prio && prio.score > 0 && (
+        <button
+          onClick={onToggleWhy}
+          className="mb-2 flex w-full items-center justify-between rounded-lg bg-parchment px-3 py-2 text-left text-sm"
+        >
+          <span>{t("attendant.priorityScore", { score: prio.score, minutes: prio.estimatedMinutes })}</span>
+          <span className="text-gold">{whyOpen ? t("attendant.hideWhy") : t("attendant.showWhy")}</span>
+        </button>
+      )}
+      {whyOpen && prio && (
+        <ul className="mb-2 space-y-1 rounded-lg border border-gold/30 bg-ivory p-3 text-xs text-graphite">
+          {prio.reasons.map((r, i) => (
+            <li key={i}>
+              <span className="font-semibold text-gold">+{r.points}</span> {r.reason}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {room.status === "PICKUP" && room.reworkNote && (
+        <div className="mb-2 rounded-lg border border-status-pickup/30 bg-status-pickup/10 p-2 text-sm text-status-pickup">
+          <strong>{t("attendant.reworkNote")}</strong> {room.reworkNote}
+        </div>
+      )}
+      {room.status === "BLOCKED" && (
+        <div className="mb-2 rounded-lg border border-status-blocked/30 bg-status-blocked/10 p-2 text-sm text-status-blocked">
+          {t("attendant.blockedNote")} {room.blockReason ? t(`blockReason.${room.blockReason}` as TKey) : ""}
+        </div>
+      )}
+      {room.notes[0] && (
+        <p className="mb-2 truncate text-xs text-graphite/60" title={room.notes[0].body}>
+          📝 {room.notes[0].author.name}: {room.notes[0].body}
+        </p>
+      )}
+
+      <div className="grid grid-cols-2 gap-2">
+        {(room.status === "DIRTY" || room.status === "PICKUP") && (
+          <button
+            onClick={() => onSetStatus(room, "IN_PROGRESS")}
+            disabled={busy}
+            className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+          >
+            {busy ? "…" : t("attendant.startCleaning")}
+          </button>
+        )}
+        {room.status === "BLOCKED" && (
+          <button
+            onClick={() => onSetStatus(room, "IN_PROGRESS")}
+            disabled={busy}
+            className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+          >
+            {busy ? "…" : t("attendant.unblockAndStart")}
+          </button>
+        )}
+        {room.status === "IN_PROGRESS" && (
+          <button
+            onClick={() => onSetStatus(room, "CLEAN")}
+            disabled={busy}
+            className="col-span-2 h-14 rounded-xl bg-status-clean text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+          >
+            {busy ? "…" : t("attendant.markClean")}
+          </button>
+        )}
+
+        {moreOpen ? (
+          <>
+            {canBlock && (
+              <button
+                onClick={() => onOpenModal("block")}
+                disabled={busy}
+                className="h-12 rounded-xl border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
+              >
+                {t("attendant.blockedAction")}
+              </button>
+            )}
+            <button
+              onClick={() => onOpenModal("defect")}
+              className="h-12 rounded-xl border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
+            >
+              {t("attendant.defectAction")}
+            </button>
+            <button
+              onClick={() => onOpenModal("note")}
+              className="col-span-2 h-11 rounded-xl border border-charcoal/20 text-sm text-graphite transition active:scale-[0.98]"
+            >
+              {t("attendant.addNote")}
+            </button>
+            <button
+              onClick={() => setMoreOpen(false)}
+              className="col-span-2 h-9 rounded-lg text-xs text-graphite/60 transition hover:bg-parchment"
+            >
+              {t("attendant.less")}
+            </button>
+          </>
+        ) : (
+          <button
+            onClick={() => setMoreOpen(true)}
+            className="col-span-2 h-10 rounded-xl text-sm text-graphite/70 transition hover:bg-parchment"
+          >
+            {t("attendant.more")}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function BlockModal({
   room,
   onClose,
@@ -469,16 +549,17 @@ function BlockModal({
   onClose: () => void;
   onSubmit: (reason: string) => void;
 }) {
-  const labels: Record<string, string> = {
-    DND: "🚪 Do Not Disturb",
-    GUEST_IN_ROOM: "🧍 Guest in room",
-    DOUBLE_LOCKED: "🔒 Double locked",
-    REFUSED: "🙅 Service refused",
+  const { t } = useLocale();
+  const labels: Record<string, TKey> = {
+    DND: "attendant.blockReasonDnd",
+    GUEST_IN_ROOM: "attendant.blockReasonGuest",
+    DOUBLE_LOCKED: "attendant.blockReasonLocked",
+    REFUSED: "attendant.blockReasonRefused",
   };
   return (
     <Modal
-      title={`Block room ${room.number}`}
-      subtitle="A re-check reminder and escalation timer start automatically."
+      title={t("attendant.blockModalTitle", { number: room.number })}
+      subtitle={t("attendant.blockModalSubtitle")}
       onClose={onClose}
     >
       <div className="grid gap-2">
@@ -488,7 +569,7 @@ function BlockModal({
             onClick={() => onSubmit(r)}
             className="h-14 rounded-xl border-2 border-status-blocked/60 text-base font-medium text-status-blocked hover:bg-status-blocked/10"
           >
-            {labels[r]}
+            {t(labels[r])}
           </button>
         ))}
       </div>
@@ -505,6 +586,7 @@ function DefectModal({
   onClose: () => void;
   onDone: () => void;
 }) {
+  const { t } = useLocale();
   const [category, setCategory] = useState<string>("PLUMBING");
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -530,8 +612,8 @@ function DefectModal({
   };
 
   return (
-    <Modal title={`Report defect · ${room.number}`} subtitle="Creates a work order for engineering." onClose={onClose}>
-      <label className="mb-1 block text-sm font-medium">Category</label>
+    <Modal title={t("attendant.defectModalTitle", { number: room.number })} subtitle={t("attendant.defectModalSubtitle")} onClose={onClose}>
+      <label className="mb-1 block text-sm font-medium">{t("attendant.category")}</label>
       <div className="mb-3 grid grid-cols-2 gap-2">
         {DEFECT_CATEGORIES.map((c) => (
           <button
@@ -541,19 +623,21 @@ function DefectModal({
               category === c ? "border-gold bg-parchment font-semibold" : "border-charcoal/15"
             }`}
           >
-            {c.replace(/_/g, " / ")}
+            {t(`defectCategory.${c}` as TKey)}
           </button>
         ))}
       </div>
-      <label className="mb-1 block text-sm font-medium">Description</label>
+      <label className="mb-1 block text-sm font-medium">{t("attendant.description")}</label>
       <textarea
         value={note}
         onChange={(e) => setNote(e.target.value)}
         rows={3}
         className="mb-3 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-        placeholder="What is broken?"
+        placeholder={t("attendant.descriptionPlaceholder")}
       />
-      <label className="mb-1 block text-sm font-medium">Photo (optional)</label>
+      <label className="mb-1 block text-sm font-medium">
+        {t("attendant.photoOptional")} ({t("common.optional")})
+      </label>
       <input
         type="file"
         accept="image/*"
@@ -567,7 +651,7 @@ function DefectModal({
         disabled={busy || !note.trim()}
         className="h-14 w-full rounded-xl bg-status-defect text-lg font-semibold text-linen disabled:opacity-40"
       >
-        {busy ? "Sending…" : "Send to engineering"}
+        {busy ? t("attendant.sending") : t("attendant.sendToEngineering")}
       </button>
     </Modal>
   );
@@ -582,6 +666,7 @@ function NoteModal({
   onClose: () => void;
   onDone: (note: Note) => void;
 }) {
+  const { t } = useLocale();
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -597,21 +682,21 @@ function NoteModal({
   };
 
   return (
-    <Modal title={`Note · room ${room.number}`} subtitle="Visible to all departments." onClose={onClose}>
+    <Modal title={t("attendant.noteModalTitle", { number: room.number })} subtitle={t("attendant.noteModalSubtitle")} onClose={onClose}>
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}
         rows={4}
         autoFocus
         className="mb-3 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-        placeholder="Add a note…"
+        placeholder={t("attendant.notePlaceholder")}
       />
       <button
         onClick={save}
         disabled={busy || !body.trim()}
         className="h-14 w-full rounded-xl bg-navy text-base font-medium text-ivory disabled:opacity-40"
       >
-        {busy ? "Saving…" : "Save note"}
+        {busy ? t("common.saving") : t("attendant.saveNote")}
       </button>
     </Modal>
   );

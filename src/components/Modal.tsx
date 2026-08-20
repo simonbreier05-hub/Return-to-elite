@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 /**
  * Shared modal frame. Bottom sheet on phones, centred dialog from `sm` up,
@@ -26,6 +27,7 @@ export default function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useLocale();
   const [closing, setClosing] = useState(false);
 
   const close = () => {
@@ -55,7 +57,7 @@ export default function Modal({
           </div>
           <button
             onClick={close}
-            aria-label="Close"
+            aria-label={t("common.close")}
             className="-mr-1 -mt-1 h-11 w-11 shrink-0 rounded-lg text-lg hover:bg-parchment"
           >
             ✕

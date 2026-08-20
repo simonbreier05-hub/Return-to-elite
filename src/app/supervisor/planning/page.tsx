@@ -5,7 +5,7 @@ import PlanningView from "./view";
 export default async function PlanningPage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="Morning Planning" userName={session.name} role={session.role}>
+    <AppShell title="planning.title" userName={session.name} role={session.role}>
       <PlanningView />
     </AppShell>
   );

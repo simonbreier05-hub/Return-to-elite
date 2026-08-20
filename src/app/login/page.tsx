@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { api } from "@/components/api";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { TKey } from "@/lib/i18n/translations";
+import LanguageSwitcher from "@/components/LanguageSwitcher";
 
 interface DevUser {
   id: string;
@@ -12,19 +15,11 @@ interface DevUser {
   section?: string | null;
 }
 
-const ROLE_LABELS: Record<string, string> = {
-  room_attendant: "Attendant",
-  supervisor: "Supervisor",
-  front_office: "Front Office",
-  concierge: "Concierge",
-  engineering: "Engineering",
-  duty_manager: "Duty Manager",
-};
-
 /** Order the roles the way a shift is run, not alphabetically. */
 const ROLE_ORDER = ["supervisor", "duty_manager", "front_office", "concierge", "engineering", "room_attendant"];
 
 export default function LoginPage() {
+  const { t } = useLocale();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -69,7 +64,9 @@ export default function LoginPage() {
   // One tile per POSITION, not per person — ten named attendants on one
   // screen was the clutter being complained about. Anyone who needs a
   // specific attendant (not just "an" attendant) still reaches them from
-  // the header's "Switch role" selector once signed in.
+  // the header's "Switch role" selector once signed in. Role labels come
+  // from the same central role.* dictionary AppShell uses, so "Room
+  // Attendant" reads identically everywhere in the app.
   const positions = useMemo(() => {
     if (!devUsers) return [];
     return ROLE_ORDER.map((role) => {
@@ -79,14 +76,15 @@ export default function LoginPage() {
       // already defaults to (see POSITION_HANDLES server-side) — keep that
       // one consistent rather than picking whoever sorts first.
       const representative = people.find((u) => u.name.startsWith("Maria")) ?? people[0];
-      return { role, label: ROLE_LABELS[role] ?? role, user: representative, count: people.length };
-    }).filter((p): p is { role: string; label: string; user: DevUser; count: number } => p !== null);
+      return { role, user: representative, count: people.length };
+    }).filter((p): p is { role: string; user: DevUser; count: number } => p !== null);
   }, [devUsers]);
 
   return (
     // Light, paper-toned throughout — no dark panel behind the door, the
     // same "quiet luxury" register the whole app now carries.
-    <div className="flex min-h-screen items-center justify-center bg-ivory p-4">
+    <div className="relative flex min-h-screen items-center justify-center bg-ivory p-4">
+      <LanguageSwitcher className="absolute right-4 top-4" />
       <div className="w-full max-w-2xl">
         <div className="mb-9 text-center">
           <Image
@@ -97,9 +95,7 @@ export default function LoginPage() {
             priority
             className="mx-auto h-auto w-full max-w-[260px]"
           />
-          <p className="mt-5 text-[0.68rem] uppercase tracking-[0.28em] text-graphite">
-            Housekeeping · Interne Anwendung
-          </p>
+          <p className="mt-5 text-[0.68rem] uppercase tracking-[0.28em] text-graphite">{t("login.appName")}</p>
         </div>
 
         {error && (
@@ -111,14 +107,14 @@ export default function LoginPage() {
         {devUsers ? (
           <div className="rounded-xl border border-charcoal/10 bg-linen p-6 shadow-card">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-serif text-2xl text-navy">Choose your position</h2>
+              <h2 className="font-serif text-2xl text-navy">{t("login.choosePosition")}</h2>
               <span className="rounded-full bg-gold/10 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wider text-gold-soft">
-                Dev mode · no password
+                {t("common.devMode")}
               </span>
             </div>
 
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-              {positions.map(({ role, label, user, count }, i) => (
+              {positions.map(({ role, user, count }, i) => (
                 <button
                   key={role}
                   onClick={() => quickLogin(user.email)}
@@ -126,17 +122,13 @@ export default function LoginPage() {
                   style={{ "--stagger-i": i } as React.CSSProperties}
                   className="flex h-20 animate-stagger flex-col items-center justify-center rounded-lg border border-charcoal/15 bg-ivory px-3 text-center transition hover:-translate-y-0.5 hover:border-gold hover:bg-parchment hover:shadow-card disabled:opacity-40 disabled:hover:translate-y-0"
                 >
-                  <div className="text-sm font-semibold">{label}</div>
-                  {count > 1 && <div className="text-xs text-graphite">as {user.name}</div>}
+                  <div className="text-sm font-semibold">{t(`role.${role}` as TKey)}</div>
+                  {count > 1 && <div className="text-xs text-graphite">{t("login.asName", { name: user.name })}</div>}
                 </button>
               ))}
             </div>
 
-            <p className="mt-5 text-center text-xs text-graphite">
-              Password sign-in is hidden while quick login is on. Need it back? Set{" "}
-              <code className="rounded bg-charcoal/5 px-1 py-0.5">ALLOW_DEV_LOGIN</code> off, or ask for a specific
-              attendant via the role switcher in the header after signing in.
-            </p>
+            <p className="mt-5 text-center text-xs text-graphite">{t("login.devModeNote")}</p>
           </div>
         ) : (
           <div className="mx-auto max-w-md rounded-xl border border-charcoal/10 bg-linen p-7 shadow-card">
@@ -146,9 +138,7 @@ export default function LoginPage() {
           </div>
         )}
 
-        <p className="mt-8 text-center text-[0.68rem] tracking-[0.04em] text-graphite/70">
-          Behrenstrasse 37 · <span className="text-graphite">10117 Berlin</span>
-        </p>
+        <p className="mt-8 text-center text-[0.68rem] tracking-[0.04em] text-graphite/70">{t("login.address")}</p>
       </div>
     </div>
   );
@@ -169,6 +159,7 @@ function PasswordForm({
   busy: boolean;
   onSubmit: () => void;
 }) {
+  const { t } = useLocale();
   return (
     <form
       onSubmit={(e) => {
@@ -177,7 +168,7 @@ function PasswordForm({
       }}
     >
       <label className="mb-2 block text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-graphite">
-        Email
+        {t("login.email")}
       </label>
       <input
         type="email"
@@ -188,7 +179,7 @@ function PasswordForm({
         autoComplete="username"
       />
       <label className="mb-2 block text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-graphite">
-        Password
+        {t("login.password")}
       </label>
       <input
         type="password"
@@ -202,7 +193,7 @@ function PasswordForm({
         disabled={busy}
         className="h-[3.1rem] w-full rounded-sm bg-navy text-[0.78rem] font-semibold uppercase tracking-[0.1em] text-ivory transition hover:-translate-y-px hover:bg-navy-line hover:shadow-lift disabled:opacity-50 disabled:hover:translate-y-0"
       >
-        {busy ? "Signing in…" : "Sign in"}
+        {busy ? t("login.signingIn") : t("login.signIn")}
       </button>
     </form>
   );

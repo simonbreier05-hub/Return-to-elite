@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter } from "next/font/google";
 import Script from "next/script";
+import Providers from "@/components/Providers";
 import "./globals.css";
 
 /**
@@ -46,7 +47,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${serif.variable} ${sans.variable}`}>
       <body className="min-h-screen bg-ivory text-charcoal antialiased">
-        {children}
+        <Providers>{children}</Providers>
         {/* Registers the static-asset service worker (public/sw.js) after
             the page is interactive. The Socket.IO connection and all
             /api/** calls stay online-only — see public/sw.js for scope. */}

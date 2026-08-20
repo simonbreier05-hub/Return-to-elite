@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 interface Handover {
   headline: string;
@@ -32,6 +33,7 @@ interface Facts {
 const WINDOWS = [4, 8, 12];
 
 export default function HandoverView() {
+  const { t } = useLocale();
   const [hours, setHours] = useState(8);
   const [data, setData] = useState<{ handover: Handover; facts: Facts } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -69,20 +71,20 @@ export default function HandoverView() {
     <div className="animate-rise pb-16">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-4xl leading-none">Shift Handover</h2>
+          <h2 className="font-serif text-4xl leading-none">{t("handover.title")}</h2>
           <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">Everything the incoming supervisor needs, in about thirty seconds.</p>
+          <p className="text-sm text-graphite/70">{t("handover.subtitle")}</p>
         </div>
         <Link
           href="/supervisor"
           className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
         >
-          ← Live board
+          {t("handover.liveBoardLink")}
         </Link>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-sm text-graphite/60">Cover the last</span>
+        <span className="text-sm text-graphite/60">{t("handover.coverLast")}</span>
         {WINDOWS.map((w) => (
           <button
             key={w}
@@ -91,7 +93,7 @@ export default function HandoverView() {
               hours === w ? "border-gold-line bg-parchment font-semibold" : "border-charcoal/15 bg-white"
             }`}
           >
-            {w} h
+            {t("handover.hours", { n: w })}
           </button>
         ))}
         <button
@@ -99,7 +101,7 @@ export default function HandoverView() {
           disabled={busy}
           className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm disabled:opacity-40"
         >
-          {busy ? "Writing…" : "Regenerate"}
+          {busy ? t("handover.writing") : t("handover.regenerate")}
         </button>
       </div>
 
@@ -125,7 +127,7 @@ export default function HandoverView() {
                 onClick={copy}
                 className="h-12 rounded-xl bg-navy px-5 text-sm font-medium text-ivory transition hover:bg-navy-line"
               >
-                {copied ? "✓ Copied" : "Copy for the shift book"}
+                {copied ? t("handover.copied") : t("handover.copyForShiftBook")}
               </button>
               <span className="text-xs text-graphite/55">
                 {h.providerLabel}
@@ -146,13 +148,10 @@ export default function HandoverView() {
               onClick={() => setShowFacts((s) => !s)}
               className="flex w-full items-center justify-between text-left"
             >
-              <span className="font-serif text-xl">The facts behind this text</span>
-              <span className="text-sm text-gold">{showFacts ? "hide ▲" : "show ▼"}</span>
+              <span className="font-serif text-xl">{t("handover.factsTitle")}</span>
+              <span className="text-sm text-gold">{showFacts ? `${t("common.hide")} ▲` : `${t("common.show")} ▼`}</span>
             </button>
-            <p className="mt-1 text-sm text-graphite/60">
-              Counted by the system from the board and the audit trail. The writer receives exactly these lines and may
-              not add anything to them — no number in the handover comes from a language model.
-            </p>
+            <p className="mt-1 text-sm text-graphite/60">{t("handover.factsExplain")}</p>
 
             {showFacts && (
               <ul className="mt-3 space-y-1.5 rounded-xl border border-gold-line/40 bg-ivory p-4 text-sm text-graphite">
@@ -165,7 +164,7 @@ export default function HandoverView() {
         </>
       )}
 
-      {!h && !error && <p className="text-sm text-graphite/60">Collecting the shift…</p>}
+      {!h && !error && <p className="text-sm text-graphite/60">{t("handover.collecting")}</p>}
     </div>
   );
 }
