@@ -664,11 +664,24 @@ function RoomDrawer({
   const [savingNote, setSavingNote] = useState(false);
   const style = STATUS_STYLES[room.status];
 
+  // The board only ever carries a capped, possibly-stale preview of a room's
+  // notes (see the take: 3 in /api/rooms and the .slice(0, 3) on every
+  // realtime patch) — fetch the complete history fresh whenever the drawer
+  // opens on a room, so nothing past the cap silently stays hidden.
+  const [notes, setNotes] = useState<Note[] | null>(null);
+  useEffect(() => {
+    setNotes(null);
+    api<{ notes: Note[] }>(`/api/rooms/${room.id}/notes`)
+      .then((d) => setNotes(d.notes))
+      .catch(() => setNotes(room.notes));
+  }, [room.id]);
+
   const addNote = async () => {
     if (!noteBody.trim() || savingNote) return;
     setSavingNote(true);
     try {
       const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body: noteBody } });
+      setNotes((prev) => [res.note, ...(prev ?? [])]);
       onNoteAdded({ ...res.note, roomId: room.id });
       setNoteBody("");
     } finally {
@@ -805,7 +818,9 @@ function RoomDrawer({
 
         <div className="mt-4">
           <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
-          {room.notes.map((n) => (
+          {notes === null && <p className="text-sm text-graphite/50">{t("common.loading")}</p>}
+          {notes?.length === 0 && <p className="text-sm text-graphite/50">{t("attendant.noNotesYet")}</p>}
+          {notes?.map((n) => (
             <div key={n.id} className="mb-1 rounded-lg bg-ivory p-2 text-sm">
               <span className="text-xs text-graphite/60">
                 {n.author.name} ({t(`role.${n.author.role}` as TKey)}) ·{" "}

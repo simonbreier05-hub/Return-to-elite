@@ -40,6 +40,21 @@ interface DayFigures {
   eveningOccupancy: number;
 }
 
+interface Staffing {
+  roomsToClean: number;
+  neededMin: number;
+  neededMax: number;
+  withinPool: boolean;
+  realisticCapacity: number;
+  deferCount: number;
+}
+
+interface DeferredRoom {
+  roomId: string;
+  number: string;
+  isDeparture: boolean;
+}
+
 interface Plan {
   assignments: Assignment[];
   unassigned: { roomId: string; number: string; reason: string }[];
@@ -61,6 +76,8 @@ interface PlanResponse {
   stayovers: number;
   totalRooms: number;
   roomsNeedingWork: number;
+  staffing: Staffing;
+  deferredRooms: DeferredRoom[];
 }
 
 const SHIFT_PRESETS = [
@@ -85,6 +102,8 @@ export default function PlanningView() {
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState<{ roomId: string; fromId: string } | null>(null);
   const [edited, setEdited] = useState(false);
+  const [staffRequest, setStaffRequest] = useState<"idle" | "sending" | "sent">("idle");
+  const [deferAcked, setDeferAcked] = useState(false);
 
   const rooms = result?.rooms ?? {};
 
@@ -114,6 +133,8 @@ export default function PlanningView() {
       else setRefreshing(true);
       setError(null);
       setApplied(null);
+      setStaffRequest("idle");
+      setDeferAcked(false);
       try {
         // Explicit values, not the closured state: setOnShift/setCapacity are
         // async, so a team toggle followed straight by a recalc would otherwise
@@ -270,6 +291,28 @@ export default function PlanningView() {
     }
   };
 
+  const requestStaff = async () => {
+    if (!result) return;
+    const s = result.staffing;
+    setStaffRequest("sending");
+    try {
+      await api("/api/notifications", {
+        body: {
+          message: t("planning.staffingRequestMessage", {
+            needed: s.neededMax,
+            total: s.roomsToClean,
+            onShift: onShift.size,
+            defer: s.deferCount,
+          }),
+        },
+      });
+      setStaffRequest("sent");
+    } catch (e) {
+      setStaffRequest("idle");
+      setError((e as Error).message);
+    }
+  };
+
   const live = useMemo(() => plan?.assignments.filter((a) => a.roomCount > 0) ?? [], [plan]);
   const spread = useMemo(() => {
     if (!live.length) return 0;
@@ -343,6 +386,89 @@ export default function PlanningView() {
           <p className="text-sm text-graphite/50">{t("planning.loadingDay")}</p>
         )}
       </section>
+
+      {/* ---- Staffing --------------------------------------------------------
+          Live from the board, not from what the supervisor typed above: every
+          room the house actually needs cleaned today (stayovers + departures +
+          arrivals, each room counted once), turned into how many hands that
+          takes at 10–12 rooms each. This is what decides who to pick below, not
+          the other way round. */}
+      {result && (
+        <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+          <h3 className="mb-1 font-serif text-2xl">{t("planning.staffingTitle")}</h3>
+          <p className="mb-4 text-sm text-graphite/60">{t("planning.staffingExplain")}</p>
+
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <div>
+              <div className="font-serif text-3xl text-navy">
+                {result.staffing.neededMin === result.staffing.neededMax
+                  ? t("planning.staffingNeededExact", { count: result.staffing.neededMin })
+                  : t("planning.staffingNeededRange", { min: result.staffing.neededMin, max: result.staffing.neededMax })}
+              </div>
+              <p className="text-xs text-graphite/55">{t("planning.staffingRoute")}</p>
+            </div>
+            <div className="text-sm text-graphite/70">{t("planning.staffingOnShift", { count: onShift.size })}</div>
+          </div>
+
+          {!result.staffing.withinPool && (
+            <div className="mt-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4">
+              <h4 className="font-serif text-lg text-status-out-of-order">{t("planning.staffingCapacityTitle")}</h4>
+              <p className="mt-1 text-sm text-graphite">
+                {t("planning.staffingCapacityBody", {
+                  realistic: result.staffing.realisticCapacity,
+                  total: result.staffing.roomsToClean,
+                  defer: result.staffing.deferCount,
+                })}
+              </p>
+              <p className="mt-1 text-xs text-graphite/70">{t("planning.staffingCapacityPriority")}</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={requestStaff}
+                  disabled={staffRequest !== "idle"}
+                  className="h-12 rounded-xl bg-navy px-5 text-sm font-semibold text-ivory transition hover:bg-navy-line disabled:opacity-60"
+                >
+                  {staffRequest === "sending"
+                    ? t("planning.staffingRequestSending")
+                    : staffRequest === "sent"
+                    ? `✓ ${t("planning.staffingRequestSent")}`
+                    : t("planning.staffingRequestStaff")}
+                </button>
+                <button
+                  onClick={() => setDeferAcked(true)}
+                  disabled={deferAcked}
+                  className="h-12 rounded-xl border border-charcoal/20 bg-white px-5 text-sm font-medium transition hover:border-gold-line disabled:opacity-60"
+                >
+                  {deferAcked ? `✓ ${t("planning.staffingDeferRooms", { count: result.staffing.deferCount })}` : t("planning.staffingDeferRooms", { count: result.staffing.deferCount })}
+                </button>
+              </div>
+
+              {deferAcked && (
+                <p className="mt-3 text-xs text-graphite/70">{t("planning.staffingDeferredNote", { count: result.staffing.deferCount })}</p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {result && result.deferredRooms.length > 0 && (
+        <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+          <h3 className="mb-2 font-serif text-xl">{t("planning.staffingDeferredTitle")}</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {result.deferredRooms.map((r) => (
+              <span
+                key={r.roomId}
+                title={r.isDeparture ? t("planning.departureLegend") : t("planning.stayoverLegend")}
+                className={`h-10 rounded-lg border px-2.5 text-sm font-medium tabular-nums leading-10 ${
+                  r.isDeparture ? "border-charcoal/30 bg-parchment" : "border-charcoal/15 bg-white"
+                }`}
+              >
+                {r.number}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ---- 2 · The team --------------------------------------------------- */}
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
@@ -652,6 +778,10 @@ function AttendantCard({
               </div>
             }
           >
+            <p className="mb-1.5 text-xs text-graphite/70">
+              <span className="font-medium text-graphite">{t("planning.routeLabel")}: </span>
+              {list.map((r) => r.detail.number).join(" → ")}
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {list.map(({ id, detail }) => (
                 <button

@@ -114,10 +114,16 @@ async function main() {
       const checkout = count % 4 === 0;
       const assignee = attendants[(floor + i) % attendants.length];
 
-      // Only a current guest's room (stayover) or a same-day departure is in
-      // scope for housekeeping — a vacant room with nobody arriving today is
-      // simply released and gets no attention, not an arbitrary status.
-      const occupancy = occupied && !checkout ? "OCCUPIED" : "VACANT";
+      // `occupancy` means "is a guest physically in the room right now" — a
+      // departure guest still counts as OCCUPIED until they actually leave,
+      // exactly like defaultDayFigures() assumes (it derives stayovers as
+      // occupiedNow − departures, so occupiedNow has to include departures
+      // while they're still checked in, or that subtraction quietly throws
+      // real stayover rooms away). `&& !checkout` here used to zero a
+      // departure room's occupancy out immediately, which is what made the
+      // "belegte Zimmer heute Abend" figure the supervisor sees come out far
+      // lower than the rooms actually needing an attendant.
+      const occupancy = occupied ? "OCCUPIED" : "VACANT";
       const relevant = isHousekeepingRelevant({ occupancy, isCheckoutToday: checkout });
       const status = relevant ? progression[floor][i % progression[floor].length] : "INSPECTED";
       const minutesAgo = relevant

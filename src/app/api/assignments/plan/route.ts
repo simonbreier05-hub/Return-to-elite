@@ -6,6 +6,8 @@ import { getPriorityWeights, getSettings } from "@/lib/settings";
 import { computePriority } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 import { planAssignments } from "@/lib/assignment/planAssignments";
+import { computeStaffingNeed, splitForCapacity } from "@/lib/assignment/staffing";
+import { TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 import { isHousekeepingRelevant } from "@/lib/rooms/isHousekeepingRelevant";
 import {
   checkDayFigures,
@@ -131,13 +133,27 @@ export async function POST(req: NextRequest) {
       priorityScore,
     }));
 
+  // --- Staffing: is this even something the pool can cover today? ---------
+  // planAssignments() balances whatever it is handed and flags overbooking —
+  // it never drops a room. That is still right for "I picked 3 attendants
+  // for a big house, warn me." This is the layer above it: given the realistic
+  // envelope of the house (4-10 attendants, 10-12 rooms each), decide up front
+  // whether today's demand fits at all, and if it does not, which rooms make
+  // today's cut. Departures are kept back only once every stayover already is.
+  const workable = assignable.filter((r) => NEEDS_WORK.has(r.status));
+  const staffing = computeStaffingNeed(workRooms.length);
+  const { deferred } = splitForCapacity(workable, staffing.realisticCapacity);
+  const deferredIds = new Set(deferred.map((r) => r.id));
+  const assignableForPlan = assignable.filter((r) => !deferredIds.has(r.id));
+
   const plan = planAssignments(
-    assignable,
+    assignableForPlan,
     attendants.map((a) => ({ id: a.id, name: a.name, preferredSection: a.section })),
-    { capacityMinutes: opts.capacityMinutes }
+    { capacityMinutes: opts.capacityMinutes, maxRoomsPerAttendant: TYPICAL_DAILY_ROOMS.high }
   );
 
-  // Room detail the planning board needs to render the proposal.
+  // Room detail the planning board needs to render the proposal — including
+  // deferred rooms, so the board can still show their number and floor.
   const roomDetail = Object.fromEntries(
     assignable.map((r) => [
       r.id,
@@ -154,6 +170,12 @@ export async function POST(req: NextRequest) {
     stayovers: stayoversFrom(figures),
     totalRooms: rooms.length,
     roomsNeedingWork: workRooms.length,
+    staffing,
+    deferredRooms: deferred.map((r) => ({
+      roomId: r.id,
+      number: r.number,
+      isDeparture: r.isDeparture,
+    })),
     computedAt: now.toISOString(),
   });
 }

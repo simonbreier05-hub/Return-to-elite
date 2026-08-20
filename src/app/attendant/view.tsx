@@ -463,9 +463,23 @@ function RoomCard({
         </div>
       )}
       {room.notes[0] && (
-        <p className="mb-2 truncate text-xs text-graphite/60" title={room.notes[0].body}>
-          📝 {room.notes[0].author.name}: {room.notes[0].body}
-        </p>
+        <button
+          onClick={() => onOpenModal("note")}
+          className="mb-2 flex w-full items-start gap-1.5 rounded-lg bg-parchment/60 px-2 py-1.5 text-left text-xs text-graphite/70 transition hover:bg-parchment"
+        >
+          <span className="shrink-0">📝</span>
+          <span className="min-w-0 flex-1 truncate">
+            {room.notes[0].author.name}: {room.notes[0].body}
+          </span>
+          {room.notes.length > 1 && (
+            <span className="shrink-0 rounded-full bg-charcoal/10 px-1.5 text-[0.65rem] font-semibold text-graphite">
+              {/* This card only ever holds a capped preview (see /api/rooms), so
+                  past the cap this reads "+2" rather than a promise of "exactly
+                  2 more" — the modal fetches the real, complete count. */}
+              +{room.notes.length - 1}{room.notes.length >= 3 ? "+" : ""}
+            </span>
+          )}
+        </button>
       )}
 
       <div className="grid grid-cols-2 gap-2">
@@ -657,6 +671,13 @@ function DefectModal({
   );
 }
 
+/**
+ * Notes, viewed and added in one place. The room card only ever carries a
+ * capped, possibly-stale preview (see the `Room.notes` cap in /api/rooms and
+ * the .slice(0, 3) on every realtime patch) — this is the one spot that
+ * fetches the room's complete note history fresh, every time it opens, so
+ * nothing older ever silently goes missing.
+ */
 function NoteModal({
   room,
   onClose,
@@ -669,12 +690,21 @@ function NoteModal({
   const { t } = useLocale();
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
+  const [notes, setNotes] = useState<Note[] | null>(null);
+
+  useEffect(() => {
+    api<{ notes: Note[] }>(`/api/rooms/${room.id}/notes`)
+      .then((d) => setNotes(d.notes))
+      .catch(() => setNotes([]));
+  }, [room.id]);
 
   const save = async () => {
     if (busy || !body.trim()) return;
     setBusy(true);
     try {
       const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body } });
+      setNotes((prev) => [res.note, ...(prev ?? [])]);
+      setBody("");
       onDone({ ...res.note, roomId: room.id });
     } finally {
       setBusy(false);
@@ -683,6 +713,23 @@ function NoteModal({
 
   return (
     <Modal title={t("attendant.noteModalTitle", { number: room.number })} subtitle={t("attendant.noteModalSubtitle")} onClose={onClose}>
+      {notes === null ? (
+        <p className="mb-3 text-sm text-graphite/50">{t("common.loading")}</p>
+      ) : notes.length > 0 ? (
+        <div className="mb-3 max-h-56 space-y-1.5 overflow-y-auto">
+          {notes.map((n) => (
+            <div key={n.id} className="rounded-lg bg-ivory p-2 text-sm">
+              <span className="text-xs text-graphite/60">
+                {n.author.name} ({t(`role.${n.author.role}` as TKey)}) ·{" "}
+                {new Date(n.createdAt).toLocaleString([], { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <p>{n.body}</p>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="mb-3 text-sm text-graphite/50">{t("attendant.noNotesYet")}</p>
+      )}
       <textarea
         value={body}
         onChange={(e) => setBody(e.target.value)}

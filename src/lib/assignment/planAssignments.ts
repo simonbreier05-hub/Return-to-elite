@@ -65,6 +65,15 @@ export interface AssignmentPlan {
 export interface PlanOptions {
   /** Net minutes an attendant can clean in one shift. Default 390 (6.5 h). */
   capacityMinutes?: number;
+  /**
+   * Rooms-per-attendant guideline (house standard: 10-12). When set, the
+   * round-cutting step (below) also cuts a round once it reaches this many
+   * rooms, on top of the usual minutes balance — so a short list of quick
+   * rooms doesn't quietly grow into a 16-room round while a suite-heavy one
+   * sits light. Unset (the default) keeps the pure minutes balance this
+   * function always had, so it stays a strict no-op for existing callers.
+   */
+  maxRoomsPerAttendant?: number;
 }
 
 /** Urgent first; room number keeps it deterministic when scores tie. */
@@ -77,6 +86,7 @@ export function planAssignments(
   options: PlanOptions = {}
 ): AssignmentPlan {
   const capacityMinutes = options.capacityMinutes ?? 390;
+  const maxRoomsPerAttendant = options.maxRoomsPerAttendant;
 
   const workload = rooms.filter((r) => NEEDS_ATTENDANT.has(r.status));
   const totalMinutes = workload.reduce((sum, r) => sum + r.estimatedMinutes, 0);
@@ -155,8 +165,9 @@ export function planAssignments(
       const distanceIfRoomAdded = Math.abs(cumulative + room.estimatedMinutes - targetCumulative);
       const roomsLeft = walkingOrder.length - index;
       const roundsLeft = shareCount - cursor;
+      const atRoomCap = maxRoomsPerAttendant !== undefined && rounds[cursor].length >= maxRoomsPerAttendant;
       // Never cut so early that a later attendant would be left with nothing.
-      if (distanceIfCutNow < distanceIfRoomAdded && rounds[cursor].length > 0 && roomsLeft >= roundsLeft) {
+      if ((distanceIfCutNow < distanceIfRoomAdded || atRoomCap) && rounds[cursor].length > 0 && roomsLeft >= roundsLeft) {
         cursor++;
       }
     }
@@ -229,6 +240,11 @@ export function planAssignments(
       if (bucket.overbooked) {
         bucket.reasons.push(
           `Over one shift by ${bucket.totalMinutes - capacityMinutes} min — consider extra help or deferring stayovers.`
+        );
+      }
+      if (maxRoomsPerAttendant !== undefined && bucket.roomCount > maxRoomsPerAttendant) {
+        bucket.reasons.push(
+          `${bucket.roomCount} rooms is above the ${maxRoomsPerAttendant}-room guideline — there were not enough attendants to keep everyone under it.`
         );
       }
     }
