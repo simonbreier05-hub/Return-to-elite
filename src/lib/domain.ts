@@ -137,5 +137,14 @@ export const DEFAULT_SETTINGS = {
   welfareCheckMinutes: 120, // DND older than N minutes => welfare-check reminder
   etaWarningMinutes: 45, // arrival ETA within N minutes & room not INSPECTED => alert
   releaseQueueBacklogThreshold: 5, // CLEAN rooms waiting for inspection => supervisor alert
+  // Morning-planning staffing guideline (see src/lib/assignment/staffing.ts).
+  // 10-12 rooms/attendant is a house standard, not a law of nature — a
+  // property with a heavier mix of suites, or a lean skeleton crew on a
+  // Sunday, may need a different band. roomsPerAttendantMax is a hard
+  // ceiling (planAssignments never exceeds it); roomsPerAttendantMin sizes
+  // how much work the plan realistically takes on before offering to defer.
+  roomsPerAttendantMin: 10,
+  roomsPerAttendantMax: 12,
+  attendantPoolMax: 10, // realistic upper end of the Room Attendant roster
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };

@@ -11,6 +11,9 @@ interface Thresholds {
   welfareCheckMinutes: number;
   etaWarningMinutes: number;
   releaseQueueBacklogThreshold: number;
+  roomsPerAttendantMin: number;
+  roomsPerAttendantMax: number;
+  attendantPoolMax: number;
 }
 
 type Weights = Record<string, number>;
@@ -38,11 +41,21 @@ const WEIGHT_LABELS: Record<string, { titleKey: TKey; hintKey: TKey }> = {
   etaSoonWindowMinutes: { titleKey: "weightLabels.etaSoonWindowMinutes.title", hintKey: "weightLabels.etaSoonWindowMinutes.hint" },
 };
 
-const THRESHOLD_LABELS: Record<keyof Thresholds, { titleKey: TKey; hintKey: TKey; unitKey: TKey }> = {
+type ThresholdKey = "blockedRecheckMinutes" | "welfareCheckMinutes" | "etaWarningMinutes" | "releaseQueueBacklogThreshold";
+type StaffingKey = "roomsPerAttendantMin" | "roomsPerAttendantMax" | "attendantPoolMax";
+
+const THRESHOLD_LABELS: Record<ThresholdKey, { titleKey: TKey; hintKey: TKey; unitKey: TKey }> = {
   blockedRecheckMinutes: { titleKey: "thresholdLabels.blockedRecheckMinutes.title", hintKey: "thresholdLabels.blockedRecheckMinutes.hint", unitKey: "common.minutesShort" },
   welfareCheckMinutes: { titleKey: "thresholdLabels.welfareCheckMinutes.title", hintKey: "thresholdLabels.welfareCheckMinutes.hint", unitKey: "common.minutesShort" },
   etaWarningMinutes: { titleKey: "thresholdLabels.etaWarningMinutes.title", hintKey: "thresholdLabels.etaWarningMinutes.hint", unitKey: "common.minutesShort" },
   releaseQueueBacklogThreshold: { titleKey: "thresholdLabels.releaseQueueBacklogThreshold.title", hintKey: "thresholdLabels.releaseQueueBacklogThreshold.hint", unitKey: "thresholdLabels.rooms" },
+};
+
+/** Morning-planning staffing guideline — see src/lib/assignment/staffing.ts. */
+const STAFFING_LABELS: Record<StaffingKey, { titleKey: TKey; hintKey: TKey; unitKey: TKey }> = {
+  roomsPerAttendantMin: { titleKey: "thresholdLabels.roomsPerAttendantMin.title", hintKey: "thresholdLabels.roomsPerAttendantMin.hint", unitKey: "thresholdLabels.rooms" },
+  roomsPerAttendantMax: { titleKey: "thresholdLabels.roomsPerAttendantMax.title", hintKey: "thresholdLabels.roomsPerAttendantMax.hint", unitKey: "thresholdLabels.rooms" },
+  attendantPoolMax: { titleKey: "thresholdLabels.attendantPoolMax.title", hintKey: "thresholdLabels.attendantPoolMax.hint", unitKey: "thresholdLabels.attendants" },
 };
 
 export default function SettingsView() {
@@ -118,7 +131,7 @@ export default function SettingsView() {
         <h3 className="mb-1 font-serif text-2xl">{t("settings.escalationThresholds")}</h3>
         <p className="mb-4 text-sm text-graphite/60">{t("settings.escalationHint")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {(Object.keys(THRESHOLD_LABELS) as (keyof Thresholds)[]).map((key) => (
+          {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => (
             <label key={key} className="rounded-xl border border-charcoal/15 bg-white p-4">
               <div className="text-sm font-medium">{t(THRESHOLD_LABELS[key].titleKey)}</div>
               <div className="mb-2 text-xs text-graphite/60">{t(THRESHOLD_LABELS[key].hintKey)}</div>
@@ -131,6 +144,29 @@ export default function SettingsView() {
                   className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
                 />
                 <span className="text-sm text-graphite/60">{t(THRESHOLD_LABELS[key].unitKey)}</span>
+              </div>
+            </label>
+          ))}
+        </div>
+      </section>
+
+      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+        <h3 className="mb-1 font-serif text-2xl">{t("settings.staffingGuideline")}</h3>
+        <p className="mb-4 text-sm text-graphite/60">{t("settings.staffingGuidelineHint")}</p>
+        <div className="grid gap-3 sm:grid-cols-3">
+          {(Object.keys(STAFFING_LABELS) as StaffingKey[]).map((key) => (
+            <label key={key} className="rounded-xl border border-charcoal/15 bg-white p-4">
+              <div className="text-sm font-medium">{t(STAFFING_LABELS[key].titleKey)}</div>
+              <div className="mb-2 text-xs text-graphite/60">{t(STAFFING_LABELS[key].hintKey)}</div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={1}
+                  value={thresholds[key]}
+                  onChange={(e) => setThresholds({ ...thresholds, [key]: Math.max(1, Number(e.target.value) || 1) })}
+                  className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
+                />
+                <span className="text-sm text-graphite/60">{t(STAFFING_LABELS[key].unitKey)}</span>
               </div>
             </label>
           ))}

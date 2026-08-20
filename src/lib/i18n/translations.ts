@@ -292,6 +292,8 @@ const en = {
     liveBoardLink: "← Live board",
     escalationThresholds: "Escalation thresholds",
     escalationHint: "When the system starts chasing people.",
+    staffingGuideline: "Morning-planning staffing",
+    staffingGuidelineHint: "The rooms-per-attendant band and roster size the planning board plans against — house standard, not a law of nature.",
     priorityWeights: "Priority weights",
     resetDefaults: "Reset to defaults",
     weightsExplain:
@@ -416,7 +418,11 @@ const en = {
     welfareCheckMinutes: { title: "Welfare check after DND for", hint: "Alerts the duty manager." },
     etaWarningMinutes: { title: "Warn before an arrival ETA", hint: "If the room is not released yet." },
     releaseQueueBacklogThreshold: { title: "Release queue backlog at", hint: "Alerts the supervisor." },
+    roomsPerAttendantMin: { title: "Rooms per attendant, planning target", hint: "What the morning plan aims for — leaves room to balance a suite-heavy round." },
+    roomsPerAttendantMax: { title: "Rooms per attendant, hard ceiling", hint: "Never exceeded, whatever else is going on." },
+    attendantPoolMax: { title: "Attendants available at most", hint: "The realistic top end of today's roster." },
     rooms: "rooms",
+    attendants: "attendants",
   },
 } as const;
 
@@ -701,6 +707,8 @@ const de = {
     liveBoardLink: "← Live-Board",
     escalationThresholds: "Eskalationsschwellen",
     escalationHint: "Ab wann das System aktiv nachfasst.",
+    staffingGuideline: "Personalbedarf der Tagesplanung",
+    staffingGuidelineHint: "Die Zimmer-pro-Person-Spanne und Team-Obergrenze, gegen die die Tagesplanung rechnet — Haus-Standard, kein Naturgesetz.",
     priorityWeights: "Prioritäts-Gewichte",
     resetDefaults: "Auf Standard zurücksetzen",
     weightsExplain:
@@ -825,7 +833,11 @@ const de = {
     welfareCheckMinutes: { title: "Wohlergehens-Check nach DND für", hint: "Alarmiert den Duty Manager." },
     etaWarningMinutes: { title: "Vor Ankunftszeit warnen", hint: "Falls das Zimmer noch nicht freigegeben ist." },
     releaseQueueBacklogThreshold: { title: "Freigabe-Rückstau ab", hint: "Alarmiert den Supervisor." },
+    roomsPerAttendantMin: { title: "Zimmer pro Room Attendant, Planungsziel", hint: "Worauf die Tagesplanung zielt — lässt Spielraum, eine zimmerstarke Runde auszugleichen." },
+    roomsPerAttendantMax: { title: "Zimmer pro Room Attendant, feste Obergrenze", hint: "Wird nie überschritten, egal was sonst los ist." },
+    attendantPoolMax: { title: "Höchstens verfügbare Room Attendants", hint: "Die realistische Obergrenze der heutigen Belegschaft." },
     rooms: "Zimmer",
+    attendants: "Room Attendants",
   },
 } satisfies Dict;
 

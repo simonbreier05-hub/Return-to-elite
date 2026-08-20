@@ -157,18 +157,31 @@ export function planAssignments(
   const rounds: AssignableRoom[][] = Array.from({ length: shareCount }, () => []);
   let cursor = 0;
   let cumulative = 0;
+  // The target this round is cutting towards — what's left to place, spread
+  // over the rounds still open. Frozen for the whole round and only
+  // recomputed when a cut actually happens (not on every room — a target
+  // that kept chasing the live cumulative would converge on itself and
+  // never trigger a cut). That recompute is what matters once
+  // maxRoomsPerAttendant is in play: a cheap floor's round can get capped
+  // well under its "ideal" minutes share (12 quick rooms doesn't reach a
+  // fair share sized for slower rooms), and without re-averaging over what
+  // is actually left, that shortfall silently rolls forward as debt onto
+  // whichever round happens to be scanning next — typically dumping it onto
+  // the first expensive floor's round and blowing it far past capacity.
+  // With no cap this reduces to the original fixed-proportion target.
+  let target = shareCount > 0 ? totalMinutes / shareCount : 0;
 
   walkingOrder.forEach((room, index) => {
     if (cursor < shareCount - 1) {
-      const targetCumulative = ((cursor + 1) * totalMinutes) / shareCount;
-      const distanceIfCutNow = Math.abs(cumulative - targetCumulative);
-      const distanceIfRoomAdded = Math.abs(cumulative + room.estimatedMinutes - targetCumulative);
+      const distanceIfCutNow = Math.abs(cumulative - target);
+      const distanceIfRoomAdded = Math.abs(cumulative + room.estimatedMinutes - target);
       const roomsLeft = walkingOrder.length - index;
       const roundsLeft = shareCount - cursor;
       const atRoomCap = maxRoomsPerAttendant !== undefined && rounds[cursor].length >= maxRoomsPerAttendant;
       // Never cut so early that a later attendant would be left with nothing.
       if ((distanceIfCutNow < distanceIfRoomAdded || atRoomCap) && rounds[cursor].length > 0 && roomsLeft >= roundsLeft) {
         cursor++;
+        target = cumulative + (totalMinutes - cumulative) / (shareCount - cursor);
       }
     }
     rounds[cursor].push(room);

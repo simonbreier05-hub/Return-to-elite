@@ -6,8 +6,7 @@ import { getPriorityWeights, getSettings } from "@/lib/settings";
 import { computePriority } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 import { planAssignments } from "@/lib/assignment/planAssignments";
-import { computeStaffingNeed, splitForCapacity } from "@/lib/assignment/staffing";
-import { TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
+import { computeStaffingNeed, splitForCapacity, type StaffingConfig } from "@/lib/assignment/staffing";
 import { isHousekeepingRelevant } from "@/lib/rooms/isHousekeepingRelevant";
 import {
   checkDayFigures,
@@ -126,6 +125,11 @@ export async function POST(req: NextRequest) {
       section: room.section,
       status: room.status,
       isDeparture: departureIds.has(room.id),
+      // A departure only carries a real deadline when someone is actually
+      // booked into it later today — that guest is what makes it
+      // time-critical. A checkout with no same-day arrival is no more urgent
+      // than a stayover; see splitForCapacity for where this matters.
+      isUrgentTurnover: departureIds.has(room.id) && room.arrivals.length > 0,
       estimatedMinutes: predictCleaningMinutes(
         { type: room.type, isCheckoutToday: departureIds.has(room.id), baseCleanMinutes: room.baseCleanMinutes },
         { stayLengthNights: 2 }
@@ -136,12 +140,18 @@ export async function POST(req: NextRequest) {
   // --- Staffing: is this even something the pool can cover today? ---------
   // planAssignments() balances whatever it is handed and flags overbooking —
   // it never drops a room. That is still right for "I picked 3 attendants
-  // for a big house, warn me." This is the layer above it: given the realistic
-  // envelope of the house (4-10 attendants, 10-12 rooms each), decide up front
-  // whether today's demand fits at all, and if it does not, which rooms make
-  // today's cut. Departures are kept back only once every stayover already is.
+  // for a big house, warn me." This is the layer above it: given the
+  // realistic envelope of the house — tunable in Settings, defaults to 4-10
+  // attendants at 10-12 rooms each — decide up front whether today's demand
+  // fits at all, and if it does not, which rooms make today's cut. A
+  // same-day turnover is kept back only once every other room already is.
+  const staffingConfig: StaffingConfig = {
+    roomsPerAttendantMin: settings.roomsPerAttendantMin,
+    roomsPerAttendantMax: settings.roomsPerAttendantMax,
+    attendantPoolMax: settings.attendantPoolMax,
+  };
   const workable = assignable.filter((r) => NEEDS_WORK.has(r.status));
-  const staffing = computeStaffingNeed(workRooms.length);
+  const staffing = computeStaffingNeed(workRooms.length, staffingConfig);
   const { deferred } = splitForCapacity(workable, staffing.realisticCapacity);
   const deferredIds = new Set(deferred.map((r) => r.id));
   const assignableForPlan = assignable.filter((r) => !deferredIds.has(r.id));
@@ -149,7 +159,7 @@ export async function POST(req: NextRequest) {
   const plan = planAssignments(
     assignableForPlan,
     attendants.map((a) => ({ id: a.id, name: a.name, preferredSection: a.section })),
-    { capacityMinutes: opts.capacityMinutes, maxRoomsPerAttendant: TYPICAL_DAILY_ROOMS.high }
+    { capacityMinutes: opts.capacityMinutes, maxRoomsPerAttendant: settings.roomsPerAttendantMax }
   );
 
   // Room detail the planning board needs to render the proposal — including

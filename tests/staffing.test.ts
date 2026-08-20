@@ -5,7 +5,7 @@ import { TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 describe("computeStaffingNeed", () => {
   it("reports nothing needed for an empty day", () => {
     const s = computeStaffingNeed(0);
-    expect(s).toEqual({ roomsToClean: 0, neededMin: 0, neededMax: 0, withinPool: true, realisticCapacity: 120, deferCount: 0 });
+    expect(s).toEqual({ roomsToClean: 0, neededMin: 0, neededMax: 0, withinPool: true, realisticCapacity: 100, deferCount: 0 });
   });
 
   it("stays within the pool for an ordinary day", () => {
@@ -27,46 +27,57 @@ describe("computeStaffingNeed", () => {
     // 145 rooms — the whole house dirty at once.
     const s = computeStaffingNeed(145);
     expect(s.withinPool).toBe(false);
-    expect(s.realisticCapacity).toBe(ATTENDANT_POOL.max * TYPICAL_DAILY_ROOMS.high); // 120
-    expect(s.deferCount).toBe(145 - 120);
+    // Sized off the low end (10/attendant), not the 12-room ceiling — see
+    // computeStaffingNeed for why: it leaves the balancer slack instead of
+    // saturating every round at the hard cap.
+    expect(s.realisticCapacity).toBe(ATTENDANT_POOL.max * TYPICAL_DAILY_ROOMS.low); // 100
+    expect(s.deferCount).toBe(145 - 100);
   });
 
-  it("sits exactly on the pool boundary without tipping into deferral", () => {
-    const s = computeStaffingNeed(ATTENDANT_POOL.max * TYPICAL_DAILY_ROOMS.high); // 120
+  it("sits exactly on the realistic-capacity boundary without tipping into deferral", () => {
+    const s = computeStaffingNeed(ATTENDANT_POOL.max * TYPICAL_DAILY_ROOMS.low); // 100
     expect(s.withinPool).toBe(true);
     expect(s.deferCount).toBe(0);
   });
 });
 
 describe("splitForCapacity", () => {
-  const room = (id: string, isDeparture: boolean, priorityScore = 0) => ({ id, isDeparture, priorityScore });
+  const room = (id: string, isUrgentTurnover: boolean, priorityScore = 0) => ({ id, isUrgentTurnover, priorityScore });
 
   it("keeps everything when demand already fits", () => {
     const rooms = [room("a", true), room("b", false)];
     expect(splitForCapacity(rooms, 5)).toEqual({ kept: rooms, deferred: [] });
   });
 
-  it("defers stayovers before touching a single departure", () => {
+  it("defers non-urgent rooms before touching a same-day turnover", () => {
     const rooms = [
-      room("dep1", true),
-      room("dep2", true),
+      room("turn1", true),
+      room("turn2", true),
       room("stay1", false),
       room("stay2", false),
       room("stay3", false),
     ];
     const { kept, deferred } = splitForCapacity(rooms, 3);
-    expect(kept.map((r) => r.id)).toEqual(expect.arrayContaining(["dep1", "dep2"]));
-    expect(deferred.every((r) => !r.isDeparture)).toBe(true);
+    expect(kept.map((r) => r.id)).toEqual(expect.arrayContaining(["turn1", "turn2"]));
+    expect(deferred.every((r) => !r.isUrgentTurnover)).toBe(true);
     expect(kept).toHaveLength(3);
     expect(deferred).toHaveLength(2);
   });
 
-  it("only defers a departure once every stayover already is deferred", () => {
-    const rooms = [room("dep1", true), room("dep2", true), room("dep3", true), room("stay1", false)];
+  it("only defers a same-day turnover once every other room already is", () => {
+    const rooms = [room("turn1", true), room("turn2", true), room("turn3", true), room("stay1", false)];
     const { kept, deferred } = splitForCapacity(rooms, 2);
     expect(deferred.map((r) => r.id)).toContain("stay1");
     expect(kept).toHaveLength(2);
-    expect(kept.every((r) => r.isDeparture)).toBe(true);
+    expect(kept.every((r) => r.isUrgentTurnover)).toBe(true);
+  });
+
+  it("a departure with no same-day arrival ranks with stayovers, not ahead of them", () => {
+    // "cold" departure (isUrgentTurnover: false) — nobody is waiting on it,
+    // so a higher-priority stayover is kept over it, same as any other room.
+    const rooms = [room("cold-departure", false, 10), room("stayover", false, 90)];
+    const { kept } = splitForCapacity(rooms, 1);
+    expect(kept.map((r) => r.id)).toEqual(["stayover"]);
   });
 
   it("keeps the most urgent rooms first within each group", () => {
