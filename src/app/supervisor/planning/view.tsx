@@ -412,7 +412,7 @@ export default function PlanningView() {
         <button
           onClick={() => createPlan()}
           disabled={busy || onShift.size === 0}
-          className="mb-4 h-14 w-full rounded-xl bg-charcoal text-base font-semibold tracking-wide text-ivory transition hover:bg-espresso disabled:opacity-40 sm:w-auto sm:px-12"
+          className="mb-4 h-14 w-full rounded-xl bg-navy text-base font-semibold tracking-wide text-ivory transition hover:bg-navy-line disabled:opacity-40 sm:w-auto sm:px-12"
         >
           {busy ? "Calculating…" : "Create proposal"}
         </button>
@@ -432,11 +432,15 @@ export default function PlanningView() {
           )}
         </div>
       )}
-      {onShift.size === 0 && <p className="mb-4 text-sm text-amber-700">Select at least one attendant.</p>}
+      {onShift.size === 0 && <p className="mb-4 text-sm text-gold-soft">Select at least one attendant.</p>}
 
-      {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
       {applied && (
-        <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900">✓ {applied}</div>
+        <div className="mb-4 rounded-xl border border-status-clean/30 bg-status-clean/10 p-4 text-status-clean">✓ {applied}</div>
       )}
 
       {plan && (
@@ -456,7 +460,7 @@ export default function PlanningView() {
           </section>
 
           {coverage > 1 && (
-            <div className="mb-4 rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
+            <div className="mb-4 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm text-gold-soft">
               The day needs <strong>{fmt(plan.summary.totalMinutes - totalCapacity)}</strong> more than the team can
               cover. Add someone to the shift, choose a longer shift, or defer stayover service.
             </div>
@@ -493,7 +497,7 @@ export default function PlanningView() {
               <button
                 onClick={apply}
                 disabled={busy}
-                className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-white transition hover:brightness-95 disabled:opacity-40"
+                className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-charcoal transition hover:brightness-95 disabled:opacity-40"
               >
                 {busy ? "Applying…" : "Apply plan to the team"}
               </button>
@@ -547,7 +551,7 @@ function Stepper({
   warning?: string;
 }) {
   return (
-    <div className={`rounded-2xl border p-4 ${warning ? "border-amber-400 bg-amber-50" : "border-charcoal/15 bg-white"}`}>
+    <div className={`rounded-2xl border p-4 transition-colors ${warning ? "border-gold/40 bg-gold/10" : "border-charcoal/15 bg-white"}`}>
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
       <div className="mt-2 flex items-center gap-2">
         <button
@@ -575,7 +579,7 @@ function Stepper({
         </button>
       </div>
       <p className="mt-2 text-xs text-graphite/60">{hint}</p>
-      {warning && <p className="mt-1 text-xs font-medium text-amber-800">{warning}</p>}
+      {warning && <p className="mt-1 text-xs font-medium text-gold-soft">{warning}</p>}
     </div>
   );
 }
@@ -586,7 +590,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
       <div
         className={`mt-1 font-serif text-3xl ${
-          tone === "warn" ? "text-amber-700" : tone === "good" ? "text-emerald-700" : ""
+          tone === "warn" ? "text-gold-soft" : tone === "good" ? "text-status-clean" : ""
         }`}
       >
         {value}
@@ -627,14 +631,14 @@ function AttendantCard({
     <div className="rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
       <div className="flex items-baseline justify-between">
         <h4 className="font-serif text-2xl">{assignment.attendantName}</h4>
-        <span className={`text-sm font-semibold ${assignment.overbooked ? "text-red-700" : "text-graphite/70"}`}>
+        <span className={`text-sm font-semibold ${assignment.overbooked ? "text-status-dirty" : "text-graphite/70"}`}>
           {fmt(assignment.totalMinutes)} / {fmt(capacity)}
         </span>
       </div>
 
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-parchment">
         <div
-          className={`h-full rounded-full transition-all ${assignment.overbooked ? "bg-red-600" : "bg-gold"}`}
+          className={`h-full rounded-full transition-all ${assignment.overbooked ? "bg-status-dirty" : "bg-gold"}`}
           style={{ width: `${pct}%` }}
         />
       </div>

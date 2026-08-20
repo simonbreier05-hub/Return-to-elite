@@ -18,17 +18,20 @@ interface WorkOrder {
   };
 }
 
+/** Work-order colours borrow the house's status palette (globals.css) so a
+ * "start work" button reads the same navy/brass/muted family as a room
+ * status tile, rather than stock Tailwind blues/ambers. */
 const NEXT: Record<string, { to: string; label: string; cls: string } | undefined> = {
-  OPEN: { to: "ACK", label: "Acknowledge", cls: "bg-blue-600 text-white" },
-  ACK: { to: "IN_PROGRESS", label: "Start work", cls: "bg-amber-600 text-white" },
-  IN_PROGRESS: { to: "RESOLVED", label: "Mark resolved", cls: "bg-emerald-600 text-white" },
+  OPEN: { to: "ACK", label: "Acknowledge", cls: "bg-status-dirty text-linen" },
+  ACK: { to: "IN_PROGRESS", label: "Start work", cls: "bg-status-in-progress text-linen" },
+  IN_PROGRESS: { to: "RESOLVED", label: "Mark resolved", cls: "bg-status-clean text-linen" },
 };
 
 const STATUS_CHIP: Record<string, string> = {
-  OPEN: "bg-red-100 text-red-800",
-  ACK: "bg-blue-100 text-blue-800",
-  IN_PROGRESS: "bg-amber-100 text-amber-800",
-  RESOLVED: "bg-emerald-100 text-emerald-800",
+  OPEN: "bg-status-dirty/10 text-status-dirty",
+  ACK: "bg-status-inspected/10 text-status-inspected",
+  IN_PROGRESS: "bg-status-in-progress/10 text-status-in-progress",
+  RESOLVED: "bg-status-clean/10 text-status-clean",
 };
 
 export default function EngineeringView() {
@@ -80,7 +83,11 @@ export default function EngineeringView() {
     <div>
       <h2 className="mb-1 font-serif text-3xl">Work orders</h2>
       <p className="mb-4 text-sm text-graphite/70">{open.length} open · {resolved.length} resolved</p>
-      {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
 
       <div className="grid gap-3 md:grid-cols-2">
         {[...open, ...resolved].map((wo) => (

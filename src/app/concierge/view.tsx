@@ -93,9 +93,9 @@ export default function ConciergeView() {
         <label className="mb-1 block text-sm font-medium">Note (optional)</label>
         <input value={note} onChange={(e) => setNote(e.target.value)} placeholder="City tour, back for dinner"
           className="mb-4 h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-2 text-sm text-status-out-of-order">{error}</p>}
         <button onClick={submit} disabled={busy || !roomNumber || !start || !end}
-          className="h-12 w-full rounded-xl bg-charcoal font-medium text-ivory disabled:opacity-40">
+          className="h-12 w-full rounded-xl bg-navy font-medium text-ivory disabled:opacity-40">
           {busy ? "Saving…" : "Log excursion"}
         </button>
       </div>
@@ -108,13 +108,13 @@ export default function ConciergeView() {
             const active = new Date(e.startsAt).getTime() <= now && new Date(e.endsAt).getTime() > now;
             return (
               <div key={e.id}
-                className={`rounded-xl border p-4 ${active ? "border-emerald-400 bg-emerald-50" : "border-charcoal/10 bg-white"}`}>
+                className={`rounded-xl border p-4 transition-colors ${active ? "border-status-pickup/40 bg-status-pickup/10" : "border-charcoal/10 bg-white"}`}>
                 <div className="flex items-center justify-between">
                   <span className="font-serif text-2xl">{e.room.number}</span>
                   <span className="text-sm">
                     {new Date(e.startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
                     {new Date(e.endsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    {active && <span className="ml-2 rounded-full bg-emerald-600 px-2 py-0.5 text-xs text-white">guest out</span>}
+                    {active && <span className="ml-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">guest out</span>}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-graphite/70">

@@ -76,25 +76,29 @@ export default function FrontOfficeView() {
         <div>
           <h2 className="font-serif text-3xl">Arrivals</h2>
           <p className="text-sm text-graphite/70">
-            <strong className="text-emerald-700">{readyCount}</strong> of {expected.length} expected arrivals ready
+            <strong className="text-status-inspected">{readyCount}</strong> of {expected.length} expected arrivals ready
             (room INSPECTED)
           </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
           type="button"
-          className="h-12 rounded-xl bg-charcoal px-5 font-medium text-ivory active:scale-[0.98]"
+          className="h-12 rounded-xl bg-navy px-5 font-medium text-ivory active:scale-[0.98]"
         >
           + New arrival
         </button>
       </div>
 
       {released && (
-        <div className="mb-4 rounded-xl border border-emerald-400 bg-emerald-50 p-4 text-emerald-900">
+        <div className="mb-4 rounded-xl border border-status-inspected/30 bg-status-inspected/10 p-4 text-status-inspected">
           🛎 {released}
         </div>
       )}
-      {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-sm">
         <table className="w-full min-w-[44rem] text-left text-sm">
@@ -116,7 +120,7 @@ export default function FrontOfficeView() {
                   <td className="px-4 py-3 font-medium">
                     {a.vip && <span className="text-gold">★ </span>}
                     {a.guestName}
-                    {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-emerald-700">checked in</span>}
+                    {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-status-inspected">checked in</span>}
                   </td>
                   <td className="px-4 py-3 font-serif text-lg">{a.room.number}</td>
                   <td className="px-4 py-3">
@@ -151,7 +155,7 @@ export default function FrontOfficeView() {
                         onClick={() => patch(a.id, { status: "CHECKED_IN" })}
                         disabled={!ready}
                         title={ready ? "Check in" : "Room not yet released"}
-                        className="h-10 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white disabled:opacity-30"
+                        className="h-10 rounded-lg bg-status-inspected px-3 text-xs font-semibold text-linen disabled:opacity-30"
                       >
                         Check in
                       </button>
@@ -189,8 +193,8 @@ function Flag({ on, label, hot, onClick }: { on: boolean; label: string; hot?: b
       className={`h-10 rounded-full border px-3 text-xs font-medium ${
         on
           ? hot
-            ? "border-red-500 bg-red-500 text-white"
-            : "border-gold bg-gold text-white"
+            ? "border-status-out-of-order bg-status-out-of-order text-linen"
+            : "border-gold bg-gold text-charcoal"
           : "border-charcoal/20 text-graphite/60"
       }`}
     >
@@ -255,11 +259,11 @@ function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (ar
           <Flag on={earlyCheckIn} label="Early check-in" onClick={() => setEarlyCheckIn((v) => !v)} />
           <Flag on={neededNow} label="Needed now" hot onClick={() => setNeededNow((v) => !v)} />
         </div>
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-2 text-sm text-status-out-of-order">{error}</p>}
         <div className="grid grid-cols-2 gap-2">
           <button onClick={onClose} className="h-12 rounded-xl border border-charcoal/20">Cancel</button>
           <button onClick={submit} disabled={busy || !roomNumber || !guestName}
-            className="h-12 rounded-xl bg-charcoal font-medium text-ivory disabled:opacity-40">
+            className="h-12 rounded-xl bg-navy font-medium text-ivory disabled:opacity-40">
             {busy ? "Saving…" : "Create"}
           </button>
         </div>

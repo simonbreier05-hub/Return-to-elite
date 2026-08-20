@@ -224,7 +224,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           )}
           <Link
             href="/supervisor/planning"
-            className="flex h-14 items-center rounded-xl bg-charcoal px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-espresso"
+            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >
             Morning planning →
           </Link>
@@ -240,11 +240,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
       {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
       {error && (
-        <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>
+        <div className="mb-3 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-4 py-2 text-sm text-status-out-of-order">
+          {error}
+        </div>
       )}
 
       {bulkResult && (
-        <div className="mb-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-900">
+        <div className="mb-3 rounded-lg border border-status-clean/30 bg-status-clean/10 px-4 py-2 text-sm text-status-clean">
           {bulkResult}
         </div>
       )}
@@ -384,7 +386,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               <button
                 onClick={() => releaseAll()}
                 disabled={bulkBusy}
-                className="mb-3 h-14 w-full rounded-xl bg-emerald-600 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                className="mb-3 h-14 w-full rounded-xl bg-status-inspected text-base font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
               >
                 {bulkBusy ? "Releasing…" : `✓ Release all ${releaseQueue.length}`}
               </button>
@@ -393,7 +395,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               {releaseQueue.map((room) => {
                 const busy = busyRoomId === room.id;
                 return (
-                  <div key={room.id} className="rounded-xl border border-yellow-300 bg-yellow-50 p-3">
+                  <div key={room.id} className="rounded-xl border border-status-clean/30 bg-status-clean/10 p-3">
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xl">{room.number}</span>
                       <span className="text-xs text-graphite/60">
@@ -412,14 +414,14 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                       <button
                         onClick={() => act(room, "INSPECTED")}
                         disabled={busy}
-                        className="h-12 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                        className="h-12 rounded-lg bg-status-inspected text-sm font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
                       >
                         {busy ? "…" : "✓ Inspect & release"}
                       </button>
                       <button
                         onClick={() => setDialog({ kind: "rework", room })}
                         disabled={busy}
-                        className="h-12 rounded-lg border-2 border-orange-500 text-sm font-semibold text-orange-700 transition active:scale-[0.98] disabled:opacity-50"
+                        className="h-12 rounded-lg border-2 border-status-pickup text-sm font-semibold text-status-pickup transition active:scale-[0.98] disabled:opacity-50"
                       >
                         ↩ Rework
                       </button>
@@ -493,7 +495,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
 function Kpi({ label, value, bar, accent }: { label: string; value: string; bar?: number; accent?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${accent ? "border-amber-400 bg-amber-50" : "border-charcoal/10 bg-white"}`}>
+    <div className={`rounded-2xl border p-4 shadow-sm transition-colors ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
       <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
       <div className="mt-1 font-serif text-3xl">{value}</div>
       {bar !== undefined && (
@@ -559,7 +561,7 @@ function ReworkModal({
         <button
           onClick={() => onSubmit(note.trim())}
           disabled={!note.trim()}
-          className="h-14 rounded-xl bg-orange-600 text-base font-semibold text-white disabled:opacity-40"
+          className="h-14 rounded-xl bg-status-pickup text-base font-semibold text-linen disabled:opacity-40"
         >
           ↩ Send back
         </button>
@@ -615,7 +617,7 @@ function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void
         <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
           Cancel
         </button>
-        <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-gray-600 text-base font-semibold text-white">
+        <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-status-out-of-order text-base font-semibold text-linen">
           Set out of order
         </button>
       </div>
@@ -681,7 +683,7 @@ function RoomDrawer({
           <p className="mt-1 text-xs text-graphite/60">OOO until {new Date(room.oooUntil).toLocaleString()}</p>
         )}
         {room.reworkNote && room.status === "PICKUP" && (
-          <p className="mt-2 rounded-lg bg-orange-50 p-2 text-sm text-orange-900">Rework: {room.reworkNote}</p>
+          <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">Rework: {room.reworkNote}</p>
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -690,14 +692,14 @@ function RoomDrawer({
               <button
                 onClick={() => onAct(room, "INSPECTED")}
                 disabled={busy}
-                className="col-span-2 h-14 rounded-xl bg-emerald-600 text-lg font-semibold text-white disabled:opacity-50"
+                className="col-span-2 h-14 rounded-xl bg-status-inspected text-lg font-semibold text-linen disabled:opacity-50"
               >
                 {busy ? "Releasing…" : "✓ Inspect & release"}
               </button>
               <button
                 onClick={() => onOpenDialog("rework")}
                 disabled={busy}
-                className="col-span-2 h-12 rounded-xl border-2 border-orange-500 font-medium text-orange-700 disabled:opacity-50"
+                className="col-span-2 h-12 rounded-xl border-2 border-status-pickup font-medium text-status-pickup disabled:opacity-50"
               >
                 ↩ Send back (rework)
               </button>
@@ -707,7 +709,7 @@ function RoomDrawer({
             <button
               onClick={() => onAct(room, "DIRTY")}
               disabled={busy}
-              className="col-span-2 h-12 rounded-xl border-2 border-red-400 font-medium text-red-700 disabled:opacity-50"
+              className="col-span-2 h-12 rounded-xl border-2 border-status-dirty font-medium text-status-dirty disabled:opacity-50"
             >
               Set DIRTY (new checkout)
             </button>
@@ -725,14 +727,14 @@ function RoomDrawer({
               <button
                 onClick={() => onOpenDialog("ooo")}
                 disabled={busy}
-                className="h-12 rounded-xl border-2 border-gray-400 text-sm font-medium text-gray-700 disabled:opacity-50"
+                className="h-12 rounded-xl border-2 border-status-out-of-order/60 text-sm font-medium text-status-out-of-order disabled:opacity-50"
               >
                 Set OOO…
               </button>
               <button
                 onClick={() => onAct(room, "OUT_OF_SERVICE")}
                 disabled={busy}
-                className="h-12 rounded-xl border-2 border-gray-300 text-sm font-medium text-gray-600 disabled:opacity-50"
+                className="h-12 rounded-xl border-2 border-charcoal/25 text-sm font-medium text-graphite disabled:opacity-50"
               >
                 Set OOS
               </button>
@@ -806,7 +808,7 @@ function RoomDrawer({
             <button
               onClick={addNote}
               disabled={savingNote || !noteBody.trim()}
-              className="h-12 rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40"
+              className="h-12 rounded-lg bg-navy px-4 text-ivory disabled:opacity-40"
             >
               {savingNote ? "…" : "Add"}
             </button>

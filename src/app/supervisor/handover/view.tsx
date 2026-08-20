@@ -103,7 +103,11 @@ export default function HandoverView() {
         </button>
       </div>
 
-      {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
 
       {h && f && (
         <>
@@ -119,7 +123,7 @@ export default function HandoverView() {
             <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-charcoal/10 pt-4">
               <button
                 onClick={copy}
-                className="h-12 rounded-xl bg-charcoal px-5 text-sm font-medium text-ivory transition hover:bg-espresso"
+                className="h-12 rounded-xl bg-navy px-5 text-sm font-medium text-ivory transition hover:bg-navy-line"
               >
                 {copied ? "✓ Copied" : "Copy for the shift book"}
               </button>
@@ -130,7 +134,7 @@ export default function HandoverView() {
             </div>
 
             {h.warning && (
-              <p className="mt-3 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+              <p className="mt-3 rounded-lg border border-gold/40 bg-gold/10 p-3 text-sm text-gold-soft">
                 {h.warning}
               </p>
             )}

@@ -1,11 +1,11 @@
 {
-  "name": "Hotel Housekeeping",
+  "name": "Hotel de Rome Housekeeping",
   "short_name": "Housekeeping",
-  "description": "Real-time room cleaning & release for a 145-room luxury hotel",
+  "description": "Real-time room cleaning & release for Hotel de Rome, Berlin",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f5f0e6",
-  "theme_color": "#1a1714",
+  "background_color": "#f7f3ea",
+  "theme_color": "#133457",
   "orientation": "any",
   "icons": [
     {

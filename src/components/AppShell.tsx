@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { api } from "./api";
 import { useSocket } from "./useSocket";
 
@@ -15,10 +16,12 @@ interface Notification {
   createdAt: string;
 }
 
+/** Alert *levels* — a separate semantic system from room status colours,
+ * kept in the same muted register so it never reads as a room-status hue. */
 const LEVEL_STYLES: Record<string, string> = {
-  info: "border-l-emerald-500",
-  warning: "border-l-amber-500",
-  critical: "border-l-red-600",
+  info: "border-l-navy-line",
+  warning: "border-l-gold",
+  critical: "border-l-status-out-of-order",
 };
 
 /**
@@ -98,15 +101,20 @@ export default function AppShell({
 
   return (
     <div className="min-h-screen flex flex-col">
-      {/* A slim navy edge — the house's own accent, kept to this one line;
-          border rather than a second sticky element, so scrolling never
-          risks a gap or a stacking mismatch between the two. */}
-      <header className="sticky top-0 z-40 border-t-[3px] border-navy-line bg-charcoal text-ivory shadow-lift">
+      {/* A slim navy edge — the house's own accent, kept to this one line —
+          over a light, paper-toned bar carrying the real crest. Border
+          rather than a second sticky element, so scrolling never risks a
+          gap or a stacking mismatch between the two. */}
+      <header className="sticky top-0 z-40 border-t-[3px] border-navy bg-linen text-charcoal shadow-lift">
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-baseline gap-4">
-            <span className="font-serif text-[1.7rem] tracking-[0.06em] text-gold-soft">StayClean</span>
-            <span className="hidden h-4 w-px bg-ivory/20 sm:block" />
-            <span className="hidden text-[0.72rem] uppercase tracking-[0.24em] text-ivory/55 sm:inline">{title}</span>
+          <div className="flex items-center gap-3.5">
+            <Image src="/brand/crest.png" alt="" width={34} height={27} className="h-[1.7rem] w-auto shrink-0" priority />
+            <div className="flex items-baseline gap-4">
+              <div className="leading-tight">
+                <p className="text-[0.62rem] uppercase tracking-[0.24em] text-gold-soft">Hotel de Rome · Berlin</p>
+                <p className="font-serif text-xl tracking-[0.01em] text-navy">{title}</p>
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {devUsers && (
@@ -114,14 +122,12 @@ export default function AppShell({
                 aria-label="Switch role (dev)"
                 value=""
                 onChange={(e) => switchTo(e.target.value)}
-                className="hidden h-12 max-w-[11rem] rounded-xl border border-gold-line/40 bg-white/10 px-3 text-sm text-ivory outline-none md:block"
+                className="hidden h-12 max-w-[11rem] rounded-sm border border-charcoal/15 bg-parchment/60 px-3 text-sm text-charcoal outline-none focus:border-gold md:block"
                 title="Development: switch role without signing out"
               >
-                <option value="" className="text-charcoal">
-                  Switch role…
-                </option>
+                <option value="">Switch role…</option>
                 {devUsers.map((u) => (
-                  <option key={u.email} value={u.email} className="text-charcoal">
+                  <option key={u.email} value={u.email}>
                     {u.name} · {u.role.replace(/_/g, " ")}
                   </option>
                 ))}
@@ -129,14 +135,14 @@ export default function AppShell({
             )}
             <button
               onClick={() => setOpen((o) => !o)}
-              className="relative flex h-12 w-12 items-center justify-center rounded-full hover:bg-white/10"
+              className="relative flex h-12 w-12 items-center justify-center rounded-full hover:bg-parchment"
               aria-label="Notifications"
             >
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
               {unread > 0 && (
-                <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-600 px-1 text-xs font-bold">
+                <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-status-out-of-order px-1 text-xs font-bold text-linen">
                   {unread}
                 </span>
               )}
@@ -147,7 +153,7 @@ export default function AppShell({
             </div>
             <button
               onClick={logout}
-              className="ml-2 h-12 rounded-xl border border-white/20 px-4 text-sm transition hover:bg-white/10"
+              className="ml-2 h-12 rounded-sm border border-charcoal/15 px-4 text-sm transition hover:bg-parchment hover:border-charcoal/25"
             >
               Sign out
             </button>
@@ -156,26 +162,27 @@ export default function AppShell({
       </header>
 
       {open && (
-        <div className="fixed inset-x-2 top-20 z-50 mx-auto max-w-lg rounded-2xl border border-charcoal/10 bg-white shadow-2xl sm:right-6 sm:left-auto sm:w-[26rem]">
+        <div className="fixed inset-x-2 top-20 z-50 mx-auto max-w-lg animate-sheet rounded-2xl border border-charcoal/10 bg-linen shadow-2xl sm:right-6 sm:left-auto sm:w-[26rem]">
           <div className="flex items-center justify-between border-b border-charcoal/10 px-4 py-3">
-            <span className="font-serif text-lg">Notifications</span>
+            <span className="font-serif text-lg text-navy">Notifications</span>
             <div className="flex gap-2">
-              <button onClick={ackAll} className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment">
+              <button onClick={ackAll} className="h-10 rounded-sm px-3 text-sm text-gold-soft hover:bg-parchment">
                 Mark all read
               </button>
-              <button onClick={() => setOpen(false)} className="h-10 w-10 rounded-lg hover:bg-parchment">✕</button>
+              <button onClick={() => setOpen(false)} className="h-10 w-10 rounded-sm hover:bg-parchment">✕</button>
             </div>
           </div>
           <div className="max-h-96 overflow-y-auto p-2">
-            {notifications.length === 0 && <p className="p-4 text-sm text-graphite/60">No notifications.</p>}
-            {notifications.map((n) => (
+            {notifications.length === 0 && <p className="p-4 text-sm text-graphite/70">No notifications.</p>}
+            {notifications.map((n, i) => (
               <div
                 key={n.id}
-                className={`mb-2 rounded-lg border border-charcoal/5 border-l-4 bg-ivory p-3 ${LEVEL_STYLES[n.level] ?? ""} ${
+                style={{ "--stagger-i": i } as React.CSSProperties}
+                className={`mb-2 animate-stagger rounded-lg border border-charcoal/5 border-l-4 bg-ivory p-3 ${LEVEL_STYLES[n.level] ?? ""} ${
                   n.acknowledged ? "opacity-50" : ""
                 }`}
               >
-                <div className="text-xs uppercase tracking-wider text-graphite/60">
+                <div className="text-xs uppercase tracking-wider text-graphite/70">
                   {n.type.replace(/_/g, " ")} · {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
                 <div className="mt-1 text-sm">{n.message}</div>

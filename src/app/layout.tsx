@@ -23,21 +23,23 @@ const sans = Inter({
 
 export const metadata: Metadata = {
   title: "StayClean",
-  description: "Real-time room cleaning & release for a 145-room luxury hotel",
+  description: "Real-time room cleaning & release for Hotel de Rome, Berlin",
   manifest: "/manifest.json",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "any" },
+      { url: "/icon.png", sizes: "32x32", type: "image/png" },
       { url: "/icons/icon-192.png", sizes: "192x192", type: "image/png" },
       { url: "/icons/icon-512.png", sizes: "512x512", type: "image/png" },
     ],
-    apple: "/icons/icon-192.png",
+    apple: "/icons/apple-touch-icon.png",
   },
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  themeColor: "#1a1714",
+  themeColor: "#133457",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

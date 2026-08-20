@@ -199,7 +199,11 @@ export default function AttendantView() {
 
       <OfflineBar state={offline} />
 
-      {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
 
       {routeRooms.length > 0 && (
         <Collapsible
@@ -213,9 +217,9 @@ export default function AttendantView() {
               <span
                 className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wider ${
                   routeLoad === "heavy"
-                    ? "bg-red-100 text-red-800"
+                    ? "bg-gold/15 text-gold-soft"
                     : routeLoad === "typical"
-                      ? "bg-emerald-100 text-emerald-800"
+                      ? "bg-status-clean/10 text-status-clean"
                       : "bg-parchment text-graphite/70"
                 }`}
               >
@@ -264,7 +268,7 @@ export default function AttendantView() {
                               <circle cx="4" cy="11" r="1.3" /><circle cx="10" cy="11" r="1.3" />
                             </svg>
                           </button>
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-charcoal text-xs font-semibold text-ivory tabular-nums">
+                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory tabular-nums">
                             {startIndex + i + 1}
                           </span>
                           <span className="font-serif text-lg">{room.number}</span>
@@ -341,12 +345,12 @@ export default function AttendantView() {
               )}
 
               {room.status === "PICKUP" && room.reworkNote && (
-                <div className="mb-2 rounded-lg border border-orange-300 bg-orange-50 p-2 text-sm text-orange-900">
+                <div className="mb-2 rounded-lg border border-status-pickup/30 bg-status-pickup/10 p-2 text-sm text-status-pickup">
                   <strong>Rework:</strong> {room.reworkNote}
                 </div>
               )}
               {room.status === "BLOCKED" && (
-                <div className="mb-2 rounded-lg border border-purple-300 bg-purple-50 p-2 text-sm text-purple-900">
+                <div className="mb-2 rounded-lg border border-status-blocked/30 bg-status-blocked/10 p-2 text-sm text-status-blocked">
                   Blocked: {room.blockReason?.replace(/_/g, " ")}
                 </div>
               )}
@@ -361,7 +365,7 @@ export default function AttendantView() {
                   <button
                     onClick={() => setStatus(room, "IN_PROGRESS")}
                     disabled={busy}
-                    className="col-span-2 h-14 rounded-xl bg-blue-600 text-lg font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                    className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
                   >
                     {busy ? "…" : "▶ Start cleaning"}
                   </button>
@@ -370,7 +374,7 @@ export default function AttendantView() {
                   <button
                     onClick={() => setStatus(room, "IN_PROGRESS")}
                     disabled={busy}
-                    className="col-span-2 h-14 rounded-xl bg-blue-600 text-lg font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                    className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
                   >
                     {busy ? "…" : "▶ Unblock & start"}
                   </button>
@@ -379,7 +383,7 @@ export default function AttendantView() {
                   <button
                     onClick={() => setStatus(room, "CLEAN")}
                     disabled={busy}
-                    className="col-span-2 h-14 rounded-xl bg-yellow-400 text-lg font-semibold text-charcoal transition active:scale-[0.98] disabled:opacity-50"
+                    className="col-span-2 h-14 rounded-xl bg-status-clean text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
                   >
                     {busy ? "…" : "✓ Mark clean · to inspect"}
                   </button>
@@ -388,14 +392,14 @@ export default function AttendantView() {
                   <button
                     onClick={() => setModal({ kind: "block", room })}
                     disabled={busy}
-                    className="h-12 rounded-xl border-2 border-purple-500 text-sm font-medium text-purple-700 transition active:scale-[0.98] disabled:opacity-50"
+                    className="h-12 rounded-xl border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
                   >
                     ⛔ Blocked…
                   </button>
                 )}
                 <button
                   onClick={() => setModal({ kind: "defect", room })}
-                  className="h-12 rounded-xl border-2 border-amber-500 text-sm font-medium text-amber-700 transition active:scale-[0.98]"
+                  className="h-12 rounded-xl border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
                 >
                   🔧 Defect…
                 </button>
@@ -482,7 +486,7 @@ function BlockModal({
           <button
             key={r}
             onClick={() => onSubmit(r)}
-            className="h-14 rounded-xl border-2 border-purple-400 text-base font-medium text-purple-800 hover:bg-purple-50"
+            className="h-14 rounded-xl border-2 border-status-blocked/60 text-base font-medium text-status-blocked hover:bg-status-blocked/10"
           >
             {labels[r]}
           </button>
@@ -557,11 +561,11 @@ function DefectModal({
         onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
         className="mb-4 w-full text-sm"
       />
-      {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+      {error && <p className="mb-2 text-sm text-status-out-of-order">{error}</p>}
       <button
         onClick={submit}
         disabled={busy || !note.trim()}
-        className="h-14 w-full rounded-xl bg-amber-600 text-lg font-semibold text-white disabled:opacity-40"
+        className="h-14 w-full rounded-xl bg-status-defect text-lg font-semibold text-linen disabled:opacity-40"
       >
         {busy ? "Sending…" : "Send to engineering"}
       </button>
@@ -605,7 +609,7 @@ function NoteModal({
       <button
         onClick={save}
         disabled={busy || !body.trim()}
-        className="h-14 w-full rounded-xl bg-charcoal text-base font-medium text-ivory disabled:opacity-40"
+        className="h-14 w-full rounded-xl bg-navy text-base font-medium text-ivory disabled:opacity-40"
       >
         {busy ? "Saving…" : "Save note"}
       </button>

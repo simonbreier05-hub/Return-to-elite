@@ -16,9 +16,18 @@
  * network, untouched.
  */
 
-const CACHE_VERSION = "stayclean-static-v1";
+const CACHE_VERSION = "stayclean-static-v2";
 
-const PRECACHE_URLS = ["/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
+const PRECACHE_URLS = [
+  "/manifest.json",
+  "/favicon.ico",
+  "/icon.png",
+  "/icons/icon-192.png",
+  "/icons/icon-512.png",
+  "/icons/apple-touch-icon.png",
+  "/brand/wordmark.png",
+  "/brand/crest.png",
+];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -51,8 +60,10 @@ function isStaticAsset(url) {
   return (
     url.pathname.startsWith("/_next/static/") ||
     url.pathname.startsWith("/icons/") ||
+    url.pathname.startsWith("/brand/") ||
     url.pathname === "/manifest.json" ||
-    url.pathname === "/favicon.ico"
+    url.pathname === "/favicon.ico" ||
+    url.pathname === "/icon.png"
   );
 }
 

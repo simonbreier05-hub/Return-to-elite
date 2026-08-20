@@ -105,7 +105,11 @@ export default function SettingsView() {
         </Link>
       </div>
 
-      {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
 
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <h3 className="mb-1 font-serif text-2xl">Escalation thresholds</h3>
