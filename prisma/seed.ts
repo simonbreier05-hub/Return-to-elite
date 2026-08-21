@@ -1,6 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { roomNumbersForFloor } from "../src/lib/domain";
+import { FLOOR_4_SECTION, roomNumbersForFloor } from "../src/lib/domain";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
 
 /**
@@ -106,7 +106,10 @@ async function main() {
     const numbers = roomNumbersForFloor(floor);
     for (const [idx, number] of numbers.entries()) {
       const i = idx + 1; // 1-based position on the floor, not the literal room number
-      const section = `${floor}${i <= 15 ? "A" : "B"}`;
+      // Floor 4 doesn't split neatly by position — its two wings are read
+      // straight off the floor plan (see FLOOR_4_SECTION); every other
+      // floor still splits by position along one running corridor.
+      const section = floor === 4 ? FLOOR_4_SECTION[number as keyof typeof FLOOR_4_SECTION] : `${floor}${i <= 15 ? "A" : "B"}`;
       const type = typeFor(floor, i);
       count++;
       // Deterministic-ish demo distribution of statuses & occupancy
@@ -181,7 +184,7 @@ async function main() {
     },
   });
   await prisma.room.update({
-    where: { number: "410" },
+    where: { number: "414" },
     data: {
       status: "BLOCKED", blockReason: "DOUBLE_LOCKED", blockedSince: at(-10), statusSince: at(-10),
       occupancy: "OCCUPIED", isCheckoutToday: false,

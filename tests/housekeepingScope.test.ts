@@ -21,8 +21,8 @@ describe("isHousekeepingRelevant", () => {
 });
 
 describe("roomNumbersForFloor", () => {
-  it("gives every floor exactly 29 rooms", () => {
-    for (const floor of [1, 2, 3, 4, 5]) {
+  it("gives every floor but 4 exactly 29 rooms", () => {
+    for (const floor of [1, 2, 3, 5]) {
       expect(roomNumbersForFloor(floor)).toHaveLength(29);
     }
   });
@@ -38,9 +38,26 @@ describe("roomNumbersForFloor", () => {
     expect(numbers[0]).toBe("501");
   });
 
-  it("floors 2-4 stay contiguous and end at their floor's 29th room", () => {
+  it("floors 2-3 stay contiguous and end at their floor's 29th room", () => {
     expect(roomNumbersForFloor(2).at(-1)).toBe("229");
     expect(roomNumbersForFloor(3).at(-1)).toBe("329");
-    expect(roomNumbersForFloor(4).at(-1)).toBe("429");
+  });
+
+  it("floor 4 follows the house's real, irregular numbering — not a running corridor", () => {
+    const numbers = roomNumbersForFloor(4);
+    expect(numbers).toHaveLength(23);
+    expect(numbers[0]).toBe("401");
+    expect(numbers.at(-1)).toBe("437");
+    // Numbers taken by non-guest spaces on this floor plan (housekeeping
+    // closets, lifts, the fire escape, the service lift) never appear.
+    for (const missing of ["403", "404", "410", "411", "413", "426", "427", "429", "430"]) {
+      expect(numbers).not.toContain(missing);
+    }
+  });
+
+  it("returns a fresh array each call — callers can't mutate the shared list", () => {
+    const a = roomNumbersForFloor(4);
+    a.push("999");
+    expect(roomNumbersForFloor(4)).not.toContain("999");
   });
 });

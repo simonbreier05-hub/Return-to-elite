@@ -64,23 +64,56 @@ export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
   PENTHOUSE: "Penthouse",
 };
 
-/** The property: five guest floors, 29 rooms each = 145 keys. */
+/** The property: five guest floors, 139 keys — see roomNumbersForFloor. */
 export const HOTEL = {
   floors: [1, 2, 3, 4, 5],
+  /** Floors 1, 2, 3, 5 only — floor 4 is the real, irregular list below. */
   roomsPerFloor: 29,
-  /** Rooms 01–15 form section A, 16–29 section B. */
+  /** Rooms 01–15 form section A, 16–29 section B (floors 1, 2, 3, 5). */
   sectionSplit: 15,
 } as const;
 
 /**
- * Room numbers for a floor, low to high. Every floor carries
- * `HOTEL.roomsPerFloor` rooms, numbered `{floor}01`…, with one exception:
- * floor 5 skips "513" (the common hotel superstition skip, same idea as a
- * lift with no 13th-floor button) so the top floor still runs up to room
- * "530" instead of stopping at "529" — matching how the house is actually
- * numbered, door to door.
+ * Floor 4's real numbering, taken directly off the house's own floor plan —
+ * not sequential like the other floors. The guest rooms sit around two
+ * courtyards and the historic Bebelplatz-facing block rather than one
+ * running corridor, so 403–411, 413, 426, 427, 429 and 430 simply don't
+ * exist as guest rooms on this floor (housekeeping closets, the fire
+ * escape, lifts and the service lift take some of those numbers instead).
+ * Kept as an explicit list rather than a formula, because a formula can't
+ * express "these specific numbers, no others."
+ */
+const FLOOR_4_ROOMS = [
+  "401", "402",
+  "412", "414", "415", "416", "417", "418", "419",
+  "420", "421", "422", "423", "424", "425", "428",
+  "431", "432", "433", "434", "435", "436", "437",
+] as const;
+
+/**
+ * Floor 4's two wings, also read off the floor plan: 401/402 and 431–437
+ * cluster together near the lobby and lifts on the Bebelplatz side; 412
+ * through 428 run down the Innenhof corridor towards Französische Straße.
+ * A room attendant working this floor should stay in one wing, not
+ * zig-zag between them — see roomNumbersForFloor's callers.
+ */
+export const FLOOR_4_SECTION: Record<(typeof FLOOR_4_ROOMS)[number], "4A" | "4B"> = {
+  "401": "4A", "402": "4A",
+  "431": "4A", "432": "4A", "433": "4A", "434": "4A", "435": "4A", "436": "4A", "437": "4A",
+  "412": "4B", "414": "4B", "415": "4B", "416": "4B", "417": "4B", "418": "4B", "419": "4B",
+  "420": "4B", "421": "4B", "422": "4B", "423": "4B", "424": "4B", "425": "4B", "428": "4B",
+};
+
+/**
+ * Room numbers for a floor, in a sensible walking/display order. Floor 4
+ * returns its real, irregular list (see FLOOR_4_ROOMS); every other floor
+ * carries `HOTEL.roomsPerFloor` sequential rooms, numbered `{floor}01`…,
+ * with one exception: floor 5 skips "513" (the common hotel superstition
+ * skip, same idea as a lift with no 13th-floor button) so the top floor
+ * still runs up to room "530" instead of stopping at "529".
  */
 export function roomNumbersForFloor(floor: number): string[] {
+  if (floor === 4) return [...FLOOR_4_ROOMS];
   const numbers: string[] = [];
   for (let i = 1; numbers.length < HOTEL.roomsPerFloor; i++) {
     if (floor === 5 && i === 13) continue;
