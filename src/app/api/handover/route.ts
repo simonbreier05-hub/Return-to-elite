@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
-import { minutesBetween, type HandoverFacts, type RoomRef } from "@/lib/handover/collectFacts";
+import { minutesBetween, type DeferredRoomRef, type HandoverFacts, type RoomRef } from "@/lib/handover/collectFacts";
 import { activeProvider, generateHandover } from "@/lib/handover/generate";
 
 /**
@@ -97,6 +97,10 @@ export async function GET(req: NextRequest) {
         .map(toRef)
         .sort((a, b) => b.minutesInStatus - a.minutesInStatus)
         .slice(0, 3),
+      deferred: rooms
+        .filter((r) => r.deferredSince)
+        .map((r): DeferredRoomRef => ({ ...toRef(r), deferredMinutesAgo: minutesBetween(r.deferredSince!, now) }))
+        .sort((a, b) => b.deferredMinutesAgo - a.deferredMinutesAgo),
     },
     arrivals: {
       expected: arrivals.length,

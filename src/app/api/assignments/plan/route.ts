@@ -106,13 +106,26 @@ export async function POST(req: NextRequest) {
   const defaults = defaultDayFigures(classifiable, expectedArrivals);
   const figures = opts.dayFigures ?? defaults;
 
-  // Only rooms that still need an attendant, AND that a current or departing
-  // guest actually makes relevant, can be planned. A vacant room nobody is
-  // staying in or checking out of today never enters the work pool — see
-  // isHousekeepingRelevant for why this is a single shared gate.
-  const workRooms = classifiable.filter((r) => NEEDS_WORK.has(r.status) && isHousekeepingRelevant(r));
-  const departureIds = classifyDepartures(workRooms, figures.departures);
-  const warnings = checkDayFigures(figures, rooms.length, workRooms.length);
+  // The house starts every plan from a 100%-clean baseline — the day's real
+  // workload is whoever is actually staying, checking out or checking in
+  // today (stayovers + departures + arrivals, isHousekeepingRelevant's own
+  // definition, one count per room), full stop. That is what "belegte
+  // Zimmer" subtracts from the clean baseline, not a live read of whichever
+  // rooms still happen to say DIRTY right now. The distinction matters: a
+  // status-filtered count shrinks all morning as attendants tick rooms off,
+  // which would silently understate staffing need by early afternoon even
+  // though those finished rooms were real work somebody did today. This
+  // count stays the same from 07:00 to 19:00 — it is today's occupancy, not
+  // today's remaining status board.
+  const occupiedRooms = classifiable.filter(isHousekeepingRelevant);
+  const departureIds = classifyDepartures(occupiedRooms, figures.departures);
+  const warnings = checkDayFigures(figures, rooms.length, occupiedRooms.length);
+
+  // The status board still decides what actually gets *assigned* below —
+  // there is no reason to hand an attendant a room that is already CLEAN or
+  // INSPECTED, occupied or not. NEEDS_WORK only narrows the assignment step;
+  // it never narrows the staffing count above.
+  const actionableRooms = occupiedRooms.filter((r) => NEEDS_WORK.has(r.status));
 
   // A departure clean is substantially longer than stayover service, so the
   // split the supervisor entered is what actually moves the workload.
@@ -150,8 +163,13 @@ export async function POST(req: NextRequest) {
     roomsPerAttendantMax: settings.roomsPerAttendantMax,
     attendantPoolMax: settings.attendantPoolMax,
   };
+  // Staffing itself is sized off the full-day occupancy baseline (see
+  // occupiedRooms above) — how many hands today's actual guests require,
+  // not how many rooms happen to still say DIRTY at the moment someone
+  // opens this screen. Which specific rooms get deferred when that's too
+  // many, though, can only ever be ones still on the table — see workable.
   const workable = assignable.filter((r) => NEEDS_WORK.has(r.status));
-  const staffing = computeStaffingNeed(workRooms.length, staffingConfig);
+  const staffing = computeStaffingNeed(occupiedRooms.length, staffingConfig);
   const { deferred } = splitForCapacity(workable, staffing.realisticCapacity);
   const deferredIds = new Set(deferred.map((r) => r.id));
   const assignableForPlan = assignable.filter((r) => !deferredIds.has(r.id));
@@ -179,7 +197,8 @@ export async function POST(req: NextRequest) {
     warnings,
     stayovers: stayoversFrom(figures),
     totalRooms: rooms.length,
-    roomsNeedingWork: workRooms.length,
+    roomsNeedingWork: occupiedRooms.length,
+    stillActionable: actionableRooms.length,
     staffing,
     deferredRooms: deferred.map((r) => ({
       roomId: r.id,

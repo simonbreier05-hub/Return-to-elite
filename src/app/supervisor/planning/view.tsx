@@ -77,6 +77,7 @@ interface PlanResponse {
   stayovers: number;
   totalRooms: number;
   roomsNeedingWork: number;
+  stillActionable: number;
   staffing: Staffing;
   deferredRooms: DeferredRoom[];
 }
@@ -277,14 +278,21 @@ export default function PlanningView() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<{ roomsAssigned: number }>("/api/assignments/apply", {
+      const res = await api<{ roomsAssigned: number; roomsDeferred: number }>("/api/assignments/apply", {
         body: {
           assignments: plan.assignments
             .filter((a) => a.roomIds.length > 0)
             .map((a) => ({ attendantId: a.attendantId, roomIds: a.roomIds })),
+          // Stamped so the shift handover can call these out by name instead
+          // of silently mixing them into "still dirty" — see result.deferredRooms.
+          deferredRoomIds: result?.deferredRooms.map((r) => r.roomId) ?? [],
         },
       });
-      setApplied(t("planning.applied", { count: res.roomsAssigned }));
+      setApplied(
+        res.roomsDeferred > 0
+          ? t("planning.appliedWithDeferred", { count: res.roomsAssigned, deferred: res.roomsDeferred })
+          : t("planning.applied", { count: res.roomsAssigned })
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -332,13 +340,9 @@ export default function PlanningView() {
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("planning.subtitle")}</p>
-          {HOTEL.pendingFloors.length > 0 && (
+          {HOTEL.unconfirmedFloors.length > 0 && (
             <p className="mt-1 text-xs font-medium text-gold-soft">
-              {t("common.pendingFloorNotice", {
-                floors: HOTEL.pendingFloors.join(", "),
-                count: result?.totalRooms ?? 0,
-                expected: HOTEL.expectedTotalRooms,
-              })}
+              {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}
             </p>
           )}
         </div>
@@ -579,7 +583,11 @@ export default function PlanningView() {
           <section
             className={`mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 transition-opacity ${refreshing ? "opacity-60" : ""}`}
           >
-            <Stat label={t("planning.roomsToClean")} value={String(plan.summary.totalRooms)} sub={t("planning.ofKeys", { count: result?.totalRooms ?? 0 })} />
+            <Stat
+              label={t("planning.roomsToClean")}
+              value={String(result?.roomsNeedingWork ?? plan.summary.totalRooms)}
+              sub={t("planning.stillOpenSub", { count: result?.stillActionable ?? plan.summary.totalRooms, total: result?.totalRooms ?? 0 })}
+            />
             <Stat label={t("planning.totalWork")} value={fmt(plan.summary.totalMinutes)} sub={t("planning.departureCleans", { count: figures?.departures ?? 0 })} />
             <Stat
               label={t("planning.teamCapacity")}

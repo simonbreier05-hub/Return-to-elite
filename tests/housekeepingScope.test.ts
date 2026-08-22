@@ -21,20 +21,25 @@ describe("isHousekeepingRelevant", () => {
 });
 
 describe("roomNumbersForFloor", () => {
-  it("gives floors 1-3 exactly 33 rooms, their confirmed real count", () => {
-    for (const floor of [1, 2, 3]) {
-      expect(roomNumbersForFloor(floor)).toHaveLength(33);
-    }
+  it("gives floor 3 (photographed, the full pattern) exactly 33 rooms", () => {
+    expect(roomNumbersForFloor(3)).toHaveLength(33);
+  });
+
+  it("floors 1, 2 and 5 are trimmed a few rooms short of floor 3's full pattern", () => {
+    expect(roomNumbersForFloor(1)).toHaveLength(30);
+    expect(roomNumbersForFloor(2)).toHaveLength(30);
+    expect(roomNumbersForFloor(5)).toHaveLength(29);
   });
 
   it("floor 1 starts at 101", () => {
     expect(roomNumbersForFloor(1)[0]).toBe("101");
   });
 
-  it("floors 1-3 share one irregular pattern: skip 02/03, 05/06, 13, then run to 38", () => {
-    for (const floor of [1, 2, 3]) {
+  it("floors 1, 2, 3 and 5 share one pattern (skip 02/03, 05/06, 13), each cut at its own top", () => {
+    const top: Record<number, string> = { 1: "135", 2: "235", 3: "338", 5: "534" };
+    for (const floor of [1, 2, 3, 5]) {
       const numbers = roomNumbersForFloor(floor);
-      expect(numbers.at(-1)).toBe(`${floor}38`);
+      expect(numbers.at(-1)).toBe(top[floor]);
       for (const suffix of ["02", "03", "05", "06", "13"]) {
         expect(numbers).not.toContain(`${floor}${suffix}`);
       }
@@ -53,9 +58,12 @@ describe("roomNumbersForFloor", () => {
     }
   });
 
-  it("floor 5 is empty — its floor plan is not confirmed yet, so nothing is invented", () => {
-    expect(roomNumbersForFloor(5)).toEqual([]);
-    expect(HOTEL.pendingFloors).toContain(5);
+  it("floors 1, 2 and 5 are flagged unconfirmed — a real room list, just not floor-plan-verified", () => {
+    for (const floor of [1, 2, 5]) {
+      expect(HOTEL.unconfirmedFloors).toContain(floor);
+      expect(roomNumbersForFloor(floor).length).toBeGreaterThan(0);
+    }
+    for (const floor of [3, 4]) expect(HOTEL.unconfirmedFloors).not.toContain(floor);
   });
 
   it("returns a fresh array each call — callers can't mutate the shared list", () => {
@@ -64,8 +72,8 @@ describe("roomNumbersForFloor", () => {
     expect(roomNumbersForFloor(4)).not.toContain("999");
   });
 
-  it("adds up to the house's confirmed 122 keys across floors 1-4", () => {
+  it("adds up to the house's full 145 keys across floors 1-5", () => {
     const total = [1, 2, 3, 4, 5].reduce((sum, f) => sum + roomNumbersForFloor(f).length, 0);
-    expect(total).toBe(122);
+    expect(total).toBe(145);
   });
 });

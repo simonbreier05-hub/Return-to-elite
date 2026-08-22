@@ -12,13 +12,14 @@ import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant"
  * something to show on first login.
  *
  * room-seed-data.json is the actual room table (source: the "Elite
- * Housekeeping" Airtable base / the house's own floor plans), floors 1–4.
- * Floor 5's floor plan is not confirmed yet, so it is deliberately absent
- * from the file rather than filled in with invented numbers — see the
- * file's own `missingFloor` / `note` fields, and HOTEL.pendingFloors in
- * src/lib/domain.ts, which the UI reads to say so out loud instead of
- * quietly showing a smaller house than the real one. Update the JSON and
- * re-seed once floor 5's plan is confirmed; nothing here needs to change.
+ * Housekeeping" Airtable base / the house's own floor plans), all 145 keys
+ * across floors 1–5. Floors 3 and 4 come from photographed floor plans;
+ * floors 1, 2 and 5 follow the same numbering pattern but are a *calculated*
+ * trim to hit the house's stated 145-key total, not independently confirmed
+ * — the file's own `note` says so, and src/lib/domain.ts's
+ * `HOTEL.unconfirmedFloors` mirrors exactly that admission so the UI keeps
+ * saying it out loud instead of presenting a computed guess as fact. Update
+ * the JSON (and HOTEL.unconfirmedFloors) once a floor is actually verified.
  *
  * All demo passwords: 123
  */
@@ -30,8 +31,6 @@ interface SeedRoom {
 interface RoomSeedData {
   note: string;
   totalRoomsInThisFile: number;
-  totalRoomsExpected: number;
-  missingFloor: number;
   rooms: SeedRoom[];
 }
 
@@ -112,19 +111,13 @@ async function main() {
   }
   for (const numbers of roomsByFloor.values()) numbers.sort((a, b) => a.localeCompare(b));
   const floors = [...roomsByFloor.keys()].sort((a, b) => a - b);
-  console.log(
-    `room-seed-data.json: ${seedData.rooms.length} rooms across floors ${floors.join(", ")}` +
-      (seedData.missingFloor
-        ? ` — floor ${seedData.missingFloor} intentionally absent (${seedData.totalRoomsExpected - seedData.totalRoomsInThisFile} keys not yet confirmed).`
-        : ".")
-  );
+  console.log(`room-seed-data.json: ${seedData.rooms.length} rooms across floors ${floors.join(", ")}.`);
 
   // Categories climb with the floor, the way a city hotel is usually stacked.
+  // (No confirmed category data yet for any floor — this tiering is still a
+  // placeholder, same as the room list for floors 1, 2 and 5 themselves.)
   const typeFor = (floor: number, idx: number): string => {
-    if (floor === 5) {
-      if (idx <= 2) return "PENTHOUSE";
-      return idx % 3 === 0 ? "JUNIOR_SUITE" : "SUITE";
-    }
+    if (floor === 5) return idx % 4 === 0 ? "SUITE" : idx % 2 === 0 ? "JUNIOR_SUITE" : "DELUXE";
     if (floor === 4) return idx % 4 === 0 ? "SUITE" : idx % 2 === 0 ? "JUNIOR_SUITE" : "DELUXE";
     if (floor === 3) return idx % 5 === 0 ? "JUNIOR_SUITE" : "DELUXE";
     if (floor === 2) return idx % 3 === 0 ? "DELUXE" : "SUPERIOR";
@@ -237,11 +230,8 @@ async function main() {
       occupancy: "OCCUPIED", isCheckoutToday: false,
     },
   });
-  // Floor 5 doesn't exist in the seed yet (its floor plan isn't confirmed —
-  // see HOTEL.pendingFloors), so this demo OOO/defect scenario lives on 332
-  // instead of the old placeholder room 512.
   await prisma.room.update({
-    where: { number: "332" },
+    where: { number: "512" },
     data: { status: "OUT_OF_ORDER", oooUntil: at(60 * 24 * 3), statusSince: at(-60 * 24) },
   });
   await prisma.room.update({
@@ -249,7 +239,7 @@ async function main() {
     data: { status: "GREEN_OPT_OUT", statusSince: at(-120), occupancy: "OCCUPIED", isCheckoutToday: false },
   });
   await prisma.room.update({
-    where: { number: "217" },
+    where: { number: "515" },
     data: {
       status: "PICKUP", reworkNote: "Bathroom mirror streaky, minibar not restocked.", statusSince: at(-20),
       occupancy: "OCCUPIED", isCheckoutToday: false,
@@ -268,8 +258,7 @@ async function main() {
     { room: "207", guestName: "Dr. Amelie Winter", eta: at(40), vip: true, earlyCheckIn: true, neededNow: false },
     { room: "208", guestName: "Jonas Berg", eta: at(90), vip: false, earlyCheckIn: false, neededNow: true },
     { room: "312", guestName: "Familie Rossi", eta: at(180), vip: false, earlyCheckIn: false, neededNow: false },
-    // Was room 524 (floor 5, not seeded yet — see HOTEL.pendingFloors).
-    { room: "324", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
+    { room: "524", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
     { room: "118", guestName: "Nina Larsen", eta: at(300), vip: false, earlyCheckIn: false, neededNow: false },
   ];
   for (const a of arrivals) {
@@ -304,12 +293,12 @@ async function main() {
   });
 
   // --- Defect + work order ------------------------------------------------
-  // Same room as the OUT_OF_ORDER override above (332) — the OOO status is
+  // Same room as the OUT_OF_ORDER override above (512) — the OOO status is
   // because of this defect.
   const maria = users["maria@hotel.test"];
   const defect = await prisma.defect.create({
     data: {
-      roomId: byNumber["332"].id,
+      roomId: byNumber["512"].id,
       category: "PLUMBING",
       note: "Shower drain blocked, water pooling.",
       reportedById: maria.id,

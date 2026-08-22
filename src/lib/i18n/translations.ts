@@ -29,7 +29,7 @@ const en = {
     hide: "hide",
     why: "why?",
     minutesShort: "min",
-    pendingFloorNotice: "Floor {{floors}} not yet in the system — floor plan not confirmed. {{count}} of {{expected}} keys are live.",
+    unconfirmedFloorNotice: "Room list for floor {{floors}} is a calculated estimate, not yet checked against a floor plan or Opera — numbers may be off.",
   },
   nav: {
     liveBoard: "Live Board",
@@ -320,6 +320,7 @@ const en = {
     factsExplain:
       "Counted by the system from the board and the audit trail. The writer receives exactly these lines and may not add anything to them — no number in the handover comes from a language model.",
     collecting: "Collecting the shift…",
+    deferredBadge: "{{count}} rooms carried over from a previous plan — see below for which ones.",
   },
   planning: {
     title: "Morning Planning",
@@ -349,6 +350,7 @@ const en = {
     selectAtLeastOne: "Select at least one attendant.",
     roomsToClean: "Rooms to clean",
     ofKeys: "of {{count}} keys",
+    stillOpenSub: "{{count}} still open · {{total}} keys in the house",
     totalWork: "Total work",
     departureCleans: "{{count}} departure cleans",
     teamCapacity: "Team capacity",
@@ -363,6 +365,7 @@ const en = {
     applyPlan: "Apply plan to the team",
     applying: "Applying…",
     applied: "{{count}} rooms assigned. The team sees their list immediately.",
+    appliedWithDeferred: "{{count}} rooms assigned, {{deferred}} set aside for today — flagged in the shift handover.",
     moveRoomTitle: "Move room {{number}}",
     moveRoomSubtitle: "Pick who should take it instead.",
     roomsAndMinutes: "{{count}} rooms · {{minutes}}",
@@ -445,7 +448,7 @@ const de = {
     hide: "verbergen",
     why: "warum?",
     minutesShort: "Min",
-    pendingFloorNotice: "Etage {{floors}} noch nicht im System erfasst — Grundriss nicht bestätigt. {{count}} von {{expected}} Zimmern sind aktiv.",
+    unconfirmedFloorNotice: "Zimmerliste für Etage {{floors}} ist eine rechnerische Schätzung, noch nicht mit Grundriss oder Opera abgeglichen — Nummern können abweichen.",
   },
   nav: {
     liveBoard: "Live-Board",
@@ -736,6 +739,7 @@ const de = {
     factsExplain:
       "Vom System aus Board und Audit-Protokoll gezählt. Der Text-Generator erhält genau diese Zeilen und darf nichts hinzufügen — keine Zahl in der Übergabe stammt von einem Sprachmodell.",
     collecting: "Schicht wird zusammengestellt…",
+    deferredBadge: "{{count}} Zimmer aus einem früheren Plan übernommen — welche, steht unten.",
   },
   planning: {
     title: "Tagesplanung",
@@ -765,6 +769,7 @@ const de = {
     selectAtLeastOne: "Mindestens ein Zimmermädchen auswählen.",
     roomsToClean: "Zimmer zu reinigen",
     ofKeys: "von {{count}} Zimmern",
+    stillOpenSub: "{{count}} noch offen · {{total}} Zimmer im Haus",
     totalWork: "Gesamtarbeit",
     departureCleans: "{{count}} Abreise-Reinigungen",
     teamCapacity: "Team-Kapazität",
@@ -779,6 +784,7 @@ const de = {
     applyPlan: "Plan auf das Team anwenden",
     applying: "Wendet an…",
     applied: "{{count}} Zimmer zugewiesen. Das Team sieht die Liste sofort.",
+    appliedWithDeferred: "{{count}} Zimmer zugewiesen, {{deferred}} für heute zurückgestellt — in der Schichtübergabe markiert.",
     moveRoomTitle: "Zimmer {{number}} verschieben",
     moveRoomSubtitle: "Wähle, wer es stattdessen übernehmen soll.",
     roomsAndMinutes: "{{count}} Zimmer · {{minutes}}",

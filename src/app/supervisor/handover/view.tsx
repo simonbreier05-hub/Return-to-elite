@@ -25,7 +25,7 @@ interface Facts {
     inProgress: number;
     waitingForInspection: number;
   };
-  attention: { blocked: unknown[]; rework: unknown[]; outOfOrder: unknown[] };
+  attention: { blocked: unknown[]; rework: unknown[]; outOfOrder: unknown[]; deferred: unknown[] };
   arrivals: { expected: number; readyNow: number; atRisk: unknown[] };
   engineering: { openWorkOrders: number };
 }
@@ -113,6 +113,12 @@ export default function HandoverView() {
 
       {h && f && (
         <>
+          {f.attention.deferred.length > 0 && (
+            <div className="mb-4 flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm font-medium text-gold-soft">
+              <span aria-hidden>↷</span>
+              {t("handover.deferredBadge", { count: f.attention.deferred.length })}
+            </div>
+          )}
           <article className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-6 shadow-card">
             <h3 className="font-serif text-3xl leading-tight">{h.headline}</h3>
             <div className="rule-gold my-3 w-full" />
