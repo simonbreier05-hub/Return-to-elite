@@ -1,15 +1,48 @@
+import fs from "node:fs";
+import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { FLOOR_4_SECTION, roomNumbersForFloor } from "../src/lib/domain";
+import { FLOOR_4_SECTION } from "../src/lib/domain";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
 
 /**
- * Seed: one user per role, ten room attendants, 145 rooms across
- * 5 floors (101–530) with sections & types, demo arrivals/excursions/defects
- * so every view has something to show on first login.
+ * Seed: one user per role, ten room attendants, and the house's real rooms
+ * — read live from data/room-seed-data.json, not a guessed formula — with
+ * sections & types, demo arrivals/excursions/defects so every view has
+ * something to show on first login.
+ *
+ * room-seed-data.json is the actual room table (source: the "Elite
+ * Housekeeping" Airtable base / the house's own floor plans), floors 1–4.
+ * Floor 5's floor plan is not confirmed yet, so it is deliberately absent
+ * from the file rather than filled in with invented numbers — see the
+ * file's own `missingFloor` / `note` fields, and HOTEL.pendingFloors in
+ * src/lib/domain.ts, which the UI reads to say so out loud instead of
+ * quietly showing a smaller house than the real one. Update the JSON and
+ * re-seed once floor 5's plan is confirmed; nothing here needs to change.
  *
  * All demo passwords: 123
  */
+
+interface SeedRoom {
+  number: string;
+  floor: number;
+}
+interface RoomSeedData {
+  note: string;
+  totalRoomsInThisFile: number;
+  totalRoomsExpected: number;
+  missingFloor: number;
+  rooms: SeedRoom[];
+}
+
+function loadRoomSeedData(): RoomSeedData {
+  const filePath = path.join(__dirname, "data", "room-seed-data.json");
+  const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as RoomSeedData;
+  if (!Array.isArray(data.rooms) || data.rooms.length === 0) {
+    throw new Error(`room-seed-data.json at ${filePath} has no rooms — refusing to seed an empty house.`);
+  }
+  return data;
+}
 
 const prisma = new PrismaClient();
 
@@ -70,8 +103,22 @@ async function main() {
   }
   const attendants = usersData.filter((u) => u.role === "room_attendant").map((u) => users[u.email]);
 
-  // --- Rooms: 145 keys across 5 guest floors -----------------------------
-  // 29 rooms per floor; 01–15 is section A, 16–29 section B.
+  // --- Rooms: the house's real key list -----------------------------------
+  const seedData = loadRoomSeedData();
+  const roomsByFloor = new Map<number, string[]>();
+  for (const r of seedData.rooms) {
+    if (!roomsByFloor.has(r.floor)) roomsByFloor.set(r.floor, []);
+    roomsByFloor.get(r.floor)!.push(r.number);
+  }
+  for (const numbers of roomsByFloor.values()) numbers.sort((a, b) => a.localeCompare(b));
+  const floors = [...roomsByFloor.keys()].sort((a, b) => a - b);
+  console.log(
+    `room-seed-data.json: ${seedData.rooms.length} rooms across floors ${floors.join(", ")}` +
+      (seedData.missingFloor
+        ? ` — floor ${seedData.missingFloor} intentionally absent (${seedData.totalRoomsExpected - seedData.totalRoomsInThisFile} keys not yet confirmed).`
+        : ".")
+  );
+
   // Categories climb with the floor, the way a city hotel is usually stacked.
   const typeFor = (floor: number, idx: number): string => {
     if (floor === 5) {
@@ -102,8 +149,8 @@ async function main() {
 
   const roomIds: { id: string; number: string; floor: number; section: string }[] = [];
   let count = 0;
-  for (const floor of [1, 2, 3, 4, 5]) {
-    const numbers = roomNumbersForFloor(floor);
+  for (const floor of floors) {
+    const numbers = roomsByFloor.get(floor)!;
     for (const [idx, number] of numbers.entries()) {
       const i = idx + 1; // 1-based position on the floor, not the literal room number
       // Floor 4 doesn't split neatly by position — its two wings are read
@@ -165,19 +212,19 @@ async function main() {
     where: { number: "204" },
     data: { status: "IN_PROGRESS", statusSince: at(-15), occupancy: "OCCUPIED", isCheckoutToday: false },
   });
-  // 205 / 206 are being turned around for the arrivals seeded below —
+  // 207 / 208 are being turned around for the arrivals seeded below —
   // today's departure clean, guest not there yet.
   await prisma.room.update({
-    where: { number: "205" },
+    where: { number: "207" },
     data: { status: "CLEAN", statusSince: at(-30), occupancy: "VACANT", isCheckoutToday: true },
   });
   await prisma.room.update({
-    where: { number: "206" },
+    where: { number: "208" },
     data: { status: "CLEAN", statusSince: at(-50), occupancy: "VACANT", isCheckoutToday: true },
   });
   await prisma.room.update({ where: { number: "301" }, data: { status: "INSPECTED", statusSince: at(-60) } });
   await prisma.room.update({
-    where: { number: "302" },
+    where: { number: "304" },
     data: {
       status: "BLOCKED", blockReason: "DND", blockedSince: at(-45), statusSince: at(-45),
       occupancy: "OCCUPIED", isCheckoutToday: false,
@@ -190,8 +237,11 @@ async function main() {
       occupancy: "OCCUPIED", isCheckoutToday: false,
     },
   });
+  // Floor 5 doesn't exist in the seed yet (its floor plan isn't confirmed —
+  // see HOTEL.pendingFloors), so this demo OOO/defect scenario lives on 332
+  // instead of the old placeholder room 512.
   await prisma.room.update({
-    where: { number: "512" },
+    where: { number: "332" },
     data: { status: "OUT_OF_ORDER", oooUntil: at(60 * 24 * 3), statusSince: at(-60 * 24) },
   });
   await prisma.room.update({
@@ -199,7 +249,7 @@ async function main() {
     data: { status: "GREEN_OPT_OUT", statusSince: at(-120), occupancy: "OCCUPIED", isCheckoutToday: false },
   });
   await prisma.room.update({
-    where: { number: "515" },
+    where: { number: "217" },
     data: {
       status: "PICKUP", reworkNote: "Bathroom mirror streaky, minibar not restocked.", statusSince: at(-20),
       occupancy: "OCCUPIED", isCheckoutToday: false,
@@ -215,10 +265,11 @@ async function main() {
   // --- Arrivals ----------------------------------------------------------
   const fo = users["frontoffice@hotel.test"];
   const arrivals = [
-    { room: "205", guestName: "Dr. Amelie Winter", eta: at(40), vip: true, earlyCheckIn: true, neededNow: false },
-    { room: "206", guestName: "Jonas Berg", eta: at(90), vip: false, earlyCheckIn: false, neededNow: true },
+    { room: "207", guestName: "Dr. Amelie Winter", eta: at(40), vip: true, earlyCheckIn: true, neededNow: false },
+    { room: "208", guestName: "Jonas Berg", eta: at(90), vip: false, earlyCheckIn: false, neededNow: true },
     { room: "312", guestName: "Familie Rossi", eta: at(180), vip: false, earlyCheckIn: false, neededNow: false },
-    { room: "524", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
+    // Was room 524 (floor 5, not seeded yet — see HOTEL.pendingFloors).
+    { room: "324", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
     { room: "118", guestName: "Nina Larsen", eta: at(300), vip: false, earlyCheckIn: false, neededNow: false },
   ];
   for (const a of arrivals) {
@@ -246,17 +297,19 @@ async function main() {
   });
   await prisma.excursion.create({
     data: {
-      roomId: byNumber["305"].id, guestName: "Sig. Bianchi",
+      roomId: byNumber["310"].id, guestName: "Sig. Bianchi",
       startsAt: at(30), endsAt: at(240), note: "Golf outing.",
       createdById: concierge.id,
     },
   });
 
   // --- Defect + work order ------------------------------------------------
+  // Same room as the OUT_OF_ORDER override above (332) — the OOO status is
+  // because of this defect.
   const maria = users["maria@hotel.test"];
   const defect = await prisma.defect.create({
     data: {
-      roomId: byNumber["512"].id,
+      roomId: byNumber["332"].id,
       category: "PLUMBING",
       note: "Shower drain blocked, water pooling.",
       reportedById: maria.id,
@@ -266,10 +319,10 @@ async function main() {
 
   // --- Notes ---------------------------------------------------------------
   await prisma.roomNote.create({
-    data: { roomId: byNumber["205"].id, authorId: fo.id, body: "VIP amenity (champagne) to be placed before arrival." },
+    data: { roomId: byNumber["207"].id, authorId: fo.id, body: "VIP amenity (champagne) to be placed before arrival." },
   });
   await prisma.roomNote.create({
-    data: { roomId: byNumber["302"].id, authorId: maria.id, body: "DND sign out since morning, TV audible inside." },
+    data: { roomId: byNumber["304"].id, authorId: maria.id, body: "DND sign out since morning, TV audible inside." },
   });
 
   // --- Settings (escalation thresholds) ------------------------------------

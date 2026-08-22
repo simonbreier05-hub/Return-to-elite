@@ -29,6 +29,7 @@ const en = {
     hide: "hide",
     why: "why?",
     minutesShort: "min",
+    pendingFloorNotice: "Floor {{floors}} not yet in the system — floor plan not confirmed. {{count}} of {{expected}} keys are live.",
   },
   nav: {
     liveBoard: "Live Board",
@@ -444,6 +445,7 @@ const de = {
     hide: "verbergen",
     why: "warum?",
     minutesShort: "Min",
+    pendingFloorNotice: "Etage {{floors}} noch nicht im System erfasst — Grundriss nicht bestätigt. {{count}} von {{expected}} Zimmern sind aktiv.",
   },
   nav: {
     liveBoard: "Live-Board",

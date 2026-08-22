@@ -64,21 +64,47 @@ export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
   PENTHOUSE: "Penthouse",
 };
 
-/** The property: five guest floors, 139 keys — see roomNumbersForFloor. */
+/**
+ * The property: five guest floors. Floors 1–4 below carry the house's real,
+ * confirmed room numbers (source: the "Elite Housekeeping" Airtable room
+ * table / the house's own floor plans — see room-seed-data.json, imported
+ * by the seed script). Floor 5's floor plan has not been confirmed yet.
+ */
 export const HOTEL = {
   floors: [1, 2, 3, 4, 5],
-  /** Floors 1, 2, 3, 5 only — floor 4 is the real, irregular list below. */
-  roomsPerFloor: 29,
-  /** Rooms 01–15 form section A, 16–29 section B (floors 1, 2, 3, 5). */
-  sectionSplit: 15,
+  /**
+   * Floors with no confirmed room list yet. `roomNumbersForFloor` returns
+   * an empty array for these rather than inventing numbers — an empty,
+   * clearly-flagged floor is honest; a guessed one silently becomes wrong
+   * operational data the moment a supervisor trusts it. The UI reads this
+   * to show an explicit "not yet loaded" notice instead of just going
+   * quiet. Drop a floor from this list once its real room data lands.
+   */
+  pendingFloors: [5] as readonly number[],
+  /** The house's real key count, floors 1–5 (room-seed-data.json's own
+   * `totalRoomsExpected`) — what the UI's "N of 145" notice counts up to
+   * once floor 5's plan is confirmed and seeded. Not a guess: it's what
+   * the source data itself says the finished house should add up to. */
+  expectedTotalRooms: 145,
 } as const;
 
 /**
+ * Floors 1–3 share one irregular numbering pattern (confirmed floor plans,
+ * not a guess): each skips {02, 03}, {05, 06} and 13 (the common hotel
+ * superstition skip, same idea as a lift with no 13th-floor button), then
+ * runs straight through to 38 — e.g. floor 1 is 101, 104, 107–112, 114–138.
+ */
+const FLOOR_1_TO_3_SUFFIXES = [
+  1, 4, 7, 8, 9, 10, 11, 12,
+  14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38,
+] as const;
+
+/**
  * Floor 4's real numbering, taken directly off the house's own floor plan —
- * not sequential like the other floors. The guest rooms sit around two
- * courtyards and the historic Bebelplatz-facing block rather than one
- * running corridor, so 403–411, 413, 426, 427, 429 and 430 simply don't
- * exist as guest rooms on this floor (housekeeping closets, the fire
+ * a different shape again, not the floors 1–3 pattern. The guest rooms sit
+ * around two courtyards and the historic Bebelplatz-facing block rather
+ * than one running corridor, so 403–411, 413, 426, 427, 429 and 430 simply
+ * don't exist as guest rooms on this floor (housekeeping closets, the fire
  * escape, lifts and the service lift take some of those numbers instead).
  * Kept as an explicit list rather than a formula, because a formula can't
  * express "these specific numbers, no others."
@@ -105,21 +131,17 @@ export const FLOOR_4_SECTION: Record<(typeof FLOOR_4_ROOMS)[number], "4A" | "4B"
 };
 
 /**
- * Room numbers for a floor, in a sensible walking/display order. Floor 4
- * returns its real, irregular list (see FLOOR_4_ROOMS); every other floor
- * carries `HOTEL.roomsPerFloor` sequential rooms, numbered `{floor}01`…,
- * with one exception: floor 5 skips "513" (the common hotel superstition
- * skip, same idea as a lift with no 13th-floor button) so the top floor
- * still runs up to room "530" instead of stopping at "529".
+ * Room numbers for a floor, in a sensible walking/display order — every
+ * number here is real, confirmed data, floor by floor (see the comments
+ * above each list). Floor 5 deliberately returns an empty array: see
+ * HOTEL.pendingFloors.
  */
 export function roomNumbersForFloor(floor: number): string[] {
-  if (floor === 4) return [...FLOOR_4_ROOMS];
-  const numbers: string[] = [];
-  for (let i = 1; numbers.length < HOTEL.roomsPerFloor; i++) {
-    if (floor === 5 && i === 13) continue;
-    numbers.push(`${floor}${String(i).padStart(2, "0")}`);
+  if (floor === 1 || floor === 2 || floor === 3) {
+    return FLOOR_1_TO_3_SUFFIXES.map((n) => `${floor}${String(n).padStart(2, "0")}`);
   }
-  return numbers;
+  if (floor === 4) return [...FLOOR_4_ROOMS];
+  return [];
 }
 
 export const DEFECT_CATEGORIES = [

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import { HOTEL } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
 interface Attendant {
@@ -331,6 +332,15 @@ export default function PlanningView() {
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("planning.subtitle")}</p>
+          {HOTEL.pendingFloors.length > 0 && (
+            <p className="mt-1 text-xs font-medium text-gold-soft">
+              {t("common.pendingFloorNotice", {
+                floors: HOTEL.pendingFloors.join(", "),
+                count: result?.totalRooms ?? 0,
+                expected: HOTEL.expectedTotalRooms,
+              })}
+            </p>
+          )}
         </div>
         <Link
           href="/supervisor"

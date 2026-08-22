@@ -10,7 +10,7 @@ import Collapsible from "@/components/Collapsible";
 import PriorityBanner from "@/components/PriorityBanner";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES } from "@/components/status";
-import { type BlockReason, type RoomStatus } from "@/lib/domain";
+import { HOTEL, type BlockReason, type RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
 
@@ -216,6 +216,15 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+          {HOTEL.pendingFloors.length > 0 && (
+            <p className="mt-1 text-xs font-medium text-gold-soft">
+              {t("common.pendingFloorNotice", {
+                floors: HOTEL.pendingFloors.join(", "),
+                count: rooms.length,
+                expected: HOTEL.expectedTotalRooms,
+              })}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
