@@ -6,7 +6,7 @@ export default async function SettingsPage() {
   // duty_manager passes every role check, so this is the admin-only page.
   const session = await requirePage(["duty_manager"]);
   return (
-    <AppShell title="Settings" userName={session.name} role={session.role}>
+    <AppShell title="nav.settings" userName={session.name} role={session.role}>
       <SettingsView />
     </AppShell>
   );

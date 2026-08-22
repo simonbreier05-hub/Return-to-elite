@@ -150,6 +150,32 @@ describe("planAssignments — walking distance & preferences", () => {
   });
 });
 
+describe("planAssignments — per-attendant room-count guideline", () => {
+  it("is a strict no-op when maxRoomsPerAttendant is not set (existing callers)", () => {
+    const withCap = planAssignments(house(), attendants(6));
+    const withoutOption = planAssignments(house(), attendants(6));
+    expect(JSON.stringify(withCap)).toBe(JSON.stringify(withoutOption));
+  });
+
+  it("cuts rounds early to keep everyone at or under the guideline, when there is room to", () => {
+    // 145 rooms / 13 attendants (11.2 each) comfortably fits under 12 — with
+    // only 12 attendants it would be mathematically impossible (144 max).
+    const plan = planAssignments(house(), attendants(13), { maxRoomsPerAttendant: 12 });
+    for (const a of plan.assignments) expect(a.roomCount).toBeLessThanOrEqual(12);
+  });
+
+  it("still assigns every room — flags the guideline instead of dropping anyone", () => {
+    // 145 rooms / 6 attendants can never fit 12 each; nothing may be silently lost.
+    const plan = planAssignments(house(), attendants(6), { maxRoomsPerAttendant: 12 });
+    const assigned = plan.assignments.flatMap((a) => a.roomIds);
+    expect(assigned).toHaveLength(145);
+    expect(plan.unassigned).toHaveLength(0);
+    expect(plan.assignments.some((a) => a.roomCount > 12)).toBe(true);
+    const over = plan.assignments.find((a) => a.roomCount > 12)!;
+    expect(over.reasons.join(" ")).toMatch(/above the 12-room guideline/);
+  });
+});
+
 describe("planAssignments — explainability & determinism", () => {
   it("returns the same plan for the same input", () => {
     const rooms = house();

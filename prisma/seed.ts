@@ -1,15 +1,47 @@
+import fs from "node:fs";
+import path from "node:path";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { roomNumbersForFloor } from "../src/lib/domain";
+import { FLOOR_4_SECTION } from "../src/lib/domain";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
 
 /**
- * Seed: one user per role, ten room attendants, 145 rooms across
- * 5 floors (101–530) with sections & types, demo arrivals/excursions/defects
- * so every view has something to show on first login.
+ * Seed: one user per role, ten room attendants, and the house's real rooms
+ * — read live from data/room-seed-data.json, not a guessed formula — with
+ * sections & types, demo arrivals/excursions/defects so every view has
+ * something to show on first login.
+ *
+ * room-seed-data.json is the actual room table (source: the "Elite
+ * Housekeeping" Airtable base / the house's own floor plans), all 145 keys
+ * across floors 1–5. Floors 3 and 4 come from photographed floor plans;
+ * floors 1, 2 and 5 follow the same numbering pattern but are a *calculated*
+ * trim to hit the house's stated 145-key total, not independently confirmed
+ * — the file's own `note` says so, and src/lib/domain.ts's
+ * `HOTEL.unconfirmedFloors` mirrors exactly that admission so the UI keeps
+ * saying it out loud instead of presenting a computed guess as fact. Update
+ * the JSON (and HOTEL.unconfirmedFloors) once a floor is actually verified.
  *
  * All demo passwords: 123
  */
+
+interface SeedRoom {
+  number: string;
+  floor: number;
+}
+interface RoomSeedData {
+  note: string;
+  totalRoomsInThisFile: number;
+  rooms: SeedRoom[];
+}
+
+function loadRoomSeedData(): RoomSeedData {
+  const filePath = path.join(__dirname, "data", "room-seed-data.json");
+  const data = JSON.parse(fs.readFileSync(filePath, "utf-8")) as RoomSeedData;
+  if (!Array.isArray(data.rooms) || data.rooms.length === 0) {
+    throw new Error(`room-seed-data.json at ${filePath} has no rooms — refusing to seed an empty house.`);
+  }
+  return data;
+}
 
 const prisma = new PrismaClient();
 
@@ -70,14 +102,22 @@ async function main() {
   }
   const attendants = usersData.filter((u) => u.role === "room_attendant").map((u) => users[u.email]);
 
-  // --- Rooms: 145 keys across 5 guest floors -----------------------------
-  // 29 rooms per floor; 01–15 is section A, 16–29 section B.
+  // --- Rooms: the house's real key list -----------------------------------
+  const seedData = loadRoomSeedData();
+  const roomsByFloor = new Map<number, string[]>();
+  for (const r of seedData.rooms) {
+    if (!roomsByFloor.has(r.floor)) roomsByFloor.set(r.floor, []);
+    roomsByFloor.get(r.floor)!.push(r.number);
+  }
+  for (const numbers of roomsByFloor.values()) numbers.sort((a, b) => a.localeCompare(b));
+  const floors = [...roomsByFloor.keys()].sort((a, b) => a - b);
+  console.log(`room-seed-data.json: ${seedData.rooms.length} rooms across floors ${floors.join(", ")}.`);
+
   // Categories climb with the floor, the way a city hotel is usually stacked.
+  // (No confirmed category data yet for any floor — this tiering is still a
+  // placeholder, same as the room list for floors 1, 2 and 5 themselves.)
   const typeFor = (floor: number, idx: number): string => {
-    if (floor === 5) {
-      if (idx <= 2) return "PENTHOUSE";
-      return idx % 3 === 0 ? "JUNIOR_SUITE" : "SUITE";
-    }
+    if (floor === 5) return idx % 4 === 0 ? "SUITE" : idx % 2 === 0 ? "JUNIOR_SUITE" : "DELUXE";
     if (floor === 4) return idx % 4 === 0 ? "SUITE" : idx % 2 === 0 ? "JUNIOR_SUITE" : "DELUXE";
     if (floor === 3) return idx % 5 === 0 ? "JUNIOR_SUITE" : "DELUXE";
     if (floor === 2) return idx % 3 === 0 ? "DELUXE" : "SUPERIOR";
@@ -102,11 +142,14 @@ async function main() {
 
   const roomIds: { id: string; number: string; floor: number; section: string }[] = [];
   let count = 0;
-  for (const floor of [1, 2, 3, 4, 5]) {
-    const numbers = roomNumbersForFloor(floor);
+  for (const floor of floors) {
+    const numbers = roomsByFloor.get(floor)!;
     for (const [idx, number] of numbers.entries()) {
       const i = idx + 1; // 1-based position on the floor, not the literal room number
-      const section = `${floor}${i <= 15 ? "A" : "B"}`;
+      // Floor 4 doesn't split neatly by position — its two wings are read
+      // straight off the floor plan (see FLOOR_4_SECTION); every other
+      // floor still splits by position along one running corridor.
+      const section = floor === 4 ? FLOOR_4_SECTION[number as keyof typeof FLOOR_4_SECTION] : `${floor}${i <= 15 ? "A" : "B"}`;
       const type = typeFor(floor, i);
       count++;
       // Deterministic-ish demo distribution of statuses & occupancy
@@ -114,10 +157,16 @@ async function main() {
       const checkout = count % 4 === 0;
       const assignee = attendants[(floor + i) % attendants.length];
 
-      // Only a current guest's room (stayover) or a same-day departure is in
-      // scope for housekeeping — a vacant room with nobody arriving today is
-      // simply released and gets no attention, not an arbitrary status.
-      const occupancy = occupied && !checkout ? "OCCUPIED" : "VACANT";
+      // `occupancy` means "is a guest physically in the room right now" — a
+      // departure guest still counts as OCCUPIED until they actually leave,
+      // exactly like defaultDayFigures() assumes (it derives stayovers as
+      // occupiedNow − departures, so occupiedNow has to include departures
+      // while they're still checked in, or that subtraction quietly throws
+      // real stayover rooms away). `&& !checkout` here used to zero a
+      // departure room's occupancy out immediately, which is what made the
+      // "belegte Zimmer heute Abend" figure the supervisor sees come out far
+      // lower than the rooms actually needing an attendant.
+      const occupancy = occupied ? "OCCUPIED" : "VACANT";
       const relevant = isHousekeepingRelevant({ occupancy, isCheckoutToday: checkout });
       const status = relevant ? progression[floor][i % progression[floor].length] : "INSPECTED";
       const minutesAgo = relevant
@@ -156,26 +205,26 @@ async function main() {
     where: { number: "204" },
     data: { status: "IN_PROGRESS", statusSince: at(-15), occupancy: "OCCUPIED", isCheckoutToday: false },
   });
-  // 205 / 206 are being turned around for the arrivals seeded below —
+  // 207 / 208 are being turned around for the arrivals seeded below —
   // today's departure clean, guest not there yet.
   await prisma.room.update({
-    where: { number: "205" },
+    where: { number: "207" },
     data: { status: "CLEAN", statusSince: at(-30), occupancy: "VACANT", isCheckoutToday: true },
   });
   await prisma.room.update({
-    where: { number: "206" },
+    where: { number: "208" },
     data: { status: "CLEAN", statusSince: at(-50), occupancy: "VACANT", isCheckoutToday: true },
   });
   await prisma.room.update({ where: { number: "301" }, data: { status: "INSPECTED", statusSince: at(-60) } });
   await prisma.room.update({
-    where: { number: "302" },
+    where: { number: "304" },
     data: {
       status: "BLOCKED", blockReason: "DND", blockedSince: at(-45), statusSince: at(-45),
       occupancy: "OCCUPIED", isCheckoutToday: false,
     },
   });
   await prisma.room.update({
-    where: { number: "410" },
+    where: { number: "414" },
     data: {
       status: "BLOCKED", blockReason: "DOUBLE_LOCKED", blockedSince: at(-10), statusSince: at(-10),
       occupancy: "OCCUPIED", isCheckoutToday: false,
@@ -206,8 +255,8 @@ async function main() {
   // --- Arrivals ----------------------------------------------------------
   const fo = users["frontoffice@hotel.test"];
   const arrivals = [
-    { room: "205", guestName: "Dr. Amelie Winter", eta: at(40), vip: true, earlyCheckIn: true, neededNow: false },
-    { room: "206", guestName: "Jonas Berg", eta: at(90), vip: false, earlyCheckIn: false, neededNow: true },
+    { room: "207", guestName: "Dr. Amelie Winter", eta: at(40), vip: true, earlyCheckIn: true, neededNow: false },
+    { room: "208", guestName: "Jonas Berg", eta: at(90), vip: false, earlyCheckIn: false, neededNow: true },
     { room: "312", guestName: "Familie Rossi", eta: at(180), vip: false, earlyCheckIn: false, neededNow: false },
     { room: "524", guestName: "H.E. Al-Sayed", eta: at(150), vip: true, earlyCheckIn: true, neededNow: false },
     { room: "118", guestName: "Nina Larsen", eta: at(300), vip: false, earlyCheckIn: false, neededNow: false },
@@ -237,13 +286,15 @@ async function main() {
   });
   await prisma.excursion.create({
     data: {
-      roomId: byNumber["305"].id, guestName: "Sig. Bianchi",
+      roomId: byNumber["310"].id, guestName: "Sig. Bianchi",
       startsAt: at(30), endsAt: at(240), note: "Golf outing.",
       createdById: concierge.id,
     },
   });
 
   // --- Defect + work order ------------------------------------------------
+  // Same room as the OUT_OF_ORDER override above (512) — the OOO status is
+  // because of this defect.
   const maria = users["maria@hotel.test"];
   const defect = await prisma.defect.create({
     data: {
@@ -257,10 +308,10 @@ async function main() {
 
   // --- Notes ---------------------------------------------------------------
   await prisma.roomNote.create({
-    data: { roomId: byNumber["205"].id, authorId: fo.id, body: "VIP amenity (champagne) to be placed before arrival." },
+    data: { roomId: byNumber["207"].id, authorId: fo.id, body: "VIP amenity (champagne) to be placed before arrival." },
   });
   await prisma.roomNote.create({
-    data: { roomId: byNumber["302"].id, authorId: maria.id, body: "DND sign out since morning, TV audible inside." },
+    data: { roomId: byNumber["304"].id, authorId: maria.id, body: "DND sign out since morning, TV audible inside." },
   });
 
   // --- Settings (escalation thresholds) ------------------------------------

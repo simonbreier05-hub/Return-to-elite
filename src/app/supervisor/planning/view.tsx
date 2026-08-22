@@ -5,6 +5,8 @@ import Link from "next/link";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import { HOTEL } from "@/lib/domain";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 interface Attendant {
   id: string;
@@ -39,6 +41,21 @@ interface DayFigures {
   eveningOccupancy: number;
 }
 
+interface Staffing {
+  roomsToClean: number;
+  neededMin: number;
+  neededMax: number;
+  withinPool: boolean;
+  realisticCapacity: number;
+  deferCount: number;
+}
+
+interface DeferredRoom {
+  roomId: string;
+  number: string;
+  isDeparture: boolean;
+}
+
 interface Plan {
   assignments: Assignment[];
   unassigned: { roomId: string; number: string; reason: string }[];
@@ -60,6 +77,9 @@ interface PlanResponse {
   stayovers: number;
   totalRooms: number;
   roomsNeedingWork: number;
+  stillActionable: number;
+  staffing: Staffing;
+  deferredRooms: DeferredRoom[];
 }
 
 const SHIFT_PRESETS = [
@@ -71,6 +91,7 @@ const SHIFT_PRESETS = [
 const fmt = (min: number) => `${Math.floor(min / 60)} h ${String(Math.round(min % 60)).padStart(2, "0")}`;
 
 export default function PlanningView() {
+  const { t } = useLocale();
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [onShift, setOnShift] = useState<Set<string>>(new Set());
   const [capacity, setCapacity] = useState(390);
@@ -83,6 +104,8 @@ export default function PlanningView() {
   const [error, setError] = useState<string | null>(null);
   const [moving, setMoving] = useState<{ roomId: string; fromId: string } | null>(null);
   const [edited, setEdited] = useState(false);
+  const [staffRequest, setStaffRequest] = useState<"idle" | "sending" | "sent">("idle");
+  const [deferAcked, setDeferAcked] = useState(false);
 
   const rooms = result?.rooms ?? {};
 
@@ -112,6 +135,8 @@ export default function PlanningView() {
       else setRefreshing(true);
       setError(null);
       setApplied(null);
+      setStaffRequest("idle");
+      setDeferAcked(false);
       try {
         // Explicit values, not the closured state: setOnShift/setCapacity are
         // async, so a team toggle followed straight by a recalc would otherwise
@@ -253,18 +278,47 @@ export default function PlanningView() {
     setBusy(true);
     setError(null);
     try {
-      const res = await api<{ roomsAssigned: number }>("/api/assignments/apply", {
+      const res = await api<{ roomsAssigned: number; roomsDeferred: number }>("/api/assignments/apply", {
         body: {
           assignments: plan.assignments
             .filter((a) => a.roomIds.length > 0)
             .map((a) => ({ attendantId: a.attendantId, roomIds: a.roomIds })),
+          // Stamped so the shift handover can call these out by name instead
+          // of silently mixing them into "still dirty" — see result.deferredRooms.
+          deferredRoomIds: result?.deferredRooms.map((r) => r.roomId) ?? [],
         },
       });
-      setApplied(`${res.roomsAssigned} rooms assigned. The team sees their list immediately.`);
+      setApplied(
+        res.roomsDeferred > 0
+          ? t("planning.appliedWithDeferred", { count: res.roomsAssigned, deferred: res.roomsDeferred })
+          : t("planning.applied", { count: res.roomsAssigned })
+      );
     } catch (e) {
       setError((e as Error).message);
     } finally {
       setBusy(false);
+    }
+  };
+
+  const requestStaff = async () => {
+    if (!result) return;
+    const s = result.staffing;
+    setStaffRequest("sending");
+    try {
+      await api("/api/notifications", {
+        body: {
+          message: t("planning.staffingRequestMessage", {
+            needed: s.neededMax,
+            total: s.roomsToClean,
+            onShift: onShift.size,
+            defer: s.deferCount,
+          }),
+        },
+      });
+      setStaffRequest("sent");
+    } catch (e) {
+      setStaffRequest("idle");
+      setError((e as Error).message);
     }
   };
 
@@ -283,59 +337,59 @@ export default function PlanningView() {
     <div className="animate-rise pb-28">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-4xl leading-none">Morning Planning</h2>
+          <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
           <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">
-            Set the day, pick the team, get a balanced round for each attendant.
-          </p>
+          <p className="text-sm text-graphite/70">{t("planning.subtitle")}</p>
+          {HOTEL.unconfirmedFloors.length > 0 && (
+            <p className="mt-1 text-xs font-medium text-gold-soft">
+              {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}
+            </p>
+          )}
         </div>
         <Link
           href="/supervisor"
           className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
         >
-          ← Live board
+          {t("planning.liveBoardLink")}
         </Link>
       </div>
 
       {/* ---- 1 · The day ---------------------------------------------------- */}
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-serif text-2xl">1 · Today&apos;s figures</h3>
+          <h3 className="font-serif text-2xl">{t("planning.step1")}</h3>
           {result && (
             <button
               onClick={() => applyFigures(result.defaults, true)}
               className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment"
             >
-              Reset to system data
+              {t("planning.resetSystemData")}
             </button>
           )}
         </div>
-        <p className="mb-4 text-sm text-graphite/60">
-          Prefilled from the house data — adjust anything the night audit says differently. The workload updates as you
-          change it.
-        </p>
+        <p className="mb-4 text-sm text-graphite/60">{t("planning.step1Explain")}</p>
 
         {figures ? (
           <div className="grid gap-3 sm:grid-cols-3">
             <Stepper
-              label="Departures"
-              hint="check out today · full clean"
+              label={t("planning.departures")}
+              hint={t("planning.departuresHint")}
               value={figures.departures}
               step={1}
               onChange={(v, immediate) => setFigure("departures", v, immediate)}
               warning={warn("departures")}
             />
             <Stepper
-              label="Arrivals"
-              hint="must be released today"
+              label={t("planning.arrivals")}
+              hint={t("planning.arrivalsHint")}
               value={figures.arrivals}
               step={1}
               onChange={(v, immediate) => setFigure("arrivals", v, immediate)}
               warning={warn("arrivals")}
             />
             <Stepper
-              label="Occupied tonight"
-              hint={`${result?.stayovers ?? 0} stayovers included`}
+              label={t("planning.occupiedTonight")}
+              hint={t("planning.occupiedHint", { count: result?.stayovers ?? 0 })}
               value={figures.eveningOccupancy}
               step={1}
               onChange={(v, immediate) => setFigure("eveningOccupancy", v, immediate)}
@@ -343,29 +397,110 @@ export default function PlanningView() {
             />
           </div>
         ) : (
-          <p className="text-sm text-graphite/50">Loading the day…</p>
+          <p className="text-sm text-graphite/50">{t("planning.loadingDay")}</p>
         )}
       </section>
+
+      {/* ---- Staffing --------------------------------------------------------
+          Live from the board, not from what the supervisor typed above: every
+          room the house actually needs cleaned today (stayovers + departures +
+          arrivals, each room counted once), turned into how many hands that
+          takes at 10–12 rooms each. This is what decides who to pick below, not
+          the other way round. */}
+      {result && (
+        <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+          <h3 className="mb-1 font-serif text-2xl">{t("planning.staffingTitle")}</h3>
+          <p className="mb-4 text-sm text-graphite/60">{t("planning.staffingExplain")}</p>
+
+          <div className="flex flex-wrap items-baseline gap-x-6 gap-y-2">
+            <div>
+              <div className="font-serif text-3xl text-navy">
+                {result.staffing.neededMin === result.staffing.neededMax
+                  ? t("planning.staffingNeededExact", { count: result.staffing.neededMin })
+                  : t("planning.staffingNeededRange", { min: result.staffing.neededMin, max: result.staffing.neededMax })}
+              </div>
+              <p className="text-xs text-graphite/55">{t("planning.staffingRoute")}</p>
+            </div>
+            <div className="text-sm text-graphite/70">{t("planning.staffingOnShift", { count: onShift.size })}</div>
+          </div>
+
+          {!result.staffing.withinPool && (
+            <div className="mt-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4">
+              <h4 className="font-serif text-lg text-status-out-of-order">{t("planning.staffingCapacityTitle")}</h4>
+              <p className="mt-1 text-sm text-graphite">
+                {t("planning.staffingCapacityBody", {
+                  realistic: result.staffing.realisticCapacity,
+                  total: result.staffing.roomsToClean,
+                  defer: result.staffing.deferCount,
+                })}
+              </p>
+              <p className="mt-1 text-xs text-graphite/70">{t("planning.staffingCapacityPriority")}</p>
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  onClick={requestStaff}
+                  disabled={staffRequest !== "idle"}
+                  className="h-12 rounded-xl bg-navy px-5 text-sm font-semibold text-ivory transition hover:bg-navy-line disabled:opacity-60"
+                >
+                  {staffRequest === "sending"
+                    ? t("planning.staffingRequestSending")
+                    : staffRequest === "sent"
+                    ? `✓ ${t("planning.staffingRequestSent")}`
+                    : t("planning.staffingRequestStaff")}
+                </button>
+                <button
+                  onClick={() => setDeferAcked(true)}
+                  disabled={deferAcked}
+                  className="h-12 rounded-xl border border-charcoal/20 bg-white px-5 text-sm font-medium transition hover:border-gold-line disabled:opacity-60"
+                >
+                  {deferAcked ? `✓ ${t("planning.staffingDeferRooms", { count: result.staffing.deferCount })}` : t("planning.staffingDeferRooms", { count: result.staffing.deferCount })}
+                </button>
+              </div>
+
+              {deferAcked && (
+                <p className="mt-3 text-xs text-graphite/70">{t("planning.staffingDeferredNote", { count: result.staffing.deferCount })}</p>
+              )}
+            </div>
+          )}
+        </section>
+      )}
+
+      {result && result.deferredRooms.length > 0 && (
+        <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+          <h3 className="mb-2 font-serif text-xl">{t("planning.staffingDeferredTitle")}</h3>
+          <div className="flex flex-wrap gap-1.5">
+            {result.deferredRooms.map((r) => (
+              <span
+                key={r.roomId}
+                title={r.isDeparture ? t("planning.departureLegend") : t("planning.stayoverLegend")}
+                className={`h-10 rounded-lg border px-2.5 text-sm font-medium tabular-nums leading-10 ${
+                  r.isDeparture ? "border-charcoal/30 bg-parchment" : "border-charcoal/15 bg-white"
+                }`}
+              >
+                {r.number}
+              </span>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* ---- 2 · The team --------------------------------------------------- */}
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-serif text-2xl">2 · Who is on shift?</h3>
+          <h3 className="font-serif text-2xl">{t("planning.step2")}</h3>
           <div className="flex gap-1">
             <button
               onClick={selectAllAttendants}
               className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment"
             >
-              All
+              {t("planning.all")}
             </button>
             <button onClick={selectNoAttendants} className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment">
-              None
+              {t("planning.none")}
             </button>
           </div>
         </div>
-        <p className="mb-3 text-sm text-graphite/60">
-          {onShift.size} of {attendants.length} selected · preferred sections are honoured.
-        </p>
+        <p className="mb-3 text-sm text-graphite/60">{t("planning.selectedOfTotal", { on: onShift.size, total: attendants.length })}</p>
         <div className="mb-4 flex flex-wrap gap-2">
           {attendants.map((a) => {
             const on = onShift.has(a.id);
@@ -382,13 +517,13 @@ export default function PlanningView() {
                   {on ? "✓ " : ""}
                   {a.name}
                 </div>
-                <div className="text-xs text-graphite/60">{a.section ? `prefers ${a.section}` : "no preference"}</div>
+                <div className="text-xs text-graphite/60">{a.section ? t("planning.prefersSection", { section: a.section }) : t("planning.noPreference")}</div>
               </button>
             );
           })}
         </div>
 
-        <h4 className="mb-2 font-serif text-xl">Shift length</h4>
+        <h4 className="mb-2 font-serif text-xl">{t("planning.shiftLength")}</h4>
         <div className="flex flex-wrap gap-2">
           {SHIFT_PRESETS.map((p) => (
             <button
@@ -412,9 +547,9 @@ export default function PlanningView() {
         <button
           onClick={() => createPlan()}
           disabled={busy || onShift.size === 0}
-          className="mb-4 h-14 w-full rounded-xl bg-charcoal text-base font-semibold tracking-wide text-ivory transition hover:bg-espresso disabled:opacity-40 sm:w-auto sm:px-12"
+          className="mb-4 h-14 w-full rounded-xl bg-navy text-base font-semibold tracking-wide text-ivory transition hover:bg-navy-line disabled:opacity-40 sm:w-auto sm:px-12"
         >
-          {busy ? "Calculating…" : "Create proposal"}
+          {busy ? t("planning.calculating") : t("planning.createProposal")}
         </button>
       ) : (
         <div className="mb-4 flex items-center gap-3">
@@ -423,20 +558,24 @@ export default function PlanningView() {
             disabled={busy || onShift.size === 0}
             className="h-11 rounded-xl border border-charcoal/15 bg-white px-5 text-sm transition hover:border-gold-line disabled:opacity-40"
           >
-            Refresh from the live board
+            {t("planning.refreshFromBoard")}
           </button>
           {refreshing && (
             <span className="flex items-center gap-1.5 text-sm text-graphite/60">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-gold" /> Updating…
+              <span className="h-2 w-2 animate-pulse rounded-full bg-gold" /> {t("planning.updating")}
             </span>
           )}
         </div>
       )}
-      {onShift.size === 0 && <p className="mb-4 text-sm text-amber-700">Select at least one attendant.</p>}
+      {onShift.size === 0 && <p className="mb-4 text-sm text-gold-soft">{t("planning.selectAtLeastOne")}</p>}
 
-      {error && <div className="mb-4 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
       {applied && (
-        <div className="mb-4 rounded-xl border border-emerald-300 bg-emerald-50 p-4 text-emerald-900">✓ {applied}</div>
+        <div className="mb-4 rounded-xl border border-status-clean/30 bg-status-clean/10 p-4 text-status-clean">✓ {applied}</div>
       )}
 
       {plan && (
@@ -444,21 +583,24 @@ export default function PlanningView() {
           <section
             className={`mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4 transition-opacity ${refreshing ? "opacity-60" : ""}`}
           >
-            <Stat label="Rooms to clean" value={String(plan.summary.totalRooms)} sub={`of ${result?.totalRooms ?? 0} keys`} />
-            <Stat label="Total work" value={fmt(plan.summary.totalMinutes)} sub={`${figures?.departures ?? 0} departure cleans`} />
             <Stat
-              label="Team capacity"
+              label={t("planning.roomsToClean")}
+              value={String(result?.roomsNeedingWork ?? plan.summary.totalRooms)}
+              sub={t("planning.stillOpenSub", { count: result?.stillActionable ?? plan.summary.totalRooms, total: result?.totalRooms ?? 0 })}
+            />
+            <Stat label={t("planning.totalWork")} value={fmt(plan.summary.totalMinutes)} sub={t("planning.departureCleans", { count: figures?.departures ?? 0 })} />
+            <Stat
+              label={t("planning.teamCapacity")}
               value={fmt(totalCapacity)}
-              sub={`${onShift.size} × ${fmt(capacity)}`}
+              sub={t("planning.onXCapacity", { count: onShift.size, capacity: fmt(capacity) })}
               tone={coverage > 1 ? "warn" : "good"}
             />
-            <Stat label="Busiest ↔ quietest" value={`${spread} min`} tone={spread > 90 ? "warn" : "good"} />
+            <Stat label={t("planning.spread")} value={t("planning.minutes", { count: spread })} tone={spread > 90 ? "warn" : "good"} />
           </section>
 
           {coverage > 1 && (
-            <div className="mb-4 rounded-xl border border-amber-400 bg-amber-50 p-4 text-sm text-amber-900">
-              The day needs <strong>{fmt(plan.summary.totalMinutes - totalCapacity)}</strong> more than the team can
-              cover. Add someone to the shift, choose a longer shift, or defer stayover service.
+            <div className="mb-4 rounded-xl border border-gold/40 bg-gold/10 p-4 text-sm text-gold-soft">
+              {t("planning.coverageWarning", { minutes: fmt(plan.summary.totalMinutes - totalCapacity) })}
             </div>
           )}
 
@@ -466,10 +608,10 @@ export default function PlanningView() {
               the grid, not buried inside every card's collapsed explanation. */}
           <div className="mb-2 flex flex-wrap items-center gap-4 text-xs text-graphite/60">
             <span className="flex items-center gap-1.5">
-              <span className="h-3.5 w-3.5 rounded border border-charcoal/30 bg-parchment" /> Departure clean (full turn)
+              <span className="h-3.5 w-3.5 rounded border border-charcoal/30 bg-parchment" /> {t("planning.departureLegend")}
             </span>
             <span className="flex items-center gap-1.5">
-              <span className="h-3.5 w-3.5 rounded border border-charcoal/15 bg-white" /> Stayover service
+              <span className="h-3.5 w-3.5 rounded border border-charcoal/15 bg-white" /> {t("planning.stayoverLegend")}
             </span>
           </div>
 
@@ -488,14 +630,15 @@ export default function PlanningView() {
           <div className="sticky bottom-3 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <p className="text-sm text-graphite/70">
-                {edited ? "Moved by hand — " : ""}Nothing is saved yet. Review, adjust, then apply.
+                {edited ? t("planning.movedByHand") : ""}
+                {t("planning.nothingSavedYet")}
               </p>
               <button
                 onClick={apply}
                 disabled={busy}
-                className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-white transition hover:brightness-95 disabled:opacity-40"
+                className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-charcoal transition hover:brightness-95 disabled:opacity-40"
               >
-                {busy ? "Applying…" : "Apply plan to the team"}
+                {busy ? t("planning.applying") : t("planning.applyPlan")}
               </button>
             </div>
           </div>
@@ -504,8 +647,8 @@ export default function PlanningView() {
 
       {moving && plan && (
         <Modal
-          title={`Move room ${rooms[moving.roomId]?.number ?? ""}`}
-          subtitle="Pick who should take it instead."
+          title={t("planning.moveRoomTitle", { number: rooms[moving.roomId]?.number ?? "" })}
+          subtitle={t("planning.moveRoomSubtitle")}
           onClose={() => setMoving(null)}
         >
           <div className="grid gap-2">
@@ -517,9 +660,7 @@ export default function PlanningView() {
                 className="flex h-14 items-center justify-between rounded-xl border border-charcoal/15 px-4 text-left hover:border-gold-line disabled:opacity-40"
               >
                 <span className="font-medium">{a.attendantName}</span>
-                <span className="text-sm text-graphite/60">
-                  {a.roomCount} rooms · {fmt(a.totalMinutes)}
-                </span>
+                <span className="text-sm text-graphite/60">{t("planning.roomsAndMinutes", { count: a.roomCount, minutes: fmt(a.totalMinutes) })}</span>
               </button>
             ))}
           </div>
@@ -547,7 +688,7 @@ function Stepper({
   warning?: string;
 }) {
   return (
-    <div className={`rounded-2xl border p-4 ${warning ? "border-amber-400 bg-amber-50" : "border-charcoal/15 bg-white"}`}>
+    <div className={`rounded-2xl border p-4 transition-colors ${warning ? "border-gold/40 bg-gold/10" : "border-charcoal/15 bg-white"}`}>
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
       <div className="mt-2 flex items-center gap-2">
         <button
@@ -575,7 +716,7 @@ function Stepper({
         </button>
       </div>
       <p className="mt-2 text-xs text-graphite/60">{hint}</p>
-      {warning && <p className="mt-1 text-xs font-medium text-amber-800">{warning}</p>}
+      {warning && <p className="mt-1 text-xs font-medium text-gold-soft">{warning}</p>}
     </div>
   );
 }
@@ -586,7 +727,7 @@ function Stat({ label, value, sub, tone }: { label: string; value: string; sub?:
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
       <div
         className={`mt-1 font-serif text-3xl ${
-          tone === "warn" ? "text-amber-700" : tone === "good" ? "text-emerald-700" : ""
+          tone === "warn" ? "text-gold-soft" : tone === "good" ? "text-status-clean" : ""
         }`}
       >
         {value}
@@ -607,6 +748,7 @@ function AttendantCard({
   capacity: number;
   onMoveRoom: (roomId: string) => void;
 }) {
+  const { t } = useLocale();
   // The house is read floor by floor, so the plan is grouped that way too.
   const byFloor = useMemo(() => {
     const map = new Map<number, { id: string; detail: RoomDetail }[]>();
@@ -627,20 +769,20 @@ function AttendantCard({
     <div className="rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
       <div className="flex items-baseline justify-between">
         <h4 className="font-serif text-2xl">{assignment.attendantName}</h4>
-        <span className={`text-sm font-semibold ${assignment.overbooked ? "text-red-700" : "text-graphite/70"}`}>
+        <span className={`text-sm font-semibold ${assignment.overbooked ? "text-status-dirty" : "text-graphite/70"}`}>
           {fmt(assignment.totalMinutes)} / {fmt(capacity)}
         </span>
       </div>
 
       <div className="mt-2 h-2 overflow-hidden rounded-full bg-parchment">
         <div
-          className={`h-full rounded-full transition-all ${assignment.overbooked ? "bg-red-600" : "bg-gold"}`}
+          className={`h-full rounded-full transition-all ${assignment.overbooked ? "bg-status-dirty" : "bg-gold"}`}
           style={{ width: `${pct}%` }}
         />
       </div>
 
       <p className="mt-2 text-xs text-graphite/60">
-        {assignment.roomCount} rooms · {departures} departures · {assignment.sections.join(", ")}
+        {t("planning.roomsDeparturesSections", { count: assignment.roomCount, departures, sections: assignment.sections.join(", ") })}
       </p>
 
       <div className="mt-3 space-y-1.5">
@@ -650,18 +792,20 @@ function AttendantCard({
             defaultOpen={floorIdx === 0}
             summary={
               <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-                Floor {floor} · {list.length} rooms
+                {t("attendant.floor", { floor })} · {list.length}
               </div>
             }
           >
+            <p className="mb-1.5 text-xs text-graphite/70">
+              <span className="font-medium text-graphite">{t("planning.routeLabel")}: </span>
+              {list.map((r) => r.detail.number).join(" → ")}
+            </p>
             <div className="flex flex-wrap gap-1.5">
               {list.map(({ id, detail }) => (
                 <button
                   key={id}
                   onClick={() => onMoveRoom(id)}
-                  title={`${detail.number} · ~${detail.minutes} min · ${
-                    detail.isDeparture ? "departure clean" : "stayover service"
-                  } — tap to move`}
+                  title={`${detail.number} · ~${detail.minutes} min`}
                   className={`h-10 rounded-lg border px-2.5 text-sm font-medium tabular-nums hover:border-gold-line ${
                     detail.isDeparture ? "border-charcoal/30 bg-parchment" : "border-charcoal/15 bg-white"
                   }`}
@@ -675,12 +819,12 @@ function AttendantCard({
       </div>
 
       <details className="mt-3">
-        <summary className="cursor-pointer text-sm text-gold">Why this split?</summary>
+        <summary className="cursor-pointer text-sm text-gold">{t("planning.whySplit")}</summary>
         <ul className="mt-2 space-y-1 rounded-lg border border-gold-line/40 bg-ivory p-3 text-xs text-graphite">
           {assignment.reasons.map((r, i) => (
             <li key={i}>· {r}</li>
           ))}
-          <li>· Shaded room numbers are departure cleans, plain ones stayover service.</li>
+          <li>· {t("planning.shadedLegend")}</li>
         </ul>
       </details>
     </div>

@@ -7,8 +7,12 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import PriorityBanner from "@/components/PriorityBanner";
+import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES } from "@/components/status";
-import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type RoomStatus } from "@/lib/domain";
+import { HOTEL, type BlockReason, type RoomStatus } from "@/lib/domain";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { Locale, TKey } from "@/lib/i18n/translations";
 
 interface Note {
   id: string;
@@ -49,7 +53,12 @@ const LEGEND: RoomStatus[] = [
   "DEFECT_REPORTED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT",
 ];
 
+/** Matches the KPI card's own "backlog" accent below — one number, used both
+ * to flag the stat card and to decide the priority banner's urgency tone. */
+const RELEASE_QUEUE_BACKLOG = 5;
+
 export default function SupervisorView({ isDutyManager }: { isDutyManager: boolean }) {
+  const { t } = useLocale();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -93,7 +102,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       });
     },
     "room:status": (p: { number: string; from: string; to: string; by: string }) => {
-      setTicker(`Room ${p.number}: ${p.from} → ${p.to} (${p.by})`);
+      setTicker(`${p.number}: ${p.from} → ${p.to} (${p.by})`);
       setTimeout(() => setTicker(null), 6000);
     },
     "attendant:location": (p: { userId: string; roomId: string }) => {
@@ -151,6 +160,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const inspected = rooms.filter((r) => r.status === "INSPECTED").length;
   const sellable = rooms.filter((r) => !["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status)).length;
   const progress = sellable ? Math.round((inspected / sellable) * 100) : 0;
+  const blockedCount = rooms.filter((r) => r.status === "BLOCKED").length;
 
   /** Single place where a status change is issued, so busy-state and error handling are consistent. */
   const act = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
@@ -162,7 +172,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       // Apply immediately; the socket echo will simply re-apply the same values.
       setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
     } catch (e) {
-      setError(`Room ${room.number}: ${(e as Error).message}`);
+      setError(`${room.number}: ${(e as Error).message}`);
     } finally {
       setBusyRoomId(null);
     }
@@ -188,8 +198,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       });
       setBulkResult(
         res.rejected === 0
-          ? `${res.changed} rooms released and pushed to the PMS.`
-          : `${res.changed} released, ${res.rejected} could not be: ${res.failed[0]?.error ?? ""}`
+          ? t("supervisor.releasedAndPushed", { count: res.changed })
+          : t("supervisor.releasedPartial", { changed: res.changed, rejected: res.rejected, error: res.failed[0]?.error ?? "" })
       );
       load();
     } catch (e) {
@@ -203,48 +213,67 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     <div className="animate-rise">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="font-serif text-4xl leading-none">Live Board</h2>
+          <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
           <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">Five floors · {rooms.length} keys</p>
+          <p className="text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+          {HOTEL.unconfirmedFloors.length > 0 && (
+            <p className="mt-1 text-xs font-medium text-gold-soft">
+              {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}
+            </p>
+          )}
         </div>
         <div className="flex flex-wrap gap-2">
           <Link
             href="/supervisor/handover"
             className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
           >
-            Handover
+            {t("supervisor.handoverLink")}
           </Link>
           {isDutyManager && (
             <Link
               href="/settings"
               className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
             >
-              Settings
+              {t("supervisor.settingsLink")}
             </Link>
           )}
           <Link
             href="/supervisor/planning"
-            className="flex h-14 items-center rounded-xl bg-charcoal px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-espresso"
+            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >
-            Morning planning →
+            {t("supervisor.morningPlanningLink")}
           </Link>
         </div>
       </div>
 
+      <PriorityBanner
+        items={[
+          {
+            count: releaseQueue.length,
+            label: t("priority.releaseQueue"),
+            icon: "clock",
+            tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
+          },
+          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent" },
+        ]}
+      />
+
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label="Released / sellable" value={`${inspected}/${sellable}`} />
-        <Kpi label="Daily progress" value={`${progress}%`} bar={progress} />
-        <Kpi label="Release queue" value={String(releaseQueue.length)} accent={releaseQueue.length >= 5} />
-        <Kpi label="Blocked" value={String(rooms.filter((r) => r.status === "BLOCKED").length)} />
+        <Kpi label={t("supervisor.releasedSellable")} value={`${inspected}/${sellable}`} />
+        <Kpi label={t("supervisor.dailyProgress")} value={`${progress}%`} bar={progress} />
+        <Kpi label={t("supervisor.releaseQueueLabel")} value={String(releaseQueue.length)} accent={releaseQueue.length >= RELEASE_QUEUE_BACKLOG} />
+        <Kpi label={t("supervisor.blockedLabel")} value={String(blockedCount)} />
       </div>
 
       {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
       {error && (
-        <div className="mb-3 rounded-lg border border-red-300 bg-red-50 px-4 py-2 text-sm text-red-800">{error}</div>
+        <div className="mb-3 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-4 py-2 text-sm text-status-out-of-order">
+          {error}
+        </div>
       )}
 
       {bulkResult && (
-        <div className="mb-3 rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-2 text-sm text-emerald-900">
+        <div className="mb-3 rounded-lg border border-status-clean/30 bg-status-clean/10 px-4 py-2 text-sm text-status-clean">
           {bulkResult}
         </div>
       )}
@@ -256,45 +285,45 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search room, section, guest or attendant…"
+              placeholder={t("supervisor.searchPlaceholder")}
               className="h-12 min-w-[14rem] flex-1 rounded-xl border border-charcoal/15 bg-white px-4 outline-none focus:border-gold"
             />
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as RoomStatus | "ALL")}
-              aria-label="Filter by status"
+              aria-label={t("supervisor.filterByStatus")}
               className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
             >
-              <option value="ALL">All statuses</option>
+              <option value="ALL">{t("supervisor.allStatuses")}</option>
               {LEGEND.map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_LABELS[s]}
+                  {t(`status.${s}` as TKey)}
                 </option>
               ))}
             </select>
             <select
               value={String(floorFilter)}
               onChange={(e) => setFloorFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))}
-              aria-label="Filter by floor"
+              aria-label={t("supervisor.filterByFloor")}
               className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
             >
-              <option value="ALL">All floors</option>
+              <option value="ALL">{t("supervisor.allFloors")}</option>
               {[...new Set(rooms.map((r) => r.floor))]
                 .sort((a, b) => a - b)
                 .map((f) => (
                   <option key={f} value={f}>
-                    Floor {f}
+                    {t("supervisor.floorN", { floor: f })}
                   </option>
                 ))}
             </select>
             <select
               value={attendantFilter}
               onChange={(e) => setAttendantFilter(e.target.value)}
-              aria-label="Filter by attendant"
+              aria-label={t("supervisor.filterByAttendant")}
               className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
             >
-              <option value="ALL">Anyone</option>
-              <option value="NONE">Unassigned</option>
+              <option value="ALL">{t("supervisor.anyone")}</option>
+              <option value="NONE">{t("supervisor.unassigned")}</option>
               {attendants.map((a) => (
                 <option key={a.id} value={a.id}>
                   {a.name}
@@ -303,9 +332,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             </select>
             {filtersActive && (
               <>
-                <span className="text-sm text-graphite/60">
-                  {visible.length} of {rooms.length}
-                </span>
+                <span className="text-sm text-graphite/60">{t("supervisor.ofTotal", { visible: visible.length, total: rooms.length })}</span>
                 <button
                   onClick={() => {
                     setSearch("");
@@ -315,7 +342,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                   }}
                   className="h-12 rounded-xl border border-charcoal/15 px-4 text-sm"
                 >
-                  Clear
+                  {t("supervisor.clear")}
                 </button>
               </>
             )}
@@ -324,8 +351,9 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <div className="mb-3 flex flex-wrap gap-2 text-xs">
             {LEGEND.map((s) => (
               <span key={s} className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 shadow-sm">
-                <span className={`h-2.5 w-2.5 rounded-full ${STATUS_STYLES[s].dot}`} />
-                {STATUS_LABELS[s]}
+                <StatusIcon iconKey={STATUS_STYLES[s].iconKey} className="h-3 w-3 shrink-0" />
+                <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[s].dot}`} />
+                {t(`status.${s}` as TKey)}
               </span>
             ))}
           </div>
@@ -336,9 +364,9 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               defaultOpen={filtersActive}
               summary={
                 <h3 className="font-serif text-xl">
-                  Floor {floor}
+                  {t("supervisor.floorN", { floor })}
                   <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
-                    {floorRooms.filter((r) => r.status === "INSPECTED").length}/{floorRooms.length} released
+                    {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
                   </span>
                 </h3>
               }
@@ -353,12 +381,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                       className={`relative flex h-16 flex-col items-center justify-center rounded-lg border-b-4 text-sm font-semibold shadow-sm transition active:scale-95 ${STATUS_STYLES[room.status].tile} ${
                         busyRoomId === room.id ? "animate-pulse" : ""
                       }`}
-                      title={`${room.number} — ${STATUS_LABELS[room.status]}`}
+                      title={`${room.number} — ${t(`status.${room.status}` as TKey)}`}
                     >
                       {room.number}
                       <span className="max-w-full truncate px-1 text-[9px] font-normal opacity-80">
                         {room.status === "BLOCKED" && room.blockReason
-                          ? BLOCK_REASON_SHORT[room.blockReason as BlockReason] ?? room.blockReason
+                          ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey)
                           : room.section}
                       </span>
                       {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
@@ -377,27 +405,27 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
         <div className="space-y-4">
           <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-            <h3 className="mb-2 font-serif text-xl">Release queue</h3>
-            {releaseQueue.length === 0 && <p className="text-sm text-graphite/60">Nothing waiting for inspection.</p>}
+            <h3 className="mb-2 font-serif text-xl">{t("supervisor.releaseQueueTitle")}</h3>
+            {releaseQueue.length === 0 && <p className="text-sm text-graphite/60">{t("supervisor.nothingWaiting")}</p>}
 
             {releaseQueue.length > 1 && (
               <button
                 onClick={() => releaseAll()}
                 disabled={bulkBusy}
-                className="mb-3 h-14 w-full rounded-xl bg-emerald-600 text-base font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                className="mb-3 h-14 w-full rounded-xl bg-status-inspected text-base font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
               >
-                {bulkBusy ? "Releasing…" : `✓ Release all ${releaseQueue.length}`}
+                {bulkBusy ? t("supervisor.releasing") : t("supervisor.releaseAll", { count: releaseQueue.length })}
               </button>
             )}
             <div className="space-y-2">
               {releaseQueue.map((room) => {
                 const busy = busyRoomId === room.id;
                 return (
-                  <div key={room.id} className="rounded-xl border border-yellow-300 bg-yellow-50 p-3">
+                  <div key={room.id} className="rounded-xl border border-status-clean/30 bg-status-clean/10 p-3">
                     <div className="flex items-center justify-between">
                       <span className="font-serif text-xl">{room.number}</span>
                       <span className="text-xs text-graphite/60">
-                        waiting {Math.round((Date.now() - new Date(room.statusSince).getTime()) / 60000)} min
+                        {t("supervisor.waitingMin", { minutes: Math.round((Date.now() - new Date(room.statusSince).getTime()) / 60000) })}
                       </span>
                     </div>
                     {room.arrivals[0] && (
@@ -412,16 +440,16 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                       <button
                         onClick={() => act(room, "INSPECTED")}
                         disabled={busy}
-                        className="h-12 rounded-lg bg-emerald-600 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                        className="h-12 rounded-lg bg-status-inspected text-sm font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
                       >
-                        {busy ? "…" : "✓ Inspect & release"}
+                        {busy ? "…" : t("supervisor.inspectRelease")}
                       </button>
                       <button
                         onClick={() => setDialog({ kind: "rework", room })}
                         disabled={busy}
-                        className="h-12 rounded-lg border-2 border-orange-500 text-sm font-semibold text-orange-700 transition active:scale-[0.98] disabled:opacity-50"
+                        className="h-12 rounded-lg border-2 border-status-pickup text-sm font-semibold text-status-pickup transition active:scale-[0.98] disabled:opacity-50"
                       >
-                        ↩ Rework
+                        {t("supervisor.reworkBtn")}
                       </button>
                     </div>
                   </div>
@@ -431,7 +459,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           </div>
 
           <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-            <h3 className="mb-2 font-serif text-xl">Attendants</h3>
+            <h3 className="mb-2 font-serif text-xl">{t("supervisor.attendantsTitle")}</h3>
             <div className="space-y-2">
               {attendants.map((a) => {
                 const loc = a.currentRoomId ? roomById.get(a.currentRoomId) : null;
@@ -439,7 +467,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                   <div key={a.id} className="flex items-center justify-between rounded-lg bg-ivory px-3 py-2 text-sm">
                     <span>{a.name}</span>
                     <span className="text-graphite/60">
-                      {loc ? `in ${loc.number}` : a.section ? `section ${a.section}` : "—"}
+                      {loc ? t("supervisor.inRoom", { room: loc.number }) : a.section ? t("supervisor.inSection", { section: a.section }) : "—"}
                     </span>
                   </div>
                 );
@@ -493,7 +521,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
 function Kpi({ label, value, bar, accent }: { label: string; value: string; bar?: number; accent?: boolean }) {
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${accent ? "border-amber-400 bg-amber-50" : "border-charcoal/10 bg-white"}`}>
+    <div className={`rounded-2xl border p-4 shadow-sm transition-colors ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
       <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
       <div className="mt-1 font-serif text-3xl">{value}</div>
       {bar !== undefined && (
@@ -506,14 +534,10 @@ function Kpi({ label, value, bar, accent }: { label: string; value: string; bar?
 }
 
 /** Rework reasons a supervisor reaches for most often — one tap instead of typing. */
-const REWORK_PRESETS = [
-  "Bathroom not spotless",
-  "Minibar not restocked",
-  "Linen / turndown",
-  "Dust on surfaces",
-  "Amenities missing",
-  "Room needs airing",
-];
+const REWORK_PRESETS: Record<Locale, string[]> = {
+  en: ["Bathroom not spotless", "Minibar not restocked", "Linen / turndown", "Dust on surfaces", "Amenities missing", "Room needs airing"],
+  de: ["Bad nicht makellos", "Minibar nicht aufgefüllt", "Wäsche / Turndown", "Staub auf Flächen", "Amenities fehlen", "Zimmer muss gelüftet werden"],
+};
 
 function ReworkModal({
   room,
@@ -524,17 +548,18 @@ function ReworkModal({
   onClose: () => void;
   onSubmit: (note: string) => void;
 }) {
+  const { t, locale } = useLocale();
   const [note, setNote] = useState("");
   const add = (preset: string) => setNote((n) => (n ? `${n}, ${preset.toLowerCase()}` : preset));
 
   return (
     <Modal
-      title={`Send room ${room.number} back`}
-      subtitle="The attendant sees this note on their device."
+      title={t("supervisor.reworkModalTitle", { number: room.number })}
+      subtitle={t("supervisor.reworkModalSubtitle")}
       onClose={onClose}
     >
       <div className="mb-3 flex flex-wrap gap-2">
-        {REWORK_PRESETS.map((p) => (
+        {REWORK_PRESETS[locale].map((p) => (
           <button
             key={p}
             onClick={() => add(p)}
@@ -549,58 +574,53 @@ function ReworkModal({
         onChange={(e) => setNote(e.target.value)}
         rows={3}
         autoFocus
-        placeholder="What needs to be redone?"
+        placeholder={t("supervisor.reworkPlaceholder")}
         className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
       />
       <div className="grid grid-cols-2 gap-2">
         <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
-          Cancel
+          {t("common.cancel")}
         </button>
         <button
           onClick={() => onSubmit(note.trim())}
           disabled={!note.trim()}
-          className="h-14 rounded-xl bg-orange-600 text-base font-semibold text-white disabled:opacity-40"
+          className="h-14 rounded-xl bg-status-pickup text-base font-semibold text-linen disabled:opacity-40"
         >
-          ↩ Send back
+          {t("supervisor.sendBack")}
         </button>
       </div>
     </Modal>
   );
 }
 
-const OOO_PRESETS: { label: string; hours: number }[] = [
-  { label: "4 hours", hours: 4 },
-  { label: "12 hours", hours: 12 },
-  { label: "24 hours", hours: 24 },
-  { label: "2 days", hours: 48 },
-  { label: "3 days", hours: 72 },
-  { label: "1 week", hours: 168 },
-];
+const OOO_PRESET_HOURS = [4, 12, 24, 48, 72, 168];
 
 function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void; onSubmit: (until: Date) => void }) {
+  const { t } = useLocale();
   const [hours, setHours] = useState<number>(48);
   const until = new Date(Date.now() + hours * 3600_000);
+  const presetLabel = (h: number) => (h < 24 ? `${h} h` : h % 24 === 0 ? `${h / 24} d` : `${h} h`);
 
   return (
     <Modal
-      title={`Out of order · ${room.number}`}
-      subtitle="The room leaves sellable inventory until this time."
+      title={t("supervisor.oooModalTitle", { number: room.number })}
+      subtitle={t("supervisor.oooModalSubtitle")}
       onClose={onClose}
     >
       <div className="mb-3 grid grid-cols-3 gap-2">
-        {OOO_PRESETS.map((p) => (
+        {OOO_PRESET_HOURS.map((h) => (
           <button
-            key={p.hours}
-            onClick={() => setHours(p.hours)}
+            key={h}
+            onClick={() => setHours(h)}
             className={`h-14 rounded-xl border text-sm font-medium ${
-              hours === p.hours ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
+              hours === h ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
             }`}
           >
-            {p.label}
+            {presetLabel(h)}
           </button>
         ))}
       </div>
-      <label className="mb-1 block text-sm font-medium">Custom (hours)</label>
+      <label className="mb-1 block text-sm font-medium">{t("supervisor.customHours")}</label>
       <input
         type="number"
         min={1}
@@ -609,14 +629,14 @@ function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void
         className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 text-base outline-none focus:border-gold"
       />
       <p className="mb-4 rounded-lg bg-ivory p-3 text-sm text-graphite/70">
-        Back in inventory on <strong>{until.toLocaleString()}</strong>
+        {t("supervisor.backInInventory")} <strong>{until.toLocaleString()}</strong>
       </p>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
-          Cancel
+          {t("common.cancel")}
         </button>
-        <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-gray-600 text-base font-semibold text-white">
-          Set out of order
+        <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-status-out-of-order text-base font-semibold text-linen">
+          {t("supervisor.setOutOfOrder")}
         </button>
       </div>
     </Modal>
@@ -644,15 +664,29 @@ function RoomDrawer({
   onNoteAdded: (note: Note) => void;
   onAssigned: (room: Room) => void;
 }) {
+  const { t } = useLocale();
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const style = STATUS_STYLES[room.status];
+
+  // The board only ever carries a capped, possibly-stale preview of a room's
+  // notes (see the take: 3 in /api/rooms and the .slice(0, 3) on every
+  // realtime patch) — fetch the complete history fresh whenever the drawer
+  // opens on a room, so nothing past the cap silently stays hidden.
+  const [notes, setNotes] = useState<Note[] | null>(null);
+  useEffect(() => {
+    setNotes(null);
+    api<{ notes: Note[] }>(`/api/rooms/${room.id}/notes`)
+      .then((d) => setNotes(d.notes))
+      .catch(() => setNotes(room.notes));
+  }, [room.id]);
 
   const addNote = async () => {
     if (!noteBody.trim() || savingNote) return;
     setSavingNote(true);
     try {
       const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body: noteBody } });
+      setNotes((prev) => [res.note, ...(prev ?? [])]);
       onNoteAdded({ ...res.note, roomId: room.id });
       setNoteBody("");
     } finally {
@@ -667,21 +701,24 @@ function RoomDrawer({
           <div>
             <h3 className="font-serif text-4xl">{room.number}</h3>
             <p className="text-xs uppercase tracking-wider text-graphite/50">
-              Floor {room.floor} · {room.section} · {room.type.replace(/_/g, " ")}
+              {t("supervisor.floorN", { floor: room.floor })} · {room.section} · {t(`roomType.${room.type}` as TKey)}
             </p>
           </div>
           <button onClick={onClose} className="h-12 w-12 rounded-lg hover:bg-parchment">✕</button>
         </div>
 
-        <span className={`inline-block rounded-full border px-3 py-1.5 text-sm font-medium ${style.chip}`}>
-          {STATUS_LABELS[room.status]}
-          {room.blockReason && ` · ${room.blockReason}`}
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${style.chip}`}>
+          <StatusIcon iconKey={style.iconKey} className="h-4 w-4 shrink-0" />
+          {t(`status.${room.status}` as TKey)}
+          {room.blockReason && ` · ${t(`blockReason.${room.blockReason as BlockReason}` as TKey)}`}
         </span>
         {room.oooUntil && (
-          <p className="mt-1 text-xs text-graphite/60">OOO until {new Date(room.oooUntil).toLocaleString()}</p>
+          <p className="mt-1 text-xs text-graphite/60">{t("supervisor.oooUntil", { date: new Date(room.oooUntil).toLocaleString() })}</p>
         )}
         {room.reworkNote && room.status === "PICKUP" && (
-          <p className="mt-2 rounded-lg bg-orange-50 p-2 text-sm text-orange-900">Rework: {room.reworkNote}</p>
+          <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">
+            {t("attendant.reworkNote")} {room.reworkNote}
+          </p>
         )}
 
         <div className="mt-4 grid grid-cols-2 gap-2">
@@ -690,16 +727,16 @@ function RoomDrawer({
               <button
                 onClick={() => onAct(room, "INSPECTED")}
                 disabled={busy}
-                className="col-span-2 h-14 rounded-xl bg-emerald-600 text-lg font-semibold text-white disabled:opacity-50"
+                className="col-span-2 h-14 rounded-xl bg-status-inspected text-lg font-semibold text-linen disabled:opacity-50"
               >
-                {busy ? "Releasing…" : "✓ Inspect & release"}
+                {busy ? t("supervisor.releasing") : t("supervisor.inspectRelease")}
               </button>
               <button
                 onClick={() => onOpenDialog("rework")}
                 disabled={busy}
-                className="col-span-2 h-12 rounded-xl border-2 border-orange-500 font-medium text-orange-700 disabled:opacity-50"
+                className="col-span-2 h-12 rounded-xl border-2 border-status-pickup font-medium text-status-pickup disabled:opacity-50"
               >
-                ↩ Send back (rework)
+                {t("supervisor.sendBackRework")}
               </button>
             </>
           )}
@@ -707,9 +744,9 @@ function RoomDrawer({
             <button
               onClick={() => onAct(room, "DIRTY")}
               disabled={busy}
-              className="col-span-2 h-12 rounded-xl border-2 border-red-400 font-medium text-red-700 disabled:opacity-50"
+              className="col-span-2 h-12 rounded-xl border-2 border-status-dirty font-medium text-status-dirty disabled:opacity-50"
             >
-              Set DIRTY (new checkout)
+              {t("supervisor.setDirtyCheckout")}
             </button>
           )}
           {["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(room.status) ? (
@@ -718,30 +755,30 @@ function RoomDrawer({
               disabled={busy}
               className="col-span-2 h-12 rounded-xl border-2 border-charcoal/30 font-medium disabled:opacity-50"
             >
-              Return to inventory (DIRTY)
+              {t("supervisor.returnToInventory")}
             </button>
           ) : (
             <>
               <button
                 onClick={() => onOpenDialog("ooo")}
                 disabled={busy}
-                className="h-12 rounded-xl border-2 border-gray-400 text-sm font-medium text-gray-700 disabled:opacity-50"
+                className="h-12 rounded-xl border-2 border-status-out-of-order/60 text-sm font-medium text-status-out-of-order disabled:opacity-50"
               >
-                Set OOO…
+                {t("supervisor.setOoo")}
               </button>
               <button
                 onClick={() => onAct(room, "OUT_OF_SERVICE")}
                 disabled={busy}
-                className="h-12 rounded-xl border-2 border-gray-300 text-sm font-medium text-gray-600 disabled:opacity-50"
+                className="h-12 rounded-xl border-2 border-charcoal/25 text-sm font-medium text-graphite disabled:opacity-50"
               >
-                Set OOS
+                {t("supervisor.setOos")}
               </button>
             </>
           )}
         </div>
 
         <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium">Assigned attendant</label>
+          <label className="mb-1 block text-sm font-medium">{t("supervisor.assignedAttendant")}</label>
           <select
             value={room.assignedTo?.id ?? ""}
             onChange={async (e) => {
@@ -752,7 +789,7 @@ function RoomDrawer({
             }}
             className="h-12 w-full rounded-lg border border-charcoal/20 bg-white px-3"
           >
-            <option value="">— unassigned —</option>
+            <option value="">{t("supervisor.unassignedOption")}</option>
             {attendants.map((a) => (
               <option key={a.id} value={a.id}>{a.name}</option>
             ))}
@@ -761,12 +798,12 @@ function RoomDrawer({
 
         {room.arrivals.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Expected arrivals</h4>
+            <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.expectedArrivals")}</h4>
             {room.arrivals.map((a, i) => (
               <p key={i} className="text-sm">
                 {a.vip && "★ "}{a.guestName}
                 {a.eta && ` · ETA ${new Date(a.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-                {a.neededNow && " · NEEDED NOW"}
+                {a.neededNow && ` ${t("supervisor.neededNowFlag")}`}
               </p>
             ))}
           </div>
@@ -774,22 +811,24 @@ function RoomDrawer({
 
         {room.defects.length > 0 && (
           <div className="mt-4">
-            <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Defects</h4>
+            <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.defectsTitle")}</h4>
             {room.defects.map((d) => (
               <p key={d.id} className="text-sm">
-                🔧 {d.category}: {d.note}
-                {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{d.workOrder.status}]</span>}
+                🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
+                {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
               </p>
             ))}
           </div>
         )}
 
         <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Notes</h4>
-          {room.notes.map((n) => (
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
+          {notes === null && <p className="text-sm text-graphite/50">{t("common.loading")}</p>}
+          {notes?.length === 0 && <p className="text-sm text-graphite/50">{t("attendant.noNotesYet")}</p>}
+          {notes?.map((n) => (
             <div key={n.id} className="mb-1 rounded-lg bg-ivory p-2 text-sm">
               <span className="text-xs text-graphite/60">
-                {n.author.name} ({n.author.role.replace(/_/g, " ")}) ·{" "}
+                {n.author.name} ({t(`role.${n.author.role}` as TKey)}) ·{" "}
                 {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
               <p>{n.body}</p>
@@ -800,23 +839,21 @@ function RoomDrawer({
               value={noteBody}
               onChange={(e) => setNoteBody(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && addNote()}
-              placeholder="Add a note…"
+              placeholder={t("supervisor.addNotePlaceholder")}
               className="h-12 flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold"
             />
             <button
               onClick={addNote}
               disabled={savingNote || !noteBody.trim()}
-              className="h-12 rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40"
+              className="h-12 rounded-lg bg-navy px-4 text-ivory disabled:opacity-40"
             >
-              {savingNote ? "…" : "Add"}
+              {savingNote ? "…" : t("common.add")}
             </button>
           </div>
         </div>
 
         {isDutyManager && (
-          <p className="mt-6 text-center text-xs text-graphite/50">
-            Duty manager: full audit trail via GET /api/audit
-          </p>
+          <p className="mt-6 text-center text-xs text-graphite/50">{t("supervisor.dutyManagerAudit")}</p>
         )}
       </div>
     </div>

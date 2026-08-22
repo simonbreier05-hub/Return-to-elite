@@ -22,6 +22,14 @@ export interface RoomRef {
   assignedTo?: string | null;
 }
 
+/** A room a morning plan explicitly pushed to the next day for capacity —
+ * see splitForCapacity / Room.deferredSince. Distinct from `stillDirty`:
+ * that number includes rooms nobody has gotten to yet today; this list is
+ * specifically the ones a supervisor already decided couldn't fit. */
+export interface DeferredRoomRef extends RoomRef {
+  deferredMinutesAgo: number;
+}
+
 export interface HandoverFacts {
   generatedAt: Date;
   /** Hours of board activity the summary covers. */
@@ -43,6 +51,8 @@ export interface HandoverFacts {
     rework: RoomRef[];
     outOfOrder: RoomRef[];
     longestWaitingForInspection: RoomRef[];
+    /** Set aside for today by a plan (capacity), not yet released since. */
+    deferred: DeferredRoomRef[];
   };
 
   arrivals: {
@@ -109,6 +119,12 @@ export function factsToBullets(f: HandoverFacts): string[] {
   if (f.attention.longestWaitingForInspection.length) {
     const w = f.attention.longestWaitingForInspection[0];
     lines.push(`Longest wait for inspection: ${w.number}, ${w.minutesInStatus} min.`);
+  }
+  if (f.attention.deferred.length) {
+    lines.push(
+      `Pushed to the next day for capacity (still ${f.attention.deferred.length} outstanding): ` +
+        f.attention.deferred.map((r) => r.number).join(", ") + "."
+    );
   }
 
   lines.push(

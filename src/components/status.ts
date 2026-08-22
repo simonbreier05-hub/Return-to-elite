@@ -1,55 +1,77 @@
 import type { RoomStatus } from "@/lib/domain";
 
-/** Tailwind classes per status — board color scheme from the spec. */
-export const STATUS_STYLES: Record<RoomStatus, { chip: string; tile: string; dot: string }> = {
+/**
+ * Tailwind classes per status, using the house's muted status palette
+ * (see the --color-status-* tokens in globals.css) rather than stock
+ * Tailwind reds/blues/yellows — kept deliberately deep/desaturated so
+ * status colour never competes with the navy/brass brand palette, while
+ * staying clearly distinct status-to-status for a supervisor scanning the
+ * board at a glance.
+ *
+ * `iconKey` names one of the app's four status glyphs (see
+ * components/icons.tsx's StatusIcon) so colour is never the only signal —
+ * every status chip pairs its colour with an icon and the text label,
+ * which also keeps it legible for colour-blind users.
+ */
+export const STATUS_STYLES: Record<RoomStatus, { chip: string; tile: string; dot: string; iconKey: "warning" | "clock" | "ban" | "check" }> = {
   DIRTY: {
-    chip: "bg-red-100 text-red-800 border-red-300",
-    tile: "bg-red-500/90 text-white border-red-700",
-    dot: "bg-red-500",
+    chip: "bg-status-dirty/10 text-status-dirty border-status-dirty/30",
+    tile: "bg-status-dirty text-linen border-black/20",
+    dot: "bg-status-dirty",
+    iconKey: "warning",
   },
   IN_PROGRESS: {
-    chip: "bg-blue-100 text-blue-800 border-blue-300",
-    tile: "bg-blue-500/90 text-white border-blue-700",
-    dot: "bg-blue-500",
+    chip: "bg-status-in-progress/10 text-status-in-progress border-status-in-progress/30",
+    tile: "bg-status-in-progress text-linen border-black/20",
+    dot: "bg-status-in-progress",
+    iconKey: "clock",
   },
   CLEAN: {
-    chip: "bg-yellow-100 text-yellow-800 border-yellow-300",
-    tile: "bg-yellow-400 text-charcoal border-yellow-600",
-    dot: "bg-yellow-400",
+    chip: "bg-status-clean/10 text-status-clean border-status-clean/30",
+    tile: "bg-status-clean text-linen border-black/20",
+    dot: "bg-status-clean",
+    iconKey: "clock",
   },
   INSPECTED: {
-    chip: "bg-emerald-100 text-emerald-800 border-emerald-300",
-    tile: "bg-emerald-500/90 text-white border-emerald-700",
-    dot: "bg-emerald-500",
+    chip: "bg-status-inspected/10 text-status-inspected border-status-inspected/30",
+    tile: "bg-status-inspected text-linen border-black/20",
+    dot: "bg-status-inspected",
+    iconKey: "check",
   },
   PICKUP: {
-    chip: "bg-orange-100 text-orange-800 border-orange-300",
-    tile: "bg-orange-500/90 text-white border-orange-700",
-    dot: "bg-orange-500",
+    chip: "bg-status-pickup/10 text-status-pickup border-status-pickup/30",
+    tile: "bg-status-pickup text-linen border-black/20",
+    dot: "bg-status-pickup",
+    iconKey: "warning",
   },
   BLOCKED: {
-    chip: "bg-purple-100 text-purple-800 border-purple-300",
-    tile: "bg-purple-500/90 text-white border-purple-700",
-    dot: "bg-purple-500",
+    chip: "bg-status-blocked/10 text-status-blocked border-status-blocked/30",
+    tile: "bg-status-blocked text-linen border-black/20",
+    dot: "bg-status-blocked",
+    iconKey: "ban",
   },
   DEFECT_REPORTED: {
-    chip: "bg-amber-100 text-amber-900 border-amber-300",
-    tile: "bg-amber-600/90 text-white border-amber-800",
-    dot: "bg-amber-600",
+    chip: "bg-status-defect/10 text-status-defect border-status-defect/30",
+    tile: "bg-status-defect text-linen border-black/20",
+    dot: "bg-status-defect",
+    iconKey: "warning",
   },
   OUT_OF_ORDER: {
-    chip: "bg-gray-200 text-gray-700 border-gray-400",
-    tile: "bg-gray-400 text-white border-gray-600",
-    dot: "bg-gray-400",
+    chip: "bg-status-out-of-order/10 text-status-out-of-order border-status-out-of-order/30",
+    tile: "bg-status-out-of-order text-linen border-black/20",
+    dot: "bg-status-out-of-order",
+    iconKey: "ban",
   },
   OUT_OF_SERVICE: {
-    chip: "bg-gray-200 text-gray-600 border-gray-300",
-    tile: "bg-gray-300 text-gray-700 border-gray-500",
-    dot: "bg-gray-300",
+    chip: "bg-status-out-of-service/10 text-status-out-of-service border-status-out-of-service/30",
+    tile: "bg-status-out-of-service text-linen border-black/20",
+    dot: "bg-status-out-of-service",
+    iconKey: "ban",
   },
   GREEN_OPT_OUT: {
-    chip: "bg-teal-100 text-teal-800 border-teal-300",
-    tile: "bg-teal-500/90 text-white border-teal-700",
-    dot: "bg-teal-500",
+    chip: "bg-status-green-opt-out/10 text-status-green-opt-out border-status-green-opt-out/30",
+    tile: "bg-status-green-opt-out text-linen border-black/20",
+    dot: "bg-status-green-opt-out",
+    iconKey: "check",
   },
 };

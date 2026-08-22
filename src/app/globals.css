@@ -6,43 +6,68 @@
  * This property occupies an 1889 former Dresdner Bank headquarters:
  * repurposed bank vaults, original wood panelling, a stone entrance, and an
  * interior kept deliberately elegant-minimalist rather than ornate. The
- * palette below leans into that — deeper stone/marble neutrals, a near-black
- * "vault" ink, warm antique brass, and a single restrained navy accent
- * echoing the house's current mark. The house is independent today and is
- * slated to join Four Seasons within the year; the accent is therefore a
- * generic, well-reasoned "luxury hospitality" navy — never a copy of any
- * real chain's protected brand colours — so it reads as elegant now and
- * won't need excusing later. Navy is used sparingly and only in chrome
- * (header, dividers, the odd highlight) — never on anything that doubles as
- * operational signal.
+ * house is Hotel de Rome, Berlin — this is its actual crest (a Quadriga,
+ * echoing the one above the Brandenburg Gate) and its real palette, both
+ * carried over from the house's own design mockup rather than invented:
+ * a warm stone/cream ground, a near-black ink for reading text, a single
+ * deep navy for headings/brand chrome/primary actions, and a muted brass
+ * for the quieter accents (dividers, focus rings, labels).
  *
- * Status colours are a SEPARATE, functional system and stay untouched by any
- * of this: DIRTY is red because the spec says DIRTY is red, and a supervisor
- * reading the board at a glance must never wonder whether a red tile means
- * "needs cleaning" or "brand accent". Decoration does not get to complicate
- * an operational signal.
+ * Status colours are a SEPARATE, functional system and stay untouched by
+ * any of the brand palette: a supervisor reading the board at a glance
+ * must never wonder whether a colour means "needs cleaning" or "brand
+ * accent". Decoration does not get to complicate an operational signal —
+ * see the --color-status-* tokens below, all deliberately muted/deep so
+ * they sit in the same quiet register as the rest of the UI without ever
+ * being mistaken for it.
  */
 @theme {
-  --color-ivory: #f5f0e6;
-  --color-parchment: #e6dabd;
-  --color-linen: #fcfaf4;
-  --color-charcoal: #16130f;
-  --color-espresso: #2a1f17;
-  --color-graphite: #4a4033;
-  --color-gold: #a3763c;
-  --color-gold-soft: #d9bd86;
-  --color-gold-line: #c39a63;
-  /* A single deep navy, the house's own identity mark restrained to
-     chrome-only use — see the note above. Never applied to a status tile,
-     a button that changes room state, or an error message. */
-  --color-navy: #16283f;
-  --color-navy-line: #3a6ea8;
+  /* Ground — warm stone/cream, from near-white to a soft tan hairline. */
+  --color-ivory: #f7f3ea; /* page background (mockup stone-050) */
+  --color-parchment: #f1ebdc; /* hover/active tint, chip backgrounds (stone-100) */
+  --color-linen: #ffffff; /* card surfaces — clean white, as in the house mockup */
+
+  /* Ink — reading text, warm near-black to muted secondary. */
+  --color-charcoal: #211c16; /* primary text (ink-900) */
+  --color-espresso: #3b342a; /* secondary ink, dark hover shade (ink-700) */
+  --color-graphite: #6b6152; /* muted/secondary text (ink-500) */
+
+  /* Brass — the quieter accent: dividers, focus rings, small labels. */
+  --color-gold: #a9843f; /* brass-500 */
+  --color-gold-soft: #85662e; /* brass-600, nudged for AA contrast on ivory (4.8:1) */
+  --color-gold-line: #a9843f; /* brass-500 — hairline rules, focus borders */
+
+  /* Navy — the house's own identity colour. Promoted from a restrained
+     accent to the primary brand colour now that this is built for the
+     real house: headings, primary buttons, the crest. */
+  --color-navy: #133457; /* navy-900 */
+  --color-navy-line: #1b4269; /* navy-800 — hover/pressed shade, accent lines */
+
+  /* Status — muted, deliberately distinct from the brand palette above.
+     Four are the house's own (clean/dirty/inspected/out-of-order); the
+     rest extend the same family for the app's fuller status vocabulary. */
+  --color-status-clean: #5c7a52;
+  --color-status-dirty: #9c5a2e;
+  --color-status-in-progress: #8a6e2e;
+  --color-status-inspected: #3e5c78;
+  --color-status-pickup: #3e7864;
+  --color-status-blocked: #5c3e78;
+  --color-status-defect: #783e5c;
+  --color-status-out-of-order: #7a2e2a;
+  --color-status-out-of-service: #6b6152;
+  --color-status-green-opt-out: #6e7a3e;
 
   --font-serif: var(--font-display), "Hoefler Text", Garamond, Georgia, serif;
   --font-sans: var(--font-body), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
 
-  --shadow-card: 0 1px 2px rgb(22 19 15 / 0.05), 0 8px 24px -12px rgb(22 19 15 / 0.2);
-  --shadow-lift: 0 2px 4px rgb(22 19 15 / 0.07), 0 18px 40px -16px rgb(22 19 15 / 0.3);
+  --shadow-card: 0 1px 2px rgb(33 28 22 / 0.05), 0 8px 24px -12px rgb(33 28 22 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(33 28 22 / 0.06), 0 18px 40px -16px rgb(33 28 22 / 0.22);
+
+  /* Motion — one easing curve, one duration band, used everywhere so
+     hover/status/page transitions all feel like the same hand drew them. */
+  --ease-house: cubic-bezier(0.4, 0, 0.2, 1);
+  --duration-fast: 180ms;
+  --duration-base: 220ms;
 }
 
 html {
@@ -54,18 +79,42 @@ html {
 }
 
 /* Tablet-first: comfortable touch targets, no accidental text selection
-   when a housekeeper taps quickly with gloves on. */
+   when a housekeeper taps quickly with gloves on. Also the one place every
+   button in the app gets its tactile feedback and consistent transition
+   timing — a single rule instead of repeating it on each component. */
 button {
   touch-action: manipulation;
   -webkit-user-select: none;
   user-select: none;
+  transition:
+    background-color var(--duration-base) var(--ease-house),
+    border-color var(--duration-base) var(--ease-house),
+    color var(--duration-base) var(--ease-house),
+    box-shadow var(--duration-base) var(--ease-house),
+    opacity var(--duration-base) var(--ease-house),
+    transform var(--duration-fast) var(--ease-house);
+}
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* Form fields and links get the same hover/focus transition language. */
+input,
+select,
+textarea,
+a {
+  transition:
+    background-color var(--duration-base) var(--ease-house),
+    border-color var(--duration-base) var(--ease-house),
+    color var(--duration-base) var(--ease-house),
+    box-shadow var(--duration-base) var(--ease-house);
 }
 
 /* A faint stone grain keeps large ivory areas from looking flat on a big
    iPad screen, without costing an image request — the marble-entrance cue
    rather than plain paper. */
 body {
-  background-image: radial-gradient(circle at 1px 1px, rgb(22 19 15 / 0.026) 1px, transparent 0);
+  background-image: radial-gradient(circle at 1px 1px, rgb(33 28 22 / 0.026) 1px, transparent 0);
   background-size: 22px 22px;
 }
 
@@ -75,22 +124,102 @@ body {
   height: 1px;
 }
 
-/* The rarer navy counterpart — reserved for the header top edge and the
-   login screen, the two places a brand mark would traditionally sit. */
+/* The navy counterpart — reserved for the header top edge and the login
+   screen, the two places a brand mark would traditionally sit. */
 .rule-navy {
   background: linear-gradient(90deg, transparent, var(--color-navy-line), transparent);
   height: 1px;
 }
 
 @keyframes rise {
-  from { opacity: 0; transform: translateY(6px); }
-  to { opacity: 1; transform: none; }
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
 }
 .animate-rise {
-  animation: rise 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation: rise var(--duration-base) var(--ease-house) both;
+}
+
+/* Staggered entrance for lists/grids of cards (room boards, queues). Apply
+   `.animate-stagger` plus an inline `--stagger-i` index — each item's
+   delay falls out of the one shared step, so new list types stay in sync
+   with the rest of the app for free. */
+.animate-stagger {
+  opacity: 0;
+  animation: rise var(--duration-base) var(--ease-house) both;
+  animation-delay: calc(var(--stagger-i, 0) * 28ms);
+}
+
+/* Soft fade+scale for modals/popovers/toasts — replaces the abrupt
+   mount/unmount every dialog in the app used to have. */
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes sheetIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+.animate-overlay {
+  animation: overlayIn var(--duration-base) var(--ease-house) both;
+}
+.animate-sheet {
+  animation: sheetIn var(--duration-base) var(--ease-house) both;
+}
+/* Mirror of the two above, played when a dialog is closing (see Modal.tsx,
+   which delays unmount by one duration so this gets a chance to run). */
+@keyframes overlayOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+@keyframes sheetOut {
+  from {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px) scale(0.98);
+  }
+}
+.animate-overlay-out {
+  animation: overlayOut var(--duration-base) var(--ease-house) both;
+}
+.animate-sheet-out {
+  animation: sheetOut var(--duration-base) var(--ease-house) both;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .animate-rise { animation: none; }
-  * { transition-duration: 0.01ms !important; }
+  .animate-rise,
+  .animate-stagger,
+  .animate-overlay,
+  .animate-sheet,
+  .animate-overlay-out,
+  .animate-sheet-out {
+    animation: none;
+    opacity: 1;
+    transform: none;
+  }
+  * {
+    transition-duration: 0.01ms !important;
+  }
 }

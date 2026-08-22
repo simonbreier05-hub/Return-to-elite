@@ -86,6 +86,9 @@ export async function applyStatusChange(
     blockedSince: to === "BLOCKED" ? now : null,
     reworkNote: to === "PICKUP" ? input.note : to === "IN_PROGRESS" ? room.reworkNote : null,
     oooUntil: to === "OUT_OF_ORDER" ? input.oooUntil : null,
+    // Released means today's backlog on this room is over — a plan applied
+    // later today can still defer it again if it comes back into play.
+    deferredSince: to === "INSPECTED" ? null : undefined,
   });
 
   await audit({

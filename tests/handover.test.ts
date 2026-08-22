@@ -24,6 +24,7 @@ const facts = (over: Partial<HandoverFacts> = {}): HandoverFacts => ({
     rework: [{ number: "515", floor: 5, status: "PICKUP", minutesInStatus: 20, reworkNote: "Minibar" }],
     outOfOrder: [{ number: "512", floor: 5, status: "OUT_OF_ORDER", minutesInStatus: 1440 }],
     longestWaitingForInspection: [{ number: "206", floor: 2, status: "CLEAN", minutesInStatus: 52 }],
+    deferred: [{ number: "428", floor: 4, status: "DIRTY", minutesInStatus: 90, deferredMinutesAgo: 90 }],
   },
   arrivals: {
     expected: 5,
@@ -75,12 +76,19 @@ describe("handover facts", () => {
 
   it("leaves out sections that have nothing to report", () => {
     const quiet = facts({
-      attention: { blocked: [], rework: [], outOfOrder: [], longestWaitingForInspection: [] },
+      attention: { blocked: [], rework: [], outOfOrder: [], longestWaitingForInspection: [], deferred: [] },
       engineering: { openWorkOrders: 0, unacknowledged: 0, resolvedInWindow: 0, open: [] },
     });
     const joined = factsToBullets(quiet).join(" ");
     expect(joined).not.toMatch(/Blocked:/);
     expect(joined).not.toMatch(/open work orders/);
+    expect(joined).not.toMatch(/Pushed to the next day/);
+  });
+
+  it("calls out rooms carried over from a previous plan by name", () => {
+    const joined = factsToBullets(facts()).join(" ");
+    expect(joined).toMatch(/Pushed to the next day for capacity/);
+    expect(joined).toContain("428");
   });
 });
 
@@ -99,9 +107,14 @@ describe("handover writer — it may not invent anything", () => {
     });
     f.attention.rework.forEach((r) => permit(r.number));
     f.attention.outOfOrder.forEach((r) => permit(r.number));
+    f.attention.deferred.forEach((r) => {
+      permit(r.number);
+      permit(r.deferredMinutesAgo);
+    });
     permit(f.attention.blocked.length);
     permit(f.attention.rework.length);
     permit(f.attention.outOfOrder.length);
+    permit(f.attention.deferred.length);
     permit(f.arrivals.expected);
     permit(f.arrivals.readyNow);
     f.arrivals.vipPending.forEach((v) => permit(v.room));
@@ -135,7 +148,7 @@ describe("handover writer — it may not invent anything", () => {
   it("says so plainly when nothing is outstanding", () => {
     const out = localWriter(
       facts({
-        attention: { blocked: [], rework: [], outOfOrder: [], longestWaitingForInspection: [] },
+        attention: { blocked: [], rework: [], outOfOrder: [], longestWaitingForInspection: [], deferred: [] },
         arrivals: { expected: 0, readyNow: 0, vipPending: [], atRisk: [] },
       })
     );
@@ -154,5 +167,16 @@ describe("handover writer — it may not invent anything", () => {
 
   it("mentions refused status changes so they are not lost", () => {
     expect(localWriter(facts()).body).toMatch(/refused/i);
+  });
+
+  it("calls out rooms carried over from a plan by name, not lumped in with plain dirty rooms", () => {
+    const out = localWriter(facts());
+    expect(out.body).toMatch(/Carried over from today's plan/);
+    expect(out.body).toContain("428");
+  });
+
+  it("leads with the carried-over count when nothing is at risk", () => {
+    const out = localWriter(facts({ arrivals: { expected: 0, readyNow: 0, vipPending: [], atRisk: [] } }));
+    expect(out.headline).toMatch(/carried over/i);
   });
 });
