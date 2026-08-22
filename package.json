@@ -10,7 +10,7 @@
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "build:railway": "prisma generate --schema prisma/schema.postgres.prisma && next build",
-    "start:railway": "prisma db push --schema prisma/schema.postgres.prisma --skip-generate --accept-data-loss && SEED_MODE=if-empty tsx prisma/seed.ts && NODE_ENV=production node server.js",
+    "start:railway": "prisma db push --schema prisma/schema.postgres.prisma --skip-generate --accept-data-loss && tsx prisma/seed.ts && NODE_ENV=production node server.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:push:postgres": "prisma db push --schema prisma/schema.postgres.prisma",
