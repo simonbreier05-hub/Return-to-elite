@@ -104,6 +104,7 @@ model RoomNote {
   authorId  String
   author    User     @relation(fields: [authorId], references: [id])
   body      String
+  status    String   @default("OPEN") // OPEN | DONE — see NoteStatus in src/lib/domain.ts
   createdAt DateTime @default(now())
 }
 
