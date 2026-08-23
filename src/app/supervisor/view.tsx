@@ -7,6 +7,7 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import WindowPanel from "@/components/WindowPanel";
 import { STATUS_STYLES } from "@/components/status";
 import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type RoomStatus } from "@/lib/domain";
 
@@ -152,6 +153,29 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const sellable = rooms.filter((r) => !["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status)).length;
   const progress = sellable ? Math.round((inspected / sellable) * 100) : 0;
 
+  /**
+   * Everything a supervisor should look at today, house-wide — broader than
+   * `releaseQueue` above (CLEAN only): also defects and OOO/OOS. CLEAN is
+   * the actual enum value for what reads as "Clean · To Inspect".
+   */
+  const needsAttention = rooms.filter((r) =>
+    ["CLEAN", "DEFECT_REPORTED", "OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status)
+  );
+
+  /**
+   * Grouped by floor over the FULL room list — `byFloor` above is derived
+   * from the filtered `visible` list (board search/filters) and would be
+   * wrong here; the Etagen window always reflects the whole house.
+   */
+  const byFloorAll = useMemo(() => {
+    const map = new Map<number, Room[]>();
+    for (const room of rooms) {
+      if (!map.has(room.floor)) map.set(room.floor, []);
+      map.get(room.floor)!.push(room);
+    }
+    return [...map.entries()].sort((a, b) => a[0] - b[0]);
+  }, [rooms]);
+
   /** Single place where a status change is issued, so busy-state and error handling are consistent. */
   const act = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
     if (busyRoomId) return; // guards against a double tap while a request is in flight
@@ -230,6 +254,81 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           </Link>
         </div>
       </div>
+
+      <WindowPanel
+        title="Zimmerstatus"
+        right={<span className="text-xs text-graphite/60">{needsAttention.length}</span>}
+      >
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
+          Braucht Aufmerksamkeit
+        </h4>
+        {needsAttention.length === 0 && <p className="mb-4 text-sm text-graphite/60">Nichts wartet gerade.</p>}
+        <div className="mb-4 space-y-2">
+          {needsAttention.map((room) => {
+            const busy = busyRoomId === room.id;
+            return (
+              <div
+                key={room.id}
+                className="flex items-center justify-between gap-2 rounded-lg border border-charcoal/10 bg-ivory px-3 py-2"
+              >
+                <div>
+                  <span className="font-serif text-lg">
+                    Floor {room.floor} · {room.number}
+                  </span>
+                  <p className="text-xs text-graphite/60">
+                    {room.assignedTo?.name ?? "—"} · {STATUS_LABELS[room.status]}
+                    {room.status === "DEFECT_REPORTED" &&
+                      room.defects[0] &&
+                      ` · ${room.defects[0].category}: ${room.defects[0].note}`}
+                    {room.status === "OUT_OF_ORDER" &&
+                      room.oooUntil &&
+                      ` · bis ${new Date(room.oooUntil).toLocaleString()}`}
+                  </p>
+                </div>
+                {room.status === "CLEAN" && (
+                  <button
+                    onClick={() => act(room, "INSPECTED")}
+                    disabled={busy}
+                    className="h-11 shrink-0 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                  >
+                    {busy ? "…" : "Freigeben"}
+                  </button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">Etagen</h4>
+        <div className="space-y-2">
+          {byFloorAll.map(([floor, floorRooms]) => {
+            const cleanCount = floorRooms.filter((r) => r.status === "CLEAN" || r.status === "INSPECTED").length;
+            return (
+              <Collapsible
+                key={floor}
+                defaultOpen={false}
+                summary={
+                  <div className="text-sm">
+                    Etage {floor} — {cleanCount}/{floorRooms.length} clean
+                  </div>
+                }
+              >
+                <div className="flex flex-wrap gap-1.5">
+                  {floorRooms.map((room) => (
+                    <span
+                      key={room.id}
+                      className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs shadow-sm"
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${STATUS_STYLES[room.status].dot}`} />
+                      {room.number}
+                    </span>
+                  ))}
+                </div>
+              </Collapsible>
+            );
+          })}
+        </div>
+      </WindowPanel>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <Kpi label="Released / sellable" value={`${inspected}/${sellable}`} />

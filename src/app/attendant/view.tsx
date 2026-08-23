@@ -9,9 +9,26 @@ import OfflineBar from "@/components/OfflineBar";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
 import DragReorderList from "@/components/DragReorderList";
+import WindowPanel from "@/components/WindowPanel";
 import { STATUS_STYLES } from "@/components/status";
 import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
+
+/**
+ * The single next status in the attendant's restricted linear chain for the
+ * "Meine Zimmer" window's "Status weiterschalten" button. Deliberately
+ * narrower than the full LEGAL_TRANSITIONS table (which also allows
+ * PICKUP/BLOCKED/etc.) — this only serves "keep tapping to advance", and it
+ * never proposes INSPECTED. The server enforces that independently anyway
+ * (src/lib/stateMachine.ts ROLE_ALLOWED_TARGETS.room_attendant excludes it),
+ * so this is a UI convenience on top of an existing hard guarantee, not a
+ * substitute for it.
+ */
+function nextAttendantStatus(status: RoomStatus): RoomStatus | null {
+  if (status === "DIRTY") return "IN_PROGRESS";
+  if (status === "IN_PROGRESS") return "CLEAN";
+  return null;
+}
 
 interface Note {
   id: string;
@@ -49,6 +66,7 @@ export default function AttendantView() {
   const [error, setError] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
+  const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
   const offline = useOfflineQueue();
 
   const loadRooms = useCallback(async () => {
@@ -173,6 +191,13 @@ export default function AttendantView() {
   const routeChunks = useMemo(() => chunkByFloor(routeRooms), [routeRooms]);
   const routeLoad = routeLoadLabel(routeRooms.length);
 
+  /**
+   * "erledigt" for the Meine Zimmer window = cleaned OR released — distinct
+   * from `done` above, which counts only INSPECTED for the existing header
+   * stat line.
+   */
+  const doneForWindow = routeRooms.filter((r) => r.status === "CLEAN" || r.status === "INSPECTED").length;
+
   /** One floor-chunk was locally reordered — splice it back into the full sequence and persist. */
   const reorderChunk = async (chunkIndex: number, newChunkItems: Room[]) => {
     const nextChunks = routeChunks.map((c, i) => (i === chunkIndex ? { ...c, items: newChunkItems } : c));
@@ -198,6 +223,88 @@ export default function AttendantView() {
       </div>
 
       <OfflineBar state={offline} />
+
+      <WindowPanel
+        title="Meine Zimmer"
+        right={
+          <span className="text-xs text-graphite/60">
+            {doneForWindow} von {routeRooms.length} erledigt
+          </span>
+        }
+      >
+        <div className="mb-3 h-2 overflow-hidden rounded-full bg-parchment">
+          <div
+            className="h-full rounded-full bg-gold transition-all"
+            style={{ width: `${routeRooms.length ? Math.round((doneForWindow / routeRooms.length) * 100) : 0}%` }}
+          />
+        </div>
+        {routeRooms.length === 0 && <p className="text-sm text-graphite/60">Noch keine Zimmer zugewiesen.</p>}
+        <div className="space-y-1.5">
+          {routeRooms.map((room) => {
+            const style = STATUS_STYLES[room.status];
+            const next = nextAttendantStatus(room.status);
+            const expanded = expandedRoomId === room.id;
+            const busy = busyRoomId === room.id;
+            return (
+              <div
+                key={room.id}
+                className={`overflow-hidden rounded-lg border border-charcoal/10 border-l-4 bg-white ${style.border}`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setExpandedRoomId(expanded ? null : room.id)}
+                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
+                  aria-expanded={expanded}
+                >
+                  <span className="font-serif text-lg">{room.number}</span>
+                  <span className={`rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
+                    {STATUS_LABELS[room.status]}
+                  </span>
+                  {room.status === "INSPECTED" && <span title="Bereits freigegeben">🔒</span>}
+                  {room.notes.length > 0 && <span className="text-xs text-graphite/60">📝 {room.notes.length}</span>}
+                  <svg
+                    className={`ml-auto h-4 w-4 shrink-0 text-graphite/45 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                    strokeWidth={2}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </button>
+                {expanded && (
+                  <div className="border-t border-charcoal/5 px-3 pb-3 pt-2.5">
+                    {room.notes.length === 0 && <p className="text-xs text-graphite/50">Keine Notizen.</p>}
+                    {room.notes.map((n) => (
+                      <p key={n.id} className="mb-1 text-xs text-graphite/70">
+                        <span className="text-graphite/50">
+                          {n.author.name} ({n.author.role.replace(/_/g, " ")}) ·{" "}
+                          {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </span>{" "}
+                        {n.body}
+                      </p>
+                    ))}
+                    {next && (
+                      <button
+                        onClick={() => setStatus(room, next)}
+                        disabled={busy}
+                        className="mt-1 h-11 w-full rounded-xl bg-blue-600 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
+                      >
+                        {busy ? "…" : `Status weiterschalten → ${STATUS_LABELS[next]}`}
+                      </button>
+                    )}
+                    {room.status === "INSPECTED" && (
+                      <p className="mt-1 text-xs text-graphite/60">
+                        Bereits vom Supervisor freigegeben – keine Änderung möglich.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </WindowPanel>
 
       {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
 
