@@ -94,3 +94,16 @@ body {
   .animate-rise { animation: none; }
   * { transition-duration: 0.01ms !important; }
 }
+
+/*
+ * Guest screen (TEST/DEMO, room 305 — see src/app/guest/305) uses its own
+ * small palette straight from the brief, scoped to `.guest-theme` so it
+ * doesn't touch the staff app's ivory/gold palette above.
+ */
+.guest-theme {
+  --g-cream: #f7f3ea;
+  --g-navy: #133457;
+  --g-brass: #a9843f;
+  --g-panel: #ede6d6;
+  --g-muted: #8a8578;
+}

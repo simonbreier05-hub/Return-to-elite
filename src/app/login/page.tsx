@@ -118,6 +118,19 @@ export default function LoginPage() {
                   {count > 1 && <div className="text-xs text-graphite/60">as {user.name}</div>}
                 </button>
               ))}
+              {/* TEST/DEMO entry point: simulates the guest-facing screen a real
+                  guest will reach via an NFC tag / pre-arrival link once that
+                  exists. Not a login — goes straight to the room 305 guest
+                  screen with no session. Remove this tile once the real access
+                  path is in place (see src/app/guest/305). */}
+              <button
+                onClick={() => window.location.assign("/guest/305")}
+                disabled={busy}
+                className="flex h-20 flex-col items-center justify-center rounded-xl border border-dashed border-gold-line/60 bg-linen px-3 text-center transition hover:border-navy-line hover:bg-parchment disabled:opacity-40"
+              >
+                <div className="text-sm font-semibold">Guest</div>
+                <div className="text-xs text-graphite/60">Room 305</div>
+              </button>
             </div>
 
             <p className="mt-5 text-center text-xs text-graphite/55">
