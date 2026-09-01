@@ -48,6 +48,7 @@ model Room {
   isCheckoutToday  Boolean   @default(false) // due-out today (drives priority: turn before stayover)
   blockReason      String? // DND | GUEST_IN_ROOM | DOUBLE_LOCKED | REFUSED (only when BLOCKED)
   blockedSince     DateTime?
+  blockedUntil     DateTime? // end of a DND window (guest- or staff-set); null = until cleared manually
   reworkNote       String? // supervisor note when sending CLEAN back to PICKUP
   oooUntil         DateTime? // end time for OUT_OF_ORDER
   baseCleanMinutes Int       @default(30) // baseline used by predictCleaningMinutes
@@ -58,6 +59,12 @@ model Room {
   // and freely reorderable afterwards by drag — see /api/rooms/reorder.
   // Null for an unassigned room or one outside today's route.
   routeOrder       Int?
+  // Guest self-service (see /guest/[roomToken]): a persisted, randomly
+  // generated per-room token for NFC/QR/pre-arrival-email access — never
+  // derived from the room id/number, so a leak can't forge other rooms.
+  guestToken             String?   @unique
+  guestCleanRequestedAt  DateTime? // when a guest last asked for cleaning
+  guestCleanRequestedFor DateTime? // target time ("now"/+30min/a chosen time) — feeds computePriority
   updatedAt        DateTime  @updatedAt
 
   notes      RoomNote[]
@@ -101,8 +108,9 @@ model RoomNote {
   id        String   @id @default(cuid())
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id])
-  authorId  String
-  author    User     @relation(fields: [authorId], references: [id])
+  authorId  String?
+  author    User?    @relation(fields: [authorId], references: [id])
+  guestSource String? // set instead of authorId when a guest wrote it, e.g. "Gast, Zimmer 305"
   body      String
   createdAt DateTime @default(now())
 }
@@ -114,8 +122,9 @@ model Defect {
   category     String // PLUMBING | ELECTRICAL | HVAC | FURNITURE | IT_TV | MINIBAR | OTHER
   note         String
   photoPath    String? // stored under /public/uploads (S3 mock)
-  reportedById String
-  reportedBy   User       @relation("DefectReporter", fields: [reportedById], references: [id])
+  reportedById String?
+  reportedBy   User?      @relation("DefectReporter", fields: [reportedById], references: [id])
+  guestSource  String? // set instead of reportedById when a guest reported it, e.g. "Gast, Zimmer 305"
   createdAt    DateTime   @default(now())
   workOrder    WorkOrder?
 }

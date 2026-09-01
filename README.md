@@ -158,6 +158,16 @@ Steps:
 `0.0.0.0`. SQLite is *not* suitable on Railway (ephemeral filesystem) — use the
 Postgres service, which the Railway scripts above already target.
 
+**Preview / PR environments:** each Railway environment needs its own steps
+3–4 above — a preview environment does not automatically inherit the
+production service's `DATABASE_URL` reference, and if it boots against an
+empty (or wrong) Postgres instance, `start:railway`'s `SEED_MODE=if-empty`
+seed step only runs once, on that environment's *own* first boot. If a
+preview shows 0 rooms / 0 attendants (and `POST /api/assignments/plan` warns
+"No rooms found"), that's the environment never having been seeded against
+its own database — re-check its `DATABASE_URL` binding and redeploy, or run
+`npm run db:seed` against it directly, rather than assuming a planner bug.
+
 ## Visual design — tuned to the house
 
 The property occupies an 1889 former Dresdner Bank headquarters: repurposed

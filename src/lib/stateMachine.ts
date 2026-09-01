@@ -1,6 +1,16 @@
 import type { Role, RoomStatus } from "./domain";
 
 /**
+ * The actor a transition is checked against. "guest" is NOT a member of
+ * `Role`/`ROLES` in domain.ts — it can never be a `User.role`, never signs a
+ * staff JWT, never passes a `requireRole([...])` check. It exists only here,
+ * so a guest action (see /guest/[roomToken]) can be routed through the same
+ * `checkTransition`/`applyStatusChange` gate as staff, restricted to the one
+ * target it may ever set.
+ */
+export type ActorRole = Role | "guest";
+
+/**
  * Room status state machine + role permission matrix.
  *
  * Both checks are enforced SERVER-SIDE in the status API route
@@ -37,7 +47,7 @@ export const LEGAL_TRANSITIONS: Record<RoomStatus, RoomStatus[]> = {
  * room as sellable). front_office & concierge may not change cleaning status
  * at all.
  */
-export const ROLE_ALLOWED_TARGETS: Record<Role, RoomStatus[]> = {
+export const ROLE_ALLOWED_TARGETS: Record<ActorRole, RoomStatus[]> = {
   room_attendant: ["IN_PROGRESS", "CLEAN", "BLOCKED", "DEFECT_REPORTED", "DIRTY", "GREEN_OPT_OUT"],
   supervisor: [...([
     "DIRTY", "IN_PROGRESS", "CLEAN", "INSPECTED", "PICKUP", "BLOCKED",
@@ -50,6 +60,9 @@ export const ROLE_ALLOWED_TARGETS: Record<Role, RoomStatus[]> = {
   engineering: ["DEFECT_REPORTED"], // may flag a defect; everything else via work orders
   front_office: [], // MUST NOT change housekeeping status
   concierge: [], // MUST NOT change housekeeping status
+  // A guest (see /guest/[roomToken]) may only ever set their own room to
+  // BLOCKED (Do Not Disturb) — never CLEAN/INSPECTED/OUT_OF_ORDER/etc.
+  guest: ["BLOCKED"],
 };
 
 export type TransitionCheck =
@@ -61,7 +74,7 @@ export type TransitionCheck =
  * layer can map it to HTTP 403 (forbidden for role) / 409 (illegal transition)
  * and write an audit entry either way.
  */
-export function checkTransition(role: Role, from: RoomStatus, to: RoomStatus): TransitionCheck {
+export function checkTransition(role: ActorRole, from: RoomStatus, to: RoomStatus): TransitionCheck {
   if (!ROLE_ALLOWED_TARGETS[role].includes(to)) {
     return {
       ok: false,
@@ -73,6 +86,10 @@ export function checkTransition(role: Role, from: RoomStatus, to: RoomStatus): T
     };
   }
   if (from === to) {
+    // BLOCKED→BLOCKED is the one legitimate no-op: re-confirming or
+    // extending an active DND window (staff or guest). Every other
+    // same-status call stays a conflict.
+    if (to === "BLOCKED") return { ok: true };
     return { ok: false, code: 409, error: `Room is already '${from}'.` };
   }
   if (!LEGAL_TRANSITIONS[from].includes(to)) {

@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { roomNumbersForFloor } from "../src/lib/domain";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
+import { generateGuestToken } from "../src/lib/rooms/resolveGuestRoom";
 
 /**
  * Seed: one user per role, ten room attendants, 145 rooms across
@@ -100,7 +101,7 @@ async function main() {
     5: ["DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY", "DIRTY"],
   };
 
-  const roomIds: { id: string; number: string; floor: number; section: string }[] = [];
+  const roomIds: { id: string; number: string; floor: number; section: string; guestToken: string | null }[] = [];
   let count = 0;
   for (const floor of [1, 2, 3, 4, 5]) {
     const numbers = roomNumbersForFloor(floor);
@@ -136,9 +137,12 @@ async function main() {
           isCheckoutToday: checkout,
           baseCleanMinutes: baseMinutes[type],
           assignedToId: assignee.id,
+          // Every room gets a guest-access token — this is what gets
+          // written to an NFC tag / QR code / pre-arrival email link.
+          guestToken: generateGuestToken(),
         },
       });
-      roomIds.push({ id: room.id, number, floor, section });
+      roomIds.push({ id: room.id, number, floor, section, guestToken: room.guestToken });
     }
   }
   console.log(`Created ${count} rooms.`);
@@ -276,6 +280,7 @@ async function main() {
 
   console.log("Seed complete. Login with any seeded user / password '123'.");
   console.table(usersData.map((u) => ({ email: u.email, role: u.role })));
+  console.log(`Guest screen demo (room 305): /guest/${byNumber["305"].guestToken}`);
 }
 
 main()

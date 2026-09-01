@@ -21,7 +21,17 @@ export async function GET() {
     orderBy: [{ role: "asc" }, { name: "asc" }],
     select: { id: true, email: true, name: true, role: true, section: true },
   });
-  return NextResponse.json({ enabled: true, users });
+
+  // Guest-screen demo entry (room 305) — no NFC tag needed to test it.
+  // Same gate as everything else on this route: never advertised in
+  // production unless ALLOW_DEV_LOGIN is explicitly set.
+  const room305 = await prisma.room.findUnique({
+    where: { number: "305" },
+    select: { guestToken: true },
+  });
+  const guestDemo = room305?.guestToken ? { roomNumber: "305", token: room305.guestToken } : null;
+
+  return NextResponse.json({ enabled: true, users, guestDemo });
 }
 
 const Body = z.object({ email: z.string().email() });

@@ -1,23 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
-import { DefectCategorySchema } from "@/lib/domain";
+import { guardGuestRequest } from "@/lib/rooms/resolveGuestRoom";
 import { reportDefect } from "@/lib/rooms/reportDefect";
+import { DefectCategorySchema } from "@/lib/domain";
 
 /**
- * POST /api/rooms/[id]/defects — report a defect (category + note + photo).
- * Photos are stored under public/uploads (local S3 mock). A work order is
- * auto-created and routed to the engineering queue.
+ * POST /api/guest/[roomToken]/defect — "Mangel melden". Multipart, mirrors
+ * the staff route (POST /api/rooms/[id]/defects) exactly, sharing the same
+ * reportDefect() creation logic — this is the real work-order path.
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(["room_attendant", "supervisor", "engineering"]);
-  if (!auth.ok) return auth.response;
-  const { id } = await params;
-
-  const room = await prisma.room.findUnique({ where: { id } });
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+export async function POST(req: NextRequest, { params }: { params: Promise<{ roomToken: string }> }) {
+  const { roomToken } = await params;
+  const gate = await guardGuestRequest(req, roomToken, "defect", { limit: 5, windowMs: 60_000 });
+  if (!gate.ok) return gate.response;
+  const { room, guestSource } = gate;
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Expected multipart form data." }, { status: 400 });
@@ -27,7 +24,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!category.success) return NextResponse.json({ error: "Invalid defect category." }, { status: 400 });
   if (!note) return NextResponse.json({ error: "Defect note is required." }, { status: 400 });
 
-  // Photo upload → local S3 mock (public/uploads)
   let photoPath: string | null = null;
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
@@ -43,8 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const defect = await reportDefect(
-    { roomId: id, roomNumber: room.number, category: category.data, note, photoPath },
-    { type: "staff", userId: auth.session.userId }
+    { roomId: room.id, roomNumber: room.number, category: category.data, note, photoPath },
+    { type: "guest", label: guestSource }
   );
 
   return NextResponse.json({ defect }, { status: 201 });

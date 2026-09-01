@@ -115,3 +115,42 @@ describe("permission matrix — room attendant", () => {
     }
   });
 });
+
+describe("guest actor (see /guest/[roomToken]) — may only ever set BLOCKED", () => {
+  it("may set DIRTY/IN_PROGRESS/PICKUP → BLOCKED", () => {
+    expect(checkTransition("guest", "DIRTY", "BLOCKED")).toEqual({ ok: true });
+    expect(checkTransition("guest", "IN_PROGRESS", "BLOCKED")).toEqual({ ok: true });
+    expect(checkTransition("guest", "PICKUP", "BLOCKED")).toEqual({ ok: true });
+  });
+
+  it("may re-confirm/extend an already-BLOCKED room (idempotent re-block)", () => {
+    expect(checkTransition("guest", "BLOCKED", "BLOCKED")).toEqual({ ok: true });
+  });
+
+  it("may never reach INSPECTED, CLEAN, or any other status", () => {
+    for (const to of ROOM_STATUSES.filter((s) => s !== "BLOCKED")) {
+      const res = checkTransition("guest", "DIRTY", to);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.code).toBe(403);
+    }
+    const res = checkTransition("guest", "CLEAN", "INSPECTED");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe(403);
+  });
+
+  it("cannot set BLOCKED on a room where BLOCKED isn't a legal target at all (e.g. from CLEAN)", () => {
+    const res = checkTransition("guest", "CLEAN", "BLOCKED");
+    expect(res.ok).toBe(false);
+    if (!res.ok) expect(res.code).toBe(409);
+  });
+});
+
+describe("idempotent re-block does not weaken the same-status rule elsewhere", () => {
+  it("every other same-status pair is still a 409, not just BLOCKED's exemption", () => {
+    for (const status of ROOM_STATUSES.filter((s) => s !== "BLOCKED")) {
+      const res = checkTransition("duty_manager", status, status);
+      expect(res.ok).toBe(false);
+      if (!res.ok) expect(res.code).toBe(409);
+    }
+  });
+});
