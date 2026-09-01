@@ -106,6 +106,28 @@ describe("computePriority — explainable scoring", () => {
     expect(sameSection.score).toBeGreaterThan(sameFloor.score);
   });
 
+  it("scores a guest cleaning request whose target time has arrived", () => {
+    const res = computePriority(
+      { ...baseRoom, guestCleanRequestedFor: min(-5) },
+      emptyCtx
+    );
+    expect(res.reasons.some((r) => r.signal === "guest_request_now")).toBe(true);
+    expect(res.score).toBe(PRIORITY_WEIGHTS.guestRequestNow);
+  });
+
+  it("scores a guest cleaning request whose target time is coming up soon, lower than 'now'", () => {
+    const soon = computePriority({ ...baseRoom, guestCleanRequestedFor: min(30) }, emptyCtx);
+    expect(soon.reasons.some((r) => r.signal === "guest_request_soon")).toBe(true);
+    expect(soon.score).toBe(PRIORITY_WEIGHTS.guestRequestSoon);
+    expect(soon.score).toBeLessThan(PRIORITY_WEIGHTS.guestRequestNow);
+  });
+
+  it("does not score a guest cleaning request far in the future", () => {
+    const far = computePriority({ ...baseRoom, guestCleanRequestedFor: min(500) }, emptyCtx);
+    expect(far.reasons.some((r) => r.signal.startsWith("guest_request"))).toBe(false);
+    expect(far.score).toBe(0);
+  });
+
   it("score always equals the sum of its explained parts (transparency invariant)", () => {
     const res = computePriority(
       { ...baseRoom, isCheckoutToday: true, status: "BLOCKED", blockedSince: min(-60) },

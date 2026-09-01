@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { api } from "@/components/api";
 
 interface DevUser {
@@ -9,6 +10,11 @@ interface DevUser {
   name: string;
   role: string;
   section?: string | null;
+}
+
+interface GuestDemo {
+  roomNumber: string;
+  token: string;
 }
 
 const ROLE_LABELS: Record<string, string> = {
@@ -29,12 +35,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [devUsers, setDevUsers] = useState<DevUser[] | null>(null);
+  const [guestDemo, setGuestDemo] = useState<GuestDemo | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/dev-login")
       .then((r) => (r.ok ? r.json() : { enabled: false }))
-      .then((d) => setDevUsers(d.enabled ? d.users : null))
-      .catch(() => setDevUsers(null));
+      .then((d) => {
+        setDevUsers(d.enabled ? d.users : null);
+        setGuestDemo(d.enabled ? d.guestDemo ?? null : null);
+      })
+      .catch(() => {
+        setDevUsers(null);
+        setGuestDemo(null);
+      });
   }, []);
 
   // Hard navigation so the App Router cannot serve segments cached for a
@@ -118,6 +131,17 @@ export default function LoginPage() {
                   {count > 1 && <div className="text-xs text-graphite/60">as {user.name}</div>}
                 </button>
               ))}
+              {guestDemo && (
+                // Not a staff session — this navigates straight to the
+                // public guest screen, no quickLogin/cookie involved.
+                <Link
+                  href={`/guest/${guestDemo.token}`}
+                  className="flex h-20 flex-col items-center justify-center rounded-xl border border-charcoal/15 bg-linen px-3 text-center transition hover:border-navy-line hover:bg-parchment"
+                >
+                  <div className="text-sm font-semibold">Gast (Zimmer {guestDemo.roomNumber})</div>
+                  <div className="text-xs text-graphite/60">no login</div>
+                </Link>
+              )}
             </div>
 
             <p className="mt-5 text-center text-xs text-graphite/55">

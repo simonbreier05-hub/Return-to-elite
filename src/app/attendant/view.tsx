@@ -16,7 +16,10 @@ import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } 
 interface Note {
   id: string;
   body: string;
-  author: { name: string; role: string };
+  // Guest-authored notes (see /guest/[roomToken]) have no staff author —
+  // guestSource carries a display label like "Gast, Zimmer 305" instead.
+  author: { name: string; role: string } | null;
+  guestSource?: string | null;
   createdAt: string;
   roomId?: string;
 }
@@ -352,7 +355,7 @@ export default function AttendantView() {
               )}
               {room.notes[0] && (
                 <p className="mb-2 truncate text-xs text-graphite/60" title={room.notes[0].body}>
-                  📝 {room.notes[0].author.name}: {room.notes[0].body}
+                  📝 {room.notes[0].author?.name ?? room.notes[0].guestSource ?? "Guest"}: {room.notes[0].body}
                 </p>
               )}
 

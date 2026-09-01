@@ -61,6 +61,7 @@ export async function GET(req: NextRequest) {
           status: room.status,
           isCheckoutToday: room.isCheckoutToday,
           blockedSince: room.blockedSince,
+          guestCleanRequestedFor: room.guestCleanRequestedFor,
         },
         {
           now,

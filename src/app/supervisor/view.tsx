@@ -13,7 +13,10 @@ import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type RoomStatus } 
 interface Note {
   id: string;
   body: string;
-  author: { name: string; role: string };
+  // Guest-authored notes (see /guest/[roomToken]) have no staff author —
+  // guestSource carries a display label like "Gast, Zimmer 305" instead.
+  author: { name: string; role: string } | null;
+  guestSource?: string | null;
   createdAt: string;
   roomId?: string;
 }
@@ -789,7 +792,7 @@ function RoomDrawer({
           {room.notes.map((n) => (
             <div key={n.id} className="mb-1 rounded-lg bg-ivory p-2 text-sm">
               <span className="text-xs text-graphite/60">
-                {n.author.name} ({n.author.role.replace(/_/g, " ")}) ·{" "}
+                {n.author ? `${n.author.name} (${n.author.role.replace(/_/g, " ")})` : (n.guestSource ?? "Guest")} ·{" "}
                 {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>
               <p>{n.body}</p>

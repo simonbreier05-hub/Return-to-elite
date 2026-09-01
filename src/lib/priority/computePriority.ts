@@ -22,6 +22,8 @@ export interface PriorityRoomInput {
   status: string;
   isCheckoutToday: boolean;
   blockedSince?: Date | null;
+  /** Guest self-service "Jetzt reinigen" target time (see /guest/[roomToken]). */
+  guestCleanRequestedFor?: Date | null;
 }
 
 export interface PriorityArrivalInput {
@@ -86,6 +88,9 @@ export const PRIORITY_WEIGHTS = {
   sameSection: 12, // route proximity
   sameFloor: 6,
   etaSoonWindowMinutes: 90,
+  guestRequestNow: 50, // guest asked for cleaning and the target time has arrived
+  guestRequestSoon: 25, // target time is coming up within guestRequestSoonWindowMinutes
+  guestRequestSoonWindowMinutes: 60,
 } as const;
 
 /** Statuses that still need housekeeping work and therefore compete for priority. */
@@ -166,6 +171,25 @@ export function computePriority(room: PriorityRoomInput, ctx: PriorityContext): 
         signal: "blocked_age",
         points,
         reason: `Blocked for ${Math.round(elapsed / 60_000)} min (${intervals}× re-check interval) — needs re-check.`,
+      });
+    }
+  }
+
+  // (5b) Guest self-service cleaning request ("Jetzt reinigen")
+  if (room.guestCleanRequestedFor) {
+    const delta = room.guestCleanRequestedFor.getTime() - now;
+    if (delta <= 0) {
+      reasons.push({
+        signal: "guest_request_now",
+        points: W.guestRequestNow,
+        reason: "Guest requested cleaning — target time has arrived.",
+      });
+    } else if (delta <= W.guestRequestSoonWindowMinutes * 60_000) {
+      const mins = Math.round(delta / 60_000);
+      reasons.push({
+        signal: "guest_request_soon",
+        points: W.guestRequestSoon,
+        reason: `Guest requested cleaning in ${mins} min.`,
       });
     }
   }

@@ -14,7 +14,10 @@ interface WorkOrder {
     note: string;
     photoPath?: string | null;
     room: { number: string; status: string; floor: number };
-    reportedBy: { name: string; role: string };
+    // Guest-reported defects (see /guest/[roomToken]) have no staff
+    // reporter — guestSource carries a display label instead.
+    reportedBy: { name: string; role: string } | null;
+    guestSource?: string | null;
   };
 }
 
@@ -99,7 +102,7 @@ export default function EngineeringView() {
               <img src={wo.defect.photoPath} alt="Defect photo" className="mt-2 max-h-40 rounded-lg object-cover" />
             )}
             <p className="mt-2 text-xs text-graphite/60">
-              Reported by {wo.defect.reportedBy.name} ·{" "}
+              Reported by {wo.defect.reportedBy?.name ?? wo.defect.guestSource ?? "Guest"} ·{" "}
               {new Date(wo.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               {wo.assignedTo && ` · assigned to ${wo.assignedTo.name}`}
             </p>

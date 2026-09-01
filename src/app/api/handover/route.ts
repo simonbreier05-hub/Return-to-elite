@@ -75,6 +75,7 @@ export async function GET(req: NextRequest) {
     orderBy: { createdAt: "desc" },
     take: 8,
     include: { room: { select: { number: true } }, author: { select: { name: true, role: true } } },
+    // guestSource rides along automatically as a scalar Defect/RoomNote column.
   });
 
   const facts: HandoverFacts = {
@@ -130,8 +131,8 @@ export async function GET(req: NextRequest) {
     },
     notes: notes.map((n) => ({
       room: n.room.number,
-      author: n.author.name,
-      role: n.author.role,
+      author: n.author?.name ?? n.guestSource ?? "Guest",
+      role: n.author?.role ?? "guest",
       body: n.body,
     })),
   };

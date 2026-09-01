@@ -78,6 +78,7 @@ export async function POST(req: NextRequest) {
         status: room.status,
         isCheckoutToday: room.isCheckoutToday,
         blockedSince: room.blockedSince,
+        guestCleanRequestedFor: room.guestCleanRequestedFor,
       },
       {
         now,
@@ -145,12 +146,25 @@ export async function POST(req: NextRequest) {
     ])
   );
 
+  // planAssignments already handles 0 attendants / 0 rooms without crashing
+  // (an empty plan with everything "unassigned"), but a fresh environment
+  // with truly nothing in it (no rooms at all) almost always means the
+  // database was never seeded — say so plainly rather than silently
+  // returning an all-empty plan that looks like a bug in the planner.
+  const environmentWarning =
+    rooms.length === 0
+      ? "No rooms found in this environment — has the database been seeded? (npm run db:seed, or check SEED_MODE=if-empty ran on deploy.)"
+      : workRooms.length > 0 && attendants.length === 0
+        ? "No attendants on shift — rooms cannot be assigned until at least one room_attendant exists."
+        : null;
+
   return NextResponse.json({
     plan,
     rooms: roomDetail,
     figures,
     defaults,
     warnings,
+    environmentWarning,
     stayovers: stayoversFrom(figures),
     totalRooms: rooms.length,
     roomsNeedingWork: workRooms.length,
