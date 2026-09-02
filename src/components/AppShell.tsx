@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "./api";
 import { useSocket } from "./useSocket";
 
@@ -109,6 +110,13 @@ export default function AppShell({
             <span className="hidden text-[0.72rem] uppercase tracking-[0.24em] text-ivory/55 sm:inline">{title}</span>
           </div>
           <div className="flex items-center gap-2">
+            <Link
+              href="/floor-plan"
+              className="hidden h-10 items-center rounded-lg border border-white/20 px-3 text-xs font-medium uppercase tracking-wider text-ivory/85 transition hover:bg-white/10 sm:flex"
+              title="Floor plan · wayfinding · HSK & SVC lift locations"
+            >
+              🗺️ Floor Plan
+            </Link>
             {devUsers && (
               <select
                 aria-label="Switch role (dev)"

@@ -1,9 +1,10 @@
 # StayClean — Real-Time Room Cleaning & Release
 
 Production-quality **prototype** of a cross-departmental, real-time room-cleaning and
-room-release system for a 145-room luxury hotel. Built to later integrate with
-**Oracle OPERA Cloud via OHIP** (connector interface included); runs today on
-mock/local data.
+room-release system for **Hotel de Rome Berlin** (139 rooms across 5 floors, the
+real numbering/layout — see [Floor plan](#floor-plan--wayfinding-hotel-de-rome-berlin)
+below). Built to later integrate with **Oracle OPERA Cloud via OHIP** (connector
+interface included); runs today on mock/local data.
 
 | | |
 |---|---|
@@ -21,7 +22,7 @@ mock/local data.
 npm install
 cp .env.example .env          # defaults are fine
 npm run db:push               # create SQLite schema (prisma/dev.db)
-npm run db:seed               # 145 rooms over 5 floors, 10 attendants, demo data
+npm run db:seed               # 139 rooms over 5 floors (real Hotel de Rome layout), 10 attendants, demo data
 npm run dev                   # custom server: Next.js + Socket.IO on :3000
 ```
 
@@ -139,7 +140,7 @@ start commands automatically:
 - **Start:** `npm run start:railway` — `prisma db push`, seeds **only if the
   database is empty** (`SEED_MODE=if-empty`, so a redeploy never wipes live
   data), then boots the server
-- **Healthcheck:** `GET /api/health` (returns `{status:"ok",rooms:145}`)
+- **Healthcheck:** `GET /api/health` (returns `{status:"ok",rooms:139}`)
 
 Steps:
 
@@ -326,6 +327,43 @@ The pattern: **rules and classical ML for decisions that must be repeatable and
 defensible, language models for turning messy human language into structure and
 back.** Assignment is the former. Handover notes are the latter.
 
+## Floor plan & wayfinding — Hotel de Rome Berlin
+
+`src/lib/floorplan/hotelDeRome.ts` is the single source of truth for the real
+property: every room number and floor, the "Aus dem Lift geradeaus/rechts"
+elevator wayfinding card kept behind each floor's plan in the housekeeping
+binder, interconnecting room groups, the disabled-access and anti-allergic
+rooms, and the non-lettable floor facilities — fire escapes, guest & service
+lifts, and housekeeping (HSK) offices.
+
+**Staff and housekeeping always arrive on a floor via the SVC (service)
+lift.** Everything a room attendant needs on that floor is kept in the HSK
+office positioned at that lift — seeded as the `FloorFacility` row with
+`isPrimaryHsk: true` — never any other HSK/storage room the floor happens to
+have. This is queried through `GET /api/floor-plan` and rendered for every
+role on the **Floor Plan** page (linked from the header on every screen), so
+an attendant, supervisor, front-office or engineering user can look up where
+a room sits, how to walk to it from the lift, which rooms interconnect, and
+where the floor's HSK office actually is.
+
+Room and floor data feeding this is stored relationally, not just as a
+static page: `Room.interconnectingGroup` / `hasDisabledAccess` /
+`isAntiAllergic` / `hasTerrace` and the `FloorFacility` model are seeded
+straight from `hotelDeRome.ts` and are what the API/page above read.
+
+**Digitization confidence** — read the header comment in `hotelDeRome.ts`
+before trusting a field operationally. Room numbers, floors and the
+elevator wayfinding text are read off clearly legible printed text
+(high confidence). Interconnecting groups, the disabled-access/anti-allergic
+rooms and floor 5's exact room list are a best-effort read of hand-annotated
+paper plans and should be checked against the originals if precision ever
+matters. Room *type/category* (Classic, Deluxe, Superior Deluxe, Junior
+Suite, Classic/Executive/Historic/Bebel Suite) is shown on the plans only as
+grayscale shading that a phone photo can't reliably distinguish between —
+every room therefore seeds as type `UNVERIFIED` ("Needs type (unverified)")
+until someone enters the real category from the property's actual
+color-coded plan/key.
+
 ## PMS integration (stub now, OHIP later)
 
 `src/lib/pms/PMSConnector.ts` defines `onReservationEvent()`, `onCheckout()`,
@@ -352,9 +390,10 @@ as duty manager):
 ```
 server.js                       # custom Next server + Socket.IO + escalation ticker
 prisma/schema.prisma            # SQLite (default) — schema.postgres.prisma for pg
-prisma/seed.ts                  # users, 145 rooms, demo data
+prisma/seed.ts                  # users, 139 rooms (real floor plan), floor facilities, demo data
 src/lib/
   domain.ts                     # roles, statuses, Zod enums, colors, defaults
+  floorplan/hotelDeRome.ts      # the real property: room list, wayfinding, HSK/SVC-lift/FT locations
   stateMachine.ts               # transitions + role matrix (unit-tested)
   auth.ts / rbac.ts / pageGuard.ts  # JWT session, API + page guards
   audit.ts / settings.ts / realtime.ts / escalations.ts
@@ -363,10 +402,10 @@ src/lib/
   assignment/planAssignments.ts # morning round planner (pure, tested)
   pms/PMSConnector.ts           # interface · MockPMSConnector · OHIPConnector stub
 src/app/
-  login/ attendant/ supervisor/ front-office/ concierge/ engineering/
+  login/ attendant/ supervisor/ front-office/ concierge/ engineering/ floor-plan/
   supervisor/planning/          # morning assignment board
   api/  auth/ rooms/ arrivals/ excursions/ workorders/ notifications/ assignments/
-        priority/ audit/ settings/ internal/escalations/
+        priority/ audit/ settings/ internal/escalations/ floor-plan/
 tests/  stateMachine.test.ts  priority.test.ts  assignment.test.ts
 ```
 
