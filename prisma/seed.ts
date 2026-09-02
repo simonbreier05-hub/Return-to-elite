@@ -50,11 +50,28 @@ const PASSWORD = "123";
 async function main() {
   // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
   // database once, but never wipe live data on a redeploy/restart.
+  //
+  // Checked against users AND rooms, not users alone: `db push
+  // --accept-data-loss` (railway-boot.sh, runs right before this on every
+  // boot) can drop/recreate the Room table on its own — most commonly, on
+  // this project, when the production and preview services share one
+  // Postgres and a boot from the other branch's divergent schema alters it
+  // — without touching User at all. A users-only check then reads "already
+  // seeded" and skips reseeding while Rooms sits empty, which is exactly
+  // the "no rooms, no attendants show up" bug this guard is meant to
+  // prevent, not cause. Seeding if *either* table is empty re-populates
+  // both from the same wipe-and-reseed path below, so they can't drift
+  // apart like this again.
   if (process.env.SEED_MODE === "if-empty") {
-    const existing = await prisma.user.count();
-    if (existing > 0) {
-      console.log(`Database already seeded (${existing} users) — skipping.`);
+    const [userCount, roomCount] = await Promise.all([prisma.user.count(), prisma.room.count()]);
+    if (userCount > 0 && roomCount > 0) {
+      console.log(`Database already seeded (${userCount} users, ${roomCount} rooms) — skipping.`);
       return;
+    }
+    if (userCount > 0 || roomCount > 0) {
+      console.log(
+        `Partial data found (${userCount} users, ${roomCount} rooms) — reseeding both, not skipping.`
+      );
     }
   }
 
