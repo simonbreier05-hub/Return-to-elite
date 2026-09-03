@@ -163,6 +163,7 @@ export const DEFECT_CATEGORIES = [
   "MINIBAR",
   "OTHER",
 ] as const;
+export type DefectCategory = (typeof DEFECT_CATEGORIES)[number];
 export const DefectCategorySchema = z.enum(DEFECT_CATEGORIES);
 
 export const WORK_ORDER_STATUSES = ["OPEN", "ACK", "IN_PROGRESS", "RESOLVED"] as const;

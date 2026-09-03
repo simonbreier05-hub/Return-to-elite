@@ -4,6 +4,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { FLOOR_4_SECTION } from "../src/lib/domain";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
+import { GUEST_SYSTEM_EMAIL } from "../src/lib/guest";
 
 /**
  * Seed: one user per role, ten room attendants, and the house's real rooms
@@ -111,6 +112,19 @@ async function main() {
     { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
     { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },
     { email: "manager@hotel.test", name: "Diana Maier", role: "duty_manager" },
+    // System account backing the guest-facing test screen (src/app/guest/305)
+    // — attributes guest-submitted notes/defects, never a real login.
+    // role: "guest" is deliberately outside the ROLES enum (see src/lib/domain.ts)
+    // so it never appears in a role-filtered staff picker; GET /api/auth/dev-login
+    // filters it out of the quick-login list for the same reason.
+    // Room number is env-overridable per deployment (see guestServer.ts) —
+    // read directly here rather than importing that file, which pulls in
+    // the Next.js prisma singleton this standalone seed script doesn't use.
+    {
+      email: GUEST_SYSTEM_EMAIL,
+      name: `Guest (Room ${process.env.GUEST_ROOM_NUMBER?.trim() || "305"})`,
+      role: "guest",
+    },
   ];
   const users: Record<string, { id: string; role: string }> = {};
   for (const u of usersData) {

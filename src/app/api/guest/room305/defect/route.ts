@@ -1,23 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { prisma } from "@/lib/db";
-import { requireRole } from "@/lib/rbac";
 import { DefectCategorySchema } from "@/lib/domain";
 import { reportDefect } from "@/lib/rooms/reportDefect";
+import { getGuestRoom, getGuestSystemUserId } from "@/lib/guestServer";
 
 /**
- * POST /api/rooms/[id]/defects — report a defect (category + note + photo).
- * Photos are stored under public/uploads (local S3 mock). A work order is
- * auto-created and routed to the engineering queue.
+ * TEST/DEMO — unauthenticated guest-facing defect report, hard scoped to
+ * room 305 (see src/app/guest/305). Reuses the exact same reportDefect()
+ * logic as the staff route (src/app/api/rooms/[id]/defects/route.ts), just
+ * with no auth check and the seeded guest system account as the reporter —
+ * the resulting Defect/WorkOrder reaches Engineering's real queue like any
+ * staff-reported one.
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(["room_attendant", "supervisor", "engineering"]);
-  if (!auth.ok) return auth.response;
-  const { id } = await params;
-
-  const room = await prisma.room.findUnique({ where: { id } });
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+export async function POST(req: NextRequest) {
+  const room = await getGuestRoom();
+  if (!room) return NextResponse.json({ error: "Room 305 not found — is the database seeded?" }, { status: 404 });
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Expected multipart form data." }, { status: 400 });
@@ -25,9 +23,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const category = DefectCategorySchema.safeParse(form.get("category"));
   const note = String(form.get("note") ?? "").trim();
   if (!category.success) return NextResponse.json({ error: "Invalid defect category." }, { status: 400 });
-  if (!note) return NextResponse.json({ error: "Defect note is required." }, { status: 400 });
+  if (!note) return NextResponse.json({ error: "Please describe the issue." }, { status: 400 });
 
-  // Photo upload → local S3 mock (public/uploads)
   let photoPath: string | null = null;
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
@@ -42,13 +39,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     photoPath = `/uploads/${filename}`;
   }
 
-  const defect = await reportDefect({
-    room,
-    category: category.data,
-    note,
-    photoPath,
-    reportedById: auth.session.userId,
-  });
+  const reportedById = await getGuestSystemUserId();
+  const defect = await reportDefect({ room, category: category.data, note, photoPath, reportedById });
 
   return NextResponse.json({ defect }, { status: 201 });
 }
