@@ -49,15 +49,20 @@ export default function GuestView({ roomNumber, floor }: { roomNumber: string; f
               Etage {floor}
             </p>
           </div>
-          {/* Placeholder wordmark — swap for the real Hotel de Rome logo asset once it exists. */}
-          <div
-            className="font-serif text-lg tracking-[0.14em]"
-            style={{ color: "var(--g-navy)" }}
-            aria-label="Hotel de Rome"
-          >
-            HOTEL
-            <br />
-            DE ROME
+          {/*
+            Original mark (public/guest/hotel-crest.svg) + text wordmark —
+            deliberately NOT a reproduction of any real hotel's logo (this
+            is a fictional house). Swap both for whatever this house's own
+            team supplies through proper brand channels, if that ever
+            applies.
+          */}
+          <div className="flex items-center gap-2.5" aria-label="Hotel de Rome">
+            <img src="/guest/hotel-crest.svg" alt="" className="h-9 w-9 shrink-0" />
+            <div className="font-serif text-lg tracking-[0.14em]" style={{ color: "var(--g-navy)" }}>
+              HOTEL
+              <br />
+              DE ROME
+            </div>
           </div>
         </header>
 
