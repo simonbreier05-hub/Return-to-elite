@@ -68,7 +68,14 @@ async function main() {
     // role: "guest" is deliberately outside the ROLES enum (see src/lib/domain.ts)
     // so it never appears in a role-filtered staff picker; GET /api/auth/dev-login
     // filters it out of the quick-login list for the same reason.
-    { email: GUEST_SYSTEM_EMAIL, name: "Guest (Room 305)", role: "guest" },
+    // Room number is env-overridable per deployment (see guestServer.ts) —
+    // read directly here rather than importing that file, which pulls in
+    // the Next.js prisma singleton this standalone seed script doesn't use.
+    {
+      email: GUEST_SYSTEM_EMAIL,
+      name: `Guest (Room ${process.env.GUEST_ROOM_NUMBER?.trim() || "305"})`,
+      role: "guest",
+    },
   ];
   const users: Record<string, { id: string; role: string }> = {};
   for (const u of usersData) {

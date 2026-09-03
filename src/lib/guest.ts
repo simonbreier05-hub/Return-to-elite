@@ -1,16 +1,16 @@
 import type { Role } from "@/lib/domain";
 
 /**
- * Shared vocabulary for the guest-facing test screen (Room 305 only — see
+ * Shared vocabulary for the guest-facing test screen (one room only — see
  * src/app/guest/305). Framework-agnostic (no prisma import) so both the API
  * routes and the client view can import it.
  *
  * TEST/DEMO SCOPE: hard-wired to one room. Once guests reach this via a real
- * NFC tag / pre-arrival link, GUEST_ROOM_NUMBER goes away in favor of a
- * per-room, per-stay identifier.
+ * NFC tag / pre-arrival link, this whole module goes away in favor of a
+ * per-room, per-stay identifier. GUEST_ROOM_NUMBER itself lives in
+ * guestServer.ts, not here — it's env-dependent (see the comment there) and
+ * this file is also imported client-side.
  */
-
-export const GUEST_ROOM_NUMBER = "305";
 
 /** Backs RoomNote.authorId / Defect.reportedById for anything a guest submits. */
 export const GUEST_SYSTEM_EMAIL = "guest-room305@hotel.test";
