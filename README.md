@@ -1,7 +1,9 @@
 # StayClean — Real-Time Room Cleaning & Release
 
 Production-quality **prototype** of a cross-departmental, real-time room-cleaning and
-room-release system for a 145-room luxury hotel. Built to later integrate with
+room-release system for a 144-room luxury hotel (142 per the corrected floor
+plans for floors 1/2/5 — floors 3/4 are pending a separate correction; see
+`src/lib/domain.ts`). Built to later integrate with
 **Oracle OPERA Cloud via OHIP** (connector interface included); runs today on
 mock/local data.
 
@@ -21,7 +23,7 @@ mock/local data.
 npm install
 cp .env.example .env          # defaults are fine
 npm run db:push               # create SQLite schema (prisma/dev.db)
-npm run db:seed               # 145 rooms over 5 floors, 10 attendants, demo data
+npm run db:seed               # 144 rooms over 5 floors, 10 attendants, demo data
 npm run dev                   # custom server: Next.js + Socket.IO on :3000
 ```
 
@@ -139,7 +141,8 @@ start commands automatically:
 - **Start:** `npm run start:railway` — `prisma db push`, seeds **only if the
   database is empty** (`SEED_MODE=if-empty`, so a redeploy never wipes live
   data), then boots the server
-- **Healthcheck:** `GET /api/health` (returns `{status:"ok",rooms:145}`)
+- **Healthcheck:** `GET /api/health` (returns `{status:"ok",rooms:144}` — a
+  live `room.count()`, not a hardcoded figure)
 
 Steps:
 
@@ -352,7 +355,7 @@ as duty manager):
 ```
 server.js                       # custom Next server + Socket.IO + escalation ticker
 prisma/schema.prisma            # SQLite (default) — schema.postgres.prisma for pg
-prisma/seed.ts                  # users, 145 rooms, demo data
+prisma/seed.ts                  # users, 144 rooms, demo data
 src/lib/
   domain.ts                     # roles, statuses, Zod enums, colors, defaults
   stateMachine.ts               # transitions + role matrix (unit-tested)
