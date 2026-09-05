@@ -64,26 +64,62 @@ export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
   PENTHOUSE: "Penthouse",
 };
 
-/** The property: five guest floors, 29 rooms each = 145 keys. */
+/**
+ * The property: five guest floors, 142 keys total. Room counts are NOT
+ * uniform across floors (32 / 36 / 33 / 23 / 18) — see roomNumbersForFloor.
+ * The 145 figure quoted in the original exposé is a known, still-open
+ * discrepancy (see room-seed-data.json's discrepancyNote); it is not
+ * reproduced here.
+ */
 export const HOTEL = {
   floors: [1, 2, 3, 4, 5],
-  roomsPerFloor: 29,
-  /** Rooms 01–15 form section A, 16–29 section B. */
+  /** Rooms 01–15 form section A, the rest section B. */
   sectionSplit: 15,
 } as const;
 
 /**
- * Room numbers for a floor, low to high. Every floor carries
- * `HOTEL.roomsPerFloor` rooms, numbered `{floor}01`…, with one exception:
- * floor 5 skips "513" (the common hotel superstition skip, same idea as a
- * lift with no 13th-floor button) so the top floor still runs up to room
- * "530" instead of stopping at "529" — matching how the house is actually
- * numbered, door to door.
+ * Floors 1, 2 and 5 read directly off the building's floor plans (photos),
+ * confirmed 2026-09-04 — see room-seed-data.json for the source and the
+ * open questions still flagged on floor 5's high numbers. These are NOT
+ * contiguous ranges:
+ *  - Floor 1 (32 rooms): no 103/106/107/108/113; runs on to 137.
+ *  - Floor 2 (36 rooms): no 213; runs on to 237.
+ *  - Floor 5 (18 rooms): no 501–512 at all — that side of the floor is
+ *    lobby/terrace, not guest rooms, on floor 5 only (floors 1–3 do have a
+ *    room row there).
+ * Floors 3 and 4 are intentionally left out of this correction (see the
+ * Zimmerdaten-Etage-1/2/5 ticket) and keep the legacy contiguous numbering
+ * below, even though room-seed-data.json separately lists 33/23 real rooms
+ * for them — reconciling floors 3/4 is a follow-up, not part of this change.
+ */
+const FLOOR_1_ROOMS = [
+  101, 102, 104, 105, 109, 110, 111, 112, 114, 115, 116, 117, 118, 119, 120,
+  121, 122, 123, 124, 125, 126, 127, 128, 129, 130, 131, 132, 133, 134, 135,
+  136, 137,
+];
+const FLOOR_2_ROOMS = [
+  201, 202, 203, 204, 205, 206, 207, 208, 209, 210, 211, 212, 214, 215, 216,
+  217, 218, 219, 220, 221, 222, 223, 224, 225, 226, 227, 228, 229, 230, 231,
+  232, 233, 234, 235, 236, 237,
+];
+const FLOOR_5_ROOMS = [
+  514, 515, 517, 518, 519, 521, 522, 523, 524, 525, 526, 529, 530, 531, 532,
+  533, 534, 535,
+];
+
+/** Floors 3 & 4 only — untouched legacy placeholder, see note above. */
+const LEGACY_ROOMS_PER_FLOOR = 29;
+
+/**
+ * Room numbers for a floor, low to high.
  */
 export function roomNumbersForFloor(floor: number): string[] {
+  if (floor === 1) return FLOOR_1_ROOMS.map(String);
+  if (floor === 2) return FLOOR_2_ROOMS.map(String);
+  if (floor === 5) return FLOOR_5_ROOMS.map(String);
+
   const numbers: string[] = [];
-  for (let i = 1; numbers.length < HOTEL.roomsPerFloor; i++) {
-    if (floor === 5 && i === 13) continue;
+  for (let i = 1; numbers.length < LEGACY_ROOMS_PER_FLOOR; i++) {
     numbers.push(`${floor}${String(i).padStart(2, "0")}`);
   }
   return numbers;

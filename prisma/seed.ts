@@ -4,9 +4,10 @@ import { roomNumbersForFloor } from "../src/lib/domain";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
 
 /**
- * Seed: one user per role, ten room attendants, 145 rooms across
- * 5 floors (101–530) with sections & types, demo arrivals/excursions/defects
- * so every view has something to show on first login.
+ * Seed: one user per role, ten room attendants, 142 rooms across
+ * 5 floors (101–535, per floor's real room list — see roomNumbersForFloor)
+ * with sections & types, demo arrivals/excursions/defects so every view has
+ * something to show on first login.
  *
  * All demo passwords: 123
  */
@@ -18,10 +19,16 @@ const PASSWORD = "123";
 async function main() {
   // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
   // database once, but never wipe live data on a redeploy/restart.
+  //
+  // Bugfix: this used to check user.count(). In Preview, users can exist
+  // (e.g. created via auth flows or a partial prior seed) while the rooms
+  // table is still empty, so that check silently skipped seeding and left
+  // Preview with no rooms. room.count() is what actually decides whether
+  // the reseed housekeeping needs did anything.
   if (process.env.SEED_MODE === "if-empty") {
-    const existing = await prisma.user.count();
+    const existing = await prisma.room.count();
     if (existing > 0) {
-      console.log(`Database already seeded (${existing} users) — skipping.`);
+      console.log(`Database already seeded (${existing} rooms) — skipping.`);
       return;
     }
   }
@@ -182,11 +189,15 @@ async function main() {
     },
   });
   await prisma.room.update({
-    where: { number: "512" },
+    // Was "512" — removed from floor 5 (lobby/terrace, not a guest room;
+    // see room-seed-data.json). "514" is the lowest remaining floor-5 room.
+    where: { number: "514" },
     data: { status: "OUT_OF_ORDER", oooUntil: at(60 * 24 * 3), statusSince: at(-60 * 24) },
   });
   await prisma.room.update({
-    where: { number: "108" },
+    // Was "108" — removed from floor 1 (real floor plan has no 108).
+    // "109" is the nearest remaining floor-1 room.
+    where: { number: "109" },
     data: { status: "GREEN_OPT_OUT", statusSince: at(-120), occupancy: "OCCUPIED", isCheckoutToday: false },
   });
   await prisma.room.update({
@@ -247,7 +258,7 @@ async function main() {
   const maria = users["maria@hotel.test"];
   const defect = await prisma.defect.create({
     data: {
-      roomId: byNumber["512"].id,
+      roomId: byNumber["514"].id, // was "512", see the OUT_OF_ORDER override above
       category: "PLUMBING",
       note: "Shower drain blocked, water pooling.",
       reportedById: maria.id,
