@@ -11,12 +11,21 @@ export async function GET() {
     include: {
       defect: {
         include: {
-          room: { select: { id: true, number: true, status: true, floor: true } },
+          room: {
+            select: {
+              id: true, number: true, status: true, floor: true,
+              _count: { select: { notes: { where: { status: "OPEN" } } } },
+            },
+          },
           reportedBy: { select: { name: true, role: true } },
         },
       },
       assignedTo: { select: { id: true, name: true } },
     },
   });
-  return NextResponse.json({ workOrders });
+  const withNoteCounts = workOrders.map((wo) => {
+    const { _count, ...room } = wo.defect.room;
+    return { ...wo, defect: { ...wo.defect, room: { ...room, openNotesCount: _count.notes } } };
+  });
+  return NextResponse.json({ workOrders: withNoteCounts });
 }

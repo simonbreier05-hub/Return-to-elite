@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none" role="img" aria-label="House crest">
+  <!--
+    Original mark for the guest screen's placeholder wordmark — NOT a
+    reproduction of any real hotel's logo. A plain arch (entrance/threshold)
+    with a four-point star above it and a base line beneath, monoline navy,
+    in the "generic luxury hospitality, never a real chain's mark" spirit
+    already established for this fictional house (see globals.css). Swap
+    for whatever this house's own team supplies through proper channels.
+  -->
+  <path d="M32 6L34.6 12.4L41 15L34.6 17.6L32 24L29.4 17.6L23 15L29.4 12.4Z" fill="#133457"/>
+  <path
+    d="M16 46V30C16 21.1634 23.1634 14 32 14C40.8366 14 48 21.1634 48 30V46"
+    stroke="#133457"
+    stroke-width="2.4"
+    stroke-linecap="round"
+  />
+  <line x1="12" y1="46" x2="52" y2="46" stroke="#133457" stroke-width="2.4" stroke-linecap="round"/>
+  <line x1="12" y1="52" x2="52" y2="52" stroke="#133457" stroke-width="1.2" stroke-linecap="round" opacity="0.55"/>
+</svg>

@@ -1,12 +1,16 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
-import { roomNumbersForFloor } from "../src/lib/domain";
+import { FLOOR_PLAN, HOTEL, FLOOR_FACILITIES } from "../src/lib/floorplan/hotelDeRome";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
+import { GUEST_SYSTEM_EMAIL } from "../src/lib/guest";
 
 /**
- * Seed: one user per role, ten room attendants, 145 rooms across
- * 5 floors (101–530) with sections & types, demo arrivals/excursions/defects
- * so every view has something to show on first login.
+ * Seed: one user per role, ten room attendants, every room of the real
+ * Hotel de Rome Berlin floor plan (src/lib/floorplan/hotelDeRome.ts — see
+ * that file for what is digitized with high confidence vs. best-effort),
+ * plus the floor facilities (HSK offices, lifts, fire escapes) and demo
+ * arrivals/excursions/defects so every view has something to show on first
+ * login.
  *
  * All demo passwords: 123
  */
@@ -18,11 +22,28 @@ const PASSWORD = "123";
 async function main() {
   // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
   // database once, but never wipe live data on a redeploy/restart.
+  //
+  // Checked against users AND rooms, not users alone: `db push
+  // --accept-data-loss` (railway-boot.sh, runs right before this on every
+  // boot) can drop/recreate the Room table on its own — most commonly, on
+  // this project, when the production and preview services share one
+  // Postgres and a boot from the other branch's divergent schema alters it
+  // — without touching User at all. A users-only check then reads "already
+  // seeded" and skips reseeding while Rooms sits empty, which is exactly
+  // the "no rooms, no attendants show up" bug this guard is meant to
+  // prevent, not cause. Seeding if *either* table is empty re-populates
+  // both from the same wipe-and-reseed path below, so they can't drift
+  // apart like this again.
   if (process.env.SEED_MODE === "if-empty") {
-    const existing = await prisma.user.count();
-    if (existing > 0) {
-      console.log(`Database already seeded (${existing} users) — skipping.`);
+    const [userCount, roomCount] = await Promise.all([prisma.user.count(), prisma.room.count()]);
+    if (userCount > 0 && roomCount > 0) {
+      console.log(`Database already seeded (${userCount} users, ${roomCount} rooms) — skipping.`);
       return;
+    }
+    if (userCount > 0 || roomCount > 0) {
+      console.log(
+        `Partial data found (${userCount} users, ${roomCount} rooms) — reseeding both, not skipping.`
+      );
     }
   }
 
@@ -37,13 +58,14 @@ async function main() {
   await prisma.excursion.deleteMany();
   await prisma.arrival.deleteMany();
   await prisma.room.deleteMany();
+  await prisma.floorFacility.deleteMany();
   await prisma.user.deleteMany();
   await prisma.setting.deleteMany();
 
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   // --- Users -------------------------------------------------------------
-  // Ten attendants for 145 keys — roughly 14 rooms each, which is what a
+  // Ten attendants for ~139 keys — roughly 14 rooms each, which is what a
   // five-star house actually rosters. With four, every plan comes out at
   // three shifts' worth of work and the planning board is meaningless.
   const usersData = [
@@ -62,6 +84,24 @@ async function main() {
     { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
     { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },
     { email: "manager@hotel.test", name: "Diana Maier", role: "duty_manager" },
+    // System account backing the guest-facing test screen (src/app/guest/305)
+    // — attributes guest-submitted notes/defects, never a real login.
+    // role: "guest" is deliberately outside the ROLES enum (see src/lib/domain.ts)
+    // so it never appears in a role-filtered staff picker; GET /api/auth/dev-login
+    // filters it out of the quick-login list for the same reason.
+    // Room number is env-overridable per deployment (see guestServer.ts) —
+    // read directly here rather than importing that file, which pulls in
+    // the Next.js prisma singleton this standalone seed script doesn't use.
+    // Default is "310": this house's real, digitized floor plan (unlike the
+    // calculated room list guestServer.ts's own comment was written
+    // against) has no room "305" at all — 310 is the nearest real key on
+    // the same floor that isn't already claimed by another demo scenario
+    // below.
+    {
+      email: GUEST_SYSTEM_EMAIL,
+      name: `Guest (Room ${process.env.GUEST_ROOM_NUMBER?.trim() || "310"})`,
+      role: "guest",
+    },
   ];
   const users: Record<string, { id: string; role: string }> = {};
   for (const u of usersData) {
@@ -70,22 +110,11 @@ async function main() {
   }
   const attendants = usersData.filter((u) => u.role === "room_attendant").map((u) => users[u.email]);
 
-  // --- Rooms: 145 keys across 5 guest floors -----------------------------
-  // 29 rooms per floor; 01–15 is section A, 16–29 section B.
-  // Categories climb with the floor, the way a city hotel is usually stacked.
-  const typeFor = (floor: number, idx: number): string => {
-    if (floor === 5) {
-      if (idx <= 2) return "PENTHOUSE";
-      return idx % 3 === 0 ? "JUNIOR_SUITE" : "SUITE";
-    }
-    if (floor === 4) return idx % 4 === 0 ? "SUITE" : idx % 2 === 0 ? "JUNIOR_SUITE" : "DELUXE";
-    if (floor === 3) return idx % 5 === 0 ? "JUNIOR_SUITE" : "DELUXE";
-    if (floor === 2) return idx % 3 === 0 ? "DELUXE" : "SUPERIOR";
-    return idx % 4 === 0 ? "SUPERIOR" : "CLASSIC";
-  };
-  const baseMinutes: Record<string, number> = {
-    CLASSIC: 25, SUPERIOR: 28, DELUXE: 32, JUNIOR_SUITE: 40, SUITE: 55, PENTHOUSE: 80,
-  };
+  // --- Rooms: every key of the real Hotel de Rome floor plan -------------
+  // Room type is left "UNVERIFIED" for every room — the source floor plans
+  // only show type as grayscale shading, which couldn't be read reliably
+  // from the photos (see src/lib/floorplan/hotelDeRome.ts). baseCleanMinutes
+  // stays at the schema default (30) until real types are entered.
 
   // A snapshot of mid-morning: the team started low and is working its way
   // up, so floor 1 is largely released while floor 5 has not been touched.
@@ -102,22 +131,26 @@ async function main() {
 
   const roomIds: { id: string; number: string; floor: number; section: string }[] = [];
   let count = 0;
-  for (const floor of [1, 2, 3, 4, 5]) {
-    const numbers = roomNumbersForFloor(floor);
-    for (const [idx, number] of numbers.entries()) {
+  for (const floor of HOTEL.floors) {
+    const plan = FLOOR_PLAN[floor];
+    for (const [idx, entry] of plan.entries()) {
       const i = idx + 1; // 1-based position on the floor, not the literal room number
-      const section = `${floor}${i <= 15 ? "A" : "B"}`;
-      const type = typeFor(floor, i);
       count++;
       // Deterministic-ish demo distribution of statuses & occupancy
       const occupied = count % 3 !== 0;
       const checkout = count % 4 === 0;
       const assignee = attendants[(floor + i) % attendants.length];
 
-      // Only a current guest's room (stayover) or a same-day departure is in
-      // scope for housekeeping — a vacant room with nobody arriving today is
-      // simply released and gets no attention, not an arbitrary status.
-      const occupancy = occupied && !checkout ? "OCCUPIED" : "VACANT";
+      // `occupancy` means "is a guest physically in the room right now" — a
+      // departure guest still counts as OCCUPIED until they actually leave,
+      // exactly like defaultDayFigures() assumes (it derives stayovers as
+      // occupiedNow − departures, so occupiedNow has to include departures
+      // while they're still checked in, or that subtraction quietly throws
+      // real stayover rooms away). Not `occupied && !checkout` — that used
+      // to zero a departure room's occupancy out immediately, which is what
+      // made the "belegte Zimmer heute Abend" figure the supervisor sees
+      // come out far lower than the rooms actually needing an attendant.
+      const occupancy = occupied ? "OCCUPIED" : "VACANT";
       const relevant = isHousekeepingRelevant({ occupancy, isCheckoutToday: checkout });
       const status = relevant ? progression[floor][i % progression[floor].length] : "INSPECTED";
       const minutesAgo = relevant
@@ -126,22 +159,31 @@ async function main() {
 
       const room = await prisma.room.create({
         data: {
-          number,
+          number: entry.number,
           floor,
-          section,
-          type,
+          section: entry.section,
+          type: "UNVERIFIED",
           status,
           statusSince: new Date(Date.now() - minutesAgo * 60_000),
           occupancy,
           isCheckoutToday: checkout,
-          baseCleanMinutes: baseMinutes[type],
           assignedToId: assignee.id,
+          interconnectingGroup: entry.interconnectingGroup?.join(","),
+          hasDisabledAccess: entry.hasDisabledAccess ?? false,
+          isAntiAllergic: entry.isAntiAllergic ?? false,
+          hasTerrace: entry.hasTerrace ?? false,
         },
       });
-      roomIds.push({ id: room.id, number, floor, section });
+      roomIds.push({ id: room.id, number: entry.number, floor, section: entry.section });
     }
   }
-  console.log(`Created ${count} rooms.`);
+  console.log(`Created ${count} rooms (${HOTEL.totalRooms} expected from the floor plan).`);
+
+  // --- Floor facilities (HSK offices, lifts, fire escapes) ----------------
+  for (const facility of FLOOR_FACILITIES) {
+    await prisma.floorFacility.create({ data: facility });
+  }
+  console.log(`Created ${FLOOR_FACILITIES.length} floor facilities.`);
 
   const byNumber = Object.fromEntries(roomIds.map((r) => [r.number, r]));
   const now = Date.now();
@@ -168,25 +210,25 @@ async function main() {
   });
   await prisma.room.update({ where: { number: "301" }, data: { status: "INSPECTED", statusSince: at(-60) } });
   await prisma.room.update({
-    where: { number: "302" },
+    where: { number: "304" },
     data: {
       status: "BLOCKED", blockReason: "DND", blockedSince: at(-45), statusSince: at(-45),
       occupancy: "OCCUPIED", isCheckoutToday: false,
     },
   });
   await prisma.room.update({
-    where: { number: "410" },
+    where: { number: "414" },
     data: {
       status: "BLOCKED", blockReason: "DOUBLE_LOCKED", blockedSince: at(-10), statusSince: at(-10),
       occupancy: "OCCUPIED", isCheckoutToday: false,
     },
   });
   await prisma.room.update({
-    where: { number: "512" },
+    where: { number: "517" },
     data: { status: "OUT_OF_ORDER", oooUntil: at(60 * 24 * 3), statusSince: at(-60 * 24) },
   });
   await prisma.room.update({
-    where: { number: "108" },
+    where: { number: "105" },
     data: { status: "GREEN_OPT_OUT", statusSince: at(-120), occupancy: "OCCUPIED", isCheckoutToday: false },
   });
   await prisma.room.update({
@@ -237,7 +279,7 @@ async function main() {
   });
   await prisma.excursion.create({
     data: {
-      roomId: byNumber["305"].id, guestName: "Sig. Bianchi",
+      roomId: byNumber["308"].id, guestName: "Sig. Bianchi",
       startsAt: at(30), endsAt: at(240), note: "Golf outing.",
       createdById: concierge.id,
     },
@@ -247,7 +289,7 @@ async function main() {
   const maria = users["maria@hotel.test"];
   const defect = await prisma.defect.create({
     data: {
-      roomId: byNumber["512"].id,
+      roomId: byNumber["517"].id,
       category: "PLUMBING",
       note: "Shower drain blocked, water pooling.",
       reportedById: maria.id,
@@ -260,7 +302,7 @@ async function main() {
     data: { roomId: byNumber["205"].id, authorId: fo.id, body: "VIP amenity (champagne) to be placed before arrival." },
   });
   await prisma.roomNote.create({
-    data: { roomId: byNumber["302"].id, authorId: maria.id, body: "DND sign out since morning, TV audible inside." },
+    data: { roomId: byNumber["304"].id, authorId: maria.id, body: "DND sign out since morning, TV audible inside." },
   });
 
   // --- Settings (escalation thresholds) ------------------------------------
