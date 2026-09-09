@@ -65,6 +65,15 @@ export interface AssignmentPlan {
 export interface PlanOptions {
   /** Net minutes an attendant can clean in one shift. Default 390 (6.5 h). */
   capacityMinutes?: number;
+  /**
+   * Rooms-per-attendant guideline (house standard: 10-12). When set, the
+   * round-cutting step (below) also cuts a round once it reaches this many
+   * rooms, on top of the usual minutes balance — so a short list of quick
+   * rooms doesn't quietly grow into a 16-room round while a suite-heavy one
+   * sits light. Unset (the default) keeps the pure minutes balance this
+   * function always had, so it stays a strict no-op for existing callers.
+   */
+  maxRoomsPerAttendant?: number;
 }
 
 /** Urgent first; room number keeps it deterministic when scores tie. */
@@ -77,6 +86,7 @@ export function planAssignments(
   options: PlanOptions = {}
 ): AssignmentPlan {
   const capacityMinutes = options.capacityMinutes ?? 390;
+  const maxRoomsPerAttendant = options.maxRoomsPerAttendant;
 
   const workload = rooms.filter((r) => NEEDS_ATTENDANT.has(r.status));
   const totalMinutes = workload.reduce((sum, r) => sum + r.estimatedMinutes, 0);
@@ -147,17 +157,31 @@ export function planAssignments(
   const rounds: AssignableRoom[][] = Array.from({ length: shareCount }, () => []);
   let cursor = 0;
   let cumulative = 0;
+  // The target this round is cutting towards — what's left to place, spread
+  // over the rounds still open. Frozen for the whole round and only
+  // recomputed when a cut actually happens (not on every room — a target
+  // that kept chasing the live cumulative would converge on itself and
+  // never trigger a cut). That recompute is what matters once
+  // maxRoomsPerAttendant is in play: a cheap floor's round can get capped
+  // well under its "ideal" minutes share (12 quick rooms doesn't reach a
+  // fair share sized for slower rooms), and without re-averaging over what
+  // is actually left, that shortfall silently rolls forward as debt onto
+  // whichever round happens to be scanning next — typically dumping it onto
+  // the first expensive floor's round and blowing it far past capacity.
+  // With no cap this reduces to the original fixed-proportion target.
+  let target = shareCount > 0 ? totalMinutes / shareCount : 0;
 
   walkingOrder.forEach((room, index) => {
     if (cursor < shareCount - 1) {
-      const targetCumulative = ((cursor + 1) * totalMinutes) / shareCount;
-      const distanceIfCutNow = Math.abs(cumulative - targetCumulative);
-      const distanceIfRoomAdded = Math.abs(cumulative + room.estimatedMinutes - targetCumulative);
+      const distanceIfCutNow = Math.abs(cumulative - target);
+      const distanceIfRoomAdded = Math.abs(cumulative + room.estimatedMinutes - target);
       const roomsLeft = walkingOrder.length - index;
       const roundsLeft = shareCount - cursor;
+      const atRoomCap = maxRoomsPerAttendant !== undefined && rounds[cursor].length >= maxRoomsPerAttendant;
       // Never cut so early that a later attendant would be left with nothing.
-      if (distanceIfCutNow < distanceIfRoomAdded && rounds[cursor].length > 0 && roomsLeft >= roundsLeft) {
+      if ((distanceIfCutNow < distanceIfRoomAdded || atRoomCap) && rounds[cursor].length > 0 && roomsLeft >= roundsLeft) {
         cursor++;
+        target = cumulative + (totalMinutes - cumulative) / (shareCount - cursor);
       }
     }
     rounds[cursor].push(room);
@@ -229,6 +253,11 @@ export function planAssignments(
       if (bucket.overbooked) {
         bucket.reasons.push(
           `Over one shift by ${bucket.totalMinutes - capacityMinutes} min — consider extra help or deferring stayovers.`
+        );
+      }
+      if (maxRoomsPerAttendant !== undefined && bucket.roomCount > maxRoomsPerAttendant) {
+        bucket.reasons.push(
+          `${bucket.roomCount} rooms is above the ${maxRoomsPerAttendant}-room guideline — there were not enough attendants to keep everyone under it.`
         );
       }
     }

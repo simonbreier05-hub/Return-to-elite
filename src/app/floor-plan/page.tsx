@@ -12,7 +12,7 @@ export default async function FloorPlanPage() {
     "engineering",
   ]);
   return (
-    <AppShell title="Floor Plan" userName={session.name} role={session.role}>
+    <AppShell title="appShell.floorPlan" userName={session.name} role={session.role}>
       <FloorPlanView />
     </AppShell>
   );

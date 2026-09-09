@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
-import { roomNumbersForFloor } from "../src/lib/domain";
+import { HOTEL, roomNumbersForFloor } from "../src/lib/domain";
 
 describe("isHousekeepingRelevant", () => {
   it("is relevant when a guest is currently in the room", () => {
@@ -47,5 +47,16 @@ describe("roomNumbersForFloor — real Hotel de Rome layout", () => {
     expect(roomNumbersForFloor(3).at(-1)).toBe("338");
     expect(roomNumbersForFloor(4).at(-1)).toBe("437");
     expect(roomNumbersForFloor(5).at(-1)).toBe("535");
+  });
+
+  it("returns a fresh array each call — callers can't mutate the shared list", () => {
+    const a = roomNumbersForFloor(4);
+    a.push("999");
+    expect(roomNumbersForFloor(4)).not.toContain("999");
+  });
+
+  it("adds up to the house's real key count across floors 1-5", () => {
+    const total = [1, 2, 3, 4, 5].reduce((sum, f) => sum + roomNumbersForFloor(f).length, 0);
+    expect(total).toBe(HOTEL.totalRooms);
   });
 });

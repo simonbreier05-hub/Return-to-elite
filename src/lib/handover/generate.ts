@@ -51,6 +51,9 @@ function headlineFor(f: HandoverFacts): string {
   if (f.arrivals.atRisk.length > 0) {
     return `${f.arrivals.atRisk.length} arrival${f.arrivals.atRisk.length === 1 ? "" : "s"} at risk, ${p}% of the house released`;
   }
+  if (f.attention.deferred.length > 0) {
+    return `${f.attention.deferred.length} room${f.attention.deferred.length === 1 ? "" : "s"} carried over from today's plan, ${p}% released`;
+  }
   if (f.progress.waitingForInspection >= 5) {
     return `${f.progress.waitingForInspection} rooms waiting for inspection, ${p}% released`;
   }
@@ -93,6 +96,14 @@ function localWriter(f: HandoverFacts): HandoverResult {
       ? `Needs a decision: ${needs.join(", ")}.`
       : `Nothing is blocked or in rework — the board is clean on that front.`
   );
+
+  if (f.attention.deferred.length > 0) {
+    paragraphs.push(
+      `Carried over from today's plan (capacity, not forgotten): ${f.attention.deferred
+        .map((r) => `${r.number} (${humanise(r.status)}, deferred ${r.deferredMinutesAgo} min ago)`)
+        .join(", ")}. These need a spot in tomorrow's plan.`
+    );
+  }
 
   if (f.arrivals.expected > 0) {
     let arrivalText = `${f.arrivals.expected} arrivals are expected and ${f.arrivals.readyNow} of their rooms are already released.`;

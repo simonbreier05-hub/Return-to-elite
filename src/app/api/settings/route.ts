@@ -21,6 +21,9 @@ const Body = z.object({
   welfareCheckMinutes: z.number().int().positive().optional(),
   etaWarningMinutes: z.number().int().positive().optional(),
   releaseQueueBacklogThreshold: z.number().int().positive().optional(),
+  roomsPerAttendantMin: z.number().int().min(1).max(30).optional(),
+  roomsPerAttendantMax: z.number().int().min(1).max(30).optional(),
+  attendantPoolMax: z.number().int().min(1).max(50).optional(),
   /** Priority weights, by their name in PRIORITY_WEIGHTS. Zero is allowed — it
    *  is how a house switches a signal off entirely. */
   weights: z.record(z.string(), z.number().min(0).max(1000)).optional(),
@@ -33,6 +36,25 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
+
+  const { roomsPerAttendantMin: minRooms, roomsPerAttendantMax: maxRooms } = parsed.data;
+  if (minRooms !== undefined && maxRooms !== undefined && minRooms > maxRooms) {
+    return NextResponse.json({ error: "roomsPerAttendantMin cannot be greater than roomsPerAttendantMax." }, { status: 400 });
+  }
+  // A lone min/max change is checked against whatever the other one currently
+  // is, so a save can never leave the pair inverted in the database either.
+  if (minRooms !== undefined && maxRooms === undefined) {
+    const current = await getSettings();
+    if (minRooms > current.roomsPerAttendantMax) {
+      return NextResponse.json({ error: "roomsPerAttendantMin cannot be greater than roomsPerAttendantMax." }, { status: 400 });
+    }
+  }
+  if (maxRooms !== undefined && minRooms === undefined) {
+    const current = await getSettings();
+    if (maxRooms < current.roomsPerAttendantMin) {
+      return NextResponse.json({ error: "roomsPerAttendantMax cannot be less than roomsPerAttendantMin." }, { status: 400 });
+    }
+  }
 
   const { weights, ...thresholds } = parsed.data;
 

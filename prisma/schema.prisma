@@ -65,6 +65,13 @@ model Room {
   hasDisabledAccess    Boolean  @default(false) // marked "Room for disabled" on the floor plan
   isAntiAllergic       Boolean  @default(false) // marked "anti-allergic" on the floor plan
   hasTerrace           Boolean  @default(false) // room has its own terrace (mainly top floor)
+  // Set when a morning plan is applied and this room didn't make the day's
+  // realistic capacity (see src/lib/assignment/staffing.ts splitForCapacity)
+  // — pushed to the next day on purpose, not just "still dirty". Cleared
+  // once the room is actually released (INSPECTED) or makes a later plan.
+  // The shift handover reads this to call out carried-over rooms by name
+  // instead of silently mixing them into "still dirty".
+  deferredSince    DateTime?
   updatedAt        DateTime  @updatedAt
 
   notes      RoomNote[]

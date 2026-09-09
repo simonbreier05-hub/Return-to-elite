@@ -1,10 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
+import PriorityBanner from "@/components/PriorityBanner";
+import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES } from "@/components/status";
-import { STATUS_LABELS, type RoomStatus } from "@/lib/domain";
+import { type RoomStatus } from "@/lib/domain";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { TKey } from "@/lib/i18n/translations";
 
 interface Arrival {
   id: string;
@@ -18,6 +22,7 @@ interface Arrival {
 }
 
 export default function FrontOfficeView() {
+  const { t } = useLocale();
   const [arrivals, setArrivals] = useState<Arrival[]>([]);
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -70,58 +75,81 @@ export default function FrontOfficeView() {
 
   const expected = arrivals.filter((a) => a.status === "EXPECTED");
 
+  /** "What's important now": guests flagged as needed-now whose room still
+   * is not ready, and confirmed ETAs that have already passed. */
+  const neededNowNotReady = useMemo(
+    () => expected.filter((a) => a.neededNow && a.room.status !== "INSPECTED").length,
+    [expected]
+  );
+  const overdueEta = useMemo(() => {
+    const now = Date.now();
+    return expected.filter((a) => a.eta && new Date(a.eta).getTime() < now && a.room.status !== "INSPECTED").length;
+  }, [expected]);
+
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="font-serif text-3xl">Arrivals</h2>
+          <h2 className="font-serif text-3xl">{t("frontOffice.arrivals")}</h2>
           <p className="text-sm text-graphite/70">
-            <strong className="text-emerald-700">{readyCount}</strong> of {expected.length} expected arrivals ready
-            (room INSPECTED)
+            <strong className="text-status-inspected">{readyCount}</strong> {t("frontOffice.readyOfExpected", { total: expected.length })}
           </p>
         </div>
         <button
           onClick={() => setShowForm(true)}
           type="button"
-          className="h-12 rounded-xl bg-charcoal px-5 font-medium text-ivory active:scale-[0.98]"
+          className="h-12 rounded-xl bg-navy px-5 font-medium text-ivory active:scale-[0.98]"
         >
-          + New arrival
+          {t("frontOffice.newArrival")}
         </button>
       </div>
 
+      <PriorityBanner
+        items={[
+          { count: neededNowNotReady, label: t("priority.neededNowArrivals"), icon: "warning", tone: "urgent" },
+          { count: overdueEta, label: t("priority.overdueEta"), icon: "clock", tone: "urgent" },
+        ]}
+      />
+
       {released && (
-        <div className="mb-4 rounded-xl border border-emerald-400 bg-emerald-50 p-4 text-emerald-900">
+        <div className="mb-4 rounded-xl border border-status-inspected/30 bg-status-inspected/10 p-4 text-status-inspected">
           🛎 {released}
         </div>
       )}
-      {error && <div className="mb-4 rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>}
+      {error && (
+        <div className="mb-4 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-sm text-status-out-of-order">
+          {error}
+        </div>
+      )}
 
       <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-sm">
         <table className="w-full min-w-[44rem] text-left text-sm">
           <thead className="border-b border-charcoal/10 text-xs uppercase tracking-wider text-graphite/60">
             <tr>
-              <th className="px-4 py-3">Guest</th>
-              <th className="px-4 py-3">Room</th>
-              <th className="px-4 py-3">Housekeeping</th>
-              <th className="px-4 py-3">ETA</th>
-              <th className="px-4 py-3">Flags</th>
-              <th className="px-4 py-3">Actions</th>
+              <th className="px-4 py-3">{t("frontOffice.guest")}</th>
+              <th className="px-4 py-3">{t("frontOffice.room")}</th>
+              <th className="px-4 py-3">{t("frontOffice.housekeeping")}</th>
+              <th className="px-4 py-3">{t("frontOffice.eta")}</th>
+              <th className="px-4 py-3">{t("frontOffice.flags")}</th>
+              <th className="px-4 py-3">{t("frontOffice.actions")}</th>
             </tr>
           </thead>
           <tbody>
             {arrivals.map((a) => {
               const ready = a.room.status === "INSPECTED";
+              const style = STATUS_STYLES[a.room.status];
               return (
                 <tr key={a.id} className="border-b border-charcoal/5">
                   <td className="px-4 py-3 font-medium">
                     {a.vip && <span className="text-gold">★ </span>}
                     {a.guestName}
-                    {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-emerald-700">checked in</span>}
+                    {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-status-inspected">{t("frontOffice.checkedIn")}</span>}
                   </td>
                   <td className="px-4 py-3 font-serif text-lg">{a.room.number}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full border px-2.5 py-1 text-xs ${STATUS_STYLES[a.room.status].chip}`}>
-                      {STATUS_LABELS[a.room.status]}
+                    <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${style.chip}`}>
+                      <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
+                      {t(`status.${a.room.status}` as TKey)}
                     </span>
                   </td>
                   <td className="px-4 py-3">
@@ -140,9 +168,9 @@ export default function FrontOfficeView() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-1.5">
-                      <Flag on={a.vip} label="VIP" onClick={() => patch(a.id, { vip: !a.vip })} />
-                      <Flag on={a.earlyCheckIn} label="Early" onClick={() => patch(a.id, { earlyCheckIn: !a.earlyCheckIn })} />
-                      <Flag on={a.neededNow} label="Needed now" hot onClick={() => patch(a.id, { neededNow: !a.neededNow })} />
+                      <Flag on={a.vip} label={t("frontOffice.vip")} onClick={() => patch(a.id, { vip: !a.vip })} />
+                      <Flag on={a.earlyCheckIn} label={t("frontOffice.early")} onClick={() => patch(a.id, { earlyCheckIn: !a.earlyCheckIn })} />
+                      <Flag on={a.neededNow} label={t("frontOffice.neededNow")} hot onClick={() => patch(a.id, { neededNow: !a.neededNow })} />
                     </div>
                   </td>
                   <td className="px-4 py-3">
@@ -150,10 +178,10 @@ export default function FrontOfficeView() {
                       <button
                         onClick={() => patch(a.id, { status: "CHECKED_IN" })}
                         disabled={!ready}
-                        title={ready ? "Check in" : "Room not yet released"}
-                        className="h-10 rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white disabled:opacity-30"
+                        title={ready ? t("frontOffice.checkIn") : t("frontOffice.roomNotReady")}
+                        className="h-10 rounded-lg bg-status-inspected px-3 text-xs font-semibold text-linen disabled:opacity-30"
                       >
-                        Check in
+                        {t("frontOffice.checkIn")}
                       </button>
                     )}
                   </td>
@@ -164,10 +192,7 @@ export default function FrontOfficeView() {
         </table>
       </div>
 
-      <p className="mt-3 text-xs text-graphite/50">
-        Front office cannot change housekeeping status — release requires supervisor inspection. You are notified here
-        the moment a requested room is released.
-      </p>
+      <p className="mt-3 text-xs text-graphite/50">{t("frontOffice.cannotChangeStatus")}</p>
 
       {showForm && (
         <NewArrivalModal
@@ -189,8 +214,8 @@ function Flag({ on, label, hot, onClick }: { on: boolean; label: string; hot?: b
       className={`h-10 rounded-full border px-3 text-xs font-medium ${
         on
           ? hot
-            ? "border-red-500 bg-red-500 text-white"
-            : "border-gold bg-gold text-white"
+            ? "border-status-out-of-order bg-status-out-of-order text-linen"
+            : "border-gold bg-gold text-charcoal"
           : "border-charcoal/20 text-graphite/60"
       }`}
     >
@@ -200,6 +225,7 @@ function Flag({ on, label, hot, onClick }: { on: boolean; label: string; hot?: b
 }
 
 function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (arrival: Arrival) => void }) {
+  const { t } = useLocale();
   const [roomNumber, setRoomNumber] = useState("");
   const [guestName, setGuestName] = useState("");
   const [eta, setEta] = useState("");
@@ -234,33 +260,33 @@ function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (ar
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 font-serif text-2xl">New arrival</h3>
+        <h3 className="mb-4 font-serif text-2xl">{t("frontOffice.newArrival")}</h3>
         <div className="mb-3 grid grid-cols-2 gap-3">
           <div>
-            <label className="mb-1 block text-sm font-medium">Room number</label>
+            <label className="mb-1 block text-sm font-medium">{t("frontOffice.roomNumber")}</label>
             <input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="205"
               className="h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium">ETA</label>
+            <label className="mb-1 block text-sm font-medium">{t("frontOffice.eta")}</label>
             <input type="time" value={eta} onChange={(e) => setEta(e.target.value)}
               className="h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
           </div>
         </div>
-        <label className="mb-1 block text-sm font-medium">Guest name</label>
-        <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Dr. Amelie Winter"
+        <label className="mb-1 block text-sm font-medium">{t("frontOffice.guestName")}</label>
+        <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder={t("frontOffice.guestNamePlaceholder")}
           className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
         <div className="mb-4 flex gap-2">
-          <Flag on={vip} label="VIP" onClick={() => setVip((v) => !v)} />
-          <Flag on={earlyCheckIn} label="Early check-in" onClick={() => setEarlyCheckIn((v) => !v)} />
-          <Flag on={neededNow} label="Needed now" hot onClick={() => setNeededNow((v) => !v)} />
+          <Flag on={vip} label={t("frontOffice.vip")} onClick={() => setVip((v) => !v)} />
+          <Flag on={earlyCheckIn} label={t("frontOffice.earlyCheckIn")} onClick={() => setEarlyCheckIn((v) => !v)} />
+          <Flag on={neededNow} label={t("frontOffice.neededNow")} hot onClick={() => setNeededNow((v) => !v)} />
         </div>
-        {error && <p className="mb-2 text-sm text-red-600">{error}</p>}
+        {error && <p className="mb-2 text-sm text-status-out-of-order">{error}</p>}
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={onClose} className="h-12 rounded-xl border border-charcoal/20">Cancel</button>
+          <button onClick={onClose} className="h-12 rounded-xl border border-charcoal/20">{t("common.cancel")}</button>
           <button onClick={submit} disabled={busy || !roomNumber || !guestName}
-            className="h-12 rounded-xl bg-charcoal font-medium text-ivory disabled:opacity-40">
-            {busy ? "Saving…" : "Create"}
+            className="h-12 rounded-xl bg-navy font-medium text-ivory disabled:opacity-40">
+            {busy ? t("common.saving") : t("frontOffice.create")}
           </button>
         </div>
       </div>

@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
-import { RoleSchema } from "@/lib/domain";
+import { ROLES, RoleSchema } from "@/lib/domain";
 import { devLoginEnabled } from "@/lib/devAuth";
 
 /**
@@ -18,6 +18,10 @@ export async function GET() {
   if (!devLoginEnabled()) return NextResponse.json({ enabled: false }, { status: 404 });
 
   const users = await prisma.user.findMany({
+    // Staff only — excludes the system "guest" account that backs the
+    // guest-facing test screen (src/app/guest/305), which is never a real
+    // login and would otherwise show up here as a broken quick-switch entry.
+    where: { role: { in: [...ROLES] } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
     select: { id: true, email: true, name: true, role: true, section: true },
   });

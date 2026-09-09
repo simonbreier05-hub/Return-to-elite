@@ -3,9 +3,8 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
-import { audit } from "@/lib/audit";
-import { broadcast } from "@/lib/realtime";
 import { DefectCategorySchema } from "@/lib/domain";
+import { reportDefect } from "@/lib/rooms/reportDefect";
 
 /**
  * POST /api/rooms/[id]/defects — report a defect (category + note + photo).
@@ -43,37 +42,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     photoPath = `/uploads/${filename}`;
   }
 
-  const defect = await prisma.defect.create({
-    data: {
-      roomId: id,
-      category: category.data,
-      note,
-      photoPath,
-      reportedById: auth.session.userId,
-      workOrder: { create: { status: "OPEN" } }, // auto-route to engineering
-    },
-    include: { workOrder: true, room: { select: { number: true } } },
+  const defect = await reportDefect({
+    room,
+    category: category.data,
+    note,
+    photoPath,
+    reportedById: auth.session.userId,
   });
-
-  await audit({
-    action: "DEFECT_REPORTED",
-    userId: auth.session.userId,
-    roomId: id,
-    meta: { category: category.data, note, photoPath, workOrderId: defect.workOrder?.id },
-  });
-
-  const notification = await prisma.notification.create({
-    data: {
-      type: "WORK_ORDER",
-      level: "warning",
-      targetRole: "engineering",
-      roomId: id,
-      message: `New work order: room ${room.number} — ${category.data}: ${note.slice(0, 120)}`,
-      dedupeKey: `WORK_ORDER:${defect.id}`,
-    },
-  });
-  broadcast("notification:new", { notification });
-  broadcast("workorder:update", { workOrder: { ...defect.workOrder, defect: { ...defect, workOrder: undefined } } });
 
   return NextResponse.json({ defect }, { status: 201 });
 }

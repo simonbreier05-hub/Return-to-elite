@@ -147,6 +147,15 @@ export const FLOORS = [1, 2, 3, 4, 5] as const;
 /** The property, as digitized above — replaces the earlier generic 29-rooms-per-floor placeholder model. */
 export const HOTEL = {
   floors: FLOORS,
+  /**
+   * Floor 5 is the one floor plan flagged above as the lowest-confidence
+   * read (a smaller, irregular suite layout; two numbers named on the
+   * elevator wayfinding card couldn't be confirmed on the plan itself and
+   * were left out rather than guessed). The UI surfaces this so it never
+   * presents that room list as fully verified — drop it once someone
+   * checks floor 5 against the original plan.
+   */
+  unconfirmedFloors: [5] as readonly number[],
   get totalRooms(): number {
     return FLOORS.reduce((n, f) => n + FLOOR_PLAN[f].length, 0);
   },

@@ -79,6 +79,10 @@ export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
  * floor-by-floor data itself, the elevator wayfinding card, and the
  * non-lettable floor facilities (HSK offices, lifts, fire escapes) live in
  * src/lib/floorplan/hotelDeRome.ts — see that file for confidence notes.
+ *
+ * (Supersedes an earlier, parallel `HOTEL` built from room-seed-data.json's
+ * calculated pattern for floors 1, 2 and 5 — dropped during branch
+ * consolidation now that all five floors have a real, photographed plan.)
  */
 export {
   HOTEL,
@@ -103,6 +107,7 @@ export const DEFECT_CATEGORIES = [
   "MINIBAR",
   "OTHER",
 ] as const;
+export type DefectCategory = (typeof DEFECT_CATEGORIES)[number];
 export const DefectCategorySchema = z.enum(DEFECT_CATEGORIES);
 
 export const WORK_ORDER_STATUSES = ["OPEN", "ACK", "IN_PROGRESS", "RESOLVED"] as const;
@@ -152,5 +157,14 @@ export const DEFAULT_SETTINGS = {
   welfareCheckMinutes: 120, // DND older than N minutes => welfare-check reminder
   etaWarningMinutes: 45, // arrival ETA within N minutes & room not INSPECTED => alert
   releaseQueueBacklogThreshold: 5, // CLEAN rooms waiting for inspection => supervisor alert
+  // Morning-planning staffing guideline (see src/lib/assignment/staffing.ts).
+  // 10-12 rooms/attendant is a house standard, not a law of nature — a
+  // property with a heavier mix of suites, or a lean skeleton crew on a
+  // Sunday, may need a different band. roomsPerAttendantMax is a hard
+  // ceiling (planAssignments never exceeds it); roomsPerAttendantMin sizes
+  // how much work the plan realistically takes on before offering to defer.
+  roomsPerAttendantMin: 10,
+  roomsPerAttendantMax: 12,
+  attendantPoolMax: 10, // realistic upper end of the Room Attendant roster
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
