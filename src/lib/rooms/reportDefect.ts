@@ -32,7 +32,21 @@ export async function reportDefect(input: {
       reportedById,
       workOrder: { create: { status: "OPEN" } }, // auto-route to engineering
     },
-    include: { workOrder: true, room: { select: { number: true } } },
+    // Mirrors PATCH /api/workorders/[id]'s include: EngineeringView renders
+    // wo.defect.reportedBy.name and wo.defect.room.{status,floor,openNotesCount}
+    // unconditionally, so a `workorder:update` broadcast missing any of these
+    // used to crash that screen's render on the very next defect report —
+    // see the broadcast payload below.
+    include: {
+      workOrder: true,
+      reportedBy: { select: { name: true, role: true } },
+      room: {
+        select: {
+          number: true, status: true, floor: true,
+          _count: { select: { notes: { where: { status: "OPEN" } } } },
+        },
+      },
+    },
   });
 
   await audit({
@@ -53,7 +67,13 @@ export async function reportDefect(input: {
     },
   });
   broadcast("notification:new", { notification });
-  broadcast("workorder:update", { workOrder: { ...defect.workOrder, defect: { ...defect, workOrder: undefined } } });
+  const { _count, ...defectRoom } = defect.room;
+  broadcast("workorder:update", {
+    workOrder: {
+      ...defect.workOrder,
+      defect: { ...defect, workOrder: undefined, room: { ...defectRoom, openNotesCount: _count.notes } },
+    },
+  });
 
   return defect;
 }

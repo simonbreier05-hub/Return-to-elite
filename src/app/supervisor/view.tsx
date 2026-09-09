@@ -11,8 +11,8 @@ import NoteThread, { type ThreadNote } from "@/components/NoteThread";
 import WindowPanel from "@/components/WindowPanel";
 import PriorityBanner from "@/components/PriorityBanner";
 import { StatusIcon } from "@/components/icons";
-import { STATUS_STYLES, NOTE_STATUS_STYLES, noteBadgeVariant } from "@/components/status";
-import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type NoteStatus, type RoomStatus } from "@/lib/domain";
+import { STATUS_STYLES, noteBadgeVariant } from "@/components/status";
+import { STATUS_LABELS, type BlockReason, type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
 
