@@ -17,7 +17,7 @@ interface WorkOrder {
     note: string;
     photoPath?: string | null;
     room: { number: string; status: string; floor: number };
-    reportedBy: { name: string; role: string };
+    reportedBy?: { name: string; role: string } | null;
   };
 }
 
@@ -127,7 +127,7 @@ export default function EngineeringView() {
                 <img src={wo.defect.photoPath} alt="Defect photo" className="mt-2 max-h-40 rounded-lg object-cover" />
               )}
               <p className="mt-2 text-xs text-graphite/60">
-                {t("engineering.reportedBy", { name: wo.defect.reportedBy.name })} ·{" "}
+                {t("engineering.reportedBy", { name: wo.defect.reportedBy?.name ?? "—" })} ·{" "}
                 {new Date(wo.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 {wo.assignedTo && ` · ${t("engineering.assignedTo", { name: wo.assignedTo.name })}`}
               </p>

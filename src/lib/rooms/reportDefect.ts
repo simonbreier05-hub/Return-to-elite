@@ -32,7 +32,11 @@ export async function reportDefect(input: {
       reportedById,
       workOrder: { create: { status: "OPEN" } }, // auto-route to engineering
     },
-    include: { workOrder: true, room: { select: { number: true } } },
+    include: {
+      workOrder: true,
+      room: { select: { number: true, status: true, floor: true } },
+      reportedBy: { select: { name: true, role: true } },
+    },
   });
 
   await audit({

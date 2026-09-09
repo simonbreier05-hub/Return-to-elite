@@ -31,6 +31,11 @@ const en = {
     minutesShort: "min",
     unconfirmedFloorNotice: "Room list for floor {{floors}} is a calculated estimate, not yet checked against a floor plan or Opera — numbers may be off.",
   },
+  errorBoundary: {
+    title: "Something went wrong on this screen",
+    message: "The rest of the app is unaffected. Reloading usually fixes it — if it keeps happening, tell your supervisor.",
+    reload: "Reload",
+  },
   nav: {
     liveBoard: "Live Board",
     myRooms: "My Rooms",
@@ -454,6 +459,11 @@ const de = {
     why: "warum?",
     minutesShort: "Min",
     unconfirmedFloorNotice: "Zimmerliste für Etage {{floors}} ist eine rechnerische Schätzung, noch nicht mit Grundriss oder Opera abgeglichen — Nummern können abweichen.",
+  },
+  errorBoundary: {
+    title: "Auf diesem Bildschirm ist ein Fehler aufgetreten",
+    message: "Der Rest der App ist nicht betroffen. Neu laden hilft meistens — tritt es weiter auf, bitte die Supervisorin oder den Supervisor informieren.",
+    reload: "Neu laden",
   },
   nav: {
     liveBoard: "Live-Board",

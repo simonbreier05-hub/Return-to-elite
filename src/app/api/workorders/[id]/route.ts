@@ -42,7 +42,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       resolvedAt: to === "RESOLVED" ? now : wo.resolvedAt,
     },
     include: {
-      defect: { include: { room: { select: { id: true, number: true, status: true } }, reportedBy: { select: { name: true } } } },
+      defect: {
+        include: {
+          room: { select: { id: true, number: true, status: true, floor: true } },
+          reportedBy: { select: { name: true, role: true } },
+        },
+      },
       assignedTo: { select: { id: true, name: true } },
     },
   });

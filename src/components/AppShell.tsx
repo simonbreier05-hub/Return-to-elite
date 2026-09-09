@@ -9,6 +9,7 @@ import { useSocket } from "./useSocket";
 import { STATUS_STYLES } from "./status";
 import { STATUS_LABELS } from "@/lib/domain";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
+import ErrorBoundary from "./ErrorBoundary";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import LanguageSwitcher from "./LanguageSwitcher";
@@ -285,7 +286,9 @@ export default function AppShell({
 
       <div className="h-px w-full bg-gradient-to-r from-gold-line/70 via-gold-line/20 to-transparent" />
 
-      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-6 sm:px-6">{children}</main>
+      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-6 sm:px-6">
+        <ErrorBoundary>{children}</ErrorBoundary>
+      </main>
     </div>
   );
 }
