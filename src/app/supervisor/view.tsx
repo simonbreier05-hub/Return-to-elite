@@ -7,12 +7,14 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
-import { STATUS_STYLES } from "@/components/status";
-import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type RoomStatus } from "@/lib/domain";
+import NoteThread, { type ThreadNote } from "@/components/NoteThread";
+import { STATUS_STYLES, NOTE_STATUS_STYLES, noteBadgeVariant } from "@/components/status";
+import { BLOCK_REASON_SHORT, STATUS_LABELS, type BlockReason, type NoteStatus, type RoomStatus } from "@/lib/domain";
 
 interface Note {
   id: string;
   body: string;
+  status: NoteStatus;
   author: { name: string; role: string };
   createdAt: string;
   roomId?: string;
@@ -30,6 +32,7 @@ interface Room {
   reworkNote?: string | null;
   oooUntil?: string | null;
   isCheckoutToday: boolean;
+  openNotesCount: number;
   assignedTo?: { id: string; name: string } | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   notes: Note[];
@@ -103,8 +106,21 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     },
     "note:new": (p: { note: Note }) => {
       setRooms((prev) =>
-        prev.map((r) => (r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3) } : r))
+        prev.map((r) =>
+          r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
+        )
       );
+    },
+    // A toggle may land on a note outside the 3-item preview window, so the
+    // preview is patched directly for instant feedback but openNotesCount —
+    // an aggregate over the *full* thread — is left to the coalesced refetch.
+    "note:update": (p: { note: Note }) => {
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.id === p.note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === p.note.id ? p.note : n)) } : r
+        )
+      );
+      refetchSoon();
     },
     "arrival:update": () => refetchSoon(),
     // A whole plan changed at once — one refetch instead of 145 patches.
@@ -367,6 +383,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                           👤
                         </span>
                       )}
+                      <NoteCountBadge
+                        openCount={room.openNotesCount}
+                        totalCount={room.notes.length}
+                        className="absolute -bottom-1 -right-1"
+                      />
                     </button>
                   );
                 })}
@@ -460,9 +481,17 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           onOpenDialog={(kind) => setDialog({ kind, room: selected })}
           onNoteAdded={(note) =>
             setRooms((prev) =>
-              prev.map((r) => (r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3) } : r))
+              prev.map((r) =>
+                r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
+              )
             )
           }
+          onNoteUpdated={(note) => {
+            setRooms((prev) =>
+              prev.map((r) => (r.id === note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === note.id ? note : n)) } : r))
+            );
+            refetchSoon();
+          }}
           onAssigned={(room) => setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, ...room } : r)))}
         />
       )}
@@ -488,6 +517,35 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         />
       )}
     </div>
+  );
+}
+
+/** Small open/done note-count indicator, shared by the board tile and the drawer header. */
+function NoteCountBadge({
+  openCount,
+  totalCount,
+  className = "",
+}: {
+  openCount: number;
+  totalCount: number;
+  className?: string;
+}) {
+  const variant = noteBadgeVariant(openCount, totalCount);
+  if (!variant) return null;
+  return variant === "open" ? (
+    <span
+      className={`flex h-4 min-w-4 items-center justify-center rounded-full border border-gold-line bg-gold px-1 text-[9px] font-bold text-white ${className}`}
+      title={`${openCount} open note${openCount === 1 ? "" : "s"}`}
+    >
+      {openCount}
+    </span>
+  ) : (
+    <span
+      className={`flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 bg-gray-100 text-[9px] text-gray-600 ${className}`}
+      title="All notes done"
+    >
+      ✓
+    </span>
   );
 }
 
@@ -632,6 +690,7 @@ function RoomDrawer({
   onAct,
   onOpenDialog,
   onNoteAdded,
+  onNoteUpdated,
   onAssigned,
 }: {
   room: Room;
@@ -641,31 +700,21 @@ function RoomDrawer({
   onClose: () => void;
   onAct: (room: Room, status: RoomStatus, extra?: Record<string, unknown>) => Promise<void>;
   onOpenDialog: (kind: "rework" | "ooo") => void;
-  onNoteAdded: (note: Note) => void;
+  onNoteAdded: (note: ThreadNote) => void;
+  onNoteUpdated: (note: ThreadNote) => void;
   onAssigned: (room: Room) => void;
 }) {
-  const [noteBody, setNoteBody] = useState("");
-  const [savingNote, setSavingNote] = useState(false);
   const style = STATUS_STYLES[room.status];
-
-  const addNote = async () => {
-    if (!noteBody.trim() || savingNote) return;
-    setSavingNote(true);
-    try {
-      const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body: noteBody } });
-      onNoteAdded({ ...res.note, roomId: room.id });
-      setNoteBody("");
-    } finally {
-      setSavingNote(false);
-    }
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="h-full w-full max-w-md overflow-y-auto bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h3 className="font-serif text-4xl">{room.number}</h3>
+            <div className="flex items-center gap-2">
+              <h3 className="font-serif text-4xl">{room.number}</h3>
+              <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
+            </div>
             <p className="text-xs uppercase tracking-wider text-graphite/50">
               Floor {room.floor} · {room.section} · {room.type.replace(/_/g, " ")}
             </p>
@@ -786,31 +835,7 @@ function RoomDrawer({
 
         <div className="mt-4">
           <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Notes</h4>
-          {room.notes.map((n) => (
-            <div key={n.id} className="mb-1 rounded-lg bg-ivory p-2 text-sm">
-              <span className="text-xs text-graphite/60">
-                {n.author.name} ({n.author.role.replace(/_/g, " ")}) ·{" "}
-                {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </span>
-              <p>{n.body}</p>
-            </div>
-          ))}
-          <div className="mt-2 flex gap-2">
-            <input
-              value={noteBody}
-              onChange={(e) => setNoteBody(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && addNote()}
-              placeholder="Add a note…"
-              className="h-12 flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold"
-            />
-            <button
-              onClick={addNote}
-              disabled={savingNote || !noteBody.trim()}
-              className="h-12 rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40"
-            >
-              {savingNote ? "…" : "Add"}
-            </button>
-          </div>
+          <NoteThread roomId={room.id} initialNotes={room.notes} onNoteAdded={onNoteAdded} onNoteUpdated={onNoteUpdated} />
         </div>
 
         {isDutyManager && (

@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "./api";
 import { useSocket } from "./useSocket";
+import { STATUS_STYLES } from "./status";
+import { STATUS_LABELS } from "@/lib/domain";
+import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
 
 interface Notification {
   id: string;
@@ -41,6 +44,13 @@ export default function AppShell({
   const [open, setOpen] = useState(false);
   const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
 
+  // Global room quick search — lives here so it's reachable from every
+  // dashboard, without each page needing its own copy.
+  const [query, setQuery] = useState("");
+  const [matches, setMatches] = useState<SearchedRoom[]>([]);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [selectedRoom, setSelectedRoom] = useState<SearchedRoom | null>(null);
+
   // Quick role switching, dev only. The endpoint 404s when it is disabled, so
   // nothing renders on a locked-down deployment.
   useEffect(() => {
@@ -68,6 +78,34 @@ export default function AppShell({
   useEffect(() => {
     load();
   }, []);
+
+  useEffect(() => {
+    const q = query.trim();
+    if (!q) {
+      setMatches([]);
+      return;
+    }
+    const t = setTimeout(() => {
+      api<{ rooms: SearchedRoom[] }>(`/api/rooms?q=${encodeURIComponent(q)}`)
+        .then((d) => setMatches(d.rooms))
+        .catch(() => setMatches([]));
+    }, 280);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const openRoom = (room: SearchedRoom) => {
+    setSelectedRoom(room);
+    setSearchOpen(false);
+    setQuery("");
+  };
+
+  const searchEnter = () => {
+    const q = query.trim();
+    if (!q) return;
+    const exact = matches.find((r) => r.number === q);
+    if (exact) return openRoom(exact);
+    if (matches.length === 1) openRoom(matches[0]);
+  };
 
   useSocket({
     // The payload carries the full notification, so prepend it instead of
@@ -109,6 +147,37 @@ export default function AppShell({
             <span className="hidden text-[0.72rem] uppercase tracking-[0.24em] text-ivory/55 sm:inline">{title}</span>
           </div>
           <div className="flex items-center gap-2">
+            <div className="relative hidden md:block">
+              <input
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setSearchOpen(true);
+                }}
+                onFocus={() => setSearchOpen(true)}
+                onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
+                onKeyDown={(e) => e.key === "Enter" && searchEnter()}
+                placeholder="Find room…"
+                aria-label="Find room"
+                className="h-11 w-40 rounded-lg border border-white/15 bg-white/10 px-3 text-sm text-ivory outline-none transition-all placeholder:text-ivory/40 focus:w-56 focus:border-gold-soft"
+              />
+              {searchOpen && matches.length > 0 && (
+                <div className="absolute left-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-charcoal/10 bg-white text-charcoal shadow-2xl">
+                  {matches.slice(0, 8).map((r) => (
+                    <button
+                      key={r.id}
+                      onClick={() => openRoom(r)}
+                      className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-parchment"
+                    >
+                      <span className="font-serif">{r.number}</span>
+                      <span className={`rounded-full border px-2 py-0.5 text-[0.68rem] ${STATUS_STYLES[r.status].chip}`}>
+                        {STATUS_LABELS[r.status]}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {devUsers && (
               <select
                 aria-label="Switch role (dev)"
@@ -184,6 +253,8 @@ export default function AppShell({
           </div>
         </div>
       )}
+
+      {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
 
       <div className="h-px w-full bg-gradient-to-r from-gold-line/70 via-gold-line/20 to-transparent" />
 
