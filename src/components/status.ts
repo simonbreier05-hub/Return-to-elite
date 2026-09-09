@@ -1,4 +1,4 @@
-import type { RoomStatus } from "@/lib/domain";
+import type { NoteStatus, RoomStatus } from "@/lib/domain";
 
 /** Tailwind classes per status — board color scheme from the spec. */
 export const STATUS_STYLES: Record<RoomStatus, { chip: string; tile: string; dot: string; border: string }> = {
@@ -63,3 +63,19 @@ export const STATUS_STYLES: Record<RoomStatus, { chip: string; tile: string; dot
     border: "border-l-teal-500",
   },
 };
+
+/**
+ * A note's own OPEN/DONE state — a deliberately separate, small color system
+ * from STATUS_STYLES above. Open = the house brass accent; done = neutral
+ * gray, same tone already used for "removed from rotation" room states.
+ */
+export const NOTE_STATUS_STYLES: Record<NoteStatus, { badge: string }> = {
+  OPEN: { badge: "bg-gold-soft/40 text-gold border-gold-line/60" },
+  DONE: { badge: "bg-gray-100 text-gray-600 border-gray-300" },
+};
+
+/** Which badge variant a room's note-count indicator should render, if any. */
+export function noteBadgeVariant(openCount: number, totalCount: number): "open" | "done" | null {
+  if (totalCount === 0) return null;
+  return openCount > 0 ? "open" : "done";
+}

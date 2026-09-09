@@ -10,8 +10,9 @@ import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
 import DragReorderList from "@/components/DragReorderList";
 import WindowPanel from "@/components/WindowPanel";
-import { STATUS_STYLES } from "@/components/status";
-import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type RoomStatus } from "@/lib/domain";
+import NoteThread, { type ThreadNote } from "@/components/NoteThread";
+import { STATUS_STYLES, NOTE_STATUS_STYLES, noteBadgeVariant } from "@/components/status";
+import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 
 /**
@@ -33,6 +34,7 @@ function nextAttendantStatus(status: RoomStatus): RoomStatus | null {
 interface Note {
   id: string;
   body: string;
+  status: NoteStatus;
   author: { name: string; role: string };
   createdAt: string;
   roomId?: string;
@@ -49,6 +51,7 @@ interface Room {
   blockReason?: string | null;
   isCheckoutToday: boolean;
   routeOrder?: number | null;
+  openNotesCount: number;
   notes: Note[];
 }
 
@@ -65,6 +68,7 @@ export default function AttendantView() {
   const [modal, setModal] = useState<{ kind: "block" | "defect" | "note"; room: Room } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [whyOpen, setWhyOpen] = useState<string | null>(null);
+  const [expandedNotesId, setExpandedNotesId] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
   const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
   const offline = useOfflineQueue();
@@ -102,8 +106,21 @@ export default function AttendantView() {
     },
     "note:new": (p: { note: Note }) => {
       setRooms((prev) =>
-        prev.map((r) => (r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3) } : r))
+        prev.map((r) =>
+          r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
+        )
       );
+    },
+    // A toggle may land on a note outside the 3-item preview window, so the
+    // preview is patched directly for instant feedback but openNotesCount —
+    // an aggregate over the *full* thread — is left to the coalesced refetch.
+    "note:update": (p: { note: Note }) => {
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.id === p.note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === p.note.id ? p.note : n)) } : r
+        )
+      );
+      refreshRoomsSoon();
     },
   });
 
@@ -457,10 +474,38 @@ export default function AttendantView() {
                   Blocked: {room.blockReason?.replace(/_/g, " ")}
                 </div>
               )}
-              {room.notes[0] && (
-                <p className="mb-2 truncate text-xs text-graphite/60" title={room.notes[0].body}>
-                  📝 {room.notes[0].author.name}: {room.notes[0].body}
-                </p>
+              {noteBadgeVariant(room.openNotesCount, room.notes.length) && (
+                <button
+                  onClick={() => setExpandedNotesId(expandedNotesId === room.id ? null : room.id)}
+                  className={`mb-2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
+                    room.openNotesCount > 0 ? NOTE_STATUS_STYLES.OPEN.badge : NOTE_STATUS_STYLES.DONE.badge
+                  }`}
+                >
+                  {room.openNotesCount > 0 ? `📝 ${room.openNotesCount} open` : "📝 ✓ all done"}
+                  <span className="text-graphite/50">{expandedNotesId === room.id ? "▲" : "▼"}</span>
+                </button>
+              )}
+              {expandedNotesId === room.id && (
+                <div className="mb-2">
+                  <NoteThread
+                    roomId={room.id}
+                    initialNotes={room.notes}
+                    compact
+                    onNoteAdded={(note: ThreadNote) =>
+                      setRooms((prev) =>
+                        prev.map((r) =>
+                          r.id === room.id ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
+                        )
+                      )
+                    }
+                    onNoteUpdated={(note: ThreadNote) => {
+                      setRooms((prev) =>
+                        prev.map((r) => (r.id === room.id ? { ...r, notes: r.notes.map((n) => (n.id === note.id ? note : n)) } : r))
+                      );
+                      refreshRoomsSoon();
+                    }}
+                  />
+                </div>
               )}
 
               <div className="grid grid-cols-2 gap-2">
@@ -554,7 +599,9 @@ export default function AttendantView() {
           onDone={(note) => {
             setModal(null);
             setRooms((prev) =>
-              prev.map((r) => (r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3) } : r))
+              prev.map((r) =>
+                r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
+              )
             );
           }}
         />

@@ -104,6 +104,16 @@ export const WORK_ORDER_STATUSES = ["OPEN", "ACK", "IN_PROGRESS", "RESOLVED"] as
 export type WorkOrderStatus = (typeof WORK_ORDER_STATUSES)[number];
 export const WorkOrderStatusSchema = z.enum(WORK_ORDER_STATUSES);
 
+/** A room note's own lifecycle — separate from RoomStatus/WorkOrderStatus. */
+export const NOTE_STATUSES = ["OPEN", "DONE"] as const;
+export type NoteStatus = (typeof NOTE_STATUSES)[number];
+export const NoteStatusSchema = z.enum(NOTE_STATUSES);
+
+export const NOTE_STATUS_LABELS: Record<NoteStatus, string> = {
+  OPEN: "Open",
+  DONE: "Done",
+};
+
 /** Board colors (also documented in the README + used by the supervisor grid). */
 export const STATUS_COLORS: Record<RoomStatus, string> = {
   DIRTY: "red",
