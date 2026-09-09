@@ -22,7 +22,7 @@ const sans = Inter({
 
 export const metadata: Metadata = {
   title: "StayClean",
-  description: "Real-time room cleaning & release for a 145-room luxury hotel",
+  description: "Real-time room cleaning & release for Hotel de Rome Berlin (139 rooms)",
 };
 
 export const viewport: Viewport = {

@@ -44,8 +44,15 @@ export const BLOCK_REASON_SHORT: Record<BlockReason, string> = {
   REFUSED: "Refused",
 };
 
-/** Categories of a five-star city hotel, smallest to largest. */
+/**
+ * Categories of a five-star city hotel, smallest to largest, plus
+ * UNVERIFIED — every room seeds with this until its real category is
+ * entered from the property's color-coded floor plan (see
+ * src/lib/floorplan/hotelDeRome.ts for why: the source paper plans mark
+ * type only via grayscale shading a phone photo can't reliably read).
+ */
 export const ROOM_TYPES = [
+  "UNVERIFIED",
   "CLASSIC",
   "SUPERIOR",
   "DELUXE",
@@ -56,6 +63,7 @@ export const ROOM_TYPES = [
 export type RoomType = (typeof ROOM_TYPES)[number];
 
 export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
+  UNVERIFIED: "Needs type (unverified)",
   CLASSIC: "Classic",
   SUPERIOR: "Superior",
   DELUXE: "Deluxe",
@@ -64,30 +72,27 @@ export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
   PENTHOUSE: "Penthouse",
 };
 
-/** The property: five guest floors, 29 rooms each = 145 keys. */
-export const HOTEL = {
-  floors: [1, 2, 3, 4, 5],
-  roomsPerFloor: 29,
-  /** Rooms 01–15 form section A, 16–29 section B. */
-  sectionSplit: 15,
-} as const;
-
 /**
- * Room numbers for a floor, low to high. Every floor carries
- * `HOTEL.roomsPerFloor` rooms, numbered `{floor}01`…, with one exception:
- * floor 5 skips "513" (the common hotel superstition skip, same idea as a
- * lift with no 13th-floor button) so the top floor still runs up to room
- * "530" instead of stopping at "529" — matching how the house is actually
- * numbered, door to door.
+ * The real property (Hotel de Rome Berlin) — digitized from the
+ * housekeeping floor-plan binder. Re-exported here so existing imports of
+ * `HOTEL` / `roomNumbersForFloor` from "@/lib/domain" keep working; the
+ * floor-by-floor data itself, the elevator wayfinding card, and the
+ * non-lettable floor facilities (HSK offices, lifts, fire escapes) live in
+ * src/lib/floorplan/hotelDeRome.ts — see that file for confidence notes.
  */
-export function roomNumbersForFloor(floor: number): string[] {
-  const numbers: string[] = [];
-  for (let i = 1; numbers.length < HOTEL.roomsPerFloor; i++) {
-    if (floor === 5 && i === 13) continue;
-    numbers.push(`${floor}${String(i).padStart(2, "0")}`);
-  }
-  return numbers;
-}
+export {
+  HOTEL,
+  FLOORS,
+  FLOOR_PLAN,
+  ELEVATOR_WAYFINDING,
+  FLOOR_FACILITIES,
+  roomNumbersForFloor,
+  planEntryFor,
+  primaryHskFor,
+  type RoomPlanEntry,
+  type WayfindingLeg,
+  type FloorFacilityEntry,
+} from "./floorplan/hotelDeRome";
 
 export const DEFECT_CATEGORIES = [
   "PLUMBING",

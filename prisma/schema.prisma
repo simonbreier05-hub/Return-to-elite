@@ -58,6 +58,13 @@ model Room {
   // and freely reorderable afterwards by drag — see /api/rooms/reorder.
   // Null for an unassigned room or one outside today's route.
   routeOrder       Int?
+  // --- Floor-plan facts (digitized from the housekeeping floor-plan binder,
+  // src/lib/floorplan/hotelDeRome.ts is the single source of truth these are
+  // seeded from — see that file for what is confidently read vs. best-effort).
+  interconnectingGroup String?  // comma-separated room numbers this room can be opened into, if any
+  hasDisabledAccess    Boolean  @default(false) // marked "Room for disabled" on the floor plan
+  isAntiAllergic       Boolean  @default(false) // marked "anti-allergic" on the floor plan
+  hasTerrace           Boolean  @default(false) // room has its own terrace (mainly top floor)
   updatedAt        DateTime  @updatedAt
 
   notes      RoomNote[]
@@ -65,6 +72,25 @@ model Room {
   arrivals   Arrival[]
   excursions Excursion[]
   auditLogs  AuditLog[]
+}
+
+/**
+ * Non-lettable floor features from the floor plans — where the fire escapes,
+ * lifts and housekeeping offices actually are. Staff and guests arrive on
+ * every floor via the SVC (service) lift; the HSK room seeded with
+ * isPrimaryHsk=true is always the one positioned at that SVC lift, and is
+ * where everything a room attendant needs on that floor is kept. Any other
+ * HSK room on the same floor is secondary (extra linen/storage), per the
+ * house rule this was digitized from.
+ */
+model FloorFacility {
+  id           String  @id @default(cuid())
+  floor        Int
+  type         String // HSK | SVC_LIFT | GUEST_LIFT | FIRE_ESCAPE | LOBBY | EVENT_SPACE | TERRACE
+  label        String // human-readable, e.g. "Housekeeping office (at the SVC lift)"
+  isPrimaryHsk Boolean @default(false) // the HSK attendants should actually go to on this floor
+  nearRoom     String? // nearest guest room number, for wayfinding
+  notes        String?
 }
 
 model Arrival {
