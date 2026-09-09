@@ -5,7 +5,7 @@ import HandoverView from "./view";
 export default async function HandoverPage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="Shift Handover" userName={session.name} role={session.role}>
+    <AppShell title="handover.title" userName={session.name} role={session.role}>
       <HandoverView />
     </AppShell>
   );

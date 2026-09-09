@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { FLOOR_PLAN, HOTEL, FLOOR_FACILITIES } from "../src/lib/floorplan/hotelDeRome";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
+import { GUEST_SYSTEM_EMAIL } from "../src/lib/guest";
 
 /**
  * Seed: one user per role, ten room attendants, every room of the real
@@ -21,11 +22,28 @@ const PASSWORD = "123";
 async function main() {
   // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
   // database once, but never wipe live data on a redeploy/restart.
+  //
+  // Checked against users AND rooms, not users alone: `db push
+  // --accept-data-loss` (railway-boot.sh, runs right before this on every
+  // boot) can drop/recreate the Room table on its own — most commonly, on
+  // this project, when the production and preview services share one
+  // Postgres and a boot from the other branch's divergent schema alters it
+  // — without touching User at all. A users-only check then reads "already
+  // seeded" and skips reseeding while Rooms sits empty, which is exactly
+  // the "no rooms, no attendants show up" bug this guard is meant to
+  // prevent, not cause. Seeding if *either* table is empty re-populates
+  // both from the same wipe-and-reseed path below, so they can't drift
+  // apart like this again.
   if (process.env.SEED_MODE === "if-empty") {
-    const existing = await prisma.user.count();
-    if (existing > 0) {
-      console.log(`Database already seeded (${existing} users) — skipping.`);
+    const [userCount, roomCount] = await Promise.all([prisma.user.count(), prisma.room.count()]);
+    if (userCount > 0 && roomCount > 0) {
+      console.log(`Database already seeded (${userCount} users, ${roomCount} rooms) — skipping.`);
       return;
+    }
+    if (userCount > 0 || roomCount > 0) {
+      console.log(
+        `Partial data found (${userCount} users, ${roomCount} rooms) — reseeding both, not skipping.`
+      );
     }
   }
 
@@ -47,7 +65,7 @@ async function main() {
   const passwordHash = await bcrypt.hash(PASSWORD, 10);
 
   // --- Users -------------------------------------------------------------
-  // Ten attendants for 145 keys — roughly 14 rooms each, which is what a
+  // Ten attendants for ~139 keys — roughly 14 rooms each, which is what a
   // five-star house actually rosters. With four, every plan comes out at
   // three shifts' worth of work and the planning board is meaningless.
   const usersData = [
@@ -66,6 +84,24 @@ async function main() {
     { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
     { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },
     { email: "manager@hotel.test", name: "Diana Maier", role: "duty_manager" },
+    // System account backing the guest-facing test screen (src/app/guest/305)
+    // — attributes guest-submitted notes/defects, never a real login.
+    // role: "guest" is deliberately outside the ROLES enum (see src/lib/domain.ts)
+    // so it never appears in a role-filtered staff picker; GET /api/auth/dev-login
+    // filters it out of the quick-login list for the same reason.
+    // Room number is env-overridable per deployment (see guestServer.ts) —
+    // read directly here rather than importing that file, which pulls in
+    // the Next.js prisma singleton this standalone seed script doesn't use.
+    // Default is "310": this house's real, digitized floor plan (unlike the
+    // calculated room list guestServer.ts's own comment was written
+    // against) has no room "305" at all — 310 is the nearest real key on
+    // the same floor that isn't already claimed by another demo scenario
+    // below.
+    {
+      email: GUEST_SYSTEM_EMAIL,
+      name: `Guest (Room ${process.env.GUEST_ROOM_NUMBER?.trim() || "310"})`,
+      role: "guest",
+    },
   ];
   const users: Record<string, { id: string; role: string }> = {};
   for (const u of usersData) {
@@ -105,10 +141,16 @@ async function main() {
       const checkout = count % 4 === 0;
       const assignee = attendants[(floor + i) % attendants.length];
 
-      // Only a current guest's room (stayover) or a same-day departure is in
-      // scope for housekeeping — a vacant room with nobody arriving today is
-      // simply released and gets no attention, not an arbitrary status.
-      const occupancy = occupied && !checkout ? "OCCUPIED" : "VACANT";
+      // `occupancy` means "is a guest physically in the room right now" — a
+      // departure guest still counts as OCCUPIED until they actually leave,
+      // exactly like defaultDayFigures() assumes (it derives stayovers as
+      // occupiedNow − departures, so occupiedNow has to include departures
+      // while they're still checked in, or that subtraction quietly throws
+      // real stayover rooms away). Not `occupied && !checkout` — that used
+      // to zero a departure room's occupancy out immediately, which is what
+      // made the "belegte Zimmer heute Abend" figure the supervisor sees
+      // come out far lower than the rooms actually needing an attendant.
+      const occupancy = occupied ? "OCCUPIED" : "VACANT";
       const relevant = isHousekeepingRelevant({ occupancy, isCheckoutToday: checkout });
       const status = relevant ? progression[floor][i % progression[floor].length] : "INSPECTED";
       const minutesAgo = relevant

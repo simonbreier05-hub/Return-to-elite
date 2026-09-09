@@ -48,4 +48,15 @@ describe("roomNumbersForFloor — real Hotel de Rome layout", () => {
     expect(roomNumbersForFloor(4).at(-1)).toBe("437");
     expect(roomNumbersForFloor(5).at(-1)).toBe("535");
   });
+
+  it("returns a fresh array each call — callers can't mutate the shared list", () => {
+    const a = roomNumbersForFloor(4);
+    a.push("999");
+    expect(roomNumbersForFloor(4)).not.toContain("999");
+  });
+
+  it("adds up to the house's full 139 keys across floors 1-5", () => {
+    const total = [1, 2, 3, 4, 5].reduce((sum, f) => sum + roomNumbersForFloor(f).length, 0);
+    expect(total).toBe(139);
+  });
 });
