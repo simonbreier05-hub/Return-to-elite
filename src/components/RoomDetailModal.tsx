@@ -1,9 +1,14 @@
 "use client";
 
 import Modal from "./Modal";
+import NoteCountBadge from "./NoteCountBadge";
 import NoteThread, { type ThreadNote } from "./NoteThread";
+import { RoomFlagIcons } from "./RoomFlags";
+import { StatusIcon } from "./icons";
 import { STATUS_STYLES } from "./status";
-import { STATUS_LABELS, type RoomStatus } from "@/lib/domain";
+import type { BlockReason, RoomStatus } from "@/lib/domain";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import type { TKey } from "@/lib/i18n/translations";
 
 /** The room shape returned by GET /api/rooms — shared by the global quick search. */
 export interface SearchedRoom {
@@ -13,6 +18,7 @@ export interface SearchedRoom {
   section: string;
   type: string;
   status: RoomStatus;
+  occupancy?: string | null;
   blockReason?: string | null;
   reworkNote?: string | null;
   oooUntil?: string | null;
@@ -25,45 +31,121 @@ export interface SearchedRoom {
 }
 
 /**
- * Read-focused room detail: opened from the global quick search in
- * AppShell, from any dashboard, without navigating away. Status/assignment
- * actions stay supervisor-only in RoomDrawer — this is a lookup, not a
- * second action surface.
+ * Optional write-capable slot, supplied only by screens that are allowed to
+ * act on the room (currently the attendant's focused Housekeeper-Hub). When
+ * omitted, the modal stays the plain read-only lookup it always was — opened
+ * from the global quick search, from any dashboard, without navigating away.
  */
-export default function RoomDetailModal({ room, onClose }: { room: SearchedRoom; onClose: () => void }) {
+export interface RoomDetailActions {
+  /** The one-tap next step (start cleaning / mark clean / unblock & start). */
+  primary?: { label: string; onClick: () => void } | null;
+  busy?: boolean;
+  priority?: { score: number; estimatedMinutes: number; reasons: { points: number; reason: string }[] };
+  onBlock?: () => void;
+  blockLabel?: string;
+  onReportDefect?: () => void;
+  defectLabel?: string;
+  onNoteAdded?: (note: ThreadNote) => void;
+  onNoteUpdated?: (note: ThreadNote) => void;
+}
+
+export default function RoomDetailModal({
+  room,
+  onClose,
+  actions,
+}: {
+  room: SearchedRoom;
+  onClose: () => void;
+  actions?: RoomDetailActions;
+}) {
+  const { t } = useLocale();
   const style = STATUS_STYLES[room.status];
 
   return (
     <Modal
       title={room.number}
-      subtitle={`Floor ${room.floor} · ${room.section} · ${room.type.replace(/_/g, " ")}`}
+      subtitle={`${t("supervisor.floorN", { floor: room.floor })} · ${room.section} · ${t(`roomType.${room.type}` as TKey)}`}
       onClose={onClose}
     >
-      <span className={`inline-block rounded-full border px-3 py-1.5 text-sm font-medium ${style.chip}`}>
-        {STATUS_LABELS[room.status]}
-        {room.blockReason && ` · ${room.blockReason}`}
-      </span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${style.chip}`}>
+          <StatusIcon iconKey={style.iconKey} className="h-4 w-4 shrink-0" />
+          {t(`status.${room.status}` as TKey)}
+          {room.blockReason && ` · ${t(`blockReason.${room.blockReason as BlockReason}` as TKey)}`}
+        </span>
+        <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
+      </div>
       {room.oooUntil && (
-        <p className="mt-1 text-xs text-graphite/60">OOO until {new Date(room.oooUntil).toLocaleString()}</p>
+        <p className="mt-1 text-xs text-graphite/60">
+          {t("supervisor.oooUntil", { date: new Date(room.oooUntil).toLocaleString() })}
+        </p>
       )}
       {room.reworkNote && room.status === "PICKUP" && (
-        <p className="mt-2 rounded-lg bg-orange-50 p-2 text-sm text-orange-900">Rework: {room.reworkNote}</p>
+        <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">
+          {t("attendant.reworkNote")} {room.reworkNote}
+        </p>
+      )}
+
+      {actions?.priority && actions.priority.score > 0 && (
+        <div className="mt-3 rounded-lg border border-gold/30 bg-ivory p-3 text-xs text-graphite">
+          <p className="mb-1 font-medium text-graphite">
+            {t("attendant.priorityScore", { score: actions.priority.score, minutes: actions.priority.estimatedMinutes })}
+          </p>
+          <ul className="space-y-1">
+            {actions.priority.reasons.map((r, i) => (
+              <li key={i}>
+                <span className="font-semibold text-gold">+{r.points}</span> {r.reason}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {actions && (actions.primary || actions.onBlock || actions.onReportDefect) && (
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {actions.primary && (
+            <button
+              onClick={actions.primary.onClick}
+              disabled={actions.busy}
+              className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+            >
+              {actions.busy ? "…" : actions.primary.label}
+            </button>
+          )}
+          {actions.onBlock && (
+            <button
+              onClick={actions.onBlock}
+              disabled={actions.busy}
+              className="h-12 rounded-xl border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
+            >
+              {actions.blockLabel ?? t("attendant.blockedAction")}
+            </button>
+          )}
+          {actions.onReportDefect && (
+            <button
+              onClick={actions.onReportDefect}
+              className="h-12 rounded-xl border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
+            >
+              {actions.defectLabel ?? t("attendant.defectAction")}
+            </button>
+          )}
+        </div>
       )}
 
       <div className="mt-4">
-        <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Assigned attendant</h4>
-        <p className="text-sm">{room.assignedTo?.name ?? "— unassigned —"}</p>
+        <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.assignedAttendant")}</h4>
+        <p className="text-sm">{room.assignedTo?.name ?? t("supervisor.unassignedOption")}</p>
       </div>
 
       {room.arrivals.length > 0 && (
         <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Expected arrivals</h4>
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.expectedArrivals")}</h4>
           {room.arrivals.map((a, i) => (
             <p key={i} className="text-sm">
               {a.vip && "★ "}
               {a.guestName}
               {a.eta && ` · ETA ${new Date(a.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
-              {a.neededNow && " · NEEDED NOW"}
+              {a.neededNow && ` ${t("supervisor.neededNowFlag")}`}
             </p>
           ))}
         </div>
@@ -71,11 +153,11 @@ export default function RoomDetailModal({ room, onClose }: { room: SearchedRoom;
 
       {room.defects.length > 0 && (
         <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">Defects</h4>
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.defectsTitle")}</h4>
           {room.defects.map((d) => (
             <p key={d.id} className="text-sm">
-              🔧 {d.category}: {d.note}
-              {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{d.workOrder.status}]</span>}
+              🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
+              {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
             </p>
           ))}
         </div>
@@ -83,14 +165,10 @@ export default function RoomDetailModal({ room, onClose }: { room: SearchedRoom;
 
       <div className="mt-4">
         <div className="mb-1 flex items-center gap-2">
-          <h4 className="text-sm font-semibold uppercase tracking-wider text-graphite/60">Notes</h4>
-          {room.openNotesCount > 0 && (
-            <span className="rounded-full border border-gold-line/60 bg-gold-soft/40 px-2 py-0.5 text-[0.68rem] font-medium text-gold">
-              {room.openNotesCount} open
-            </span>
-          )}
+          <h4 className="text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
+          <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
         </div>
-        <NoteThread roomId={room.id} initialNotes={room.notes} />
+        <NoteThread roomId={room.id} initialNotes={room.notes} onNoteAdded={actions?.onNoteAdded} onNoteUpdated={actions?.onNoteUpdated} />
       </div>
     </Modal>
   );

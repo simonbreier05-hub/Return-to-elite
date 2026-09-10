@@ -62,6 +62,28 @@ export function IconWrench({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+export function IconPerson({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} aria-hidden="true">
+      <circle cx="12" cy="7.5" r="3.2" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M4.8 20.2c0-3.7 3.2-6.2 7.2-6.2s7.2 2.5 7.2 6.2" />
+    </svg>
+  );
+}
+
+export function IconBroom({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} aria-hidden="true">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M20 4 10.5 13.5" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="m10.5 13.5-3.8 1.1a1.6 1.6 0 0 0-1 2.3l.4.7a1.6 1.6 0 0 0 2.3.6l3.4-2.1M4.5 20.5l2.3-3.2"
+      />
+    </svg>
+  );
+}
+
 /** Maps status.ts's `iconKey` string to the actual glyph, so status.ts stays
  * a plain, framework-agnostic data module and only this one place needs to
  * know which SVG a key resolves to. */

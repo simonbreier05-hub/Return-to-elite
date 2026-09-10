@@ -10,8 +10,10 @@ import Collapsible from "@/components/Collapsible";
 import WindowPanel from "@/components/WindowPanel";
 import NoteThread, { type ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
+import NoteCountBadge from "@/components/NoteCountBadge";
+import { RoomFlagIcons } from "@/components/RoomFlags";
 import { StatusIcon } from "@/components/icons";
-import { STATUS_STYLES, NOTE_STATUS_STYLES, noteBadgeVariant } from "@/components/status";
+import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import { BLOCK_REASON_SHORT, STATUS_LABELS, HOTEL, type BlockReason, type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
@@ -36,6 +38,7 @@ interface Room {
   blockReason?: string | null;
   reworkNote?: string | null;
   oooUntil?: string | null;
+  occupancy?: string | null;
   isCheckoutToday: boolean;
   openNotesCount: number;
   assignedTo?: { id: string; name: string } | null;
@@ -315,8 +318,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 className="flex items-center justify-between gap-2 rounded-lg border border-charcoal/10 bg-ivory px-3 py-2"
               >
                 <div>
-                  <span className="font-serif text-lg">
-                    Floor {room.floor} · {room.number}
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="font-serif text-lg">
+                      Floor {room.floor} · {room.number}
+                    </span>
+                    <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
                   </span>
                   <p className="text-xs text-graphite/60">
                     {room.assignedTo?.name ?? "—"} · {STATUS_LABELS[room.status]}
@@ -510,6 +516,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                           👤
                         </span>
                       )}
+                      <RoomFlagIcons
+                        occupancy={room.occupancy}
+                        isCheckoutToday={room.isCheckoutToday}
+                        className="absolute -bottom-1 -left-1"
+                        badgeClassName="h-4 w-4"
+                        iconClassName="h-2.5 w-2.5"
+                      />
                       <NoteCountBadge
                         openCount={room.openNotesCount}
                         totalCount={room.notes.length}
@@ -644,35 +657,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         />
       )}
     </div>
-  );
-}
-
-/** Small open/done note-count indicator, shared by the board tile and the drawer header. */
-function NoteCountBadge({
-  openCount,
-  totalCount,
-  className = "",
-}: {
-  openCount: number;
-  totalCount: number;
-  className?: string;
-}) {
-  const variant = noteBadgeVariant(openCount, totalCount);
-  if (!variant) return null;
-  return variant === "open" ? (
-    <span
-      className={`flex h-4 min-w-4 items-center justify-center rounded-full border border-gold-line bg-gold px-1 text-[9px] font-bold text-white ${className}`}
-      title={`${openCount} open note${openCount === 1 ? "" : "s"}`}
-    >
-      {openCount}
-    </span>
-  ) : (
-    <span
-      className={`flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 bg-gray-100 text-[9px] text-gray-600 ${className}`}
-      title="All notes done"
-    >
-      ✓
-    </span>
   );
 }
 
@@ -834,6 +818,7 @@ function RoomDrawer({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-serif text-4xl">{room.number}</h3>
+              <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
               <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
             </div>
             <p className="text-xs uppercase tracking-wider text-graphite/50">

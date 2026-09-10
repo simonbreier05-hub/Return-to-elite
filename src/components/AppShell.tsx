@@ -8,6 +8,8 @@ import { api } from "./api";
 import { useSocket } from "./useSocket";
 import { STATUS_STYLES } from "./status";
 import { STATUS_LABELS } from "@/lib/domain";
+import NoteCountBadge from "./NoteCountBadge";
+import { RoomFlagIcons } from "./RoomFlags";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
 import ErrorBoundary from "./ErrorBoundary";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -194,10 +196,14 @@ export default function AppShell({
                     <button
                       key={r.id}
                       onClick={() => openRoom(r)}
-                      className="flex w-full items-center justify-between px-3 py-2 text-sm hover:bg-parchment"
+                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-parchment"
                     >
-                      <span className="font-serif">{r.number}</span>
-                      <span className={`rounded-full border px-2 py-0.5 text-[0.68rem] ${STATUS_STYLES[r.status].chip}`}>
+                      <span className="flex items-center gap-1.5">
+                        <span className="font-serif">{r.number}</span>
+                        <RoomFlagIcons occupancy={r.occupancy} isCheckoutToday={r.isCheckoutToday} iconClassName="h-2.5 w-2.5" />
+                        <NoteCountBadge openCount={r.openNotesCount} totalCount={r.notes.length} />
+                      </span>
+                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] ${STATUS_STYLES[r.status].chip}`}>
                         {STATUS_LABELS[r.status]}
                       </span>
                     </button>
