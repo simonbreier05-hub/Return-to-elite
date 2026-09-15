@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -12,6 +12,7 @@ import NoteThread, { type ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
 import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
+import HousekeeperRoster from "@/components/HousekeeperRoster";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import {
@@ -49,6 +50,7 @@ interface Room {
   oooUntil?: string | null;
   occupancy?: string | null;
   isCheckoutToday: boolean;
+  routeOrder?: number | null;
   openNotesCount: number;
   assignedTo?: { id: string; name: string; dailyNumber?: number | null } | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
@@ -237,6 +239,21 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   };
 
   /**
+   * Aufgabe C (v4): dashboard tiles (KPIs, priority banner chips) are
+   * clickable and jump straight to the matching filtered board — e.g. the
+   * "Blocked" tile shows only BLOCKED rooms. `null` clears the status filter
+   * instead (used by tiles that summarize the whole board, e.g. progress).
+   */
+  const gridRef = useRef<HTMLDivElement>(null);
+  const focusStatus = (status: RoomStatus | null) => {
+    setStatusFilter(status ?? "ALL");
+    setFloorFilter("ALL");
+    setAttendantFilter("ALL");
+    setSearch("");
+    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
+
+  /**
    * Release the whole queue in one action. Each room still passes the same
    * server-side checks, so a room someone else touched meanwhile is reported
    * rather than silently skipped.
@@ -311,8 +328,9 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             label: t("priority.releaseQueue"),
             icon: "clock",
             tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
+            onClick: () => focusStatus("CLEAN"),
           },
-          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent" },
+          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
         ]}
       />
 
@@ -395,10 +413,15 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       </WindowPanel>
 
       <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Kpi label={t("supervisor.releasedSellable")} value={`${inspected}/${sellable}`} />
-        <Kpi label={t("supervisor.dailyProgress")} value={`${progress}%`} bar={progress} />
-        <Kpi label={t("supervisor.releaseQueueLabel")} value={String(releaseQueue.length)} accent={releaseQueue.length >= RELEASE_QUEUE_BACKLOG} />
-        <Kpi label={t("supervisor.blockedLabel")} value={String(blockedCount)} />
+        <Kpi label={t("supervisor.releasedSellable")} value={`${inspected}/${sellable}`} onClick={() => focusStatus("INSPECTED")} />
+        <Kpi label={t("supervisor.dailyProgress")} value={`${progress}%`} bar={progress} onClick={() => focusStatus(null)} />
+        <Kpi
+          label={t("supervisor.releaseQueueLabel")}
+          value={String(releaseQueue.length)}
+          accent={releaseQueue.length >= RELEASE_QUEUE_BACKLOG}
+          onClick={() => focusStatus("CLEAN")}
+        />
+        <Kpi label={t("supervisor.blockedLabel")} value={String(blockedCount)} onClick={() => focusStatus("BLOCKED")} />
       </div>
 
       {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
@@ -415,7 +438,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       )}
 
       <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
-        <div>
+        <div ref={gridRef}>
           {/* Finding one room among 145 tiles should not mean scrolling. */}
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-charcoal/10 bg-linen p-3 shadow-card">
             <input
@@ -607,20 +630,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           </div>
 
           <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-            <h3 className="mb-2 font-serif text-xl">{t("supervisor.attendantsTitle")}</h3>
-            <div className="space-y-2">
-              {attendants.map((a) => {
-                const loc = a.currentRoomId ? roomById.get(a.currentRoomId) : null;
-                return (
-                  <div key={a.id} className="flex items-center justify-between rounded-lg bg-ivory px-3 py-2 text-sm">
-                    <span>{attendantLabel(a)}</span>
-                    <span className="text-graphite/60">
-                      {loc ? t("supervisor.inRoom", { room: loc.number }) : a.section ? t("supervisor.inSection", { section: a.section }) : "—"}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
+            <h3 className="mb-2 font-serif text-xl">{t("roster.title")}</h3>
+            <HousekeeperRoster attendants={attendants} rooms={rooms} onMoved={load} />
           </div>
         </div>
       </div>
@@ -685,9 +696,28 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   );
 }
 
-function Kpi({ label, value, bar, accent }: { label: string; value: string; bar?: number; accent?: boolean }) {
+function Kpi({
+  label,
+  value,
+  bar,
+  accent,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  bar?: number;
+  accent?: boolean;
+  /** Aufgabe C (v4): clicking a dashboard tile jumps to the matching filtered board view. */
+  onClick?: () => void;
+}) {
+  const Tag = onClick ? "button" : "div";
   return (
-    <div className={`rounded-2xl border p-4 shadow-sm transition-colors ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
+    <Tag
+      onClick={onClick}
+      className={`rounded-2xl border p-4 text-left shadow-sm transition-colors ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"} ${
+        onClick ? "cursor-pointer hover:border-gold-line active:scale-[0.98]" : ""
+      }`}
+    >
       <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
       <div className="mt-1 font-serif text-3xl">{value}</div>
       {bar !== undefined && (
@@ -695,7 +725,7 @@ function Kpi({ label, value, bar, accent }: { label: string; value: string; bar?
           <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${bar}%` }} />
         </div>
       )}
-    </div>
+    </Tag>
   );
 }
 

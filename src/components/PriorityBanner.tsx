@@ -9,6 +9,8 @@ export interface PriorityItem {
   icon: "warning" | "clock" | "ban";
   /** urgent = needs action now (red); watch = worth knowing, not on fire (brass). */
   tone: "urgent" | "watch";
+  /** When set, the chip becomes a button that jumps to the matching filtered view. */
+  onClick?: () => void;
 }
 
 const ICONS = { warning: IconWarning, clock: IconClock, ban: IconBan } as const;
@@ -41,17 +43,24 @@ export default function PriorityBanner({ items }: { items: PriorityItem[] }) {
         <div className="flex flex-wrap gap-2">
           {active.map((item, i) => {
             const Icon = ICONS[item.icon];
-            return (
-              <span
-                key={i}
-                className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
-                  item.tone === "urgent"
-                    ? "border-status-out-of-order/35 bg-status-out-of-order/10 text-status-out-of-order"
-                    : "border-gold/40 bg-gold/10 text-gold-soft"
-                }`}
-              >
+            const className = `flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
+              item.tone === "urgent"
+                ? "border-status-out-of-order/35 bg-status-out-of-order/10 text-status-out-of-order"
+                : "border-gold/40 bg-gold/10 text-gold-soft"
+            } ${item.onClick ? "cursor-pointer transition hover:brightness-95 active:scale-[0.98]" : ""}`;
+            const content = (
+              <>
                 <Icon className="h-4 w-4 shrink-0" />
                 {item.count} {item.label}
+              </>
+            );
+            return item.onClick ? (
+              <button key={i} onClick={item.onClick} className={className}>
+                {content}
+              </button>
+            ) : (
+              <span key={i} className={className}>
+                {content}
               </span>
             );
           })}
