@@ -5,7 +5,9 @@ import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
 import { StatusIcon } from "@/components/icons";
-import { STATUS_STYLES } from "@/components/status";
+import RoomDetailModal from "@/components/RoomDetailModal";
+import { useRoomLookup } from "@/components/useRoomLookup";
+import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import { type RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -18,7 +20,7 @@ interface Arrival {
   earlyCheckIn: boolean;
   neededNow: boolean;
   status: string;
-  room: { id: string; number: string; status: RoomStatus };
+  room: { id: string; number: string; status: RoomStatus; openNotesCount: number };
 }
 
 export default function FrontOfficeView() {
@@ -27,6 +29,7 @@ export default function FrontOfficeView() {
   const [showForm, setShowForm] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [released, setReleased] = useState<string | null>(null);
+  const roomLookup = useRoomLookup();
 
   const load = useCallback(async () => {
     const data = await api<{ arrivals: Arrival[] }>("/api/arrivals");
@@ -145,7 +148,19 @@ export default function FrontOfficeView() {
                     {a.guestName}
                     {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-status-inspected">{t("frontOffice.checkedIn")}</span>}
                   </td>
-                  <td className="px-4 py-3 font-serif text-lg">{a.room.number}</td>
+                  <td className="px-4 py-3">
+                    <button
+                      onClick={() => roomLookup.open(a.room.number)}
+                      className="flex items-center gap-1.5 font-serif text-lg hover:text-navy hover:underline"
+                    >
+                      {a.room.number}
+                      {a.room.openNotesCount > 0 && (
+                        <span className={`rounded-full border px-1.5 text-[0.62rem] font-medium ${NOTE_STATUS_STYLES.OPEN.badge}`}>
+                          📝 {a.room.openNotesCount}
+                        </span>
+                      )}
+                    </button>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs ${style.chip}`}>
                       <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
@@ -203,6 +218,8 @@ export default function FrontOfficeView() {
           }}
         />
       )}
+
+      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
     </div>
   );
 }

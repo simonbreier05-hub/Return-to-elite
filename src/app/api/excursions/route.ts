@@ -11,9 +11,20 @@ export async function GET() {
   const excursions = await prisma.excursion.findMany({
     where: { endsAt: { gte: new Date(Date.now() - 12 * 60 * 60_000) } },
     orderBy: { startsAt: "asc" },
-    include: { room: { select: { id: true, number: true, status: true } } },
+    include: {
+      room: {
+        select: {
+          id: true, number: true, status: true,
+          _count: { select: { notes: { where: { status: "OPEN" } } } },
+        },
+      },
+    },
   });
-  return NextResponse.json({ excursions });
+  const withNoteCounts = excursions.map((e) => {
+    const { _count, ...room } = e.room;
+    return { ...e, room: { ...room, openNotesCount: _count.notes } };
+  });
+  return NextResponse.json({ excursions: withNoteCounts });
 }
 
 const CreateSchema = z
