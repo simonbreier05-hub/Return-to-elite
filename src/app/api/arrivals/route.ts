@@ -11,10 +11,21 @@ export async function GET() {
   const arrivals = await prisma.arrival.findMany({
     where: { status: { not: "CANCELLED" } },
     orderBy: [{ eta: "asc" }],
-    include: { room: { select: { id: true, number: true, status: true, floor: true, type: true } } },
+    include: {
+      room: {
+        select: {
+          id: true, number: true, status: true, floor: true, type: true,
+          _count: { select: { notes: { where: { status: "OPEN" } } } },
+        },
+      },
+    },
+  });
+  const withNoteCounts = arrivals.map((a) => {
+    const { _count, ...room } = a.room;
+    return { ...a, room: { ...room, openNotesCount: _count.notes } };
   });
   const readyForArrival = arrivals.filter((a) => a.status === "EXPECTED" && a.room.status === "INSPECTED").length;
-  return NextResponse.json({ arrivals, readyForArrival });
+  return NextResponse.json({ arrivals: withNoteCounts, readyForArrival });
 }
 
 const CreateSchema = z.object({

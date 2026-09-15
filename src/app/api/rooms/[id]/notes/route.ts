@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
-import { broadcast } from "@/lib/realtime";
-import { audit } from "@/lib/audit";
+import { addRoomNote } from "@/lib/rooms/addRoomNote";
 
 /** Cross-department per-room notes: every authenticated role may read & add. */
 
@@ -32,11 +31,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const room = await prisma.room.findUnique({ where: { id } });
   if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
 
-  const note = await prisma.roomNote.create({
-    data: { roomId: id, authorId: auth.session.userId, body: parsed.data.body },
-    include: { author: { select: { name: true, role: true } } },
-  });
-  await audit({ action: "NOTE_ADDED", userId: auth.session.userId, roomId: id });
-  broadcast("note:new", { note, roomNumber: room.number });
+  const note = await addRoomNote({ room, authorId: auth.session.userId, body: parsed.data.body });
   return NextResponse.json({ note }, { status: 201 });
 }
