@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { FLOOR_PLAN, HOTEL, FLOOR_FACILITIES } from "../src/lib/floorplan/hotelDeRome";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
-import { GUEST_SYSTEM_EMAIL } from "../src/lib/guest";
+import { DEMO_PASSWORD, demoUsers } from "./demoUsers";
 
 /**
  * Seed: one user per role, ten room attendants, every room of the real
@@ -23,8 +23,6 @@ import { GUEST_SYSTEM_EMAIL } from "../src/lib/guest";
  */
 
 const prisma = new PrismaClient();
-
-const PASSWORD = "123";
 
 async function main() {
   // SEED_MODE=if-empty is used by the Railway start command: seed a fresh
@@ -70,43 +68,13 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.setting.deleteMany();
 
-  const passwordHash = await bcrypt.hash(PASSWORD, 10);
+  const passwordHash = await bcrypt.hash(DEMO_PASSWORD, 10);
 
   // --- Users -------------------------------------------------------------
-  // Ten attendants for 145 keys — roughly 14 rooms each, which is what a
-  // five-star house actually rosters. With four, every plan comes out at
-  // three shifts' worth of work and the planning board is meaningless.
-  const usersData = [
-    { email: "maria@hotel.test", name: "Maria Silva", role: "room_attendant", section: "2A" },
-    { email: "aylin@hotel.test", name: "Aylin Kaya", role: "room_attendant", section: "3A" },
-    { email: "petra@hotel.test", name: "Petra Novak", role: "room_attendant", section: "5B" },
-    { email: "hausdame@hotel.test", name: "Ingrid Hausmann", role: "room_attendant", section: "1A" },
-    { email: "lucia@hotel.test", name: "Lucia Ferrari", role: "room_attendant", section: "1B" },
-    { email: "elena@hotel.test", name: "Elena Popescu", role: "room_attendant", section: "2B" },
-    { email: "fatima@hotel.test", name: "Fatima Benali", role: "room_attendant", section: "3B" },
-    { email: "joanna@hotel.test", name: "Joanna Kowalska", role: "room_attendant", section: "4A" },
-    { email: "sena@hotel.test", name: "Sena Demir", role: "room_attendant", section: "4B" },
-    { email: "grace@hotel.test", name: "Grace Okafor", role: "room_attendant", section: "5A" },
-    { email: "supervisor@hotel.test", name: "Sofia Marchetti", role: "supervisor" },
-    { email: "frontoffice@hotel.test", name: "Felix Ott", role: "front_office" },
-    { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
-    { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },
-    { email: "houseman@hotel.test", name: "Hans Bauer", role: "houseman" },
-    { email: "manager@hotel.test", name: "Diana Maier", role: "duty_manager" },
-    // System account backing the guest-facing test screen (src/app/guest/305)
-    // — attributes guest-submitted notes/defects, never a real login.
-    // role: "guest" is deliberately outside the ROLES enum (see src/lib/domain.ts)
-    // so it never appears in a role-filtered staff picker; GET /api/auth/dev-login
-    // filters it out of the quick-login list for the same reason.
-    // Room number is env-overridable per deployment (see guestServer.ts) —
-    // read directly here rather than importing that file, which pulls in
-    // the Next.js prisma singleton this standalone seed script doesn't use.
-    {
-      email: GUEST_SYSTEM_EMAIL,
-      name: `Guest (Room ${process.env.GUEST_ROOM_NUMBER?.trim() || "310"})`,
-      role: "guest",
-    },
-  ];
+  // The list itself lives in prisma/demoUsers.ts, shared with the additive
+  // boot step in prisma/ensure-demo-users.ts so a newly added login can't end
+  // up in only one of the two paths.
+  const usersData = demoUsers();
   const users: Record<string, { id: string; role: string }> = {};
   for (const u of usersData) {
     const created = await prisma.user.create({ data: { ...u, passwordHash } });
