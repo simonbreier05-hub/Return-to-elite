@@ -117,6 +117,10 @@ export default function AttendantView() {
         return prev.map((r) => (r.id === p.room.id ? { ...r, ...p.room } : r));
       });
       refreshPrioritiesSoon();
+      // A supervisor moving this room to a different attendant (roster's
+      // "move to…") means it may no longer be mine — the coalesced refetch
+      // is the only place that actually drops it from ?mine=1.
+      refreshRoomsSoon();
     },
     "note:new": (p: { note: Note }) => {
       setRooms((prev) =>

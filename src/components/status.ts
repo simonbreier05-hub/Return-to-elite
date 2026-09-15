@@ -1,4 +1,5 @@
 import type { NoteStatus, RoomStatus } from "@/lib/domain";
+import type { RoomDayCategory } from "@/lib/rooms/roomDayCategory";
 
 /**
  * Tailwind classes per status, using the house's muted status palette
@@ -97,6 +98,28 @@ export const STATUS_STYLES: Record<
 export const NOTE_STATUS_STYLES: Record<NoteStatus, { badge: string }> = {
   OPEN: { badge: "bg-gold-soft/40 text-gold border-gold-line/60" },
   DONE: { badge: "bg-gray-100 text-gray-600 border-gray-300" },
+};
+
+/**
+ * Floor-plan day-status overlay (v4 Aufgabe D) — Anreise/Abreise/Bleiber/
+ * Same-Day-Turn/DND, one colour per category, distinguishable at a glance
+ * and never colour-alone (every chip pairs its colour with a short label).
+ * DND reuses STATUS_STYLES.BLOCKED's exact palette so "blocked/DND" always
+ * reads the same purple everywhere in the app, as v3 established; Departure
+ * and Stayover reuse the parchment/white shading the morning-planning view
+ * already uses for the same distinction (see planning/view.tsx's legend).
+ */
+export const DAY_CATEGORY_STYLES: Record<RoomDayCategory, { chip: string; dot: string; label: string }> = {
+  ARRIVAL: { chip: "border-gold/40 bg-gold/10 text-gold-soft", dot: "bg-gold", label: "Arrival" },
+  DEPARTURE: { chip: "border-charcoal/30 bg-parchment text-charcoal", dot: "bg-charcoal/50", label: "Departure" },
+  STAYOVER: { chip: "border-charcoal/15 bg-white text-graphite", dot: "bg-graphite/40", label: "Stayover" },
+  SAME_DAY_TURN: {
+    chip: "border-status-in-progress/40 bg-status-in-progress/10 text-status-in-progress",
+    dot: "bg-status-in-progress",
+    label: "Same-day turn",
+  },
+  DND: { chip: STATUS_STYLES.BLOCKED.chip, dot: STATUS_STYLES.BLOCKED.dot, label: "DND" },
+  NONE: { chip: "border-charcoal/10 bg-linen text-graphite/50", dot: "bg-charcoal/20", label: "—" },
 };
 
 /** Which badge variant a room's note-count indicator should render, if any. */
