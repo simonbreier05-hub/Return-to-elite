@@ -4,6 +4,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
+import RoomDetailModal from "@/components/RoomDetailModal";
+import { useRoomLookup } from "@/components/useRoomLookup";
+import { NOTE_STATUS_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
 interface Excursion {
@@ -12,7 +15,7 @@ interface Excursion {
   startsAt: string;
   endsAt: string;
   note?: string | null;
-  room: { number: string; status: string };
+  room: { number: string; status: string; openNotesCount: number };
 }
 
 export default function ConciergeView() {
@@ -25,6 +28,7 @@ export default function ConciergeView() {
   const [note, setNote] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const roomLookup = useRoomLookup();
 
   const load = useCallback(async () => {
     const data = await api<{ excursions: Excursion[] }>("/api/excursions");
@@ -124,7 +128,17 @@ export default function ConciergeView() {
               <div key={e.id}
                 className={`rounded-xl border p-4 transition-colors ${active ? "border-status-pickup/40 bg-status-pickup/10" : "border-charcoal/10 bg-white"}`}>
                 <div className="flex items-center justify-between">
-                  <span className="font-serif text-2xl">{e.room.number}</span>
+                  <button
+                    onClick={() => roomLookup.open(e.room.number)}
+                    className="flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
+                  >
+                    {e.room.number}
+                    {e.room.openNotesCount > 0 && (
+                      <span className={`rounded-full border px-1.5 text-[0.62rem] font-medium ${NOTE_STATUS_STYLES.OPEN.badge}`}>
+                        📝 {e.room.openNotesCount}
+                      </span>
+                    )}
+                  </button>
                   <span className="text-sm">
                     {new Date(e.startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
                     {new Date(e.endsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
@@ -139,6 +153,8 @@ export default function ConciergeView() {
           })}
         </div>
       </div>
+
+      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
     </div>
   );
 }

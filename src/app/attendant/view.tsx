@@ -10,11 +10,15 @@ import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
 import DragReorderList from "@/components/DragReorderList";
 import WindowPanel from "@/components/WindowPanel";
-import NoteThread, { type ThreadNote } from "@/components/NoteThread";
+import { type ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
+import NotificationsPanel from "@/components/NotificationsPanel";
+import NoteCountBadge from "@/components/NoteCountBadge";
+import { RoomFlagIcons } from "@/components/RoomFlags";
+import RoomDetailModal, { type RoomDetailActions } from "@/components/RoomDetailModal";
 import { StatusIcon } from "@/components/icons";
-import { STATUS_STYLES, NOTE_STATUS_STYLES, noteBadgeVariant } from "@/components/status";
-import { STATUS_LABELS, BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } from "@/lib/domain";
+import { STATUS_STYLES } from "@/components/status";
+import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -53,9 +57,14 @@ interface Room {
   status: RoomStatus;
   reworkNote?: string | null;
   blockReason?: string | null;
+  oooUntil?: string | null;
+  occupancy?: string | null;
   isCheckoutToday: boolean;
   routeOrder?: number | null;
   openNotesCount: number;
+  assignedTo?: { id: string; name: string } | null;
+  arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
+  defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
   notes: Note[];
 }
 
@@ -70,11 +79,12 @@ export default function AttendantView() {
   const { t } = useLocale();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [priorities, setPriorities] = useState<Record<string, Priority>>({});
-  const [modal, setModal] = useState<{ kind: "block" | "defect" | "note"; room: Room } | null>(null);
+  const [modal, setModal] = useState<{ kind: "block" | "defect"; room: Room } | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [whyOpen, setWhyOpen] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
-  const [expandedRoomId, setExpandedRoomId] = useState<string | null>(null);
+  /** The one room whose full detail (why, notes, defect report, block…) is open right now — the
+   * Housekeeper-Hub's focus mode keeps every card minimal and pushes everything else in here. */
+  const [detailRoomId, setDetailRoomId] = useState<string | null>(null);
   const offline = useOfflineQueue();
 
   const loadRooms = useCallback(async () => {
@@ -229,6 +239,41 @@ export default function AttendantView() {
   const routeChunks = useMemo(() => chunkByFloor(routeRooms), [routeRooms]);
   const routeLoad = routeLoadLabel(routeRooms.length);
 
+  const detailRoom = rooms.find((r) => r.id === detailRoomId) ?? null;
+
+  /**
+   * Everything a minimized room card no longer shows inline — why it's
+   * prioritized, the primary status action, block/defect entry points, and
+   * a fully writable note thread — assembled for RoomDetailModal. Block and
+   * defect stay their own overlay (multipart photo upload, preset reasons),
+   * opened on top once the detail modal steps aside.
+   */
+  const buildDetailActions = (room: Room): RoomDetailActions => {
+    const next = nextAttendantStatus(room.status);
+    const canBlock = ["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status);
+    const prio = priorities[room.id];
+    return {
+      primary:
+        room.status === "BLOCKED"
+          ? { label: t("attendant.unblockAndStart"), onClick: () => setStatus(room, "IN_PROGRESS") }
+          : next
+            ? { label: next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean"), onClick: () => setStatus(room, next) }
+            : null,
+      busy: busyRoomId === room.id,
+      priority: prio,
+      onBlock: canBlock ? () => { setDetailRoomId(null); setModal({ kind: "block", room }); } : undefined,
+      onReportDefect: () => { setDetailRoomId(null); setModal({ kind: "defect", room }); },
+      onNoteAdded: (note: ThreadNote) =>
+        setRooms((prev) =>
+          prev.map((r) => (r.id === room.id ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r))
+        ),
+      onNoteUpdated: (note: ThreadNote) => {
+        setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, notes: r.notes.map((n) => (n.id === note.id ? note : n)) } : r)));
+        refreshRoomsSoon();
+      },
+    };
+  };
+
   /**
    * "erledigt" for the Meine Zimmer window = cleaned OR released — distinct
    * from `done` above, which counts only INSPECTED for the existing header
@@ -268,8 +313,17 @@ export default function AttendantView() {
         ]}
       />
 
+      <NotificationsPanel targetRole="room_attendant" />
+
       <OfflineBar state={offline} />
 
+      {/*
+       * Focus mode: "Meine Zimmer" is the Housekeeper-Hub's default view —
+       * just the room list plus the messages panel above. Every row stays
+       * to number, status, the occupancy/checkout flags and a note badge;
+       * everything else (why this room is prioritized, notes, defect
+       * report, block) lives one tap away in RoomDetailModal.
+       */}
       <WindowPanel
         title="Meine Zimmer"
         right={
@@ -288,65 +342,25 @@ export default function AttendantView() {
         <div className="space-y-1.5">
           {routeRooms.map((room) => {
             const style = STATUS_STYLES[room.status];
-            const next = nextAttendantStatus(room.status);
-            const expanded = expandedRoomId === room.id;
-            const busy = busyRoomId === room.id;
             return (
-              <div
+              <button
+                type="button"
                 key={room.id}
-                className={`overflow-hidden rounded-lg border border-charcoal/10 border-l-4 bg-white ${style.border}`}
+                onClick={() => setDetailRoomId(room.id)}
+                className={`flex min-h-11 w-full items-center gap-2 rounded-lg border border-charcoal/10 border-l-4 bg-white px-3 py-2.5 text-left ${style.border}`}
               >
-                <button
-                  type="button"
-                  onClick={() => setExpandedRoomId(expanded ? null : room.id)}
-                  className="flex w-full items-center gap-2 px-3 py-2.5 text-left"
-                  aria-expanded={expanded}
-                >
-                  <span className="font-serif text-lg">{room.number}</span>
-                  <span className={`rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
-                    {STATUS_LABELS[room.status]}
-                  </span>
-                  {room.status === "INSPECTED" && <span title="Bereits freigegeben">🔒</span>}
-                  {room.notes.length > 0 && <span className="text-xs text-graphite/60">📝 {room.notes.length}</span>}
-                  <svg
-                    className={`ml-auto h-4 w-4 shrink-0 text-graphite/45 transition-transform duration-150 ${expanded ? "rotate-180" : ""}`}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                  </svg>
-                </button>
-                {expanded && (
-                  <div className="border-t border-charcoal/5 px-3 pb-3 pt-2.5">
-                    {room.notes.length === 0 && <p className="text-xs text-graphite/50">Keine Notizen.</p>}
-                    {room.notes.map((n) => (
-                      <p key={n.id} className="mb-1 text-xs text-graphite/70">
-                        <span className="text-graphite/50">
-                          {n.author.name} ({n.author.role.replace(/_/g, " ")}) ·{" "}
-                          {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                        </span>{" "}
-                        {n.body}
-                      </p>
-                    ))}
-                    {next && (
-                      <button
-                        onClick={() => setStatus(room, next)}
-                        disabled={busy}
-                        className="mt-1 h-11 w-full rounded-xl bg-blue-600 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
-                      >
-                        {busy ? "…" : `Status weiterschalten → ${STATUS_LABELS[next]}`}
-                      </button>
-                    )}
-                    {room.status === "INSPECTED" && (
-                      <p className="mt-1 text-xs text-graphite/60">
-                        Bereits vom Supervisor freigegeben – keine Änderung möglich.
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
+                <span className="font-serif text-lg">{room.number}</span>
+                <span className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
+                  <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
+                  {t(`status.${room.status}` as TKey)}
+                </span>
+                <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} badgeClassName="h-4 w-4" iconClassName="h-2.5 w-2.5" />
+                {room.status === "INSPECTED" && <span title="Bereits freigegeben">🔒</span>}
+                <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
+                <svg className="ml-auto h-4 w-4 shrink-0 text-graphite/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
             );
           })}
         </div>
@@ -409,8 +423,9 @@ export default function AttendantView() {
                         <div className="flex items-center gap-2 rounded-lg border border-charcoal/10 bg-white px-2.5 py-2">
                           <button
                             {...handle}
+                            onClick={(e) => e.stopPropagation()}
                             aria-label={t("attendant.dragToReorder", { number: room.number })}
-                            className="flex h-8 w-8 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-graphite/40 hover:bg-parchment active:cursor-grabbing"
+                            className="flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-graphite/40 hover:bg-parchment active:cursor-grabbing"
                           >
                             <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor">
                               <circle cx="4" cy="3" r="1.3" /><circle cx="10" cy="3" r="1.3" />
@@ -418,15 +433,23 @@ export default function AttendantView() {
                               <circle cx="4" cy="11" r="1.3" /><circle cx="10" cy="11" r="1.3" />
                             </svg>
                           </button>
-                          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory tabular-nums">
-                            {startIndex + i + 1}
-                          </span>
-                          <span className="font-serif text-lg">{room.number}</span>
-                          <span className={`ml-1 flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
-                            <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
-                            {t(`status.${room.status}` as TKey)}
-                          </span>
-                          {prio && <span className="ml-auto text-xs text-graphite/50">{prio.score}</span>}
+                          <button
+                            type="button"
+                            onClick={() => setDetailRoomId(room.id)}
+                            className="flex min-h-11 flex-1 flex-wrap items-center gap-2 rounded-lg py-1 text-left"
+                          >
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory tabular-nums">
+                              {startIndex + i + 1}
+                            </span>
+                            <span className="font-serif text-lg">{room.number}</span>
+                            <span className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium ${style.chip}`}>
+                              <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
+                              {t(`status.${room.status}` as TKey)}
+                            </span>
+                            <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} badgeClassName="h-4 w-4" iconClassName="h-2.5 w-2.5" />
+                            <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
+                            {prio && <span className="ml-auto text-xs text-graphite/50">{prio.score}</span>}
+                          </button>
                         </div>
                       );
                     }}
@@ -456,25 +479,9 @@ export default function AttendantView() {
               <RoomCard
                 key={room.id}
                 room={room}
-                prio={priorities[room.id]}
                 busy={busyRoomId === room.id}
-                whyOpen={whyOpen === room.id}
-                onToggleWhy={() => setWhyOpen(whyOpen === room.id ? null : room.id)}
                 onSetStatus={setStatus}
-                onOpenModal={(kind) => setModal({ kind, room })}
-                onNoteAdded={(note: ThreadNote) =>
-                  setRooms((prev) =>
-                    prev.map((r) =>
-                      r.id === room.id ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
-                    )
-                  )
-                }
-                onNoteUpdated={(note: ThreadNote) => {
-                  setRooms((prev) =>
-                    prev.map((r) => (r.id === room.id ? { ...r, notes: r.notes.map((n) => (n.id === note.id ? note : n)) } : r))
-                  );
-                  refreshRoomsSoon();
-                }}
+                onOpenDetail={() => setDetailRoomId(room.id)}
               />
             ))}
           </div>
@@ -485,6 +492,14 @@ export default function AttendantView() {
         <p className="rounded-2xl border border-charcoal/10 bg-linen p-8 text-center text-graphite/60 shadow-card">
           {t("attendant.noRoomsAssigned")}
         </p>
+      )}
+
+      {detailRoom && (
+        <RoomDetailModal
+          room={detailRoom}
+          onClose={() => setDetailRoomId(null)}
+          actions={buildDetailActions(detailRoom)}
+        />
       )}
 
       {modal?.kind === "block" && (
@@ -508,188 +523,82 @@ export default function AttendantView() {
           }}
         />
       )}
-      {modal?.kind === "note" && (
-        <NoteModal
-          room={modal.room}
-          onClose={() => setModal(null)}
-          onDone={(note) => {
-            setModal(null);
-            setRooms((prev) =>
-              prev.map((r) =>
-                r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
-              )
-            );
-          }}
-        />
-      )}
     </div>
   );
 }
 
 /**
- * One room card. Progressive disclosure: the single next action (start
- * cleaning / mark clean / unblock) stays big and always visible — that is
- * the 90% case, one tap. Everything else (block, defect, note) lives behind
- * "More…" so a floor of six cards reads as six clear next-steps rather than
- * twenty-four buttons.
+ * One room card, minimized for the Housekeeper-Hub's focus mode: room
+ * number, type, the occupancy/checkout flags, status, and a note badge —
+ * plus the single next action (start cleaning / mark clean / unblock),
+ * which stays big and always visible as the 90% case, one tap. Everything
+ * else (why this room is prioritized, block, defect, the full note thread)
+ * lives one tap away in RoomDetailModal, opened by tapping the card itself.
  */
 function RoomCard({
   room,
-  prio,
   busy,
-  whyOpen,
-  onToggleWhy,
   onSetStatus,
-  onOpenModal,
-  onNoteAdded,
-  onNoteUpdated,
+  onOpenDetail,
 }: {
   room: Room;
-  prio: Priority | undefined;
   busy: boolean;
-  whyOpen: boolean;
-  onToggleWhy: () => void;
   onSetStatus: (room: Room, status: RoomStatus) => void;
-  onOpenModal: (kind: "block" | "defect" | "note") => void;
-  onNoteAdded: (note: ThreadNote) => void;
-  onNoteUpdated: (note: ThreadNote) => void;
+  onOpenDetail: () => void;
 }) {
   const { t } = useLocale();
-  const [moreOpen, setMoreOpen] = useState(false);
-  const [notesOpen, setNotesOpen] = useState(false);
   const style = STATUS_STYLES[room.status];
-  const canBlock = ["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status);
+  const next = nextAttendantStatus(room.status);
 
   return (
-    <div className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm transition ${busy ? "opacity-60" : ""}`}>
-      <div className="mb-2 flex items-start justify-between">
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpenDetail}
+      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onOpenDetail()}
+      className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm transition ${busy ? "opacity-60" : ""}`}
+    >
+      <div className="mb-2 flex items-start justify-between gap-2">
         <div>
           <span className="font-serif text-3xl">{room.number}</span>
-          <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
-            {t(`roomType.${room.type}` as TKey)}
-            {room.isCheckoutToday && ` · ${t("attendant.dueOut")}`}
-          </span>
+          <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">{t(`roomType.${room.type}` as TKey)}</span>
         </div>
-        <span className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${style.chip}`}>
-          <StatusIcon iconKey={style.iconKey} className="h-3.5 w-3.5 shrink-0" />
-          {t(`status.${room.status}` as TKey)}
-        </span>
+        <div className="flex shrink-0 flex-col items-end gap-1">
+          <span className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium ${style.chip}`}>
+            <StatusIcon iconKey={style.iconKey} className="h-3.5 w-3.5 shrink-0" />
+            {t(`status.${room.status}` as TKey)}
+          </span>
+          <div className="flex items-center gap-1">
+            <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
+            <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
+          </div>
+        </div>
       </div>
 
-      {prio && prio.score > 0 && (
+      {next && (
         <button
-          onClick={onToggleWhy}
-          className="mb-2 flex w-full items-center justify-between rounded-lg bg-parchment px-3 py-2 text-left text-sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetStatus(room, next);
+          }}
+          disabled={busy}
+          className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
         >
-          <span>{t("attendant.priorityScore", { score: prio.score, minutes: prio.estimatedMinutes })}</span>
-          <span className="text-gold">{whyOpen ? t("attendant.hideWhy") : t("attendant.showWhy")}</span>
+          {busy ? "…" : next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean")}
         </button>
-      )}
-      {whyOpen && prio && (
-        <ul className="mb-2 space-y-1 rounded-lg border border-gold/30 bg-ivory p-3 text-xs text-graphite">
-          {prio.reasons.map((r, i) => (
-            <li key={i}>
-              <span className="font-semibold text-gold">+{r.points}</span> {r.reason}
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {room.status === "PICKUP" && room.reworkNote && (
-        <div className="mb-2 rounded-lg border border-status-pickup/30 bg-status-pickup/10 p-2 text-sm text-status-pickup">
-          <strong>{t("attendant.reworkNote")}</strong> {room.reworkNote}
-        </div>
       )}
       {room.status === "BLOCKED" && (
-        <div className="mb-2 rounded-lg border border-status-blocked/30 bg-status-blocked/10 p-2 text-sm text-status-blocked">
-          {t("attendant.blockedNote")} {room.blockReason ? t(`blockReason.${room.blockReason}` as TKey) : ""}
-        </div>
-      )}
-      {noteBadgeVariant(room.openNotesCount, room.notes.length) && (
         <button
-          onClick={() => setNotesOpen((o) => !o)}
-          className={`mb-2 flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium ${
-            room.openNotesCount > 0 ? NOTE_STATUS_STYLES.OPEN.badge : NOTE_STATUS_STYLES.DONE.badge
-          }`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onSetStatus(room, "IN_PROGRESS");
+          }}
+          disabled={busy}
+          className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
         >
-          📝 {room.openNotesCount > 0 ? t("attendant.notesOpen", { count: room.openNotesCount }) : t("attendant.notesAllDone")}
-          <span className="text-graphite/50">{notesOpen ? "▲" : "▼"}</span>
+          {busy ? "…" : t("attendant.unblockAndStart")}
         </button>
       )}
-      {notesOpen && (
-        <div className="mb-2">
-          <NoteThread roomId={room.id} initialNotes={room.notes} compact onNoteAdded={onNoteAdded} onNoteUpdated={onNoteUpdated} />
-        </div>
-      )}
-
-      <div className="grid grid-cols-2 gap-2">
-        {(room.status === "DIRTY" || room.status === "PICKUP") && (
-          <button
-            onClick={() => onSetStatus(room, "IN_PROGRESS")}
-            disabled={busy}
-            className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-          >
-            {busy ? "…" : t("attendant.startCleaning")}
-          </button>
-        )}
-        {room.status === "BLOCKED" && (
-          <button
-            onClick={() => onSetStatus(room, "IN_PROGRESS")}
-            disabled={busy}
-            className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-          >
-            {busy ? "…" : t("attendant.unblockAndStart")}
-          </button>
-        )}
-        {room.status === "IN_PROGRESS" && (
-          <button
-            onClick={() => onSetStatus(room, "CLEAN")}
-            disabled={busy}
-            className="col-span-2 h-14 rounded-xl bg-status-clean text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-          >
-            {busy ? "…" : t("attendant.markClean")}
-          </button>
-        )}
-
-        {moreOpen ? (
-          <>
-            {canBlock && (
-              <button
-                onClick={() => onOpenModal("block")}
-                disabled={busy}
-                className="h-12 rounded-xl border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
-              >
-                {t("attendant.blockedAction")}
-              </button>
-            )}
-            <button
-              onClick={() => onOpenModal("defect")}
-              className="h-12 rounded-xl border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
-            >
-              {t("attendant.defectAction")}
-            </button>
-            <button
-              onClick={() => onOpenModal("note")}
-              className="col-span-2 h-11 rounded-xl border border-charcoal/20 text-sm text-graphite transition active:scale-[0.98]"
-            >
-              {t("attendant.addNote")}
-            </button>
-            <button
-              onClick={() => setMoreOpen(false)}
-              className="col-span-2 h-9 rounded-lg text-xs text-graphite/60 transition hover:bg-parchment"
-            >
-              {t("attendant.less")}
-            </button>
-          </>
-        ) : (
-          <button
-            onClick={() => setMoreOpen(true)}
-            className="col-span-2 h-10 rounded-xl text-sm text-graphite/70 transition hover:bg-parchment"
-          >
-            {t("attendant.more")}
-          </button>
-        )}
-      </div>
     </div>
   );
 }
@@ -811,80 +720,3 @@ function DefectModal({
   );
 }
 
-/**
- * Notes, viewed and added in one place. The room card only ever carries a
- * capped, possibly-stale preview (see the `Room.notes` cap in /api/rooms and
- * the .slice(0, 3) on every realtime patch) — this is the one spot that
- * fetches the room's complete note history fresh, every time it opens, so
- * nothing older ever silently goes missing.
- */
-function NoteModal({
-  room,
-  onClose,
-  onDone,
-}: {
-  room: { id: string; number: string };
-  onClose: () => void;
-  onDone: (note: Note) => void;
-}) {
-  const { t } = useLocale();
-  const [body, setBody] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [notes, setNotes] = useState<Note[] | null>(null);
-
-  useEffect(() => {
-    api<{ notes: Note[] }>(`/api/rooms/${room.id}/notes`)
-      .then((d) => setNotes(d.notes))
-      .catch(() => setNotes([]));
-  }, [room.id]);
-
-  const save = async () => {
-    if (busy || !body.trim()) return;
-    setBusy(true);
-    try {
-      const res = await api<{ note: Note }>(`/api/rooms/${room.id}/notes`, { body: { body } });
-      setNotes((prev) => [res.note, ...(prev ?? [])]);
-      setBody("");
-      onDone({ ...res.note, roomId: room.id });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal title={t("attendant.noteModalTitle", { number: room.number })} subtitle={t("attendant.noteModalSubtitle")} onClose={onClose}>
-      {notes === null ? (
-        <p className="mb-3 text-sm text-graphite/50">{t("common.loading")}</p>
-      ) : notes.length > 0 ? (
-        <div className="mb-3 max-h-56 space-y-1.5 overflow-y-auto">
-          {notes.map((n) => (
-            <div key={n.id} className="rounded-lg bg-ivory p-2 text-sm">
-              <span className="text-xs text-graphite/60">
-                {n.author.name} ({t(`role.${n.author.role}` as TKey)}) ·{" "}
-                {new Date(n.createdAt).toLocaleString([], { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
-              </span>
-              <p>{n.body}</p>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <p className="mb-3 text-sm text-graphite/50">{t("attendant.noNotesYet")}</p>
-      )}
-      <textarea
-        value={body}
-        onChange={(e) => setBody(e.target.value)}
-        rows={4}
-        autoFocus
-        className="mb-3 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-        placeholder={t("attendant.notePlaceholder")}
-      />
-      <button
-        onClick={save}
-        disabled={busy || !body.trim()}
-        className="h-14 w-full rounded-xl bg-navy text-base font-medium text-ivory disabled:opacity-40"
-      >
-        {busy ? t("common.saving") : t("attendant.saveNote")}
-      </button>
-    </Modal>
-  );
-}

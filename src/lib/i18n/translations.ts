@@ -78,6 +78,7 @@ const en = {
     REFUSED: "Refused",
   },
   roomType: {
+    UNVERIFIED: "Needs type (unverified)",
     CLASSIC: "Classic",
     SUPERIOR: "Superior",
     DELUXE: "Deluxe",
@@ -123,6 +124,12 @@ const en = {
     findRoom: "Find room…",
     floorPlan: "Floor Plan",
     floorPlanTitle: "Floor plan · wayfinding · HSK & SVC lift locations",
+  },
+  roomFlags: {
+    occupied: "Occupied",
+    checkoutToday: "Departing today",
+    notesOpen: "{{count}} open note(s)",
+    notesAllDone: "All notes done",
   },
   priority: {
     importantNow: "What's important now",
@@ -507,6 +514,7 @@ const de = {
     REFUSED: "Abgelehnt",
   },
   roomType: {
+    UNVERIFIED: "Typ noch nicht erfasst",
     CLASSIC: "Classic",
     SUPERIOR: "Superior",
     DELUXE: "Deluxe",
@@ -552,6 +560,12 @@ const de = {
     findRoom: "Zimmer suchen…",
     floorPlan: "Grundriss",
     floorPlanTitle: "Grundriss · Wegeführung · HSK- & SVC-Aufzugsstandorte",
+  },
+  roomFlags: {
+    occupied: "Belegt",
+    checkoutToday: "Heute Abreise",
+    notesOpen: "{{count}} offene Notiz(en)",
+    notesAllDone: "Alle Notizen erledigt",
   },
   priority: {
     importantNow: "Das ist jetzt wichtig",

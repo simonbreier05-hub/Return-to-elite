@@ -4,6 +4,9 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
+import RoomDetailModal from "@/components/RoomDetailModal";
+import { useRoomLookup } from "@/components/useRoomLookup";
+import { NOTE_STATUS_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 
@@ -16,7 +19,7 @@ interface WorkOrder {
     category: string;
     note: string;
     photoPath?: string | null;
-    room: { number: string; status: string; floor: number };
+    room: { number: string; status: string; floor: number; openNotesCount: number };
     reportedBy?: { name: string; role: string } | null;
   };
 }
@@ -42,6 +45,7 @@ export default function EngineeringView() {
   const [orders, setOrders] = useState<WorkOrder[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const roomLookup = useRoomLookup();
 
   const load = useCallback(async () => {
     const data = await api<{ workOrders: WorkOrder[] }>("/api/workorders");
@@ -112,9 +116,17 @@ export default function EngineeringView() {
           {[...open, ...resolved].map((wo) => (
             <div key={wo.id} className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm ${wo.status === "RESOLVED" ? "opacity-60" : ""}`}>
               <div className="mb-2 flex items-center justify-between">
-                <span className="font-serif text-2xl">
+                <button
+                  onClick={() => roomLookup.open(wo.defect.room.number)}
+                  className="flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
+                >
                   {t("engineering.room")} {wo.defect.room.number}
-                </span>
+                  {wo.defect.room.openNotesCount > 0 && (
+                    <span className={`rounded-full border px-1.5 text-[0.62rem] font-medium ${NOTE_STATUS_STYLES.OPEN.badge}`}>
+                      📝 {wo.defect.room.openNotesCount}
+                    </span>
+                  )}
+                </button>
                 <span className={`rounded-full px-3 py-1 text-xs font-semibold ${STATUS_CHIP[wo.status]}`}>
                   {t(`workOrderStatus.${wo.status}` as TKey)}
                 </span>
@@ -144,6 +156,8 @@ export default function EngineeringView() {
           ))}
         </div>
       )}
+
+      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
     </div>
   );
 }

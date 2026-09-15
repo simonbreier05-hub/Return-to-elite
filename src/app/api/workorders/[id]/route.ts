@@ -44,7 +44,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     include: {
       defect: {
         include: {
-          room: { select: { id: true, number: true, status: true, floor: true } },
+          room: {
+            select: {
+              id: true, number: true, status: true, floor: true,
+              _count: { select: { notes: { where: { status: "OPEN" } } } },
+            },
+          },
           reportedBy: { select: { name: true, role: true } },
         },
       },
@@ -73,6 +78,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     broadcast("notification:new", { notification });
   }
 
-  broadcast("workorder:update", { workOrder });
-  return NextResponse.json({ workOrder });
+  const { _count, ...defectRoom } = workOrder.defect.room;
+  const workOrderWithCounts = {
+    ...workOrder,
+    defect: { ...workOrder.defect, room: { ...defectRoom, openNotesCount: _count.notes } },
+  };
+  broadcast("workorder:update", { workOrder: workOrderWithCounts });
+  return NextResponse.json({ workOrder: workOrderWithCounts });
 }
