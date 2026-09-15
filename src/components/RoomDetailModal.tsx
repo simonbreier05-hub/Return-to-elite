@@ -24,7 +24,7 @@ export interface SearchedRoom {
   oooUntil?: string | null;
   isCheckoutToday: boolean;
   openNotesCount: number;
-  assignedTo?: { id: string; name: string } | null;
+  assignedTo?: { id: string; name: string; dailyNumber?: number | null } | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   notes: ThreadNote[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
@@ -134,7 +134,13 @@ export default function RoomDetailModal({
 
       <div className="mt-4">
         <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.assignedAttendant")}</h4>
-        <p className="text-sm">{room.assignedTo?.name ?? t("supervisor.unassignedOption")}</p>
+        <p className="text-sm">
+          {room.assignedTo
+            ? room.assignedTo.dailyNumber
+              ? `#${room.assignedTo.dailyNumber} ${room.assignedTo.name}`
+              : room.assignedTo.name
+            : t("supervisor.unassignedOption")}
+        </p>
       </div>
 
       {room.arrivals.length > 0 && (

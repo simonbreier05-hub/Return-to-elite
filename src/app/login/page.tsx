@@ -16,7 +16,7 @@ interface DevUser {
 }
 
 /** Order the roles the way a shift is run, not alphabetically. */
-const ROLE_ORDER = ["supervisor", "duty_manager", "front_office", "concierge", "engineering", "room_attendant"];
+const ROLE_ORDER = ["supervisor", "duty_manager", "front_office", "concierge", "engineering", "houseman", "room_attendant"];
 
 export default function LoginPage() {
   const { t } = useLocale();

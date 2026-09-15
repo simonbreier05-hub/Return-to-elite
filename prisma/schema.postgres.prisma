@@ -21,19 +21,27 @@ model User {
   email         String    @unique
   name          String
   passwordHash  String
-  role          String // room_attendant | supervisor | front_office | concierge | engineering | duty_manager
+  role          String // room_attendant | supervisor | front_office | concierge | engineering | houseman | duty_manager
   section       String? // preferred working section for attendants, e.g. "3A"
   currentRoomId String? // live location: room the attendant is currently working in
   lastSeenAt    DateTime?
+  // Short, radio-friendly number for a room attendant, e.g. "3" instead of a
+  // full name — reassigned fresh whenever a day's assignment plan is applied
+  // (see POST /api/assignments/apply), so it is deliberately ephemeral and
+  // never tied to a person day-to-day. Null before a plan has ever been
+  // applied, or for roles that aren't room attendants.
+  dailyNumber   Int?
   createdAt     DateTime  @default(now())
 
-  assignedRooms Room[]      @relation("RoomAssignee")
-  notes         RoomNote[]
-  defects       Defect[]    @relation("DefectReporter")
-  workOrders    WorkOrder[] @relation("WorkOrderAssignee")
-  auditLogs     AuditLog[]
-  arrivals      Arrival[]
-  excursions    Excursion[]
+  assignedRooms   Room[]      @relation("RoomAssignee")
+  notes           RoomNote[]
+  defects         Defect[]    @relation("DefectReporter")
+  workOrders      WorkOrder[] @relation("WorkOrderAssignee")
+  auditLogs       AuditLog[]
+  arrivals        Arrival[]
+  excursions      Excursion[]
+  createdRoomTasks  RoomTask[] @relation("RoomTaskCreator")
+  assignedRoomTasks RoomTask[] @relation("RoomTaskAssignee")
 }
 
 model Room {
@@ -79,6 +87,7 @@ model Room {
   arrivals   Arrival[]
   excursions Excursion[]
   auditLogs  AuditLog[]
+  roomTasks  RoomTask[]
 }
 
 /**
@@ -166,6 +175,28 @@ model WorkOrder {
   resolvedAt   DateTime?
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+/**
+ * A furniture/bed-configuration job for the houseman role — e.g. "set room
+ * 207 to twin" — deliberately separate from Defect/WorkOrder (a different
+ * purpose and audience: no photo, no category, no engineering routing) and
+ * from RoomNote (a task with a lifecycle and an assignee, not a free-form
+ * comment thread).
+ */
+model RoomTask {
+  id           String    @id @default(cuid())
+  roomId       String
+  room         Room      @relation(fields: [roomId], references: [id])
+  type         String // TWIN_SETUP | TWIN_REVERT | SONSTIGES — see RoomTaskType in src/lib/domain.ts
+  note         String? // free text, used for SONSTIGES
+  status       String    @default("OPEN") // OPEN | DONE
+  createdById  String
+  createdBy    User      @relation("RoomTaskCreator", fields: [createdById], references: [id])
+  assignedToId String?
+  assignedTo   User?     @relation("RoomTaskAssignee", fields: [assignedToId], references: [id])
+  createdAt    DateTime  @default(now())
+  doneAt       DateTime?
 }
 
 model AuditLog {

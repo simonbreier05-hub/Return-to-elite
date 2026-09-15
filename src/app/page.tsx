@@ -8,6 +8,7 @@ const HOME_BY_ROLE: Record<string, string> = {
   front_office: "/front-office",
   concierge: "/concierge",
   engineering: "/engineering",
+  houseman: "/houseman",
 };
 
 export default async function Home() {

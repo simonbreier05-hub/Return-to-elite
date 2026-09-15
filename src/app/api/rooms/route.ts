@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
     where,
     orderBy: { number: "asc" },
     include: {
-      assignedTo: { select: { id: true, name: true } },
+      assignedTo: { select: { id: true, name: true, dailyNumber: true } },
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: new Date() } } },
       notes: { orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
 
   const attendants = await prisma.user.findMany({
     where: { role: "room_attendant" },
-    select: { id: true, name: true, section: true, currentRoomId: true, lastSeenAt: true },
+    select: { id: true, name: true, section: true, currentRoomId: true, lastSeenAt: true, dailyNumber: true },
   });
 
   return NextResponse.json({ rooms: roomsWithCounts, attendants });

@@ -50,6 +50,7 @@ export const ROLE_ALLOWED_TARGETS: Record<Role, RoomStatus[]> = {
   engineering: ["DEFECT_REPORTED"], // may flag a defect; everything else via work orders
   front_office: [], // MUST NOT change housekeeping status
   concierge: [], // MUST NOT change housekeeping status
+  houseman: [], // furniture/bed tasks only (RoomTask) — MUST NOT change housekeeping status
 };
 
 export type TransitionCheck =

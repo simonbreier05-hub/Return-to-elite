@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { assignDailyNumbers } from "@/lib/assignment/dailyNumbers";
 
 /**
  * POST /api/assignments/apply — writes an accepted plan.
@@ -49,6 +50,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Every attendantId must reference a room attendant." }, { status: 400 });
   }
 
+  // Fresh, short "shout across the floor" numbers for today's roster —
+  // reassigned on every plan applied. Attendants left out of this plan keep
+  // whatever number (or none) they last had; they simply aren't "today's
+  // active housekeepers" for this application.
+  const dailyNumbers = assignDailyNumbers(attendants);
+
   const knownRooms = await prisma.room.count({ where: { id: { in: roomIds } } });
   if (knownRooms !== roomIds.length) {
     return NextResponse.json({ error: "One or more rooms no longer exist." }, { status: 404 });
@@ -77,6 +84,9 @@ export async function POST(req: NextRequest) {
     ...(deferredIds.length
       ? [prisma.room.updateMany({ where: { id: { in: deferredIds } }, data: { deferredSince: now } })]
       : []),
+    ...dailyNumbers.map((a) =>
+      prisma.user.update({ where: { id: a.id }, data: { dailyNumber: a.dailyNumber } })
+    ),
   ]);
 
   await audit({

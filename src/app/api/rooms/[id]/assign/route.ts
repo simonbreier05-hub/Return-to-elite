@@ -26,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const room = await prisma.room.update({
     where: { id },
     data: { assignedToId: parsed.data.attendantId },
-    include: { assignedTo: { select: { id: true, name: true } } },
+    include: { assignedTo: { select: { id: true, name: true, dailyNumber: true } } },
   });
   await audit({
     action: "ROOM_ASSIGNED",

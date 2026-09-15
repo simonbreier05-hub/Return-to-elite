@@ -14,7 +14,16 @@ import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
-import { BLOCK_REASON_SHORT, STATUS_LABELS, HOTEL, type BlockReason, type NoteStatus, type RoomStatus } from "@/lib/domain";
+import {
+  BLOCK_REASON_SHORT,
+  STATUS_LABELS,
+  HOTEL,
+  ROOM_TASK_TYPES,
+  type BlockReason,
+  type NoteStatus,
+  type RoomStatus,
+  type RoomTaskType,
+} from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
 
@@ -41,7 +50,7 @@ interface Room {
   occupancy?: string | null;
   isCheckoutToday: boolean;
   openNotesCount: number;
-  assignedTo?: { id: string; name: string } | null;
+  assignedTo?: { id: string; name: string; dailyNumber?: number | null } | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   notes: Note[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
@@ -53,6 +62,12 @@ interface Attendant {
   section?: string | null;
   currentRoomId?: string | null;
   lastSeenAt?: string | null;
+  dailyNumber?: number | null;
+}
+
+/** "#3 Maria Silva" when today's plan has assigned a short radio number, otherwise just the name. */
+function attendantLabel(a: { name: string; dailyNumber?: number | null }): string {
+  return a.dailyNumber ? `#${a.dailyNumber} ${a.name}` : a.name;
 }
 
 const LEGEND: RoomStatus[] = [
@@ -72,7 +87,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo"; room: Room } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo" | "roomTask"; room: Room } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "ALL">("ALL");
   const [floorFilter, setFloorFilter] = useState<number | "ALL">("ALL");
@@ -325,7 +340,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                     <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
                   </span>
                   <p className="text-xs text-graphite/60">
-                    {room.assignedTo?.name ?? "—"} · {STATUS_LABELS[room.status]}
+                    {room.assignedTo ? attendantLabel(room.assignedTo) : "—"} · {STATUS_LABELS[room.status]}
                     {room.status === "DEFECT_REPORTED" &&
                       room.defects[0] &&
                       ` · ${room.defects[0].category}: ${room.defects[0].note}`}
@@ -447,7 +462,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               <option value="NONE">{t("supervisor.unassigned")}</option>
               {attendants.map((a) => (
                 <option key={a.id} value={a.id}>
-                  {a.name}
+                  {attendantLabel(a)}
                 </option>
               ))}
             </select>
@@ -512,7 +527,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                       </span>
                       {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
                       {attHere && (
-                        <span className="absolute right-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attHere.name}>
+                        <span className="absolute right-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
                           👤
                         </span>
                       )}
@@ -598,7 +613,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 const loc = a.currentRoomId ? roomById.get(a.currentRoomId) : null;
                 return (
                   <div key={a.id} className="flex items-center justify-between rounded-lg bg-ivory px-3 py-2 text-sm">
-                    <span>{a.name}</span>
+                    <span>{attendantLabel(a)}</span>
                     <span className="text-graphite/60">
                       {loc ? t("supervisor.inRoom", { room: loc.number }) : a.section ? t("supervisor.inSection", { section: a.section }) : "—"}
                     </span>
@@ -653,6 +668,16 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           onSubmit={async (until) => {
             setDialog(null);
             await act(dialog.room, "OUT_OF_ORDER", { oooUntil: until.toISOString() });
+          }}
+        />
+      )}
+      {dialog?.kind === "roomTask" && (
+        <RoomTaskModal
+          room={dialog.room}
+          onClose={() => setDialog(null)}
+          onSubmit={async (payload) => {
+            setDialog(null);
+            await api("/api/roomtasks", { body: { roomId: dialog.room.id, ...payload } });
           }}
         />
       )}
@@ -784,6 +809,73 @@ function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void
   );
 }
 
+function RoomTaskModal({
+  room,
+  onClose,
+  onSubmit,
+}: {
+  room: Room;
+  onClose: () => void;
+  onSubmit: (payload: { type: RoomTaskType; note?: string }) => Promise<void>;
+}) {
+  const { t } = useLocale();
+  const [type, setType] = useState<RoomTaskType>("TWIN_SETUP");
+  const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const needsNote = type === "SONSTIGES";
+
+  const submit = async () => {
+    if (needsNote && !note.trim()) return;
+    setBusy(true);
+    try {
+      await onSubmit({ type, note: note.trim() || undefined });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal
+      title={t("supervisor.houseTaskModalTitle", { number: room.number })}
+      subtitle={t("supervisor.houseTaskModalSubtitle")}
+      onClose={onClose}
+    >
+      <div className="mb-3 grid grid-cols-1 gap-2">
+        {ROOM_TASK_TYPES.map((rt) => (
+          <button
+            key={rt}
+            onClick={() => setType(rt)}
+            className={`h-14 rounded-xl border px-4 text-left text-sm font-medium ${
+              type === rt ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
+            }`}
+          >
+            {t(`roomTaskType.${rt}` as TKey)}
+          </button>
+        ))}
+      </div>
+      <textarea
+        value={note}
+        onChange={(e) => setNote(e.target.value)}
+        rows={3}
+        placeholder={t("supervisor.houseTaskNotePlaceholder")}
+        className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
+      />
+      <div className="grid grid-cols-2 gap-2">
+        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
+          {t("common.cancel")}
+        </button>
+        <button
+          onClick={submit}
+          disabled={busy || (needsNote && !note.trim())}
+          className="h-14 rounded-xl bg-navy text-base font-semibold text-ivory disabled:opacity-40"
+        >
+          {busy ? t("supervisor.houseTaskSending") : t("supervisor.houseTaskSend")}
+        </button>
+      </div>
+    </Modal>
+  );
+}
+
 function RoomDrawer({
   room,
   attendants,
@@ -802,7 +894,7 @@ function RoomDrawer({
   busy: boolean;
   onClose: () => void;
   onAct: (room: Room, status: RoomStatus, extra?: Record<string, unknown>) => Promise<void>;
-  onOpenDialog: (kind: "rework" | "ooo") => void;
+  onOpenDialog: (kind: "rework" | "ooo" | "roomTask") => void;
   onNoteAdded: (note: ThreadNote) => void;
   onNoteUpdated: (note: ThreadNote) => void;
   onAssigned: (room: Room) => void;
@@ -912,9 +1004,18 @@ function RoomDrawer({
           >
             <option value="">{t("supervisor.unassignedOption")}</option>
             {attendants.map((a) => (
-              <option key={a.id} value={a.id}>{a.name}</option>
+              <option key={a.id} value={a.id}>{attendantLabel(a)}</option>
             ))}
           </select>
+        </div>
+
+        <div className="mt-4">
+          <button
+            onClick={() => onOpenDialog("roomTask")}
+            className="h-12 w-full rounded-xl border-2 border-charcoal/20 text-sm font-medium transition hover:border-gold-line"
+          >
+            {t("supervisor.houseTaskBtn")}
+          </button>
         </div>
 
         {room.arrivals.length > 0 && (

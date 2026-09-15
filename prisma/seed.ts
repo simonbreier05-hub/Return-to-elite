@@ -59,6 +59,7 @@ async function main() {
   // Wipe in dependency order (idempotent re-seed).
   await prisma.notification.deleteMany();
   await prisma.auditLog.deleteMany();
+  await prisma.roomTask.deleteMany();
   await prisma.workOrder.deleteMany();
   await prisma.defect.deleteMany();
   await prisma.roomNote.deleteMany();
@@ -90,6 +91,7 @@ async function main() {
     { email: "frontoffice@hotel.test", name: "Felix Ott", role: "front_office" },
     { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
     { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },
+    { email: "houseman@hotel.test", name: "Hans Bauer", role: "houseman" },
     { email: "manager@hotel.test", name: "Diana Maier", role: "duty_manager" },
     // System account backing the guest-facing test screen (src/app/guest/305)
     // — attributes guest-submitted notes/defects, never a real login.
@@ -300,6 +302,23 @@ async function main() {
     },
   });
   await prisma.workOrder.create({ data: { defectId: defect.id, status: "ACK", ackAt: at(-30) } });
+
+  // --- Houseman tasks --------------------------------------------------------
+  const supervisorUser = users["supervisor@hotel.test"];
+  await prisma.roomTask.create({
+    data: { roomId: byNumber["209"].id, type: "TWIN_SETUP", createdById: supervisorUser.id },
+  });
+  await prisma.roomTask.create({
+    data: { roomId: byNumber["312"].id, type: "TWIN_REVERT", createdById: supervisorUser.id },
+  });
+  await prisma.roomTask.create({
+    data: {
+      roomId: byNumber["109"].id,
+      type: "SONSTIGES",
+      note: "Extra bed to be removed.",
+      createdById: supervisorUser.id,
+    },
+  });
 
   // --- Notes ---------------------------------------------------------------
   await prisma.roomNote.create({

@@ -12,6 +12,7 @@ export const ROLES = [
   "front_office",
   "concierge",
   "engineering",
+  "houseman",
   "duty_manager",
 ] as const;
 export type Role = (typeof ROLES)[number];
@@ -122,6 +123,26 @@ export const NoteStatusSchema = z.enum(NOTE_STATUSES);
 export const NOTE_STATUS_LABELS: Record<NoteStatus, string> = {
   OPEN: "Open",
   DONE: "Done",
+};
+
+/**
+ * Houseman (furniture/bed configuration) tasks — a separate concern from
+ * housekeeping cleaning. TWIN_SETUP/TWIN_REVERT cover the two standard
+ * bed-configuration jobs; SONSTIGES ("other") carries free text in
+ * RoomTask.note for anything else.
+ */
+export const ROOM_TASK_TYPES = ["TWIN_SETUP", "TWIN_REVERT", "SONSTIGES"] as const;
+export type RoomTaskType = (typeof ROOM_TASK_TYPES)[number];
+export const RoomTaskTypeSchema = z.enum(ROOM_TASK_TYPES);
+
+export const ROOM_TASK_STATUSES = ["OPEN", "DONE"] as const;
+export type RoomTaskStatus = (typeof ROOM_TASK_STATUSES)[number];
+export const RoomTaskStatusSchema = z.enum(ROOM_TASK_STATUSES);
+
+export const ROOM_TASK_TYPE_LABELS: Record<RoomTaskType, string> = {
+  TWIN_SETUP: "Twin setup",
+  TWIN_REVERT: "Twin revert",
+  SONSTIGES: "Other",
 };
 
 /** Board colors (also documented in the README + used by the supervisor grid). */

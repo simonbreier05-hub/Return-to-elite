@@ -51,6 +51,7 @@ const en = {
     front_office: "Front Office",
     concierge: "Concierge",
     engineering: "Engineering",
+    houseman: "Houseman",
     duty_manager: "Duty Manager",
   },
   status: {
@@ -100,6 +101,11 @@ const en = {
     ACK: "Acknowledged",
     IN_PROGRESS: "In Progress",
     RESOLVED: "Resolved",
+  },
+  roomTaskType: {
+    TWIN_SETUP: "Twin setup",
+    TWIN_REVERT: "Twin revert",
+    SONSTIGES: "Other",
   },
   login: {
     appName: "Housekeeping · Internal application",
@@ -253,6 +259,12 @@ const en = {
     dutyManagerAudit: "Duty manager: full audit trail via GET /api/audit",
     releasedAndPushed: "{{count}} rooms released and pushed to the PMS.",
     releasedPartial: "{{changed}} released, {{rejected}} could not be: {{error}}",
+    houseTaskBtn: "🛠 Houseman task…",
+    houseTaskModalTitle: "Houseman task · room {{number}}",
+    houseTaskModalSubtitle: "Sent straight to the houseman's queue.",
+    houseTaskNotePlaceholder: "What needs doing?",
+    houseTaskSend: "Send to houseman",
+    houseTaskSending: "Sending…",
   },
   frontOffice: {
     arrivals: "Arrivals",
@@ -303,6 +315,14 @@ const en = {
     assignedTo: "assigned to {{name}}",
     room: "Room",
     noOrders: "No open work orders — nothing reported right now.",
+  },
+  houseman: {
+    tasks: "Tasks",
+    openCount: "{{count}} open",
+    requestedBy: "Requested by {{name}}",
+    room: "Room",
+    markDone: "✓ Done",
+    noTasks: "No open tasks — nothing waiting right now.",
   },
   settings: {
     title: "Settings",
@@ -487,6 +507,7 @@ const de = {
     front_office: "Front Office",
     concierge: "Concierge",
     engineering: "Technik",
+    houseman: "Hausmann",
     duty_manager: "Duty Manager",
   },
   status: {
@@ -536,6 +557,11 @@ const de = {
     ACK: "Bestätigt",
     IN_PROGRESS: "In Arbeit",
     RESOLVED: "Erledigt",
+  },
+  roomTaskType: {
+    TWIN_SETUP: "Twin einrichten",
+    TWIN_REVERT: "Twin zurücksetzen",
+    SONSTIGES: "Sonstiges",
   },
   login: {
     appName: "Housekeeping · Interne Anwendung",
@@ -689,6 +715,12 @@ const de = {
     dutyManagerAudit: "Duty Manager: vollständiges Audit-Protokoll über GET /api/audit",
     releasedAndPushed: "{{count}} Zimmer freigegeben und ans PMS übertragen.",
     releasedPartial: "{{changed}} freigegeben, {{rejected}} nicht möglich: {{error}}",
+    houseTaskBtn: "🛠 Hausmann-Aufgabe…",
+    houseTaskModalTitle: "Hausmann-Aufgabe · Zimmer {{number}}",
+    houseTaskModalSubtitle: "Geht direkt in die Warteschlange des Hausmanns.",
+    houseTaskNotePlaceholder: "Was soll gemacht werden?",
+    houseTaskSend: "An Hausmann senden",
+    houseTaskSending: "Sendet…",
   },
   frontOffice: {
     arrivals: "Anreisen",
@@ -739,6 +771,14 @@ const de = {
     assignedTo: "zugewiesen an {{name}}",
     room: "Zimmer",
     noOrders: "Keine offenen Aufträge — aktuell nichts gemeldet.",
+  },
+  houseman: {
+    tasks: "Aufgaben",
+    openCount: "{{count}} offen",
+    requestedBy: "Angefordert von {{name}}",
+    room: "Zimmer",
+    markDone: "✓ Erledigt",
+    noTasks: "Keine offenen Aufgaben — aktuell wartet nichts.",
   },
   settings: {
     title: "Einstellungen",
