@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseAssignedFloors, serializeAssignedFloors } from "@/lib/floors";
+import { parseAssignedFloors, resolveFloorScope, serializeAssignedFloors } from "@/lib/floors";
 
 describe("parseAssignedFloors / serializeAssignedFloors", () => {
   it("parses a comma-separated list into sorted floor numbers", () => {
@@ -31,5 +31,28 @@ describe("parseAssignedFloors / serializeAssignedFloors", () => {
   it("round-trips through parse/serialize", () => {
     const floors = [5, 2, 4];
     expect(parseAssignedFloors(serializeAssignedFloors(floors))).toEqual([2, 4, 5]);
+  });
+});
+
+describe("resolveFloorScope", () => {
+  it("scopes a supervisor to their assigned floors", () => {
+    expect(resolveFloorScope({ role: "supervisor", assignedFloorsRaw: "1,2", allFloors: false })).toEqual([1, 2]);
+  });
+
+  it("fails open (no scope) for a supervisor with no floors assigned yet", () => {
+    expect(resolveFloorScope({ role: "supervisor", assignedFloorsRaw: "", allFloors: false })).toBeNull();
+    expect(resolveFloorScope({ role: "supervisor", assignedFloorsRaw: null, allFloors: false })).toBeNull();
+  });
+
+  it("never scopes duty_manager, even with floors somehow set", () => {
+    expect(resolveFloorScope({ role: "duty_manager", assignedFloorsRaw: "1", allFloors: false })).toBeNull();
+  });
+
+  it("never scopes any other role", () => {
+    expect(resolveFloorScope({ role: "front_office", assignedFloorsRaw: "1", allFloors: false })).toBeNull();
+  });
+
+  it("the allFloors escape hatch bypasses scoping even for an assigned supervisor", () => {
+    expect(resolveFloorScope({ role: "supervisor", assignedFloorsRaw: "1,2", allFloors: true })).toBeNull();
   });
 });

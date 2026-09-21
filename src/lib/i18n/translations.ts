@@ -223,6 +223,7 @@ const en = {
   supervisor: {
     liveBoard: "Live Board",
     fiveFloorsKeys: "Five floors · {{count}} keys",
+    floorScopeNotice: "Showing your assigned floor(s) only: {{floors}}",
     releasedSellable: "Released / sellable",
     dailyProgress: "Daily progress",
     releaseQueueLabel: "Release queue",
@@ -727,6 +728,7 @@ const de = {
   supervisor: {
     liveBoard: "Live-Board",
     fiveFloorsKeys: "Fünf Etagen · {{count}} Zimmer",
+    floorScopeNotice: "Zeigt nur deine zugewiesene(n) Etage(n): {{floors}}",
     releasedSellable: "Freigegeben / verkaufbar",
     dailyProgress: "Tagesfortschritt",
     releaseQueueLabel: "Freigabe-Warteschlange",

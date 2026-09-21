@@ -95,11 +95,16 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [attendantFilter, setAttendantFilter] = useState<string>("ALL");
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
+  // Non-null when the server scoped this board to the signed-in supervisor's
+  // assigned floor(s) — see GET /api/rooms. Null for duty_manager (never
+  // scoped) and for a supervisor with no floors assigned yet (fails open).
+  const [floorScope, setFloorScope] = useState<number[] | null>(null);
 
   const load = useCallback(async () => {
-    const data = await api<{ rooms: Room[]; attendants: Attendant[] }>("/api/rooms");
+    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null }>("/api/rooms");
     setRooms(data.rooms);
     setAttendants(data.attendants);
+    setFloorScope(data.floorScope);
   }, []);
 
   useEffect(() => {
@@ -290,6 +295,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+          {floorScope && (
+            <p className="mt-1 text-xs font-medium text-navy">
+              {t("supervisor.floorScopeNotice", { floors: floorScope.join(", ") })}
+            </p>
+          )}
           {HOTEL.unconfirmedFloors.length > 0 && (
             <p className="mt-1 text-xs font-medium text-gold-soft">
               {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}

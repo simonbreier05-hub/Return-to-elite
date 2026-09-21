@@ -19,3 +19,25 @@ export function serializeAssignedFloors(floors: number[]): string {
     .sort((a, b) => a - b)
     .join(",");
 }
+
+/**
+ * What GET /api/rooms should restrict a request to, given who's asking.
+ * Only a supervisor is ever scoped, and only once they actually have floors
+ * assigned — an unconfigured supervisor fails open (sees the whole house)
+ * rather than being silently locked out. `allFloors` is the explicit escape
+ * hatch for a caller that needs the whole house regardless of role (the
+ * floor-plan reference page).
+ */
+export function resolveFloorScope({
+  role,
+  assignedFloorsRaw,
+  allFloors,
+}: {
+  role: string;
+  assignedFloorsRaw: string | null | undefined;
+  allFloors: boolean;
+}): number[] | null {
+  if (role !== "supervisor" || allFloors) return null;
+  const floors = parseAssignedFloors(assignedFloorsRaw);
+  return floors.length > 0 ? floors : null;
+}
