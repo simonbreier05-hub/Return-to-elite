@@ -41,6 +41,12 @@ export function demoUsers(): DemoUser[] {
     { email: "sena@hotel.test", name: "Sena Demir", role: "room_attendant", section: "4B" },
     { email: "grace@hotel.test", name: "Grace Okafor", role: "room_attendant", section: "5A" },
     { email: "supervisor@hotel.test", name: "Sofia Marchetti", role: "supervisor" },
+    // Two more supervisor logins, added for the duty-manager floor-assignment
+    // screen — that feature needs several real supervisor accounts to assign
+    // floors to and show a meaningful "who covers what" overview; it does not
+    // change what any supervisor can see (see the duty-manager-screen prompt).
+    { email: "supervisor2@hotel.test", name: "Lukas Hoffmann", role: "supervisor" },
+    { email: "supervisor3@hotel.test", name: "Amara Diallo", role: "supervisor" },
     { email: "frontoffice@hotel.test", name: "Felix Ott", role: "front_office" },
     { email: "concierge@hotel.test", name: "Claire Dubois", role: "concierge" },
     { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },

@@ -31,6 +31,13 @@ model User {
   // never tied to a person day-to-day. Null before a plan has ever been
   // applied, or for roles that aren't room attendants.
   dailyNumber   Int?
+  // Which floor(s) a supervisor is responsible for, duty-manager-assigned —
+  // stored comma-separated (scalar list types aren't portable to SQLite, same
+  // reason as Room.interconnectingGroup); parse with src/lib/floors.ts. Only
+  // meaningful for role "supervisor"; empty for everyone else. Informational
+  // only for now — see the duty-manager-screen prompt for why this doesn't
+  // (yet) restrict what a supervisor can see in their own screen.
+  assignedFloors String   @default("")
   createdAt     DateTime  @default(now())
 
   assignedRooms   Room[]      @relation("RoomAssignee")
