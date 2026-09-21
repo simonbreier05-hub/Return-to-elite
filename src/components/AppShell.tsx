@@ -211,7 +211,9 @@ export default function AppShell({
                 </div>
               )}
             </div>
-            <LanguageSwitcher className="hidden sm:inline-flex" />
+            <div className="hidden sm:inline-flex">
+              <LanguageSwitcher />
+            </div>
             {devUsers && (
               <select
                 aria-label={t("appShell.devSwitchLabel")}
@@ -261,7 +263,9 @@ export default function AppShell({
           <div className="flex items-center justify-between border-b border-charcoal/10 px-4 py-3">
             <span className="font-serif text-lg text-navy">{t("appShell.notifications")}</span>
             <div className="flex items-center gap-2">
-              <LanguageSwitcher className="sm:hidden" />
+              <div className="sm:hidden">
+                <LanguageSwitcher />
+              </div>
               <button onClick={ackAll} className="h-10 rounded-sm px-3 text-sm text-gold-soft hover:bg-parchment">
                 {t("appShell.markAllRead")}
               </button>

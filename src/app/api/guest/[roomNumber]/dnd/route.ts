@@ -6,10 +6,9 @@ import { DND_WINDOWS, DND_WINDOW_LABELS } from "@/lib/guest";
 import { getGuestRoom } from "@/lib/guestServer";
 
 /**
- * TEST/DEMO — unauthenticated guest-facing "Do Not Disturb" request, hard
- * scoped to room 305 (see src/app/guest/305). Real guests will reach this
- * kind of action via an NFC tag / pre-arrival link, not a public route —
- * remove once that exists.
+ * Unauthenticated guest-facing "Do Not Disturb" request for one room
+ * (src/app/guest/[roomNumber]). Real guests reach this via an NFC tag /
+ * pre-arrival link pointing straight at their room's URL.
  *
  * This does NOT set Room.status/blockReason directly: that transition is
  * gated to staff sessions by the state machine (src/lib/stateMachine.ts),
@@ -20,12 +19,13 @@ import { getGuestRoom } from "@/lib/guestServer";
 
 const Body = z.object({ window: z.enum(DND_WINDOWS) });
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ roomNumber: string }> }) {
+  const { roomNumber } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid time window." }, { status: 400 });
 
-  const room = await getGuestRoom();
-  if (!room) return NextResponse.json({ error: "Room 305 not found — is the database seeded?" }, { status: 404 });
+  const room = await getGuestRoom(roomNumber);
+  if (!room) return NextResponse.json({ error: `Room ${roomNumber} not found.` }, { status: 404 });
 
   const notification = await prisma.notification.create({
     data: {

@@ -6,16 +6,17 @@ import { reportDefect } from "@/lib/rooms/reportDefect";
 import { getGuestRoom, getGuestSystemUserId } from "@/lib/guestServer";
 
 /**
- * TEST/DEMO — unauthenticated guest-facing defect report, hard scoped to
- * room 305 (see src/app/guest/305). Reuses the exact same reportDefect()
- * logic as the staff route (src/app/api/rooms/[id]/defects/route.ts), just
- * with no auth check and the seeded guest system account as the reporter —
- * the resulting Defect/WorkOrder reaches Engineering's real queue like any
+ * Unauthenticated guest-facing defect report for one room (see
+ * src/app/guest/[roomNumber]). Reuses the exact same reportDefect() logic
+ * as the staff route (src/app/api/rooms/[id]/defects/route.ts), just with
+ * no auth check and the seeded guest system account as the reporter — the
+ * resulting Defect/WorkOrder reaches Engineering's real queue like any
  * staff-reported one.
  */
-export async function POST(req: NextRequest) {
-  const room = await getGuestRoom();
-  if (!room) return NextResponse.json({ error: "Room 305 not found — is the database seeded?" }, { status: 404 });
+export async function POST(req: NextRequest, { params }: { params: Promise<{ roomNumber: string }> }) {
+  const { roomNumber } = await params;
+  const room = await getGuestRoom(roomNumber);
+  if (!room) return NextResponse.json({ error: `Room ${roomNumber} not found.` }, { status: 404 });
 
   const form = await req.formData().catch(() => null);
   if (!form) return NextResponse.json({ error: "Expected multipart form data." }, { status: 400 });

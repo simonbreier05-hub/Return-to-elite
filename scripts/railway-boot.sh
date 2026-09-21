@@ -8,21 +8,23 @@
 # branch's schema.postgres.prisma, destructively if needed (dropping a
 # column/table this branch's schema doesn't know about). That is exactly
 # what makes it dangerous when more than one service points its
-# DATABASE_URL at the same Postgres instance: StayClean (production) and
-# StayClean-preview currently do, from two different, independently-evolving
-# branches. Whichever one boots last "wins" and can silently drop columns
-# the other branch just added — this is a real, observed incident (Room.
-# deferredSince, added by preview, dropped hours later by a prod boot,
-# breaking every room query on preview with Prisma error P2022 until this
-# fix). See the incident note in the Sept 2026 fix-up commit for the
-# postmortem; the durable fix is giving preview its own database, tracked
-# separately.
+# DATABASE_URL at the same Postgres instance — which is what StayClean
+# (production) and StayClean-preview used to do, from two different,
+# independently-evolving branches, until they were split onto separate
+# databases (postgres-preview) in mid-September 2026. This is a real,
+# observed incident FROM BEFORE that split (Room.deferredSince, added by
+# preview, dropped hours later by a prod boot, breaking every room query on
+# preview with Prisma error P2022 until this fix): whichever service booted
+# last "won" and could silently drop columns the other branch had just
+# added. See the incident note in the Sept 2026 fix-up commit for the
+# postmortem.
 #
-# Until that separation happens, this step at least makes a silent drop
-# loud: it prints the exact SQL db push is about to run, with the eye-
-# catching prefix DESTRUCTIVE CHANGE AHEAD, so it's visible in Railway's
-# deploy log instead of only surfacing later as a Prisma P2022 in a
-# completely different request.
+# The database separation removed the specific cross-service risk described
+# above, but this step is kept regardless: db push is still destructive on
+# its own schema, so it still prints the exact SQL it's about to run, with
+# the eye-catching prefix DESTRUCTIVE CHANGE AHEAD, so an unexpected drop is
+# visible in Railway's deploy log instead of only surfacing later as a
+# Prisma error in a completely different request.
 set -euo pipefail
 
 SCHEMA="prisma/schema.postgres.prisma"
