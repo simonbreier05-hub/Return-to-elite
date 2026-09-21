@@ -20,11 +20,6 @@ export interface DemoUser {
   section?: string;
 }
 
-/**
- * A function rather than a const: the guest account's display name depends on
- * GUEST_ROOM_NUMBER, which is read per deployment, so it is resolved when the
- * list is actually used instead of whenever this module happens to be loaded.
- */
 export function demoUsers(): DemoUser[] {
   return [
     // Ten attendants for 145 keys — roughly 14 rooms each, which is what a
@@ -52,18 +47,13 @@ export function demoUsers(): DemoUser[] {
     { email: "engineering@hotel.test", name: "Erik Weber", role: "engineering" },
     { email: "houseman@hotel.test", name: "Hans Bauer", role: "houseman" },
     { email: "manager@hotel.test", name: "Diana Maier", role: "duty_manager" },
-    // System account backing the guest-facing test screen (src/app/guest/305)
-    // — attributes guest-submitted notes/defects, never a real login.
+    // System account backing the guest-facing screen (src/app/guest/[roomNumber])
+    // — attributes guest-submitted notes/defects, never a real login. One
+    // shared account for every room, since the room itself is already
+    // captured on the note/defect it submits.
     // role: "guest" is deliberately outside the ROLES enum (see src/lib/domain.ts)
     // so it never appears in a role-filtered staff picker; GET /api/auth/dev-login
     // filters it out of the quick-login list for the same reason.
-    // Room number is env-overridable per deployment (see guestServer.ts) —
-    // read directly here rather than importing that file, which pulls in
-    // the Next.js prisma singleton these standalone scripts don't use.
-    {
-      email: GUEST_SYSTEM_EMAIL,
-      name: `Guest (Room ${process.env.GUEST_ROOM_NUMBER?.trim() || "310"})`,
-      role: "guest",
-    },
+    { email: GUEST_SYSTEM_EMAIL, name: "Guest (self-service)", role: "guest" },
   ];
 }

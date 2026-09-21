@@ -330,7 +330,7 @@ export default function FloorPlanView() {
                           ]
                             .filter(Boolean)
                             .join(" · ") || undefined}
-                          className={`flex items-center gap-1 rounded-md border px-2 py-1 text-xs transition active:scale-95 ${style.chip} ${
+                          className={`flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-2.5 text-xs transition active:scale-95 ${style.chip} ${
                             isSelected ? "ring-2 ring-navy ring-offset-1" : ""
                           }`}
                         >
@@ -389,7 +389,7 @@ function AssignmentPanel({
       <div className="mb-3 flex flex-wrap gap-2">
         <button
           onClick={() => onModeChange("room-first")}
-          className={`h-10 rounded-lg border px-3 text-sm font-medium ${
+          className={`h-11 rounded-lg border px-3 text-sm font-medium ${
             mode === "room-first" ? "border-gold bg-parchment" : "border-charcoal/15 bg-white"
           }`}
         >
@@ -397,7 +397,7 @@ function AssignmentPanel({
         </button>
         <button
           onClick={() => onModeChange("housekeeper-first")}
-          className={`h-10 rounded-lg border px-3 text-sm font-medium ${
+          className={`h-11 rounded-lg border px-3 text-sm font-medium ${
             mode === "housekeeper-first" ? "border-gold bg-parchment" : "border-charcoal/15 bg-white"
           }`}
         >

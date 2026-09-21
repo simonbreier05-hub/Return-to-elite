@@ -6,23 +6,23 @@ import { CONTACT_DEPARTMENTS } from "@/lib/guest";
 import { getGuestRoom } from "@/lib/guestServer";
 
 /**
- * TEST/DEMO — unauthenticated guest-facing "contact a department" request,
- * hard scoped to room 305 (see src/app/guest/305 and the note in
- * ./dnd/route.ts on why this raises a Notification rather than touching
- * Room.status directly).
+ * Unauthenticated guest-facing "contact a department" request for one room
+ * (see src/app/guest/[roomNumber] and the note in ../dnd/route.ts on why
+ * this raises a Notification rather than touching Room.status directly).
  */
 
 const Body = z.object({ department: z.string() });
 
-export async function POST(req: NextRequest) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ roomNumber: string }> }) {
+  const { roomNumber } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Department required." }, { status: 400 });
 
   const dept = CONTACT_DEPARTMENTS.find((d) => d.key === parsed.data.department);
   if (!dept) return NextResponse.json({ error: "Unknown department." }, { status: 400 });
 
-  const room = await getGuestRoom();
-  if (!room) return NextResponse.json({ error: "Room 305 not found — is the database seeded?" }, { status: 404 });
+  const room = await getGuestRoom(roomNumber);
+  if (!room) return NextResponse.json({ error: `Room ${roomNumber} not found.` }, { status: 404 });
 
   const notification = await prisma.notification.create({
     data: {

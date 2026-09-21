@@ -9,10 +9,11 @@ import type { DefectCategory } from "@/lib/domain";
  * that go with it.
  *
  * Pulled out of the staff-facing route (POST /api/rooms/[id]/defects) so the
- * guest-facing report route (POST /api/guest/room305/defect) can create the
- * exact same records instead of a parallel, guest-only defect flow. The two
- * routes differ only in who is allowed to call them and who `reportedById`
- * resolves to — everything a defect *becomes* once reported is identical.
+ * guest-facing report route (POST /api/guest/[roomNumber]/defect) can create
+ * the exact same records instead of a parallel, guest-only defect flow. The
+ * two routes differ only in who is allowed to call them and who
+ * `reportedById` resolves to — everything a defect *becomes* once reported
+ * is identical.
  */
 export async function reportDefect(input: {
   room: { id: string; number: string };
