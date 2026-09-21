@@ -13,17 +13,16 @@ import PriorityBanner from "@/components/PriorityBanner";
 import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import HousekeeperRoster from "@/components/HousekeeperRoster";
+import RoomTaskModal from "@/components/RoomTaskModal";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import {
   BLOCK_REASON_SHORT,
   STATUS_LABELS,
   HOTEL,
-  ROOM_TASK_TYPES,
   type BlockReason,
   type NoteStatus,
   type RoomStatus,
-  type RoomTaskType,
 } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
@@ -96,11 +95,16 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [attendantFilter, setAttendantFilter] = useState<string>("ALL");
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
+  // Non-null when the server scoped this board to the signed-in supervisor's
+  // assigned floor(s) — see GET /api/rooms. Null for duty_manager (never
+  // scoped) and for a supervisor with no floors assigned yet (fails open).
+  const [floorScope, setFloorScope] = useState<number[] | null>(null);
 
   const load = useCallback(async () => {
-    const data = await api<{ rooms: Room[]; attendants: Attendant[] }>("/api/rooms");
+    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null }>("/api/rooms");
     setRooms(data.rooms);
     setAttendants(data.attendants);
+    setFloorScope(data.floorScope);
   }, []);
 
   useEffect(() => {
@@ -291,6 +295,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+          {floorScope && (
+            <p className="mt-1 text-xs font-medium text-navy">
+              {t("supervisor.floorScopeNotice", { floors: floorScope.join(", ") })}
+            </p>
+          )}
           {HOTEL.unconfirmedFloors.length > 0 && (
             <p className="mt-1 text-xs font-medium text-gold-soft">
               {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}
@@ -833,73 +842,6 @@ function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void
         </button>
         <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-status-out-of-order text-base font-semibold text-linen">
           {t("supervisor.setOutOfOrder")}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-function RoomTaskModal({
-  room,
-  onClose,
-  onSubmit,
-}: {
-  room: Room;
-  onClose: () => void;
-  onSubmit: (payload: { type: RoomTaskType; note?: string }) => Promise<void>;
-}) {
-  const { t } = useLocale();
-  const [type, setType] = useState<RoomTaskType>("TWIN_SETUP");
-  const [note, setNote] = useState("");
-  const [busy, setBusy] = useState(false);
-  const needsNote = type === "SONSTIGES";
-
-  const submit = async () => {
-    if (needsNote && !note.trim()) return;
-    setBusy(true);
-    try {
-      await onSubmit({ type, note: note.trim() || undefined });
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal
-      title={t("supervisor.houseTaskModalTitle", { number: room.number })}
-      subtitle={t("supervisor.houseTaskModalSubtitle")}
-      onClose={onClose}
-    >
-      <div className="mb-3 grid grid-cols-1 gap-2">
-        {ROOM_TASK_TYPES.map((rt) => (
-          <button
-            key={rt}
-            onClick={() => setType(rt)}
-            className={`h-14 rounded-xl border px-4 text-left text-sm font-medium ${
-              type === rt ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
-            }`}
-          >
-            {t(`roomTaskType.${rt}` as TKey)}
-          </button>
-        ))}
-      </div>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={3}
-        placeholder={t("supervisor.houseTaskNotePlaceholder")}
-        className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
-          {t("common.cancel")}
-        </button>
-        <button
-          onClick={submit}
-          disabled={busy || (needsNote && !note.trim())}
-          className="h-14 rounded-xl bg-navy text-base font-semibold text-ivory disabled:opacity-40"
-        >
-          {busy ? t("supervisor.houseTaskSending") : t("supervisor.houseTaskSend")}
         </button>
       </div>
     </Modal>

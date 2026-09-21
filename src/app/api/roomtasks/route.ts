@@ -33,7 +33,7 @@ const Body = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  const auth = await requireRole(["supervisor"]);
+  const auth = await requireRole(["supervisor", "duty_manager"]);
   if (!auth.ok) return auth.response;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));

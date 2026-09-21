@@ -16,6 +16,7 @@ import type { Server as SocketIOServer } from "socket.io";
  *   note:update        { note }                 — a note's OPEN/DONE status changed
  *   route:reordered    { attendantId, roomIds } — attendant's Laufplan reordered
  *   roomtask:update     { roomTask }             — houseman queue changes (new or done)
+ *   user:floors         { userId, floors }       — a supervisor's floor assignment changed
  */
 
 declare global {

@@ -97,7 +97,9 @@ export default function FloorPlanView() {
   const load = () => {
     Promise.all([
       api<FloorPlanResponse>("/api/floor-plan"),
-      api<{ rooms: LiveRoom[]; attendants: Attendant[] }>("/api/rooms"),
+      // allFloors=1: this is a hotel-wide wayfinding reference, not "my work
+      // area" — a floor-scoped supervisor still needs the whole floor plan.
+      api<{ rooms: LiveRoom[]; attendants: Attendant[] }>("/api/rooms?allFloors=1"),
     ])
       .then(([planData, roomsData]) => {
         setPlan(planData);

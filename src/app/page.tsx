@@ -4,7 +4,7 @@ import { getSession } from "@/lib/auth";
 const HOME_BY_ROLE: Record<string, string> = {
   room_attendant: "/attendant",
   supervisor: "/supervisor",
-  duty_manager: "/supervisor",
+  duty_manager: "/duty-manager",
   front_office: "/front-office",
   concierge: "/concierge",
   engineering: "/engineering",
