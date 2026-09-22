@@ -119,6 +119,8 @@ const en = {
     signingIn: "Signing in…",
     address: "Behrenstrasse 37 · 10117 Berlin",
     asName: "as {{name}}",
+    guestPreview: "Guest Preview",
+    guestPreviewRoom: "Room 301",
   },
   appShell: {
     hotelBerlin: "Hotel de Rome · Berlin",
@@ -624,6 +626,8 @@ const de = {
     signingIn: "Meldet an…",
     address: "Behrenstraße 37 · 10117 Berlin",
     asName: "als {{name}}",
+    guestPreview: "Gast-Vorschau",
+    guestPreviewRoom: "Zimmer 301",
   },
   appShell: {
     hotelBerlin: "Hotel de Rome · Berlin",
