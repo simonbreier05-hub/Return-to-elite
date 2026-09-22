@@ -41,16 +41,21 @@ const LEVEL_STYLES: Record<string, string> = {
  * `title` is a translation key (e.g. "nav.myRooms"), not literal text — the
  * page.tsx wrappers that render this are server components and cannot call
  * useLocale() themselves, so the key travels down and is resolved here.
+ *
+ * `backHref` shows a back chevron to that parent screen. Role dashboards
+ * leave it unset — they are the home screen, so there is nothing to go back to.
  */
 export default function AppShell({
   title,
   userName,
   role,
+  backHref,
   children,
 }: {
   title: TKey;
   userName: string;
   role: string;
+  backHref?: string;
   children: React.ReactNode;
 }) {
   const router = useRouter();
@@ -160,6 +165,18 @@ export default function AppShell({
       <header className="sticky top-0 z-40 border-t-[3px] border-navy bg-linen text-charcoal shadow-lift">
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-3.5">
+            {backHref && (
+              <button
+                onClick={() => router.push(backHref)}
+                className="-ml-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-navy transition hover:bg-parchment"
+                aria-label={t("appShell.back")}
+                title={t("appShell.back")}
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                </svg>
+              </button>
+            )}
             <Image src="/brand/crest.png" alt="" width={34} height={27} className="h-[1.7rem] w-auto shrink-0" priority />
             <div className="flex items-baseline gap-4">
               <div className="leading-tight">

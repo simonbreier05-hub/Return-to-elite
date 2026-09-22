@@ -18,6 +18,20 @@ export const ROLES = [
 export type Role = (typeof ROLES)[number];
 export const RoleSchema = z.enum(ROLES);
 
+/** Each role's dashboard — the target of back buttons on shared sub-pages. */
+const ROLE_HOMES: Record<Role, string> = {
+  room_attendant: "/attendant",
+  supervisor: "/supervisor",
+  front_office: "/front-office",
+  concierge: "/concierge",
+  engineering: "/engineering",
+  houseman: "/houseman",
+  duty_manager: "/duty-manager",
+};
+export function roleHome(role: Role): string {
+  return ROLE_HOMES[role];
+}
+
 export const ROOM_STATUSES = [
   "DIRTY",
   "IN_PROGRESS",
