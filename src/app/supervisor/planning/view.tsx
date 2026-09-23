@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { HOTEL } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
@@ -106,6 +107,7 @@ export default function PlanningView() {
   const [edited, setEdited] = useState(false);
   const [staffRequest, setStaffRequest] = useState<"idle" | "sending" | "sent">("idle");
   const [deferAcked, setDeferAcked] = useState(false);
+  const [viewMode, setViewMode] = useState<"list" | "floorPlan">("list");
 
   const rooms = result?.rooms ?? {};
 
@@ -604,44 +606,75 @@ export default function PlanningView() {
             </div>
           )}
 
-          {/* The shading on room chips below means something — say what before
-              the grid, not buried inside every card's collapsed explanation. */}
-          <div className="mb-2 flex flex-wrap items-center gap-4 text-xs text-graphite/60">
-            <span className="flex items-center gap-1.5">
-              <span className="h-3.5 w-3.5 rounded border border-charcoal/30 bg-parchment" /> {t("planning.departureLegend")}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="h-3.5 w-3.5 rounded border border-charcoal/15 bg-white" /> {t("planning.stayoverLegend")}
-            </span>
+          <div className="mb-3 flex gap-1 rounded-xl border border-charcoal/10 bg-linen p-1 shadow-card w-fit">
+            <button
+              onClick={() => setViewMode("list")}
+              aria-pressed={viewMode === "list"}
+              className={`h-10 rounded-lg px-4 text-sm font-medium transition ${
+                viewMode === "list" ? "bg-parchment shadow-sm" : "text-graphite/60"
+              }`}
+            >
+              {t("planning.floorPlanTabList")}
+            </button>
+            <button
+              onClick={() => setViewMode("floorPlan")}
+              aria-pressed={viewMode === "floorPlan"}
+              className={`h-10 rounded-lg px-4 text-sm font-medium transition ${
+                viewMode === "floorPlan" ? "bg-parchment shadow-sm" : "text-graphite/60"
+              }`}
+            >
+              {t("planning.floorPlanTabGrid")}
+            </button>
           </div>
 
-          <div className={`mb-4 grid gap-3 transition-opacity lg:grid-cols-2 xl:grid-cols-3 ${refreshing ? "opacity-60" : ""}`}>
-            {live.map((a) => (
-              <AttendantCard
-                key={a.attendantId}
-                assignment={a}
-                rooms={rooms}
-                capacity={plan.summary.capacityMinutes}
-                onMoveRoom={(roomId) => setMoving({ roomId, fromId: a.attendantId })}
-              />
-            ))}
-          </div>
+          {viewMode === "list" ? (
+            <>
+              {/* The shading on room chips below means something — say what before
+                  the grid, not buried inside every card's collapsed explanation. */}
+              <div className="mb-2 flex flex-wrap items-center gap-4 text-xs text-graphite/60">
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3.5 w-3.5 rounded border border-charcoal/30 bg-parchment" /> {t("planning.departureLegend")}
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="h-3.5 w-3.5 rounded border border-charcoal/15 bg-white" /> {t("planning.stayoverLegend")}
+                </span>
+              </div>
 
-          <div className="sticky bottom-3 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-sm text-graphite/70">
-                {edited ? t("planning.movedByHand") : ""}
-                {t("planning.nothingSavedYet")}
-              </p>
-              <button
-                onClick={apply}
-                disabled={busy}
-                className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-charcoal transition hover:brightness-95 disabled:opacity-40"
-              >
-                {busy ? t("planning.applying") : t("planning.applyPlan")}
-              </button>
-            </div>
-          </div>
+              <div className={`mb-4 grid gap-3 transition-opacity lg:grid-cols-2 xl:grid-cols-3 ${refreshing ? "opacity-60" : ""}`}>
+                {live.map((a) => (
+                  <AttendantCard
+                    key={a.attendantId}
+                    assignment={a}
+                    rooms={rooms}
+                    capacity={plan.summary.capacityMinutes}
+                    onMoveRoom={(roomId) => setMoving({ roomId, fromId: a.attendantId })}
+                  />
+                ))}
+              </div>
+
+              <div className="sticky bottom-3 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur">
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <p className="text-sm text-graphite/70">
+                    {edited ? t("planning.movedByHand") : ""}
+                    {t("planning.nothingSavedYet")}
+                  </p>
+                  <button
+                    onClick={apply}
+                    disabled={busy}
+                    className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-charcoal transition hover:brightness-95 disabled:opacity-40"
+                  >
+                    {busy ? t("planning.applying") : t("planning.applyPlan")}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <PlanningFloorPlanPanel
+              onShiftAttendants={attendants.filter((a) => onShift.has(a.id))}
+              actionableRoomIds={Object.keys(rooms)}
+              deferredRoomIds={result?.deferredRooms.map((r) => r.roomId) ?? []}
+            />
+          )}
         </>
       )}
 
