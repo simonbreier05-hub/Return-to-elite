@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
-import { DAY_CATEGORY_STYLES } from "@/components/status";
-import FloorPlanGrid, { DAY_CATEGORIES, type FloorPlanResponse } from "@/components/FloorPlanGrid";
+import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse } from "@/components/FloorPlanGrid";
 import { roomDayCategory } from "@/lib/rooms/roomDayCategory";
 
 interface LiveRoom {
@@ -137,17 +136,7 @@ export default function FloorPlanView() {
           room grid below scrolls horizontally on its own if a section ever
           runs wider than a narrow screen (see the per-section overflow-x-auto
           wrapper), so this never needs to be pinned in place itself. */}
-      <div className="mb-4 flex flex-wrap items-center gap-3 rounded-xl border border-charcoal/10 bg-linen/95 p-3 text-xs shadow-card">
-        {DAY_CATEGORIES.map((c) => {
-          const style = DAY_CATEGORY_STYLES[c];
-          return (
-            <span key={c} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${style.chip}`}>
-              <span className={`h-2 w-2 rounded-full ${style.dot}`} />
-              {style.label}
-            </span>
-          );
-        })}
-      </div>
+      <FloorPlanLegend className="mb-4" occupiedLabel="Occupied" />
 
       <AssignmentPanel
         mode={mode}
@@ -182,6 +171,8 @@ export default function FloorPlanView() {
             : "NONE";
           return {
             category,
+            occupancy: live?.occupancy,
+            isCheckoutToday: live?.isCheckoutToday ?? false,
             selected: selected.has(r.number),
             badge: live?.assignedTo?.name.split(" ")[0],
             title:

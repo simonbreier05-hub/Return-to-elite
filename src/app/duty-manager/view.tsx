@@ -7,6 +7,7 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import WindowPanel from "@/components/WindowPanel";
 import RoomTaskModal from "@/components/RoomTaskModal";
+import OccupancyCleanCounter from "@/components/OccupancyCleanCounter";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -16,6 +17,7 @@ interface Room {
   number: string;
   floor: number;
   status: RoomStatus;
+  occupancy: string;
   blockReason?: string | null;
   isCheckoutToday: boolean;
   arrivals: { guestName: string }[];
@@ -199,7 +201,10 @@ export default function DutyManagerView() {
       )}
 
       <h3 className="mb-2 font-serif text-xl">{t("dutyManager.dashboardTitle")}</h3>
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-7">
+        <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
+          <OccupancyCleanCounter rooms={rooms} />
+        </div>
         <Kpi label={t("dutyManager.arrivalsToday")} value={String(arrivalsToday)} />
         <Kpi label={t("dutyManager.departuresToday")} value={String(departuresToday)} />
         <Kpi label={t("dutyManager.dndRooms")} value={String(dndRooms)} accent={dndRooms > 0} />
