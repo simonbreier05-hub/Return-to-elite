@@ -24,9 +24,10 @@ const TILES: { kind: Exclude<ModalKind, null>; icon: string; title: string; hint
 ];
 
 /**
- * Guest screen for one room (src/app/guest/[roomNumber]/page.tsx resolves
+ * Guest screen for one room (src/app/g/[roomNumber]/page.tsx resolves
  * roomNumber/floor from the URL). No AppShell — a guest gets no staff
- * header, notification bell, or logout.
+ * header, notification bell, or logout. Theme + background come from the
+ * shared /g layout (src/app/g/layout.tsx).
  */
 export default function GuestView({ roomNumber, floor }: { roomNumber: string; floor: number }) {
   const [modal, setModal] = useState<ModalKind>(null);
@@ -39,7 +40,7 @@ export default function GuestView({ roomNumber, floor }: { roomNumber: string; f
   };
 
   return (
-    <div className="guest-theme min-h-screen" style={{ background: "var(--g-cream)" }}>
+    <div>
       <div className="mx-auto max-w-2xl px-5 pb-28 pt-8 sm:px-8">
         <header className="flex items-start justify-between gap-4">
           <div>

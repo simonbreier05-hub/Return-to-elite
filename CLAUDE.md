@@ -5,3 +5,5 @@
 - House policy numbers (thresholds, per-room-type credits, etc.) belong in the `Setting` table via `src/lib/settings.ts` (code default + DB override), never hardcoded in a component — see `getPriorityWeights`/`getRoomTypeCredits` for the pattern.
 - Reuse `FloorPlanGrid`/`RoomFlagIcons`/`roomDayCategory` for anything grundriss- or day-status-related instead of re-deriving colours/icons; `/floor-plan` (reference) and the Planungshub's `PlanningFloorPlanPanel` share these on purpose.
 - `requireRole([...])` in `src/lib/rbac.ts` always also passes `duty_manager` — it's the admin role. Don't re-list it.
+- Guest screen lives under `src/app/g/...` (own layout, no AppShell/session), API under `/api/guest/*` only — keep both isolated from Hub screens. API + interface documented in `docs/guest-api.md`; keep it current, it's the contract for anyone building the guest frontend independently.
+- Guest "current stay" resolves through the `Stay` model (`prisma/schema.prisma`), not `Arrival` — `Arrival` is a front-office event log, `Stay` carries token/date identity that must outlive check-in.

@@ -127,14 +127,14 @@ export default function LoginPage() {
                 </button>
               ))}
               {/* Permanent product showcase, not a login: lets us demo the
-                  guest-facing screen (see src/app/guest/[roomNumber]) in
+                  guest-facing screen (see src/app/g/[roomNumber]) in
                   presentations without a real reservation. Dashed border
                   keeps it visually distinct from the role tiles above.
                   301 is a real room from the seeded floor plan — 305 was
                   only ever a placeholder from before that floor plan was
                   digitized and doesn't resolve. */}
               <button
-                onClick={() => window.location.assign("/guest/301")}
+                onClick={() => window.location.assign("/g/301")}
                 disabled={busy}
                 className="flex h-20 flex-col items-center justify-center rounded-xl border border-dashed border-gold-line/60 bg-linen px-3 text-center transition hover:border-navy-line hover:bg-parchment disabled:opacity-40"
               >

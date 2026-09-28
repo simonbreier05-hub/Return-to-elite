@@ -8,8 +8,13 @@ export const dynamic = "force-dynamic";
 
 /**
  * Guest entry point — reached via an NFC tag or pre-arrival link pointing at
- * this room's own URL, e.g. /guest/412. No AppShell, no session: a guest has
+ * this room's own URL, e.g. /g/412. No AppShell, no session: a guest has
  * no staff account, so this deliberately does NOT call requirePage()/getSession().
+ *
+ * Interim route: resolves straight off the plain room number for now. Prompt
+ * G2 Teil 2 replaces this with opaque, token-based access —
+ * /g/r/<roomCode> (NFC/QR) and /g/s/<stayToken> (pre-arrival link) — at
+ * which point this [roomNumber] route retires. See docs/guest-api.md.
  */
 export default async function GuestRoomPage({ params }: { params: Promise<{ roomNumber: string }> }) {
   const { roomNumber } = await params;
@@ -22,7 +27,7 @@ export default async function GuestRoomPage({ params }: { params: Promise<{ room
 
 function GuestRoomNotFound({ roomNumber }: { roomNumber: string }) {
   return (
-    <div className="guest-theme flex min-h-screen items-center justify-center px-6" style={{ background: "var(--g-cream)" }}>
+    <div className="flex min-h-screen items-center justify-center px-6">
       <div
         className="w-full max-w-sm rounded-2xl border px-6 py-8 text-center shadow-sm"
         style={{ borderColor: "var(--g-panel)", background: "white" }}

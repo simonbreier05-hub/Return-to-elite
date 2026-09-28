@@ -7,7 +7,7 @@ import { getGuestRoom } from "@/lib/guestServer";
 
 /**
  * Unauthenticated guest-facing "contact a department" request for one room
- * (see src/app/guest/[roomNumber] and the note in ../dnd/route.ts on why
+ * (see src/app/g/[roomNumber] and the note in ../dnd/route.ts on why
  * this raises a Notification rather than touching Room.status directly).
  */
 

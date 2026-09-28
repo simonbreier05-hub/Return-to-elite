@@ -1,7 +1,7 @@
 import type { Role } from "@/lib/domain";
 
 /**
- * Shared vocabulary for the guest-facing screen (src/app/guest/[roomNumber]).
+ * Shared vocabulary for the guest-facing screen (src/app/g/[roomNumber]).
  * Framework-agnostic (no prisma import) so both the API routes and the
  * client view can import it.
  */

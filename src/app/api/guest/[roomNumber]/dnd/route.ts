@@ -7,7 +7,7 @@ import { getGuestRoom } from "@/lib/guestServer";
 
 /**
  * Unauthenticated guest-facing "Do Not Disturb" request for one room
- * (src/app/guest/[roomNumber]). Real guests reach this via an NFC tag /
+ * (src/app/g/[roomNumber]). Real guests reach this via an NFC tag /
  * pre-arrival link pointing straight at their room's URL.
  *
  * This does NOT set Room.status/blockReason directly: that transition is

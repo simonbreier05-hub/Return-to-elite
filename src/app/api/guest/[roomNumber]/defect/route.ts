@@ -7,7 +7,7 @@ import { getGuestRoom, getGuestSystemUserId } from "@/lib/guestServer";
 
 /**
  * Unauthenticated guest-facing defect report for one room (see
- * src/app/guest/[roomNumber]). Reuses the exact same reportDefect() logic
+ * src/app/g/[roomNumber]). Reuses the exact same reportDefect() logic
  * as the staff route (src/app/api/rooms/[id]/defects/route.ts), just with
  * no auth check and the seeded guest system account as the reporter — the
  * resulting Defect/WorkOrder reaches Engineering's real queue like any

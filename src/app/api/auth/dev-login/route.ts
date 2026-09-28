@@ -19,7 +19,7 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     // Staff only — excludes the system "guest" account that backs the
-    // guest-facing screen (src/app/guest/[roomNumber]), which is never a
+    // guest-facing screen (src/app/g/[roomNumber]), which is never a
     // real login and would otherwise show up here as a broken quick-switch entry.
     where: { role: { in: [...ROLES] } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
