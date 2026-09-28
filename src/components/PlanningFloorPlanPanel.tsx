@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
+import Collapsible from "@/components/Collapsible";
 import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse, type RoomFlags } from "@/components/FloorPlanGrid";
 import OccupancyCleanCounter from "@/components/OccupancyCleanCounter";
 import { roomDayCategory, type RoomDayCategory } from "@/lib/rooms/roomDayCategory";
@@ -352,21 +353,29 @@ export default function PlanningFloorPlanPanel({
 
       {roomsDueForLinen.length > 0 && (
         <div className="mt-3 rounded-2xl border border-status-in-progress/30 bg-status-in-progress/10 p-4">
-          <h4 className="mb-2 font-serif text-lg text-status-in-progress">{t("planning.floorPlanLinenSectionTitle")}</h4>
-          <ul className="flex flex-wrap gap-2">
-            {roomsDueForLinen.map((r) => (
-              <li key={r.id} className="flex items-center gap-1.5 rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm">
-                <span className="font-medium">{r.number}</span>
-                <button
-                  type="button"
-                  onClick={() => markLinenChanged(r.id)}
-                  className="rounded-md border border-charcoal/15 px-2 py-0.5 text-xs font-medium hover:border-gold-line"
-                >
-                  {t("planning.floorPlanLinenMarkChanged")}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <Collapsible
+            defaultOpen={roomsDueForLinen.length <= 8}
+            summary={
+              <h4 className="font-serif text-lg text-status-in-progress">
+                {t("planning.floorPlanLinenSectionTitle")} · {roomsDueForLinen.length}
+              </h4>
+            }
+          >
+            <ul className="flex flex-wrap gap-2">
+              {roomsDueForLinen.map((r) => (
+                <li key={r.id} className="flex items-center gap-1.5 rounded-lg border border-charcoal/15 bg-white px-2.5 py-1.5 text-sm">
+                  <span className="font-medium">{r.number}</span>
+                  <button
+                    type="button"
+                    onClick={() => markLinenChanged(r.id)}
+                    className="rounded-md border border-charcoal/15 px-2 py-0.5 text-xs font-medium hover:border-gold-line"
+                  >
+                    {t("planning.floorPlanLinenMarkChanged")}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </Collapsible>
         </div>
       )}
 
@@ -409,22 +418,27 @@ export default function PlanningFloorPlanPanel({
           onClose={() => setPickingRoom(null)}
         >
           <div className="grid gap-2">
-            {onShiftAttendants.map((a) => (
-              <button
-                key={a.id}
-                type="button"
-                onClick={() => {
-                  assignRoom(pickingRoom, a.id);
-                  setPickingRoom(null);
-                }}
-                className="flex h-14 items-center justify-between rounded-xl border border-charcoal/15 px-4 text-left hover:border-gold-line"
-              >
-                <span className="font-medium">{a.name}</span>
-                <span className="text-sm text-graphite/60">
-                  {creditsByAttendant.get(a.id) ?? 0} {t("planning.floorPlanCreditsShort")}
-                </span>
-              </button>
-            ))}
+            {onShiftAttendants.map((a) => {
+              const credits = creditsByAttendant.get(a.id) ?? 0;
+              const over = credits > targetCredits;
+              return (
+                <button
+                  key={a.id}
+                  type="button"
+                  onClick={() => {
+                    assignRoom(pickingRoom, a.id);
+                    setPickingRoom(null);
+                  }}
+                  title={over ? t("planning.floorPlanCreditsOverTarget", { target: targetCredits }) : undefined}
+                  className="flex h-14 items-center justify-between rounded-xl border border-charcoal/15 px-4 text-left hover:border-gold-line"
+                >
+                  <span className="font-medium">{a.name}</span>
+                  <span className={`text-sm ${over ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>
+                    {credits} {t("planning.floorPlanCreditsShort")}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </Modal>
       )}

@@ -97,9 +97,14 @@ export function FloorPlanLegend({
       )}
       {DAY_CATEGORIES.map((c) => {
         const style = DAY_CATEGORY_STYLES[c];
+        // Departure/turn's icon is the shared broom flag (isCheckoutToday),
+        // not a category-only glyph — CategoryGlyph only covers the markers
+        // that have no equivalent in RoomFlagIcons (arrival/stayover/DND).
+        const showsBroom = c === "DEPARTURE" || c === "SAME_DAY_TURN";
         return (
           <span key={c} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${style.chip}`}>
             <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+            {showsBroom && <RoomFlagIcons isCheckoutToday iconClassName="h-2.5 w-2.5" badgeClassName="h-4 w-4" />}
             <CategoryGlyph category={c} className="h-3 w-3" />
             {categoryLabels?.[c] ?? style.label}
           </span>
@@ -119,6 +124,7 @@ export function FloorPlanLegend({
 function CategoryGlyph({ category, className }: { category: RoomDayCategory; className?: string }) {
   switch (category) {
     case "ARRIVAL":
+    case "SAME_DAY_TURN":
       return <IconSuitcase className={className} />;
     case "STAYOVER":
       return <IconMoon className={className} />;
