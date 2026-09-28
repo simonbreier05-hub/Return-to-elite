@@ -87,6 +87,12 @@ model Room {
   // The shift handover reads this to call out carried-over rooms by name
   // instead of silently mixing them into "still dirty".
   deferredSince    DateTime?
+  // Last day the bed linen/towels were actually changed — stayovers cycle
+  // every N days (src/lib/rooms/laundryDue.ts), departures/arrivals always
+  // get a full change so this isn't tracked for them. Stamped by
+  // POST /api/rooms/[id]/linen (supervisor/duty_manager, from the
+  // Planungshub grundriss); null means never recorded (treated as due).
+  lastLinenChangeAt DateTime?
   updatedAt        DateTime  @updatedAt
 
   notes      RoomNote[]

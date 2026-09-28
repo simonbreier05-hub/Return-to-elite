@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
-import { getPriorityWeights, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
+import { getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
 import { PRIORITY_WEIGHTS } from "@/lib/priority/computePriority";
 import { audit } from "@/lib/audit";
 
@@ -13,6 +13,10 @@ export async function GET() {
     settings: await getSettings(),
     weights: await getPriorityWeights(),
     weightDefaults: PRIORITY_WEIGHTS,
+    // Schritt 4: cleaning credits per room type + the tidy/linen-cycle knobs,
+    // read here so the Planungshub never hardcodes a room type's credit value.
+    roomTypeCredits: await getRoomTypeCredits(),
+    planningCredits: await getPlanningCreditSettings(),
   });
 }
 
@@ -85,5 +89,7 @@ export async function PATCH(req: NextRequest) {
     settings: await getSettings(),
     weights: await getPriorityWeights(),
     weightDefaults: PRIORITY_WEIGHTS,
+    roomTypeCredits: await getRoomTypeCredits(),
+    planningCredits: await getPlanningCreditSettings(),
   });
 }

@@ -88,6 +88,31 @@ export const ROOM_TYPE_LABELS: Record<RoomType, string> = {
 };
 
 /**
+ * Cleaning "credits" per room type — the house's own unit for balancing a
+ * plan (heavier rooms count for more than one "room"). These are just the
+ * code fallback: src/lib/settings.ts#getRoomTypeCredits overrides any of
+ * them from the Setting table, so the actual value is never hardcoded in a
+ * UI — a new room type or a house policy change needs no redeploy, only a
+ * Setting row.
+ */
+export const ROOM_TYPE_DEFAULT_CREDITS: Record<RoomType, number> = {
+  UNVERIFIED: 1,
+  CLASSIC: 1,
+  SUPERIOR: 1,
+  DELUXE: 1,
+  JUNIOR_SUITE: 1.5,
+  SUITE: 1.5,
+  PENTHOUSE: 1.5,
+};
+
+/** A stayover clean that isn't due for a linen change costs less than a full clean. */
+export const DEFAULT_TIDY_CREDIT = 0.5;
+/** How many days a stayover goes between towel/linen changes. */
+export const DEFAULT_LINEN_CYCLE_DAYS = 3;
+/** Guideline credit load per attendant for the day — a warning line, not a cap. */
+export const DEFAULT_TARGET_CREDITS_PER_ATTENDANT = 14;
+
+/**
  * The real property (Hotel de Rome Berlin) — digitized from the
  * housekeeping floor-plan binder. Re-exported here so existing imports of
  * `HOTEL` / `roomNumbersForFloor` from "@/lib/domain" keep working; the

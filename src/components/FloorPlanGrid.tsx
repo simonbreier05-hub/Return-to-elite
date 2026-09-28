@@ -2,6 +2,8 @@
 
 import Collapsible from "@/components/Collapsible";
 import { DAY_CATEGORY_STYLES } from "@/components/status";
+import { RoomFlagIcons } from "@/components/RoomFlags";
+import { IconSuitcase, IconMoon, IconBan, IconLaundry } from "@/components/icons";
 import type { RoomDayCategory } from "@/lib/rooms/roomDayCategory";
 
 export interface RoomFlags {
@@ -47,9 +49,91 @@ export interface RoomMeta {
   /** Short text next to the room number, e.g. the assigned attendant's first name. */
   badge?: string;
   title?: string;
+  /**
+   * Raw occupancy/checkout facts, kept alongside `category` (not derived
+   * from it) so a same-day-turn room can show both the person and the
+   * broom icon even though only one colour applies. Rendered via the same
+   * RoomFlagIcons component every other screen uses, so "person = belegt" /
+   * "broom = Abreise heute" mean the same thing everywhere in the app.
+   */
+  occupancy?: string | null;
+  isCheckoutToday?: boolean;
+  /** A stayover due for its linen change today (src/lib/rooms/laundryDue.ts). */
+  laundryDue?: boolean;
 }
 
 export const DAY_CATEGORIES: RoomDayCategory[] = ["ARRIVAL", "DEPARTURE", "STAYOVER", "SAME_DAY_TURN", "DND"];
+
+/**
+ * Colour-plus-icon legend for the day-category overlay and the laundry-due
+ * marker — shared by every screen that renders FloorPlanGrid, so the key
+ * never drifts out of sync with what the grid actually draws. Colour never
+ * carries meaning alone: every entry pairs its swatch with an icon and a
+ * text label.
+ */
+export function FloorPlanLegend({
+  categoryLabels,
+  occupiedLabel,
+  laundryLabel,
+  className = "",
+}: {
+  /** Localized label per day category — falls back to DAY_CATEGORY_STYLES's English default when omitted. */
+  categoryLabels?: Partial<Record<RoomDayCategory, string>>;
+  /** Pass to also show the "belegt" (person-icon) swatch in the key; omit to leave it out. */
+  occupiedLabel?: string;
+  /** Pass to also show the laundry-due marker in the key; omit to leave it out. */
+  laundryLabel?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={`flex flex-wrap items-center gap-3 rounded-xl border border-charcoal/10 bg-linen/95 p-3 text-xs shadow-card ${className}`}
+    >
+      {occupiedLabel && (
+        <span className="flex items-center gap-1.5 rounded-full border border-navy/30 bg-navy/10 px-2.5 py-1 font-medium text-navy">
+          <RoomFlagIcons occupancy="OCCUPIED" iconClassName="h-2.5 w-2.5" badgeClassName="h-4 w-4" />
+          {occupiedLabel}
+        </span>
+      )}
+      {DAY_CATEGORIES.map((c) => {
+        const style = DAY_CATEGORY_STYLES[c];
+        // Departure/turn's icon is the shared broom flag (isCheckoutToday),
+        // not a category-only glyph — CategoryGlyph only covers the markers
+        // that have no equivalent in RoomFlagIcons (arrival/stayover/DND).
+        const showsBroom = c === "DEPARTURE" || c === "SAME_DAY_TURN";
+        return (
+          <span key={c} className={`flex items-center gap-1.5 rounded-full border px-2.5 py-1 font-medium ${style.chip}`}>
+            <span className={`h-2 w-2 rounded-full ${style.dot}`} />
+            {showsBroom && <RoomFlagIcons isCheckoutToday iconClassName="h-2.5 w-2.5" badgeClassName="h-4 w-4" />}
+            <CategoryGlyph category={c} className="h-3 w-3" />
+            {categoryLabels?.[c] ?? style.label}
+          </span>
+        );
+      })}
+      {laundryLabel && (
+        <span className="flex items-center gap-1.5 rounded-full border border-status-in-progress/40 bg-status-in-progress/10 px-2.5 py-1 font-medium text-status-in-progress">
+          <IconLaundry className="h-3 w-3" />
+          {laundryLabel}
+        </span>
+      )}
+    </div>
+  );
+}
+
+/** The one extra glyph per day category, beyond the shared person/broom flags — see RoomMeta's doc comment. */
+function CategoryGlyph({ category, className }: { category: RoomDayCategory; className?: string }) {
+  switch (category) {
+    case "ARRIVAL":
+    case "SAME_DAY_TURN":
+      return <IconSuitcase className={className} />;
+    case "STAYOVER":
+      return <IconMoon className={className} />;
+    case "DND":
+      return <IconBan className={className} />;
+    default:
+      return null;
+  }
+}
 
 const FACILITY_ICON: Record<string, string> = {
   HSK: "🧺",
@@ -184,6 +268,14 @@ export default function FloorPlanGrid({
                           }`}
                         >
                           {r.number}
+                          <RoomFlagIcons
+                            occupancy={meta.occupancy}
+                            isCheckoutToday={meta.isCheckoutToday}
+                            iconClassName="h-2.5 w-2.5"
+                            badgeClassName="h-4 w-4"
+                          />
+                          <CategoryGlyph category={meta.category} className="h-3 w-3" />
+                          {meta.laundryDue && <IconLaundry className="h-3 w-3 text-status-in-progress" />}
                           {r.hasDisabledAccess && "♿"}
                           {r.isAntiAllergic && "🌼"}
                           {r.interconnectingGroup && "🔗"}
