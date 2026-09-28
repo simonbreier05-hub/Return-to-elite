@@ -98,6 +98,7 @@ model Room {
   notes      RoomNote[]
   defects    Defect[]
   arrivals   Arrival[]
+  stays      Stay[]
   excursions Excursion[]
   auditLogs  AuditLog[]
   roomTasks  RoomTask[]
@@ -137,6 +138,29 @@ model Arrival {
   createdBy    User      @relation(fields: [createdById], references: [id])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+/**
+ * A guest's booked stay at one room — the "G1" dependency the guest screen
+ * (Prompt G2) resolves against: "current stay" means the Stay for this room
+ * with status IN_HOUSE. Deliberately separate from Arrival (a front-office
+ * event — one row per checked-in-today notice) since a Stay's identity
+ * (stayToken, dates) has to exist before arrival (pre-arrival email) and
+ * outlive it (checkOut + grace period, for the token expiry), which isn't
+ * what Arrival was built to carry.
+ */
+model Stay {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  guestName String // only the first name is ever shown on the guest screen — see src/lib/guest.ts
+  language  String   @default("de") // "de" | "en" — guest UI language preference
+  checkIn   DateTime // arrival date
+  checkOut  DateTime // departure date; stayToken expires checkOut + grace period (Setting, default 2h)
+  status    String   @default("EXPECTED") // EXPECTED | IN_HOUSE | CHECKED_OUT | CANCELLED
+  stayToken String   @unique // opaque, >=128 bit random — resolves /g/s/<stayToken>
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Excursion {
