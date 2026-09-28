@@ -24,12 +24,22 @@ const TILES: { kind: Exclude<ModalKind, null>; icon: string; title: string; hint
 ];
 
 /**
- * Guest screen for one room (src/app/g/[roomNumber]/page.tsx resolves
- * roomNumber/floor from the URL). No AppShell — a guest gets no staff
- * header, notification bell, or logout. Theme + background come from the
- * shared /g layout (src/app/g/layout.tsx).
+ * Guest screen for one room — shared between the two access-path pages
+ * (src/app/g/r/[roomCode], src/app/g/s/[stayToken]), which resolve the
+ * room and pass the base URL every action posts to. No AppShell — a guest
+ * gets no staff header, notification bell, or logout. Theme + background
+ * come from the shared /g layout (src/app/g/layout.tsx).
  */
-export default function GuestView({ roomNumber, floor }: { roomNumber: string; floor: number }) {
+export default function GuestView({
+  roomNumber,
+  floor,
+  actionBase,
+}: {
+  roomNumber: string;
+  floor: number;
+  /** e.g. "/api/guest/r/<roomCode>" or "/api/guest/s/<stayToken>" — never the real room number. */
+  actionBase: string;
+}) {
   const [modal, setModal] = useState<ModalKind>(null);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -98,33 +108,33 @@ export default function GuestView({ roomNumber, floor }: { roomNumber: string; f
           ))}
         </div>
 
-        <CommentField roomNumber={roomNumber} onSent={() => announce("Danke! Ihre Nachricht wurde an das Housekeeping übermittelt.")} />
+        <CommentField actionBase={actionBase} onSent={() => announce("Danke! Ihre Nachricht wurde an das Housekeeping übermittelt.")} />
       </div>
 
       {modal === "dnd" && (
         <DndModal
-          roomNumber={roomNumber}
+          actionBase={actionBase}
           onClose={() => setModal(null)}
           onSubmit={() => announce("Wird notiert — bitte nicht stören.")}
         />
       )}
       {modal === "clean" && (
         <CleanModal
-          roomNumber={roomNumber}
+          actionBase={actionBase}
           onClose={() => setModal(null)}
           onSubmit={() => announce("Ihr Reinigungswunsch wurde übermittelt.")}
         />
       )}
       {modal === "defect" && (
         <DefectModal
-          roomNumber={roomNumber}
+          actionBase={actionBase}
           onClose={() => setModal(null)}
           onSubmit={() => announce("Vielen Dank — die Meldung wurde weitergeleitet.")}
         />
       )}
       {modal === "contact" && (
         <ContactModal
-          roomNumber={roomNumber}
+          actionBase={actionBase}
           onClose={() => setModal(null)}
           onSubmit={(label) => announce(`${label} wurde benachrichtigt.`)}
         />
@@ -151,7 +161,7 @@ function ConfirmButton({ busy, onClick, children }: { busy: boolean; onClick: ()
   );
 }
 
-function DndModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onClose: () => void; onSubmit: () => void }) {
+function DndModal({ actionBase, onClose, onSubmit }: { actionBase: string; onClose: () => void; onSubmit: () => void }) {
   const [window, setWindowChoice] = useState<DndWindow>("NOW");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -160,7 +170,7 @@ function DndModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onClo
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/guest/${roomNumber}/dnd`, { body: { window } });
+      await api(`${actionBase}/dnd`, { body: { window } });
       onSubmit();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Das hat leider nicht geklappt.");
@@ -192,7 +202,7 @@ function DndModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onClo
   );
 }
 
-function CleanModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onClose: () => void; onSubmit: () => void }) {
+function CleanModal({ actionBase, onClose, onSubmit }: { actionBase: string; onClose: () => void; onSubmit: () => void }) {
   const [timing, setTiming] = useState<CleanTiming>("NOW");
   const [time, setTime] = useState("15:00");
   const [busy, setBusy] = useState(false);
@@ -202,7 +212,7 @@ function CleanModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onC
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/guest/${roomNumber}/clean-request`, { body: { timing, time: timing === "LATER" ? time : undefined } });
+      await api(`${actionBase}/clean-request`, { body: { timing, time: timing === "LATER" ? time : undefined } });
       onSubmit();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Das hat leider nicht geklappt.");
@@ -242,7 +252,7 @@ function CleanModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onC
   );
 }
 
-function DefectModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; onClose: () => void; onSubmit: () => void }) {
+function DefectModal({ actionBase, onClose, onSubmit }: { actionBase: string; onClose: () => void; onSubmit: () => void }) {
   const [category, setCategory] = useState<DefectCategory>("PLUMBING");
   const [note, setNote] = useState("");
   const [photo, setPhoto] = useState<File | null>(null);
@@ -257,7 +267,7 @@ function DefectModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; on
       fd.set("category", category);
       fd.set("note", note);
       if (photo) fd.set("photo", photo);
-      await api(`/api/guest/${roomNumber}/defect`, { formData: fd });
+      await api(`${actionBase}/defect`, { formData: fd });
       onSubmit();
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Das hat leider nicht geklappt.");
@@ -306,11 +316,11 @@ function DefectModal({ roomNumber, onClose, onSubmit }: { roomNumber: string; on
 }
 
 function ContactModal({
-  roomNumber,
+  actionBase,
   onClose,
   onSubmit,
 }: {
-  roomNumber: string;
+  actionBase: string;
   onClose: () => void;
   onSubmit: (label: string) => void;
 }) {
@@ -322,7 +332,7 @@ function ContactModal({
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/guest/${roomNumber}/contact`, { body: { department } });
+      await api(`${actionBase}/contact`, { body: { department } });
       onSubmit(CONTACT_DEPARTMENTS.find((d) => d.key === department)!.label);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : "Das hat leider nicht geklappt.");
@@ -354,7 +364,7 @@ function ContactModal({
   );
 }
 
-function CommentField({ roomNumber, onSent }: { roomNumber: string; onSent: () => void }) {
+function CommentField({ actionBase, onSent }: { actionBase: string; onSent: () => void }) {
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -364,7 +374,7 @@ function CommentField({ roomNumber, onSent }: { roomNumber: string; onSent: () =
     setBusy(true);
     setError(null);
     try {
-      await api(`/api/guest/${roomNumber}/notes`, { body: { body } });
+      await api(`${actionBase}/notes`, { body: { body } });
       setBody("");
       onSent();
     } catch (e) {

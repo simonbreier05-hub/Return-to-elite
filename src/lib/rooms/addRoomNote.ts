@@ -6,10 +6,10 @@ import { broadcast } from "@/lib/realtime";
  * Add a cross-department room note + audit entry + realtime broadcast.
  *
  * Pulled out of the staff-facing route (POST /api/rooms/[id]/notes) so the
- * guest-facing message field (POST /api/guest/[roomNumber]/notes) writes
- * into the exact same RoomNote table — no parallel "guest message"
- * structure — and shows up in the Supervisor/Attendant note lists exactly
- * like any other note.
+ * guest-facing message action (src/lib/guestActions.ts, POST
+ * /api/guest/{r,s}/<code|token>/notes) writes into the exact same RoomNote
+ * table — no parallel "guest message" structure — and shows up in the
+ * Supervisor/Attendant note lists exactly like any other note.
  */
 export async function addRoomNote(input: { room: { id: string; number: string }; authorId: string; body: string }) {
   const { room, authorId, body } = input;

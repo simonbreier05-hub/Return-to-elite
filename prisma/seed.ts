@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { FLOOR_PLAN, HOTEL, FLOOR_FACILITIES } from "../src/lib/floorplan/hotelDeRome";
 import { isHousekeepingRelevant } from "../src/lib/rooms/isHousekeepingRelevant";
+import { generateOpaqueToken } from "../src/lib/guestToken";
 import { DEMO_PASSWORD, demoUsers } from "./demoUsers";
 
 /**
@@ -180,7 +181,14 @@ async function main() {
     where: { number: "208" },
     data: { status: "CLEAN", statusSince: at(-50), occupancy: "VACANT", isCheckoutToday: true },
   });
-  await prisma.room.update({ where: { number: "301" }, data: { status: "INSPECTED", statusSince: at(-60) } });
+  await prisma.room.update({
+    where: { number: "301" },
+    // Occupied by the demo Stay seeded below — this is the room the
+    // login page's guest-preview tile links to (via its NFC/QR access
+    // code), so it needs a real current stay to actually show the guest
+    // actions instead of "Zurzeit nicht verfügbar".
+    data: { status: "INSPECTED", statusSince: at(-60), occupancy: "OCCUPIED", isCheckoutToday: false },
+  });
   await prisma.room.update({
     where: { number: "304" },
     data: {
@@ -239,6 +247,22 @@ async function main() {
       },
     });
   }
+
+  // --- Guest screen demo stay (Prompt G2 Teil 2) --------------------------
+  // Room 301 is IN_HOUSE right now so the login page's guest-preview tile
+  // (its NFC/QR access code, resolved via /g/r/<code>) has something real
+  // to show instead of "Zurzeit nicht verfügbar".
+  await prisma.stay.create({
+    data: {
+      roomId: byNumber["301"].id,
+      guestName: "Alex Guest",
+      language: "de",
+      checkIn: at(-60 * 20),
+      checkOut: at(60 * 4),
+      status: "IN_HOUSE",
+      stayToken: generateOpaqueToken(),
+    },
+  });
 
   // --- Excursions (concierge) --------------------------------------------
   const concierge = users["concierge@hotel.test"];

@@ -322,6 +322,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             </Link>
           )}
           <Link
+            href="/supervisor/guest-access"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            {t("supervisor.guestAccessLink")}
+          </Link>
+          <Link
             href="/supervisor/planning"
             className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >

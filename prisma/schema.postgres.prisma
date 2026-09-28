@@ -61,6 +61,13 @@ model Room {
   statusSince      DateTime  @default(now())
   occupancy        String    @default("VACANT") // VACANT | OCCUPIED
   isCheckoutToday  Boolean   @default(false) // due-out today (drives priority: turn before stayover)
+  // Opaque, non-guessable access code for the NFC tag / QR code physically
+  // at this room (resolves /g/r/<guestAccessCode> — Prompt G2 Teil 2).
+  // Never the room number in plain text. Nullable: generated lazily on
+  // first use by src/lib/guest/roomAccessCode.ts, so existing seeded rooms
+  // don't need a backfill migration. Regenerable from the QR/NFC generator
+  // page if a tag is lost — the old code simply stops resolving.
+  guestAccessCode  String?   @unique
   blockReason      String? // DND | GUEST_IN_ROOM | DOUBLE_LOCKED | REFUSED (only when BLOCKED)
   blockedSince     DateTime?
   reworkNote       String? // supervisor note when sending CLEAN back to PICKUP
