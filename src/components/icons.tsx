@@ -84,6 +84,38 @@ export function IconBroom({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+export function IconSuitcase({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} aria-hidden="true">
+      <rect x="3.5" y="7.5" width="17" height="12" rx="2" />
+      <path strokeLinecap="round" d="M9 7.5V5.8a1.8 1.8 0 0 1 1.8-1.8h2.4A1.8 1.8 0 0 1 15 5.8V7.5" />
+      <path strokeLinecap="round" d="M3.5 12.5h17" />
+    </svg>
+  );
+}
+
+export function IconMoon({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} aria-hidden="true">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M20 14.2A8.2 8.2 0 1 1 9.8 4a6.6 6.6 0 0 0 10.2 10.2Z"
+      />
+    </svg>
+  );
+}
+
+export function IconLaundry({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} aria-hidden="true">
+      <rect x="4" y="3.5" width="16" height="17" rx="2" />
+      <circle cx="12" cy="13" r="4.3" />
+      <path strokeLinecap="round" d="M9.3 10.3a3.9 3.9 0 0 1 5.4 0M7.5 6.5h.01M10.2 6.5h.01" />
+    </svg>
+  );
+}
+
 /** Maps status.ts's `iconKey` string to the actual glyph, so status.ts stays
  * a plain, framework-agnostic data module and only this one place needs to
  * know which SVG a key resolves to. */
