@@ -48,12 +48,31 @@ export async function GET(req: NextRequest) {
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: new Date() } } },
       notes: { orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
-      defects: { include: { workOrder: true }, orderBy: { createdAt: "desc" }, take: 2 },
+      defects: {
+        include: { workOrder: true, reportedBy: { select: { name: true, role: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 2,
+      },
+      // Guest screen requests (Prompt G2 Teil 4) — still-open ones only, for
+      // the room detail modal's "Gästeanfragen" list and the DND flag below.
+      // Guest DND never touches Room.status/blockReason (see
+      // src/lib/guestActions.ts), so this is the only way a screen knows a
+      // guest currently has Do Not Disturb active.
+      guestRequests: {
+        where: { status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
       _count: { select: { notes: { where: { status: "OPEN" } } } },
     },
   });
 
-  const roomsWithCounts = rooms.map(({ _count, ...room }) => ({ ...room, openNotesCount: _count.notes }));
+  const roomsWithCounts = rooms.map(({ _count, guestRequests, ...room }) => ({
+    ...room,
+    openNotesCount: _count.notes,
+    guestRequests,
+    guestDndActive: guestRequests.some((r) => r.kind === "DND"),
+  }));
 
   const attendants = await prisma.user.findMany({
     where: { role: "room_attendant" },

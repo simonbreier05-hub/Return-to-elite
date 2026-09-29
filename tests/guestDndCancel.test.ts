@@ -22,6 +22,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
+vi.mock("@/lib/audit", () => ({ audit: vi.fn() }));
+vi.mock("@/lib/guestServer", () => ({ getGuestSystemUserId: async () => "guest-system-user-id" }));
 
 import { runGuestAction } from "@/lib/guestActions";
 

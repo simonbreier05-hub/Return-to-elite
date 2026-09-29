@@ -4,6 +4,7 @@ import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
+import { audit } from "@/lib/audit";
 import { DefectCategorySchema } from "@/lib/domain";
 import {
   CLEAN_TIMINGS,
@@ -68,6 +69,7 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
   const parsed = DndBody.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid time window." }, { status: 400 });
 
+  const guestUserId = await getGuestSystemUserId();
   const [notification, guestRequest] = await Promise.all([
     prisma.notification.create({
       data: {
@@ -82,7 +84,9 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
       data: { roomId: room.id, kind: "DND", detail: JSON.stringify({ window: parsed.data.window }) },
     }),
   ]);
+  await audit({ action: "GUEST_DND_REQUESTED", userId: guestUserId, roomId: room.id, meta: { window: parsed.data.window } });
   broadcast("notification:new", { notification });
+  broadcast("guestrequest:new", { guestRequest });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
@@ -100,7 +104,8 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
   });
   if (!active) return NextResponse.json({ error: "No active Do Not Disturb request." }, { status: 400 });
 
-  const [, notification] = await Promise.all([
+  const guestUserId = await getGuestSystemUserId();
+  const [updated, notification] = await Promise.all([
     prisma.guestRequest.update({ where: { id: active.id }, data: { status: "CANCELLED" } }),
     prisma.notification.create({
       data: {
@@ -112,7 +117,9 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
       },
     }),
   ]);
+  await audit({ action: "GUEST_DND_CANCELLED", userId: guestUserId, roomId: room.id });
   broadcast("notification:new", { notification });
+  broadcast("guestrequest:update", { guestRequest: updated });
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
@@ -132,6 +139,7 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
   const timingLabel =
     timing === "LATER" && time ? `${CLEAN_TIMING_LABELS.LATER} – ${time} Uhr` : CLEAN_TIMING_LABELS[timing];
 
+  const guestUserId = await getGuestSystemUserId();
   const [notification, guestRequest] = await Promise.all([
     prisma.notification.create({
       data: {
@@ -146,7 +154,9 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
       data: { roomId: room.id, kind: "CLEAN_REQUEST", detail: JSON.stringify({ timing, time }) },
     }),
   ]);
+  await audit({ action: "GUEST_CLEAN_REQUESTED", userId: guestUserId, roomId: room.id, meta: { timing, time } });
   broadcast("notification:new", { notification });
+  broadcast("guestrequest:new", { guestRequest });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
@@ -199,6 +209,7 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
   const dept = CONTACT_DEPARTMENTS.find((d) => d.key === parsed.data.department);
   if (!dept) return NextResponse.json({ error: "Unknown department." }, { status: 400 });
 
+  const guestUserId = await getGuestSystemUserId();
   const [notification, guestRequest] = await Promise.all([
     prisma.notification.create({
       data: {
@@ -213,7 +224,9 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
       data: { roomId: room.id, kind: "CONTACT", detail: JSON.stringify({ department: dept.key }) },
     }),
   ]);
+  await audit({ action: "GUEST_CONTACT_REQUESTED", userId: guestUserId, roomId: room.id, meta: { department: dept.key } });
   broadcast("notification:new", { notification });
+  broadcast("guestrequest:new", { guestRequest });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 

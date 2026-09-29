@@ -12,6 +12,7 @@ import { NextRequest } from "next/server";
 const notificationCreate = vi.fn();
 const guestRequestCreate = vi.fn();
 const broadcastMock = vi.fn();
+const auditMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
   prisma: {
@@ -20,6 +21,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
+vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
+vi.mock("@/lib/guestServer", () => ({ getGuestSystemUserId: async () => "guest-system-user-id" }));
 
 import { runGuestAction } from "@/lib/guestActions";
 
@@ -38,6 +41,7 @@ describe("dnd", () => {
     notificationCreate.mockReset().mockResolvedValue({ id: "notif-1" });
     guestRequestCreate.mockReset().mockResolvedValue({ id: "req-1" });
     broadcastMock.mockReset();
+    auditMock.mockReset();
 
     const res = await runGuestAction("dnd", room, jsonRequest({ window: "NOW" }));
     expect(res.status).toBe(201);
@@ -55,6 +59,7 @@ describe("clean-request", () => {
     notificationCreate.mockReset().mockResolvedValue({ id: "notif-1" });
     guestRequestCreate.mockReset().mockResolvedValue({ id: "req-2" });
     broadcastMock.mockReset();
+    auditMock.mockReset();
 
     const res = await runGuestAction("clean-request", room, jsonRequest({ timing: "LATER", time: "15:00" }));
     expect(res.status).toBe(201);
@@ -69,6 +74,7 @@ describe("contact", () => {
     notificationCreate.mockReset().mockResolvedValue({ id: "notif-1" });
     guestRequestCreate.mockReset().mockResolvedValue({ id: "req-3" });
     broadcastMock.mockReset();
+    auditMock.mockReset();
 
     const res = await runGuestAction("contact", room, jsonRequest({ department: "housekeeping" }));
     expect(res.status).toBe(201);

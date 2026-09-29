@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { getPriorityWeights, getSettings } from "@/lib/settings";
-import { computePriority } from "@/lib/priority/computePriority";
+import { computePriority, type PriorityGuestCleanRequestInput } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 
 /**
@@ -10,6 +10,20 @@ import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
  * actionable room. Optional ?attendantId= tunes the route-proximity signal
  * to that attendant's live location.
  */
+
+/** GuestRequest.detail is untranslated JSON (see src/lib/guestActions.ts) — pull just the timing out of it. */
+function parseGuestCleanRequestTiming(detail: string | null | undefined): PriorityGuestCleanRequestInput | null {
+  if (!detail) return null;
+  try {
+    const parsed = JSON.parse(detail) as { timing?: string };
+    if (parsed.timing === "NOW" || parsed.timing === "IN_30" || parsed.timing === "LATER") {
+      return { timing: parsed.timing };
+    }
+  } catch {
+    // Malformed/missing detail — treat as no signal rather than throwing.
+  }
+  return null;
+}
 export async function GET(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
@@ -47,11 +61,19 @@ export async function GET(req: NextRequest) {
     include: {
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: now } } },
+      // Guest screen "Jetzt reinigen" (Prompt G2 Teil 4) — only the most
+      // recent still-open one matters for scoring.
+      guestRequests: {
+        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
 
   const results = rooms
     .map((room) => {
+      const guestCleanRequest = parseGuestCleanRequestTiming(room.guestRequests[0]?.detail);
       const priority = computePriority(
         {
           id: room.id,
@@ -68,6 +90,7 @@ export async function GET(req: NextRequest) {
             eta: a.eta, vip: a.vip, earlyCheckIn: a.earlyCheckIn, neededNow: a.neededNow,
           })),
           excursions: room.excursions.map((e) => ({ startsAt: e.startsAt, endsAt: e.endsAt })),
+          guestCleanRequest,
           attendantSection,
           attendantFloor,
           blockedRecheckMinutes: settings.blockedRecheckMinutes,

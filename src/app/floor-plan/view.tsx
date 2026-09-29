@@ -13,6 +13,7 @@ interface LiveRoom {
   blockReason?: string | null;
   assignedTo?: { id: string; name: string } | null;
   arrivals: { guestName: string }[];
+  guestDndActive?: boolean;
 }
 
 interface Attendant {
@@ -136,7 +137,7 @@ export default function FloorPlanView() {
           room grid below scrolls horizontally on its own if a section ever
           runs wider than a narrow screen (see the per-section overflow-x-auto
           wrapper), so this never needs to be pinned in place itself. */}
-      <FloorPlanLegend className="mb-4" occupiedLabel="Occupied" />
+      <FloorPlanLegend className="mb-4" occupiedLabel="Occupied" guestDndLabel="Guest: Do Not Disturb" />
 
       <AssignmentPanel
         mode={mode}
@@ -173,11 +174,13 @@ export default function FloorPlanView() {
             category,
             occupancy: live?.occupancy,
             isCheckoutToday: live?.isCheckoutToday ?? false,
+            guestDndActive: live?.guestDndActive ?? false,
             selected: selected.has(r.number),
             badge: live?.assignedTo?.name.split(" ")[0],
             title:
               [
                 live?.assignedTo && `Assigned to ${live.assignedTo.name}`,
+                live?.guestDndActive && "Guest: Do Not Disturb",
                 r.interconnectingGroup && `Interconnecting with ${r.interconnectingGroup}`,
                 r.hasDisabledAccess && "Room for disabled",
                 r.isAntiAllergic && "Anti-allergic",

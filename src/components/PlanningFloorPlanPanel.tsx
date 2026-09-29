@@ -31,6 +31,7 @@ interface LiveRoom {
   assignedToId: string | null;
   assignedTo?: { id: string; name: string } | null;
   arrivals: { guestName: string }[];
+  guestDndActive?: boolean;
 }
 
 interface SettingsResponse {
@@ -144,7 +145,7 @@ export default function PlanningFloorPlanPanel({
     const tidyCredit = settings?.planningCredits.tidyCredit ?? 0.5;
     const map = new Map<
       string,
-      { category: RoomDayCategory; laundryDue: boolean; credit: number }
+      { category: RoomDayCategory; laundryDue: boolean; credit: number; guestDndActive: boolean }
     >();
     for (const r of liveRooms) {
       const category = roomDayCategory({
@@ -160,7 +161,7 @@ export default function PlanningFloorPlanPanel({
         linenCycleDays,
       });
       const credit = computeRoomCredit({ type: r.type as RoomType, category, laundryDue, credits: credits as Record<RoomType, number>, tidyCredit });
-      map.set(r.id, { category, laundryDue, credit });
+      map.set(r.id, { category, laundryDue, credit, guestDndActive: r.guestDndActive ?? false });
     }
     return map;
   }, [liveRooms, settings, now]);
@@ -260,6 +261,7 @@ export default function PlanningFloorPlanPanel({
         className="mb-3"
         occupiedLabel={t("planning.floorPlanLegendOccupied")}
         laundryLabel={t("planning.floorPlanLegendLaundryDue")}
+        guestDndLabel={t("planning.floorPlanLegendGuestDnd")}
         categoryLabels={{
           ARRIVAL: t("planning.dayCategoryArrival"),
           DEPARTURE: t("planning.dayCategoryDeparture"),
@@ -336,6 +338,7 @@ export default function PlanningFloorPlanPanel({
             occupancy: live?.occupancy,
             isCheckoutToday: live?.isCheckoutToday ?? false,
             laundryDue: facts?.laundryDue ?? false,
+            guestDndActive: facts?.guestDndActive ?? false,
             selected: mode === "housekeeper-first" && activeAttendantId != null && live?.assignedToId === activeAttendantId,
             unassignedActionable: unassignedNumbers.has(r.number),
             badge: live?.assignedTo?.name.split(" ")[0],

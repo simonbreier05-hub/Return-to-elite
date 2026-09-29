@@ -16,7 +16,7 @@ import NotificationsPanel from "@/components/NotificationsPanel";
 import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import RoomDetailModal, { type RoomDetailActions } from "@/components/RoomDetailModal";
-import { StatusIcon } from "@/components/icons";
+import { StatusIcon, IconBellSlash } from "@/components/icons";
 import { STATUS_STYLES } from "@/components/status";
 import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
@@ -66,6 +66,8 @@ interface Room {
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
   notes: Note[];
+  /** Open guest "Bitte nicht stören" request (Prompt G2 Teil 4) — never Room.status/blockReason. */
+  guestDndActive?: boolean;
 }
 
 interface Priority {
@@ -260,9 +262,11 @@ export default function AttendantView() {
       primary:
         room.status === "BLOCKED"
           ? { label: t("attendant.unblockAndStart"), onClick: () => setStatus(room, "IN_PROGRESS") }
-          : next
-            ? { label: next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean"), onClick: () => setStatus(room, next) }
-            : null,
+          : next === "IN_PROGRESS" && room.guestDndActive
+            ? null
+            : next
+              ? { label: next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean"), onClick: () => setStatus(room, next) }
+              : null,
       busy: busyRoomId === room.id,
       priority: prio,
       onBlock: canBlock ? () => { setDetailRoomId(null); setModal({ kind: "block", room }); } : undefined,
@@ -359,6 +363,7 @@ export default function AttendantView() {
                   {t(`status.${room.status}` as TKey)}
                 </span>
                 <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} badgeClassName="h-4 w-4" iconClassName="h-2.5 w-2.5" />
+                {room.guestDndActive && <IconBellSlash className="h-3.5 w-3.5 shrink-0 text-status-out-of-order" />}
                 {room.status === "INSPECTED" && <span title="Bereits freigegeben">🔒</span>}
                 <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
                 <svg className="ml-auto h-4 w-4 shrink-0 text-graphite/40" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -451,6 +456,7 @@ export default function AttendantView() {
                               {t(`status.${room.status}` as TKey)}
                             </span>
                             <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} badgeClassName="h-4 w-4" iconClassName="h-2.5 w-2.5" />
+                            {room.guestDndActive && <IconBellSlash className="h-3.5 w-3.5 shrink-0 text-status-out-of-order" />}
                             <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
                             {prio && <span className="ml-auto text-xs text-graphite/50">{prio.score}</span>}
                           </button>
@@ -574,22 +580,29 @@ function RoomCard({
           </span>
           <div className="flex items-center gap-1">
             <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
+            {room.guestDndActive && <IconBellSlash className="h-4 w-4 text-status-out-of-order" />}
             <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
           </div>
         </div>
       </div>
 
-      {next && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSetStatus(room, next);
-          }}
-          disabled={busy}
-          className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-        >
-          {busy ? "…" : next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean")}
-        </button>
+      {next === "IN_PROGRESS" && room.guestDndActive ? (
+        <div className="rounded-xl border border-status-out-of-order/40 bg-status-out-of-order/10 px-3 py-3 text-center text-sm font-medium text-status-out-of-order">
+          {t("attendant.guestDndActive")}
+        </div>
+      ) : (
+        next && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onSetStatus(room, next);
+            }}
+            disabled={busy}
+            className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+          >
+            {busy ? "…" : next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean")}
+          </button>
+        )
       )}
       {room.status === "BLOCKED" && (
         <button

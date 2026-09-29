@@ -63,6 +63,33 @@ export async function applyStatusChange(
     return { ok: false, status: check.code, error: check.error };
   }
 
+  // --- Guest "Bitte nicht stören" (Prompt G2 Teil 4) --------------------
+  // Deliberately not part of checkTransition/blockReason: guest DND never
+  // touches Room.status (see src/lib/guestActions.ts), so this is checked
+  // separately, only for the one transition it's meant to gate, and only
+  // for the room attendant role — a supervisor/duty_manager starting the
+  // room anyway is the explicit override the prompt asks for.
+  if (to === "IN_PROGRESS" && session.role === "room_attendant") {
+    const activeDnd = await prisma.guestRequest.findFirst({
+      where: { roomId: room.id, kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+    });
+    if (activeDnd) {
+      await audit({
+        action: "STATUS_CHANGE_DENIED",
+        userId: session.userId,
+        roomId: room.id,
+        fromStatus: from,
+        toStatus: to,
+        meta: { reason: "guest DND active", role: session.role },
+      });
+      return {
+        ok: false,
+        status: 409,
+        error: "Guest has Do Not Disturb active — a supervisor can override this.",
+      };
+    }
+  }
+
   // --- Payload each target status requires ---------------------------------
   if (to === "BLOCKED" && !input.blockReason) {
     return {

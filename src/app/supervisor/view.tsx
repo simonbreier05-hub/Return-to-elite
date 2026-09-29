@@ -55,6 +55,8 @@ interface Room {
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   notes: Note[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
+  /** Open guest "Bitte nicht stören" request (Prompt G2 Teil 4) — never Room.status/blockReason. */
+  guestDndActive?: boolean;
 }
 
 interface Attendant {
@@ -93,6 +95,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "ALL">("ALL");
   const [floorFilter, setFloorFilter] = useState<number | "ALL">("ALL");
   const [attendantFilter, setAttendantFilter] = useState<string>("ALL");
+  const [guestDndOnly, setGuestDndOnly] = useState(false);
   const [bulkBusy, setBulkBusy] = useState(false);
   const [bulkResult, setBulkResult] = useState<string | null>(null);
   // Non-null when the server scoped this board to the signed-in supervisor's
@@ -159,6 +162,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     "arrival:update": () => refetchSoon(),
     // A whole plan changed at once — one refetch instead of 145 patches.
     "assignments:applied": () => refetchSoon(),
+    // Guest DND/clean/contact requests (Prompt G2 Teil 4) — a coalesced
+    // refetch is simplest here: guestDndActive/guestRequests aren't part of
+    // the scalar room:update payload, and this fires rarely enough that a
+    // full refetch is cheap.
+    "guestrequest:new": () => refetchSoon(),
+    "guestrequest:update": () => refetchSoon(),
   });
 
   /**
@@ -172,6 +181,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       if (floorFilter !== "ALL" && room.floor !== floorFilter) return false;
       if (attendantFilter === "NONE" && room.assignedTo) return false;
       if (attendantFilter !== "ALL" && attendantFilter !== "NONE" && room.assignedTo?.id !== attendantFilter) return false;
+      if (guestDndOnly && !room.guestDndActive) return false;
       if (!q) return true;
       return (
         room.number.toLowerCase().includes(q) ||
@@ -180,10 +190,24 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         room.arrivals.some((a) => a.guestName.toLowerCase().includes(q))
       );
     });
-  }, [rooms, search, statusFilter, floorFilter, attendantFilter]);
+  }, [rooms, search, statusFilter, floorFilter, attendantFilter, guestDndOnly]);
 
   const filtersActive =
-    search.trim() !== "" || statusFilter !== "ALL" || floorFilter !== "ALL" || attendantFilter !== "ALL";
+    search.trim() !== "" ||
+    statusFilter !== "ALL" ||
+    floorFilter !== "ALL" ||
+    attendantFilter !== "ALL" ||
+    guestDndOnly;
+
+  const guestDndCount = rooms.filter((r) => r.guestDndActive).length;
+  const focusGuestDnd = () => {
+    setStatusFilter("ALL");
+    setFloorFilter("ALL");
+    setAttendantFilter("ALL");
+    setSearch("");
+    setGuestDndOnly(true);
+    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   const byFloor = useMemo(() => {
     const map = new Map<number, Room[]>();
@@ -328,6 +352,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             {t("supervisor.guestAccessLink")}
           </Link>
           <Link
+            href="/supervisor/guest-requests"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            {guestDndCount > 0 && "🔕 "}
+            {t("supervisor.guestRequestsLink")}
+          </Link>
+          <Link
             href="/supervisor/planning"
             className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >
@@ -396,6 +427,29 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           })}
         </div>
 
+        {guestDndCount > 0 && (
+          <>
+            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
+              🔕 Gast: Bitte nicht stören
+            </h4>
+            <div className="mb-4 space-y-2">
+              {rooms
+                .filter((r) => r.guestDndActive)
+                .map((room) => (
+                  <div
+                    key={room.id}
+                    className="flex items-center justify-between gap-2 rounded-lg border border-status-out-of-order/25 bg-status-out-of-order/5 px-3 py-2"
+                  >
+                    <span className="font-serif text-lg">
+                      Floor {room.floor} · {room.number}
+                    </span>
+                    <span className="text-xs text-graphite/60">{STATUS_LABELS[room.status]}</span>
+                  </div>
+                ))}
+            </div>
+          </>
+        )}
+
         <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">Etagen</h4>
         <div className="space-y-2">
           {byFloorAll.map(([floor, floorRooms]) => {
@@ -427,7 +481,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         </div>
       </WindowPanel>
 
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
         <Kpi label={t("supervisor.releasedSellable")} value={`${inspected}/${sellable}`} onClick={() => focusStatus("INSPECTED")} />
         <Kpi label={t("supervisor.dailyProgress")} value={`${progress}%`} bar={progress} onClick={() => focusStatus(null)} />
         <Kpi
@@ -437,6 +491,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           onClick={() => focusStatus("CLEAN")}
         />
         <Kpi label={t("supervisor.blockedLabel")} value={String(blockedCount)} onClick={() => focusStatus("BLOCKED")} />
+        <Kpi label="🔕 Gast-DND" value={String(guestDndCount)} accent={guestDndCount > 0} onClick={focusGuestDnd} />
       </div>
 
       {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
@@ -504,6 +559,15 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 </option>
               ))}
             </select>
+            <button
+              onClick={() => setGuestDndOnly((v) => !v)}
+              aria-pressed={guestDndOnly}
+              className={`h-12 rounded-xl border px-4 text-sm font-medium ${
+                guestDndOnly ? "border-status-out-of-order bg-status-out-of-order/10 text-status-out-of-order" : "border-charcoal/15 bg-white"
+              }`}
+            >
+              🔕 Gast-DND
+            </button>
             {filtersActive && (
               <>
                 <span className="text-sm text-graphite/60">{t("supervisor.ofTotal", { visible: visible.length, total: rooms.length })}</span>
@@ -513,6 +577,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                     setStatusFilter("ALL");
                     setFloorFilter("ALL");
                     setAttendantFilter("ALL");
+                    setGuestDndOnly(false);
                   }}
                   className="h-12 rounded-xl border border-charcoal/15 px-4 text-sm"
                 >
@@ -559,6 +624,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                     >
                       {room.number}
                       <span className="max-w-full truncate px-1 text-[9px] font-normal opacity-80">
+                        {room.guestDndActive && "🔕 "}
                         {room.status === "BLOCKED" && room.blockReason
                           ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey)
                           : room.section}

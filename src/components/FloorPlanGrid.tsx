@@ -3,7 +3,7 @@
 import Collapsible from "@/components/Collapsible";
 import { DAY_CATEGORY_STYLES } from "@/components/status";
 import { RoomFlagIcons } from "@/components/RoomFlags";
-import { IconSuitcase, IconMoon, IconBan, IconLaundry } from "@/components/icons";
+import { IconSuitcase, IconMoon, IconBan, IconLaundry, IconBellSlash } from "@/components/icons";
 import type { RoomDayCategory } from "@/lib/rooms/roomDayCategory";
 
 export interface RoomFlags {
@@ -60,6 +60,13 @@ export interface RoomMeta {
   isCheckoutToday?: boolean;
   /** A stayover due for its linen change today (src/lib/rooms/laundryDue.ts). */
   laundryDue?: boolean;
+  /**
+   * The guest has an open "Bitte nicht stören" request from the guest screen
+   * (Prompt G2 Teil 4) — independent of `category`/blockReason on purpose:
+   * guest DND never touches Room.status (see src/lib/guestActions.ts), so a
+   * room can show this even while its category/colour says something else.
+   */
+  guestDndActive?: boolean;
 }
 
 export const DAY_CATEGORIES: RoomDayCategory[] = ["ARRIVAL", "DEPARTURE", "STAYOVER", "SAME_DAY_TURN", "DND"];
@@ -75,6 +82,7 @@ export function FloorPlanLegend({
   categoryLabels,
   occupiedLabel,
   laundryLabel,
+  guestDndLabel,
   className = "",
 }: {
   /** Localized label per day category — falls back to DAY_CATEGORY_STYLES's English default when omitted. */
@@ -83,6 +91,8 @@ export function FloorPlanLegend({
   occupiedLabel?: string;
   /** Pass to also show the laundry-due marker in the key; omit to leave it out. */
   laundryLabel?: string;
+  /** Pass to also show the guest-DND marker in the key; omit to leave it out. */
+  guestDndLabel?: string;
   className?: string;
 }) {
   return (
@@ -114,6 +124,12 @@ export function FloorPlanLegend({
         <span className="flex items-center gap-1.5 rounded-full border border-status-in-progress/40 bg-status-in-progress/10 px-2.5 py-1 font-medium text-status-in-progress">
           <IconLaundry className="h-3 w-3" />
           {laundryLabel}
+        </span>
+      )}
+      {guestDndLabel && (
+        <span className="flex items-center gap-1.5 rounded-full border border-status-out-of-order/40 bg-status-out-of-order/10 px-2.5 py-1 font-medium text-status-out-of-order">
+          <IconBellSlash className="h-3 w-3" />
+          {guestDndLabel}
         </span>
       )}
     </div>
@@ -276,6 +292,7 @@ export default function FloorPlanGrid({
                           />
                           <CategoryGlyph category={meta.category} className="h-3 w-3" />
                           {meta.laundryDue && <IconLaundry className="h-3 w-3 text-status-in-progress" />}
+                          {meta.guestDndActive && <IconBellSlash className="h-3 w-3 text-status-out-of-order" />}
                           {r.hasDisabledAccess && "♿"}
                           {r.isAntiAllergic && "🌼"}
                           {r.interconnectingGroup && "🔗"}
