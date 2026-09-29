@@ -61,6 +61,13 @@ model Room {
   statusSince      DateTime  @default(now())
   occupancy        String    @default("VACANT") // VACANT | OCCUPIED
   isCheckoutToday  Boolean   @default(false) // due-out today (drives priority: turn before stayover)
+  // Opaque, non-guessable access code for the NFC tag / QR code physically
+  // at this room (resolves /g/r/<guestAccessCode> — Prompt G2 Teil 2).
+  // Never the room number in plain text. Nullable: generated lazily on
+  // first use by src/lib/guest/roomAccessCode.ts, so existing seeded rooms
+  // don't need a backfill migration. Regenerable from the QR/NFC generator
+  // page if a tag is lost — the old code simply stops resolving.
+  guestAccessCode  String?   @unique
   blockReason      String? // DND | GUEST_IN_ROOM | DOUBLE_LOCKED | REFUSED (only when BLOCKED)
   blockedSince     DateTime?
   reworkNote       String? // supervisor note when sending CLEAN back to PICKUP
@@ -95,12 +102,14 @@ model Room {
   lastLinenChangeAt DateTime?
   updatedAt        DateTime  @updatedAt
 
-  notes      RoomNote[]
-  defects    Defect[]
-  arrivals   Arrival[]
-  excursions Excursion[]
-  auditLogs  AuditLog[]
-  roomTasks  RoomTask[]
+  notes         RoomNote[]
+  defects       Defect[]
+  arrivals      Arrival[]
+  stays         Stay[]
+  guestRequests GuestRequest[]
+  excursions    Excursion[]
+  auditLogs     AuditLog[]
+  roomTasks     RoomTask[]
 }
 
 /**
@@ -137,6 +146,53 @@ model Arrival {
   createdBy    User      @relation(fields: [createdById], references: [id])
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
+}
+
+/**
+ * A guest's booked stay at one room — the "G1" dependency the guest screen
+ * (Prompt G2) resolves against: "current stay" means the Stay for this room
+ * with status IN_HOUSE. Deliberately separate from Arrival (a front-office
+ * event — one row per checked-in-today notice) since a Stay's identity
+ * (stayToken, dates) has to exist before arrival (pre-arrival email) and
+ * outlive it (checkOut + grace period, for the token expiry), which isn't
+ * what Arrival was built to carry.
+ */
+model Stay {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  guestName String // only the first name is ever shown on the guest screen — see src/lib/guest.ts
+  language  String   @default("de") // "de" | "en" — guest UI language preference
+  checkIn   DateTime // arrival date
+  checkOut  DateTime // departure date; stayToken expires checkOut + grace period (Setting, default 2h)
+  status    String   @default("EXPECTED") // EXPECTED | IN_HOUSE | CHECKED_OUT | CANCELLED
+  stayToken String   @unique // opaque, >=128 bit random — resolves /g/s/<stayToken>
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * A DND/cleaning-timing/department-contact request raised from the guest
+ * screen (Prompt G2 Teil 3: "Nach dem Senden: einfacher Status"). Exists
+ * because those three guest actions only ever raised an ephemeral
+ * Notification (ambient, deleted from GET /api/notifications once
+ * acknowledged) — no row a guest could poll for the outcome of their own
+ * request. Defect/RoomNote already carry their own real status
+ * (WorkOrder.status, RoomNote.status) and don't need this.
+ */
+model GuestRequest {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  kind      String // DND | CLEAN_REQUEST | CONTACT
+  // Structured detail (JSON), e.g. {"window":"NOW"} or {"timing":"LATER","time":"15:00"}
+  // or {"department":"housekeeping"} — kept untranslated so the guest
+  // screen can render it in whichever language it's currently showing,
+  // not whatever the server happened to render it in at creation time.
+  detail    String?
+  status    String   @default("RECEIVED") // RECEIVED | IN_PROGRESS | DONE | CANCELLED
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model Excursion {

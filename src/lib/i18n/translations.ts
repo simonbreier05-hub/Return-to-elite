@@ -47,6 +47,7 @@ const en = {
     handover: "Handover",
     planning: "Morning planning",
     dutyManager: "Duty Manager",
+    guestAccess: "Guest access (QR/NFC)",
   },
   role: {
     room_attendant: "Room Attendant",
@@ -254,6 +255,7 @@ const en = {
     inSection: "section {{section}}",
     handoverLink: "Handover",
     settingsLink: "Settings",
+    guestAccessLink: "Guest access (QR/NFC)",
     morningPlanningLink: "Morning planning →",
     reworkModalTitle: "Send room {{number}} back",
     reworkModalSubtitle: "The attendant sees this note on their device.",
@@ -585,6 +587,7 @@ const de = {
     handover: "Übergabe",
     planning: "Tagesplanung",
     dutyManager: "Duty Manager",
+    guestAccess: "Gästezugang (QR/NFC)",
   },
   role: {
     room_attendant: "Zimmermädchen",
@@ -792,6 +795,7 @@ const de = {
     inSection: "Sektion {{section}}",
     handoverLink: "Übergabe",
     settingsLink: "Einstellungen",
+    guestAccessLink: "Gästezugang (QR/NFC)",
     morningPlanningLink: "Tagesplanung →",
     reworkModalTitle: "Zimmer {{number}} zurückschicken",
     reworkModalSubtitle: "Das Zimmermädchen sieht diese Notiz auf dem eigenen Gerät.",

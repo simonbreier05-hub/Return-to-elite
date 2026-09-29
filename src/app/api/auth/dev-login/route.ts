@@ -5,6 +5,7 @@ import { audit } from "@/lib/audit";
 import { createSessionToken, SESSION_COOKIE } from "@/lib/auth";
 import { ROLES, RoleSchema } from "@/lib/domain";
 import { devLoginEnabled } from "@/lib/devAuth";
+import { ensureRoomAccessCode } from "@/lib/guestRoomCode";
 
 /**
  * GET  — is quick login available, and who can I sign in as?
@@ -19,13 +20,22 @@ export async function GET() {
 
   const users = await prisma.user.findMany({
     // Staff only — excludes the system "guest" account that backs the
-    // guest-facing screen (src/app/guest/[roomNumber]), which is never a
-    // real login and would otherwise show up here as a broken quick-switch entry.
+    // guest-facing screen (src/app/g/r/[roomCode], src/app/g/s/[stayToken]),
+    // which is never a real login and would otherwise show up here as a
+    // broken quick-switch entry.
     where: { role: { in: [...ROLES] } },
     orderBy: [{ role: "asc" }, { name: "asc" }],
     select: { id: true, email: true, name: true, role: true, section: true },
   });
-  return NextResponse.json({ enabled: true, users });
+
+  // Login page's permanent guest-preview tile (see src/app/login/page.tsx):
+  // room 301 always has a seeded demo Stay (prisma/seed.ts), so its access
+  // code always resolves. Never the room number in the URL, same as a real
+  // NFC tag — see docs/guest-api.md.
+  const demoRoom = await prisma.room.findUnique({ where: { number: "301" }, select: { id: true } });
+  const guestPreviewUrl = demoRoom ? `/g/r/${await ensureRoomAccessCode(demoRoom.id)}` : null;
+
+  return NextResponse.json({ enabled: true, users, guestPreviewUrl });
 }
 
 const Body = z.object({ email: z.string().email() });

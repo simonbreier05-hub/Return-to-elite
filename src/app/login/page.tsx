@@ -25,12 +25,19 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [devUsers, setDevUsers] = useState<DevUser[] | null>(null);
+  const [guestPreviewUrl, setGuestPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/auth/dev-login")
       .then((r) => (r.ok ? r.json() : { enabled: false }))
-      .then((d) => setDevUsers(d.enabled ? d.users : null))
-      .catch(() => setDevUsers(null));
+      .then((d) => {
+        setDevUsers(d.enabled ? d.users : null);
+        setGuestPreviewUrl(d.enabled ? (d.guestPreviewUrl ?? null) : null);
+      })
+      .catch(() => {
+        setDevUsers(null);
+        setGuestPreviewUrl(null);
+      });
   }, []);
 
   // Hard navigation so the App Router cannot serve segments cached for a
@@ -127,20 +134,25 @@ export default function LoginPage() {
                 </button>
               ))}
               {/* Permanent product showcase, not a login: lets us demo the
-                  guest-facing screen (see src/app/guest/[roomNumber]) in
+                  guest-facing screen (see src/app/g/r/[roomCode]) in
                   presentations without a real reservation. Dashed border
                   keeps it visually distinct from the role tiles above.
-                  301 is a real room from the seeded floor plan — 305 was
-                  only ever a placeholder from before that floor plan was
-                  digitized and doesn't resolve. */}
-              <button
-                onClick={() => window.location.assign("/guest/301")}
-                disabled={busy}
-                className="flex h-20 flex-col items-center justify-center rounded-xl border border-dashed border-gold-line/60 bg-linen px-3 text-center transition hover:border-navy-line hover:bg-parchment disabled:opacity-40"
-              >
-                <div className="text-sm font-semibold">{t("login.guestPreview")}</div>
-                <div className="text-xs text-graphite/60">{t("login.guestPreviewRoom")}</div>
-              </button>
+                  Links to room 301's actual NFC/QR access code (fetched
+                  from the API above, never the room number in the URL —
+                  same as a real guest) — room 301 always has a seeded
+                  demo Stay (prisma/seed.ts) so it always resolves. Hidden
+                  entirely if that failed to resolve rather than linking
+                  to a dead demo. */}
+              {guestPreviewUrl && (
+                <button
+                  onClick={() => window.location.assign(guestPreviewUrl)}
+                  disabled={busy}
+                  className="flex h-20 flex-col items-center justify-center rounded-xl border border-dashed border-gold-line/60 bg-linen px-3 text-center transition hover:border-navy-line hover:bg-parchment disabled:opacity-40"
+                >
+                  <div className="text-sm font-semibold">{t("login.guestPreview")}</div>
+                  <div className="text-xs text-graphite/60">{t("login.guestPreviewRoom")}</div>
+                </button>
+              )}
             </div>
 
             <p className="mt-5 text-center text-xs text-graphite">{t("login.devModeNote")}</p>

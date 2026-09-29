@@ -225,7 +225,7 @@ body {
 }
 
 /*
- * Guest screen (src/app/guest/[roomNumber]) uses its own small palette
+ * Guest screen (src/app/g/[roomNumber]) uses its own small palette
  * straight from the brief, scoped to `.guest-theme` so it doesn't touch the
  * staff app's ivory/gold palette above.
  */

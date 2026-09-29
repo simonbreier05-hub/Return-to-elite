@@ -226,5 +226,12 @@ export const DEFAULT_SETTINGS = {
   roomsPerAttendantMin: 10,
   roomsPerAttendantMax: 12,
   attendantPoolMax: 10, // realistic upper end of the Room Attendant roster
+  // Guest screen (Prompt G2 Teil 2): a pre-arrival stayToken keeps working
+  // this many minutes after Stay.checkOut, so a late-departing guest isn't
+  // locked out mid-checkout.
+  guestStayTokenGraceMinutes: 120,
+  // Guest screen rate limit: max write requests (DND/clean/defect/contact/
+  // note, combined) per room+IP per rolling hour — see src/lib/guest/rateLimit.ts.
+  guestRateLimitPerHour: 5,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
