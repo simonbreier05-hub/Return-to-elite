@@ -154,16 +154,18 @@ Mängelmeldung, inkl. optionalem Foto. **Einziger Endpunkt mit
 
 **Response `201`**
 ```json
-{ "defect": { "id": "...", "roomId": "...", "category": "...", "note": "...", "photoPath": "/uploads/...", "createdAt": "..." } }
+{ "defect": { "id": "...", "roomId": "...", "category": "...", "note": "...", "photoPath": "/api/uploads/...", "createdAt": "..." } }
 ```
 
 **Fehler**: wie `dnd`, plus 400 bei fehlendem `multipart/form-data`-Body,
 ungültiger/leerer `category`/`note`, `note` > 1000 Zeichen, oder Foto > 8 MB.
 
 Landet als echter `Defect` (Quelle wie jede Personal-Meldung) im
-Techniker-Hub — inkl. `WorkOrder`. Fotos liegen unter `/uploads/*`
-(**noch nicht** signiert/zugriffsgeschützt — offener DSGVO-Punkt, siehe
-`Prompt_G2_Gaeste_Screen_v1.md`, Abschnitt Datenschutz).
+Techniker-Hub — inkl. `WorkOrder`. Fotos liegen privat unter `./uploads`
+(nie unter `public/`) und sind ausschließlich über die zugriffsgeschützte
+Route `GET /api/uploads/<datei>` erreichbar (`requireAuth()` — jedes
+angemeldete Personalkonto, kein anonymer Zugriff; siehe
+`src/app/api/uploads/[...path]/route.ts`).
 
 ### `.../contact`
 
@@ -319,12 +321,38 @@ Screen das direkt an (`GuestOfflineBar`) statt die Meldung zu verlieren.
   des Gäste-Screens (siehe Status-Feed oben) — das ist die Schreibseite von
   „jede Antwort/Erledigung wird dem Gast als Status angezeigt“.
 
+## Datenschutz (DSGVO)
+
+- **Mängel-Fotos**: privat unter `./uploads` (nie `public/`), nur über
+  `GET /api/uploads/<datei>` lesbar (`requireAuth()`, plus Segment- und
+  Pfad-Sanity-Checks gegen Traversal). Siehe
+  `src/app/api/uploads/[...path]/route.ts`.
+- **Automatische Löschung/Anonymisierung**: `src/lib/guestDataRetention.ts`,
+  ausgeführt stündlich vom Ticker in `server.js`
+  (`POST /api/internal/guest-data-retention`; ein duty_manager kann sie auch
+  manuell auslösen). Betrifft nur bereits abgeschlossene/erledigte Daten,
+  älter als `Setting.guestDataRetentionDays` (Standard 30 Tage, überschreibbar
+  wie jede andere House-Policy-Zahl über `src/lib/settings.ts`):
+  - `GuestRequest` (DND/Reinigungswunsch/Kontakt): gelöscht, sobald
+    `DONE`/`CANCELLED` und älter als die Frist.
+  - Gast-gemeldete `Defect`-Fotos: Datei wird gelöscht und `photoPath`
+    genullt; der `Defect`/`WorkOrder`-Datensatz selbst bleibt (Wartungshistorie
+    des Technik-Teams, keine Gastdaten).
+  - Gast-verfasste `RoomNote`-Freitexte: gelöscht, sobald `DONE` und älter als
+    die Frist.
+  - Noch offene Einträge werden nie automatisch gelöscht — ein vergessener,
+    nie bearbeiteter Gästewunsch soll nicht kommentarlos verschwinden.
+  - `AuditLog`-Einträge (Zimmer-Logbuch) sind bewusst ausgenommen — das ist
+    das eigene Nachvollziehbarkeits-Protokoll des Hauses, eine separate
+    Aufbewahrungsfrage.
+
 ## Offene Punkte
 
-- Mängel-Fotos unter `/uploads/*` sind noch nicht zugriffsgeschützt (DSGVO,
-  siehe Prompt-Datei).
-- Automatische Löschung/Anonymisierung nach Abreise (Standard 30 Tage) ist
-  noch nicht gebaut.
 - Live-Aktualisierung ist Polling (alle 15 s), kein Push — bewusste
   Sicherheitsentscheidung (siehe Status-Feed-Abschnitt oben), aber spürbar
   langsamer als die Hub-Screens' Socket.IO-Updates.
+- `Stay.status` wird nirgends automatisch auf `CHECKED_OUT` gesetzt (keine
+  PMS-Anbindung) — die Löschfrist oben zählt daher ab Erstellung der
+  jeweiligen Gast-Daten, nicht ab einem tatsächlichen Abreise-Zeitpunkt.
+- Rechtstexte (Impressum, Datenschutzerklärung, ggf. AVV) sind weiterhin
+  Platzhalter — das ist eine juristische, keine technische Entscheidung.

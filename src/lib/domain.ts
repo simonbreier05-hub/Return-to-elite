@@ -233,5 +233,9 @@ export const DEFAULT_SETTINGS = {
   // Guest screen rate limit: max write requests (DND/clean/defect/contact/
   // note, combined) per room+IP per rolling hour — see src/lib/guest/rateLimit.ts.
   guestRateLimitPerHour: 5,
+  // DSGVO: guest-originated data (closed GuestRequest tickets, guest-authored
+  // RoomNote freetext, guest-reported Defect photos) is purged this many days
+  // after creation — see src/lib/guestDataRetention.ts.
+  guestDataRetentionDays: 30,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };

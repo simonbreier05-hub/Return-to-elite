@@ -189,10 +189,10 @@ async function handleDefect(room: GuestActionRoom, req: NextRequest): Promise<Ne
     }
     const ext = (photo.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const filename = `defect-${room.number}-${Date.now()}.${ext}`;
-    const dir = path.join(process.cwd(), "public", "uploads");
+    const dir = path.join(process.cwd(), "uploads");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, filename), Buffer.from(await photo.arrayBuffer()));
-    photoPath = `/uploads/${filename}`;
+    photoPath = `/api/uploads/${filename}`;
   }
 
   const reportedById = await getGuestSystemUserId();

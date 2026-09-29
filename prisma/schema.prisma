@@ -231,7 +231,7 @@ model Defect {
   room         Room       @relation(fields: [roomId], references: [id])
   category     String // PLUMBING | ELECTRICAL | HVAC | FURNITURE | IT_TV | MINIBAR | OTHER
   note         String
-  photoPath    String? // stored under /public/uploads (S3 mock)
+  photoPath    String? // "/api/uploads/<file>" — file lives under private ./uploads (S3 mock), served only via the gated route (see src/app/api/uploads)
   reportedById String
   reportedBy   User       @relation("DefectReporter", fields: [reportedById], references: [id])
   createdAt    DateTime   @default(now())
