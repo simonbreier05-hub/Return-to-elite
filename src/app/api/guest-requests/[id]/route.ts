@@ -34,7 +34,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const existing = await prisma.guestRequest.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Guest request not found." }, { status: 404 });
 
-  if (parsed.data.assignedToId) {
+  if (parsed.data.assignedToId != null) {
     const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assignedToId } });
     if (!assignee) return NextResponse.json({ error: "assignedToId must reference a real user." }, { status: 400 });
   }

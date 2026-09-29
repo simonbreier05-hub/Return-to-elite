@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { getPriorityWeights, getSettings } from "@/lib/settings";
-import { computePriority, type PriorityGuestCleanRequestInput } from "@/lib/priority/computePriority";
+import { computePriority, parseGuestCleanRequestTiming } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 
 /**
@@ -10,20 +10,6 @@ import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
  * actionable room. Optional ?attendantId= tunes the route-proximity signal
  * to that attendant's live location.
  */
-
-/** GuestRequest.detail is untranslated JSON (see src/lib/guestActions.ts) — pull just the timing out of it. */
-function parseGuestCleanRequestTiming(detail: string | null | undefined): PriorityGuestCleanRequestInput | null {
-  if (!detail) return null;
-  try {
-    const parsed = JSON.parse(detail) as { timing?: string };
-    if (parsed.timing === "NOW" || parsed.timing === "IN_30" || parsed.timing === "LATER") {
-      return { timing: parsed.timing };
-    }
-  } catch {
-    // Malformed/missing detail — treat as no signal rather than throwing.
-  }
-  return null;
-}
 export async function GET(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;

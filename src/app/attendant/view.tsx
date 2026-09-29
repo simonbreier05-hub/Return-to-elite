@@ -260,10 +260,10 @@ export default function AttendantView() {
     const prio = priorities[room.id];
     return {
       primary:
-        room.status === "BLOCKED"
-          ? { label: t("attendant.unblockAndStart"), onClick: () => setStatus(room, "IN_PROGRESS") }
-          : next === "IN_PROGRESS" && room.guestDndActive
-            ? null
+        room.guestDndActive && (room.status === "BLOCKED" || next === "IN_PROGRESS")
+          ? null
+          : room.status === "BLOCKED"
+            ? { label: t("attendant.unblockAndStart"), onClick: () => setStatus(room, "IN_PROGRESS") }
             : next
               ? { label: next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean"), onClick: () => setStatus(room, next) }
               : null,
@@ -586,35 +586,37 @@ function RoomCard({
         </div>
       </div>
 
-      {next === "IN_PROGRESS" && room.guestDndActive ? (
+      {room.guestDndActive && (next === "IN_PROGRESS" || room.status === "BLOCKED") ? (
         <div className="rounded-xl border border-status-out-of-order/40 bg-status-out-of-order/10 px-3 py-3 text-center text-sm font-medium text-status-out-of-order">
           {t("attendant.guestDndActive")}
         </div>
       ) : (
-        next && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onSetStatus(room, next);
-            }}
-            disabled={busy}
-            className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-          >
-            {busy ? "…" : next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean")}
-          </button>
-        )
-      )}
-      {room.status === "BLOCKED" && (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            onSetStatus(room, "IN_PROGRESS");
-          }}
-          disabled={busy}
-          className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-        >
-          {busy ? "…" : t("attendant.unblockAndStart")}
-        </button>
+        <>
+          {next && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetStatus(room, next);
+              }}
+              disabled={busy}
+              className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+            >
+              {busy ? "…" : next === "IN_PROGRESS" ? t("attendant.startCleaning") : t("attendant.markClean")}
+            </button>
+          )}
+          {room.status === "BLOCKED" && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onSetStatus(room, "IN_PROGRESS");
+              }}
+              disabled={busy}
+              className="h-14 w-full rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+            >
+              {busy ? "…" : t("attendant.unblockAndStart")}
+            </button>
+          )}
+        </>
       )}
     </div>
   );

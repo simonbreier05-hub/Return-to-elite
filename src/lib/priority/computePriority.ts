@@ -107,6 +107,25 @@ export const PRIORITY_WEIGHTS = {
 /** Statuses that still need housekeeping work and therefore compete for priority. */
 const ACTIONABLE = new Set(["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"]);
 
+/**
+ * GuestRequest.detail is untranslated JSON (see src/lib/guestActions.ts) — pull
+ * just the timing out of it. Shared by every caller that feeds a room's
+ * still-open CLEAN_REQUEST into computePriority, so the signal can't be
+ * silently dropped by a caller re-parsing it differently (or not at all).
+ */
+export function parseGuestCleanRequestTiming(detail: string | null | undefined): PriorityGuestCleanRequestInput | null {
+  if (!detail) return null;
+  try {
+    const parsed = JSON.parse(detail) as { timing?: string };
+    if (parsed.timing === "NOW" || parsed.timing === "IN_30" || parsed.timing === "LATER") {
+      return { timing: parsed.timing };
+    }
+  } catch {
+    // Malformed/missing detail — treat as no signal rather than throwing.
+  }
+  return null;
+}
+
 export function computePriority(room: PriorityRoomInput, ctx: PriorityContext): PriorityResult {
   const reasons: PriorityReason[] = [];
   const W: PriorityWeights = ctx.weights ? { ...PRIORITY_WEIGHTS, ...ctx.weights } : PRIORITY_WEIGHTS;
