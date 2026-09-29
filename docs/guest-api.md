@@ -72,11 +72,11 @@ POST /api/guest/r/:roomCode/:action
 POST /api/guest/s/:stayToken/:action
 ```
 
-`:action` ∈ `dnd` | `clean-request` | `defect` | `contact` | `notes`.
-Antworten sind `application/json`, außer beim Mängel-Endpunkt (Request), der
-`multipart/form-data` erwartet. Beide Routen teilen sich dieselbe
-Implementierung (`src/lib/guestActions.ts`) — sie unterscheiden sich nur in
-der Auflösung des Zugangs (`resolveGuestAccessByRoomCode` vs.
+`:action` ∈ `dnd` | `dnd-cancel` | `clean-request` | `defect` | `contact` |
+`notes`. Antworten sind `application/json`, außer beim Mängel-Endpunkt
+(Request), der `multipart/form-data` erwartet. Beide Routen teilen sich
+dieselbe Implementierung (`src/lib/guestActions.ts`) — sie unterscheiden sich
+nur in der Auflösung des Zugangs (`resolveGuestAccessByRoomCode` vs.
 `resolveGuestAccessByStayToken`, `src/lib/guestServer.ts`).
 
 ### `.../dnd`
@@ -90,7 +90,7 @@ der Auflösung des Zugangs (`resolveGuestAccessByRoomCode` vs.
 
 **Response `201`**
 ```json
-{ "ok": true }
+{ "ok": true, "requestId": "..." }
 ```
 
 **Fehler**
@@ -103,7 +103,21 @@ der Auflösung des Zugangs (`resolveGuestAccessByRoomCode` vs.
 Setzt **nicht** direkt `Room.status`/`blockReason` (das bleibt Personal
 vorbehalten, siehe State-Machine) — erzeugt stattdessen eine
 `Notification` (`type: GUEST_REQUEST`, `targetRole: supervisor`), die der
-Supervisor sieht und übernehmen kann.
+Supervisor sieht und übernehmen kann, **und** einen `GuestRequest`-Eintrag
+(Status `RECEIVED`), der den Status-Feed unten und das
+„zurücknehmen“-Recht unter `dnd-cancel` trägt.
+
+### `.../dnd-cancel`
+
+Nimmt das eigene, noch offene „Bitte nicht stören“ zurück (Prompt G2 Teil 3:
+„Gast kann eine DND-Einstellung selbst zurücknehmen“). Kein Request-Body.
+
+**Response `200`**: `{ "ok": true }`. **Fehler**: wie `dnd`, plus `400`, wenn
+gerade kein aktives DND für dieses Zimmer offen ist.
+
+Setzt den zugehörigen `GuestRequest` auf `CANCELLED` und informiert das
+Personal per `Notification` — rührt, wie `dnd` selbst, `Room.status`/
+`blockReason` nicht an.
 
 ### `.../clean-request`
 
@@ -117,10 +131,10 @@ Reinigungswunsch.
 }
 ```
 
-**Response `201`**: `{ "ok": true }`. **Fehler**: wie `dnd`, plus 400 bei
-`time` nicht im Format `HH:MM`.
+**Response `201`**: `{ "ok": true, "requestId": "..." }`. **Fehler**: wie
+`dnd`, plus 400 bei `time` nicht im Format `HH:MM`.
 
-Erzeugt aktuell ebenfalls nur eine `Notification`. **Noch nicht
+Erzeugt `Notification` + `GuestRequest` wie `dnd`. **Noch nicht
 angebunden:** automatischer Sprung auf Priorität „jetzt benötigt“ in der
 Housekeeper-Route (`src/lib/priority/computePriority.ts`) — folgt in
 Teil 4.
@@ -160,8 +174,9 @@ Abteilung kontaktieren.
 ```
 
 Siehe `CONTACT_DEPARTMENTS` in `src/lib/guest.ts` für die vollständige
-Zuordnung (Anzeigename → interne Rolle). **Response `201`**: `{ "ok": true }`.
-**Fehler**: wie `dnd`, plus 400 bei unbekanntem `department`.
+Zuordnung (Anzeigename → interne Rolle). **Response `201`**:
+`{ "ok": true, "requestId": "..." }`. **Fehler**: wie `dnd`, plus 400 bei
+unbekanntem `department`. Erzeugt `Notification` + `GuestRequest` wie `dnd`.
 
 ### `.../notes`
 
@@ -181,6 +196,43 @@ Freitext-Nachricht ans Housekeeping.
 
 Landet als normaler `RoomNote`-Eintrag (wie jede Personal-Notiz).
 
+## Status-Feed (Prompt G2 Teil 3)
+
+```
+GET /api/guest/r/:roomCode/status
+GET /api/guest/s/:stayToken/status
+```
+
+Alles, was der Gast selbst für dieses Zimmer eingereicht hat, vereinheitlicht
+auf `RECEIVED` | `IN_PROGRESS` | `DONE` | `CANCELLED` — die Grundlage für
+„Eingegangen / In Bearbeitung / Erledigt“ auf dem Gäte-Screen. Vom
+Guest-Screen alle 15 s gepollt (`src/components/guest/useGuestStatusFeed.ts`),
+**nicht** über den Socket.IO-Broadcast, den die Hub-Screens nutzen: der
+sendet volle Staff-Payloads (Housekeeper-Namen, andere Zimmer) unauthentifiziert
+an jeden verbundenen Client — für einen Gast-Browser wäre das genau das
+Datenleck, das Teil 2 explizit ausschließt.
+
+**Response `200`**
+```json
+{
+  "items": [
+    { "id": "...", "kind": "DND" | "CLEAN_REQUEST" | "CONTACT" | "DEFECT" | "NOTE",
+      "detail": "...", "status": "RECEIVED" | "IN_PROGRESS" | "DONE" | "CANCELLED",
+      "createdAt": "..." }
+  ],
+  "activeDnd": { "id": "...", "detail": "..." } | null
+}
+```
+
+`detail` ist **absichtlich unübersetzt** (z. B. `{"window":"NOW"}` für DND,
+roher Kategorie-Code für Mängel, der Nachrichtentext für `NOTE`) — der Client
+übersetzt es in die gerade aktive Sprache, nicht der Server zum
+Erstellungszeitpunkt. `activeDnd` ist gesetzt, solange ein `GuestRequest` vom
+Kind `DND` noch `RECEIVED`/`IN_PROGRESS` ist — treibt die
+„zurücknehmen“-Kachel auf dem Screen. Nur Zeilen der letzten 24 h, max. 20;
+nie ein von Personal verfasster Eintrag (Filter auf den Systemkonto-Autor —
+siehe `src/lib/guestStatusFeed.ts`).
+
 ## Rate-Limits
 
 Ein Limit **pro Zimmer + IP, über alle fünf Aktionen hinweg** (nicht pro
@@ -198,6 +250,18 @@ Steuerzeichen werden entfernt, Whitespace normalisiert. React entschärft
 XSS beim Rendern ohnehin selbst — das ist zusätzliche Absicherung für
 Konsumenten, die das nicht tun (z. B. ein künftiger PDF-/E-Mail-Export).
 
+## Sprache (DE/EN)
+
+Der Guest-Screen hat sein eigenes, vom Staff-Hub komplett getrenntes
+i18n-System: `src/lib/guestI18n/translations.ts` (Wörterbuch),
+`GuestLocaleContext.tsx` (Provider). Erkennungsreihenfolge: 1) eine bereits
+auf diesem Gerät getroffene Wahl (localStorage), 2) `Stay.language` (vom
+Server mitgegeben — siehe `GuestView`'s `stayLanguage`-Prop), 3)
+Browsersprache, 4) Deutsch als Fallback. Der sichtbare DE/EN-Umschalter
+(`GuestLanguageSwitcher`) überschreibt das dauerhaft für dieses Gerät. Eine
+dritte Sprache hinzuzufügen heißt: ein weiteres Objekt in
+`translations.ts` + einen Eintrag in `GUEST_LOCALES` — sonst nichts.
+
 ## Generator für QR-/NFC-Inhalte
 
 `/supervisor/guest-access` (Rolle `supervisor`/`duty_manager`): Tabelle mit
@@ -209,6 +273,19 @@ echtem QR-Code (Bibliothek `qrcode`) und Zimmernummer im Klartext (nur für
 das Personal sichtbar) — Drucken/„Als PDF speichern“ über den
 Browser-Druckdialog, kein serverseitiges PDF-Rendering nötig.
 
+## PWA / Offline
+
+Jeder JSON-Body-Endpunkt (`dnd`, `dnd-cancel`, `clean-request`, `contact`,
+`notes`) läuft über dieselbe Offline-Queue-Mechanik wie der Staff-Hub
+(`src/lib/offline/actionQueue.ts`, eigene Instanz für Gäste unter
+`src/components/guest/useGuestOfflineQueue.ts`, eigener localStorage-Key):
+schlägt die Anfrage mangels Verbindung fehl, wird sie lokal gespeichert und
+automatisch erneut gesendet, sobald die Verbindung zurück ist — nie eine
+Aktion still verlieren. **Ausnahme:** `defect` (Mängelmeldung mit Foto,
+`multipart/form-data`) ist nicht in der Queue — die Warteschlange kann nur
+JSON-Bodies wiedergeben, nicht Dateien. Bei fehlender Verbindung zeigt der
+Screen das direkt an (`GuestOfflineBar`) statt die Meldung zu verlieren.
+
 ## Offene Punkte
 
 - Reinigungswunsch löst noch keinen Prioritäts-Sprung aus (Teil 4).
@@ -216,3 +293,10 @@ Browser-Druckdialog, kein serverseitiges PDF-Rendering nötig.
   siehe Prompt-Datei).
 - Automatische Löschung/Anonymisierung nach Abreise (Standard 30 Tage) ist
   noch nicht gebaut.
+- `clean-request`/`contact`-Status bleibt bei `RECEIVED`, bis Teil 4 dem
+  Personal eine Möglichkeit gibt, ihn auf `IN_PROGRESS`/`DONE` zu setzen
+  (bei `defect`/`notes` funktioniert das bereits über die bestehenden
+  Techniker-/Notiz-Screens).
+- Live-Aktualisierung ist Polling (alle 15 s), kein Push — bewusste
+  Sicherheitsentscheidung (siehe Status-Feed-Abschnitt oben), aber spürbar
+  langsamer als die Hub-Screens' Socket.IO-Updates.

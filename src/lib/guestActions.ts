@@ -29,7 +29,7 @@ import { sanitizeGuestText } from "@/lib/guestSanitize";
 
 type GuestActionRoom = { id: string; number: string };
 
-export const GUEST_ACTIONS = ["dnd", "clean-request", "defect", "contact", "notes"] as const;
+export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes"] as const;
 export type GuestAction = (typeof GUEST_ACTIONS)[number];
 
 export function isGuestAction(value: string): value is GuestAction {
@@ -40,6 +40,8 @@ export function runGuestAction(action: GuestAction, room: GuestActionRoom, req: 
   switch (action) {
     case "dnd":
       return handleDnd(room, req);
+    case "dnd-cancel":
+      return handleDndCancel(room);
     case "clean-request":
       return handleCleanRequest(room, req);
     case "defect":
@@ -58,23 +60,60 @@ const DndBody = z.object({ window: z.enum(DND_WINDOWS) });
  * to staff sessions by the state machine (src/lib/stateMachine.ts), and
  * attributing it to a fake staff identity would be worse than not
  * automating it. Instead it raises the same Notification staff already
- * watch for everything else (see src/app/api/rooms/[id]/defects/route.ts).
+ * watch for everything else (see src/app/api/rooms/[id]/defects/route.ts),
+ * plus a GuestRequest row (Prompt G2 Teil 3) so the guest screen can show
+ * "Eingegangen" and later offer to lift it themselves.
  */
 async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextResponse> {
   const parsed = DndBody.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid time window." }, { status: 400 });
 
-  const notification = await prisma.notification.create({
-    data: {
-      type: "GUEST_REQUEST",
-      level: "info",
-      targetRole: "supervisor",
-      roomId: room.id,
-      message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
-    },
-  });
+  const [notification, guestRequest] = await Promise.all([
+    prisma.notification.create({
+      data: {
+        type: "GUEST_REQUEST",
+        level: "info",
+        targetRole: "supervisor",
+        roomId: room.id,
+        message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
+      },
+    }),
+    prisma.guestRequest.create({
+      data: { roomId: room.id, kind: "DND", detail: JSON.stringify({ window: parsed.data.window }) },
+    }),
+  ]);
   broadcast("notification:new", { notification });
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
+}
+
+/**
+ * Guest self-service: lifts whichever DND request is currently active for
+ * this room (Prompt G2 Teil 3: "Gast kann eine DND-Einstellung selbst
+ * zurücknehmen"). No-op with a plain error if there is nothing active —
+ * this only ever cancels the guest's *own* still-open request, never
+ * touches Room.status/blockReason (staff-only, same as handleDnd above).
+ */
+async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
+  const active = await prisma.guestRequest.findFirst({
+    where: { roomId: room.id, kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+    orderBy: { createdAt: "desc" },
+  });
+  if (!active) return NextResponse.json({ error: "No active Do Not Disturb request." }, { status: 400 });
+
+  const [, notification] = await Promise.all([
+    prisma.guestRequest.update({ where: { id: active.id }, data: { status: "CANCELLED" } }),
+    prisma.notification.create({
+      data: {
+        type: "GUEST_REQUEST",
+        level: "info",
+        targetRole: "supervisor",
+        roomId: room.id,
+        message: `Room ${room.number}: guest lifted Do Not Disturb.`,
+      },
+    }),
+  ]);
+  broadcast("notification:new", { notification });
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 const CleanRequestBody = z.object({
@@ -93,17 +132,22 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
   const timingLabel =
     timing === "LATER" && time ? `${CLEAN_TIMING_LABELS.LATER} – ${time} Uhr` : CLEAN_TIMING_LABELS[timing];
 
-  const notification = await prisma.notification.create({
-    data: {
-      type: "GUEST_REQUEST",
-      level: "info",
-      targetRole: "supervisor",
-      roomId: room.id,
-      message: `Room ${room.number}: guest requests cleaning — ${timingLabel}.`,
-    },
-  });
+  const [notification, guestRequest] = await Promise.all([
+    prisma.notification.create({
+      data: {
+        type: "GUEST_REQUEST",
+        level: "info",
+        targetRole: "supervisor",
+        roomId: room.id,
+        message: `Room ${room.number}: guest requests cleaning — ${timingLabel}.`,
+      },
+    }),
+    prisma.guestRequest.create({
+      data: { roomId: room.id, kind: "CLEAN_REQUEST", detail: JSON.stringify({ timing, time }) },
+    }),
+  ]);
   broadcast("notification:new", { notification });
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
 const MAX_DEFECT_NOTE_LENGTH = 1000;
@@ -155,17 +199,22 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
   const dept = CONTACT_DEPARTMENTS.find((d) => d.key === parsed.data.department);
   if (!dept) return NextResponse.json({ error: "Unknown department." }, { status: 400 });
 
-  const notification = await prisma.notification.create({
-    data: {
-      type: "GUEST_REQUEST",
-      level: "info",
-      targetRole: dept.role,
-      roomId: room.id,
-      message: `Room ${room.number}: guest wants to be contacted by ${dept.label}.`,
-    },
-  });
+  const [notification, guestRequest] = await Promise.all([
+    prisma.notification.create({
+      data: {
+        type: "GUEST_REQUEST",
+        level: "info",
+        targetRole: dept.role,
+        roomId: room.id,
+        message: `Room ${room.number}: guest wants to be contacted by ${dept.label}.`,
+      },
+    }),
+    prisma.guestRequest.create({
+      data: { roomId: room.id, kind: "CONTACT", detail: JSON.stringify({ department: dept.key }) },
+    }),
+  ]);
   broadcast("notification:new", { notification });
-  return NextResponse.json({ ok: true }, { status: 201 });
+  return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
 const NotesBody = z.object({ body: z.string().trim().min(1).max(2000) });

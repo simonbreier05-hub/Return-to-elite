@@ -62,6 +62,8 @@ async function main() {
   await prisma.workOrder.deleteMany();
   await prisma.defect.deleteMany();
   await prisma.roomNote.deleteMany();
+  await prisma.guestRequest.deleteMany();
+  await prisma.stay.deleteMany();
   await prisma.excursion.deleteMany();
   await prisma.arrival.deleteMany();
   await prisma.room.deleteMany();

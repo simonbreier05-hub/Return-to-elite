@@ -102,13 +102,14 @@ model Room {
   lastLinenChangeAt DateTime?
   updatedAt        DateTime  @updatedAt
 
-  notes      RoomNote[]
-  defects    Defect[]
-  arrivals   Arrival[]
-  stays      Stay[]
-  excursions Excursion[]
-  auditLogs  AuditLog[]
-  roomTasks  RoomTask[]
+  notes         RoomNote[]
+  defects       Defect[]
+  arrivals      Arrival[]
+  stays         Stay[]
+  guestRequests GuestRequest[]
+  excursions    Excursion[]
+  auditLogs     AuditLog[]
+  roomTasks     RoomTask[]
 }
 
 /**
@@ -166,6 +167,30 @@ model Stay {
   checkOut  DateTime // departure date; stayToken expires checkOut + grace period (Setting, default 2h)
   status    String   @default("EXPECTED") // EXPECTED | IN_HOUSE | CHECKED_OUT | CANCELLED
   stayToken String   @unique // opaque, >=128 bit random — resolves /g/s/<stayToken>
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+/**
+ * A DND/cleaning-timing/department-contact request raised from the guest
+ * screen (Prompt G2 Teil 3: "Nach dem Senden: einfacher Status"). Exists
+ * because those three guest actions only ever raised an ephemeral
+ * Notification (ambient, deleted from GET /api/notifications once
+ * acknowledged) — no row a guest could poll for the outcome of their own
+ * request. Defect/RoomNote already carry their own real status
+ * (WorkOrder.status, RoomNote.status) and don't need this.
+ */
+model GuestRequest {
+  id        String   @id @default(cuid())
+  roomId    String
+  room      Room     @relation(fields: [roomId], references: [id])
+  kind      String // DND | CLEAN_REQUEST | CONTACT
+  // Structured detail (JSON), e.g. {"window":"NOW"} or {"timing":"LATER","time":"15:00"}
+  // or {"department":"housekeeping"} — kept untranslated so the guest
+  // screen can render it in whichever language it's currently showing,
+  // not whatever the server happened to render it in at creation time.
+  detail    String?
+  status    String   @default("RECEIVED") // RECEIVED | IN_PROGRESS | DONE | CANCELLED
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }

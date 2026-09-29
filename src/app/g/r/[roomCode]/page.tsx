@@ -15,5 +15,12 @@ export default async function GuestRoomCodePage({ params }: { params: Promise<{ 
   const access = await resolveGuestAccessByRoomCode(roomCode);
   if (!access) return <GuestUnavailable />;
 
-  return <GuestView roomNumber={access.room.number} floor={access.room.floor} actionBase={`/api/guest/r/${roomCode}`} />;
+  return (
+    <GuestView
+      roomNumber={access.room.number}
+      floor={access.room.floor}
+      actionBase={`/api/guest/r/${roomCode}`}
+      stayLanguage={access.stay.language}
+    />
+  );
 }

@@ -16,5 +16,12 @@ export default async function GuestStayTokenPage({ params }: { params: Promise<{
   const access = await resolveGuestAccessByStayToken(stayToken);
   if (!access) return <GuestUnavailable />;
 
-  return <GuestView roomNumber={access.room.number} floor={access.room.floor} actionBase={`/api/guest/s/${stayToken}`} />;
+  return (
+    <GuestView
+      roomNumber={access.room.number}
+      floor={access.room.floor}
+      actionBase={`/api/guest/s/${stayToken}`}
+      stayLanguage={access.stay.language}
+    />
+  );
 }
