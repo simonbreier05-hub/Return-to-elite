@@ -11,9 +11,10 @@ prisma/*.db-journal
 .env
 .env.local
 
-# uploads (S3 mock)
-public/uploads/*
-!public/uploads/.gitkeep
+# uploads (S3 mock) — kept outside public/ so they can only be reached
+# through the gated route (src/app/api/uploads), never as a static file.
+uploads/*
+!uploads/.gitkeep
 
 # misc
 .DS_Store

@@ -8,7 +8,8 @@ import { reportDefect } from "@/lib/rooms/reportDefect";
 
 /**
  * POST /api/rooms/[id]/defects — report a defect (category + note + photo).
- * Photos are stored under public/uploads (local S3 mock). A work order is
+ * Photos are stored privately under ./uploads (local S3 mock, never under
+ * public/) and served only via the gated /api/uploads route. A work order is
  * auto-created and routed to the engineering queue.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +28,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!category.success) return NextResponse.json({ error: "Invalid defect category." }, { status: 400 });
   if (!note) return NextResponse.json({ error: "Defect note is required." }, { status: 400 });
 
-  // Photo upload → local S3 mock (public/uploads)
+  // Photo upload → local S3 mock (private ./uploads, served only via the
+  // gated /api/uploads route — see src/app/api/uploads/[...path]/route.ts)
   let photoPath: string | null = null;
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
@@ -36,10 +38,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     const ext = (photo.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const filename = `defect-${room.number}-${Date.now()}.${ext}`;
-    const dir = path.join(process.cwd(), "public", "uploads");
+    const dir = path.join(process.cwd(), "uploads");
     await mkdir(dir, { recursive: true });
     await writeFile(path.join(dir, filename), Buffer.from(await photo.arrayBuffer()));
-    photoPath = `/uploads/${filename}`;
+    photoPath = `/api/uploads/${filename}`;
   }
 
   const defect = await reportDefect({
