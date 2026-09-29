@@ -4,7 +4,7 @@ import Modal from "./Modal";
 import NoteCountBadge from "./NoteCountBadge";
 import NoteThread, { type ThreadNote } from "./NoteThread";
 import { RoomFlagIcons } from "./RoomFlags";
-import { StatusIcon } from "./icons";
+import { StatusIcon, IconBellSlash } from "./icons";
 import { STATUS_STYLES } from "./status";
 import type { BlockReason, RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -27,7 +27,17 @@ export interface SearchedRoom {
   assignedTo?: { id: string; name: string; dailyNumber?: number | null } | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   notes: ThreadNote[];
-  defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
+  defects: {
+    id: string;
+    category: string;
+    note: string;
+    workOrder?: { status: string } | null;
+    reportedBy?: { name: string; role: string } | null;
+  }[];
+  /** Open guest "Bitte nicht stören" request (Prompt G2 Teil 4) — never Room.status/blockReason. */
+  guestDndActive?: boolean;
+  /** This room's still-open guest requests (Prompt G2 Teil 4's "Zimmer-Logbuch" view). */
+  guestRequests?: { id: string; kind: string; detail: string | null; status: string; createdAt: string }[];
 }
 
 /**
@@ -75,6 +85,12 @@ export default function RoomDetailModal({
         </span>
         <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
       </div>
+      {room.guestDndActive && (
+        <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-status-out-of-order/10 p-2 text-sm font-medium text-status-out-of-order">
+          <IconBellSlash className="h-4 w-4 shrink-0" />
+          {t("supervisor.guestDndBanner")}
+        </p>
+      )}
       {room.oooUntil && (
         <p className="mt-1 text-xs text-graphite/60">
           {t("supervisor.oooUntil", { date: new Date(room.oooUntil).toLocaleString() })}
@@ -164,6 +180,24 @@ export default function RoomDetailModal({
             <p key={d.id} className="text-sm">
               🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
               {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
+              {d.reportedBy?.role === "guest" && (
+                <span className="ml-1 text-xs font-medium text-status-out-of-order">{t("supervisor.reportedByGuest")}</span>
+              )}
+            </p>
+          ))}
+        </div>
+      )}
+
+      {room.guestRequests && room.guestRequests.length > 0 && (
+        <div className="mt-4">
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.guestRequestsTitle")}</h4>
+          {room.guestRequests.map((r) => (
+            <p key={r.id} className="text-sm">
+              {r.kind === "DND" ? "🔕" : r.kind === "CLEAN_REQUEST" ? "✨" : "💬"}{" "}
+              {t(`guestRequestKind.${r.kind}` as TKey)}
+              <span className="ml-1 text-xs text-graphite/60">
+                [{t(`guestRequestStatus.${r.status}` as TKey)} · {new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}]
+              </span>
             </p>
           ))}
         </div>

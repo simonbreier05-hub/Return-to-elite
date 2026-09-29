@@ -116,6 +116,20 @@ export function IconLaundry({ className = "h-4 w-4" }: IconProps) {
   );
 }
 
+/** Guest screen "Bitte nicht stören" request active (Prompt G2 Teil 4) — a bell, crossed out. */
+export function IconBellSlash({ className = "h-4 w-4" }: IconProps) {
+  return (
+    <svg className={className} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.7} aria-hidden="true">
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M7 8.2A5 5 0 0 1 15.8 5M18 10.5V13c0 1.7.5 3 1.5 4.2H8.3M10.5 17.2v.3a1.9 1.9 0 0 0 3.8 0v-.3"
+      />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 3.5l17 17" />
+    </svg>
+  );
+}
+
 /** Maps status.ts's `iconKey` string to the actual glyph, so status.ts stays
  * a plain, framework-agnostic data module and only this one place needs to
  * know which SVG a key resolves to. */

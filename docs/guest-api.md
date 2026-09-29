@@ -134,10 +134,11 @@ Reinigungswunsch.
 **Response `201`**: `{ "ok": true, "requestId": "..." }`. **Fehler**: wie
 `dnd`, plus 400 bei `time` nicht im Format `HH:MM`.
 
-Erzeugt `Notification` + `GuestRequest` wie `dnd`. **Noch nicht
-angebunden:** automatischer Sprung auf Priorität „jetzt benötigt“ in der
-Housekeeper-Route (`src/lib/priority/computePriority.ts`) — folgt in
-Teil 4.
+Erzeugt `Notification` + `GuestRequest` wie `dnd`. Fließt in die
+Prioritäts-Engine ein (Prompt G2 Teil 4, `src/lib/priority/computePriority.ts`):
+`timing: "NOW"` zählt genauso viel wie Front Office „jetzt benötigt“,
+`IN_30`/`LATER` proportional weniger — das Zimmer springt entsprechend in
+der Housekeeper-Route nach oben.
 
 ### `.../defect`
 
@@ -286,17 +287,44 @@ Aktion still verlieren. **Ausnahme:** `defect` (Mängelmeldung mit Foto,
 JSON-Bodies wiedergeben, nicht Dateien. Bei fehlender Verbindung zeigt der
 Screen das direkt an (`GuestOfflineBar`) statt die Meldung zu verlieren.
 
+## Wirkung im Hotelbetrieb (Prompt G2 Teil 4)
+
+- **DND:** Ein aktives Gast-DND (kein `Room.status`/`blockReason` — reine
+  `GuestRequest`-Abfrage) erscheint sofort als 🔕-Icon im Grundriss
+  (`/floor-plan`, Planungshub), in der Supervisor-Zimmerliste (eigene KPI-
+  Kachel + Filter + Abschnitt „Gast: Bitte nicht stören“) und auf dem
+  Housekeeper-Screen. Ein Room Attendant kann ein Zimmer mit aktivem
+  Gast-DND nicht auf „In Bearbeitung“ setzen (`applyStatusChange`, 409 „Guest
+  has Do Not Disturb active“); ein Supervisor/Duty Manager kann es trotzdem
+  starten — die Prüfung greift nur für `room_attendant`.
+- **Reinigungswunsch:** siehe oben — fließt jetzt real in
+  `computePriority()` ein.
+- **Mängelmeldung:** landet unverändert im Techniker-Hub (`WorkOrder`);
+  zeigt dort zusätzlich ein „Gast“-Badge, wenn `reportedBy.role === "guest"`.
+  Im Zimmer-Modal (`RoomDetailModal`) jetzt ebenfalls sichtbar (vorher fehlte
+  die Melder-Anzeige dort komplett).
+- **Abteilungskontakt/Freitext:** unverändert `Notification`/`RoomNote`,
+  jeweils klar als Gast-Herkunft erkennbar (Autor-Rolle „guest“ bzw.
+  „Gast“-Badge).
+- **Zimmer-Logbuch:** jede Gästeaktion (auch `dnd`/`dnd-cancel`/
+  `clean-request`/`contact`, die vorher nur eine flüchtige `Notification`
+  erzeugten) schreibt jetzt einen `AuditLog`-Eintrag, zugeordnet auf das
+  Gäste-Systemkonto. `RoomDetailModal` zeigt zusätzlich einen
+  „Gästeanfragen“-Abschnitt mit den offenen `GuestRequest`-Zeilen des
+  Zimmers.
+- **Supervisor-Verwaltung:** `/supervisor/guest-requests` — einsehen (offen
+  oder alle), per „Übernehmen“ zuweisen, Status auf „In Bearbeitung“/
+  „Erledigt“ setzen. `GET`/`PATCH /api/guest-requests(/[id])`,
+  Rolle `supervisor`/`duty_manager`. Jede Änderung landet beim nächsten Poll
+  des Gäste-Screens (siehe Status-Feed oben) — das ist die Schreibseite von
+  „jede Antwort/Erledigung wird dem Gast als Status angezeigt“.
+
 ## Offene Punkte
 
-- Reinigungswunsch löst noch keinen Prioritäts-Sprung aus (Teil 4).
 - Mängel-Fotos unter `/uploads/*` sind noch nicht zugriffsgeschützt (DSGVO,
   siehe Prompt-Datei).
 - Automatische Löschung/Anonymisierung nach Abreise (Standard 30 Tage) ist
   noch nicht gebaut.
-- `clean-request`/`contact`-Status bleibt bei `RECEIVED`, bis Teil 4 dem
-  Personal eine Möglichkeit gibt, ihn auf `IN_PROGRESS`/`DONE` zu setzen
-  (bei `defect`/`notes` funktioniert das bereits über die bestehenden
-  Techniker-/Notiz-Screens).
 - Live-Aktualisierung ist Polling (alle 15 s), kein Push — bewusste
   Sicherheitsentscheidung (siehe Status-Feed-Abschnitt oben), aber spürbar
   langsamer als die Hub-Screens' Socket.IO-Updates.

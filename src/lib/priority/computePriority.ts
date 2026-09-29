@@ -12,6 +12,9 @@
  *  4. concierge excursion window (guest currently out => clean now)
  *  5. DND/BLOCKED age — escalates the longer a room stays blocked
  *  6. route/section proximity to the attendant (minimize walking)
+ *  7. guest-initiated cleaning request from the guest screen (Prompt G2
+ *     Teil 4) — "jetzt" gets the same weight as front-office neededNow,
+ *     "in 30 min"/"später heute" scale down with how soon the guest asked for
  */
 
 export interface PriorityRoomInput {
@@ -36,12 +39,19 @@ export interface PriorityExcursionInput {
   endsAt: Date;
 }
 
+/** The room's most recent still-open guest cleaning request, if any (GuestRequest kind=CLEAN_REQUEST). */
+export interface PriorityGuestCleanRequestInput {
+  timing: "NOW" | "IN_30" | "LATER";
+}
+
 export interface PriorityContext {
   now: Date;
   /** EXPECTED arrivals booked onto this room today. */
   arrivals: PriorityArrivalInput[];
   /** Concierge out-of-house windows for this room. */
   excursions: PriorityExcursionInput[];
+  /** The guest's own still-open cleaning request from the guest screen, if any. */
+  guestCleanRequest?: PriorityGuestCleanRequestInput | null;
   /** Section the attendant is currently working in (route optimization). */
   attendantSection?: string | null;
   /** Floor the attendant is currently on (route optimization). */
@@ -86,10 +96,35 @@ export const PRIORITY_WEIGHTS = {
   sameSection: 12, // route proximity
   sameFloor: 6,
   etaSoonWindowMinutes: 90,
+  // Guest tapped "Jetzt reinigen" on the guest screen (Prompt G2 Teil 4).
+  // "NOW" matches neededNow's weight on purpose — a guest asking right now
+  // is exactly as urgent as front office flagging a room needed now.
+  guestCleanRequestedNow: 100,
+  guestCleanRequestedSoon: 50, // IN_30
+  guestCleanRequestedLater: 20, // LATER (later today)
 } as const;
 
 /** Statuses that still need housekeeping work and therefore compete for priority. */
 const ACTIONABLE = new Set(["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"]);
+
+/**
+ * GuestRequest.detail is untranslated JSON (see src/lib/guestActions.ts) — pull
+ * just the timing out of it. Shared by every caller that feeds a room's
+ * still-open CLEAN_REQUEST into computePriority, so the signal can't be
+ * silently dropped by a caller re-parsing it differently (or not at all).
+ */
+export function parseGuestCleanRequestTiming(detail: string | null | undefined): PriorityGuestCleanRequestInput | null {
+  if (!detail) return null;
+  try {
+    const parsed = JSON.parse(detail) as { timing?: string };
+    if (parsed.timing === "NOW" || parsed.timing === "IN_30" || parsed.timing === "LATER") {
+      return { timing: parsed.timing };
+    }
+  } catch {
+    // Malformed/missing detail — treat as no signal rather than throwing.
+  }
+  return null;
+}
 
 export function computePriority(room: PriorityRoomInput, ctx: PriorityContext): PriorityResult {
   const reasons: PriorityReason[] = [];
@@ -175,6 +210,20 @@ export function computePriority(room: PriorityRoomInput, ctx: PriorityContext): 
     reasons.push({ signal: "route_section", points: W.sameSection, reason: `Same section (${room.section}) as attendant — minimal walking.` });
   } else if (ctx.attendantFloor != null && room.floor === ctx.attendantFloor) {
     reasons.push({ signal: "route_floor", points: W.sameFloor, reason: `Same floor (${room.floor}) as attendant.` });
+  }
+
+  // (7) Guest-initiated cleaning request (Prompt G2 Teil 4)
+  if (ctx.guestCleanRequest) {
+    const { timing } = ctx.guestCleanRequest;
+    const points =
+      timing === "NOW" ? W.guestCleanRequestedNow : timing === "IN_30" ? W.guestCleanRequestedSoon : W.guestCleanRequestedLater;
+    const reason =
+      timing === "NOW"
+        ? "Guest requested cleaning now via the guest app."
+        : timing === "IN_30"
+          ? "Guest requested cleaning in 30 minutes via the guest app."
+          : "Guest requested cleaning later today via the guest app.";
+    reasons.push({ signal: "guest_clean_request", points, reason });
   }
 
   const score = reasons.reduce((sum, r) => sum + r.points, 0);

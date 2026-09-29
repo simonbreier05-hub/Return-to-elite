@@ -49,6 +49,7 @@ model User {
   excursions      Excursion[]
   createdRoomTasks  RoomTask[] @relation("RoomTaskCreator")
   assignedRoomTasks RoomTask[] @relation("RoomTaskAssignee")
+  assignedGuestRequests GuestRequest[]
 }
 
 model Room {
@@ -191,8 +192,13 @@ model GuestRequest {
   // not whatever the server happened to render it in at creation time.
   detail    String?
   status    String   @default("RECEIVED") // RECEIVED | IN_PROGRESS | DONE | CANCELLED
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  // Which staff member is handling it (Prompt G2 Teil 4: "Supervisor kann
+  // Gästeanfragen einsehen, zuweisen, als erledigt markieren"). Null =
+  // unassigned; anyone with PATCH access can still act on it either way.
+  assignedToId String?
+  assignedTo   User?    @relation(fields: [assignedToId], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 }
 
 model Excursion {

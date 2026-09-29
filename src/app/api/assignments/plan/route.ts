@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { getPriorityWeights, getSettings } from "@/lib/settings";
-import { computePriority } from "@/lib/priority/computePriority";
+import { computePriority, parseGuestCleanRequestTiming } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 import { planAssignments } from "@/lib/assignment/planAssignments";
 import { computeStaffingNeed, splitForCapacity, type StaffingConfig } from "@/lib/assignment/staffing";
@@ -63,6 +63,14 @@ export async function POST(req: NextRequest) {
     include: {
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: now } } },
+      // Guest screen "Jetzt reinigen" (Prompt G2 Teil 4) — same signal
+      // /api/priority feeds computePriority, so the morning plan can't drift
+      // from the live board (see CLAUDE.md on computePriority callers).
+      guestRequests: {
+        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
 
@@ -86,6 +94,7 @@ export async function POST(req: NextRequest) {
           eta: a.eta, vip: a.vip, earlyCheckIn: a.earlyCheckIn, neededNow: a.neededNow,
         })),
         excursions: room.excursions.map((e) => ({ startsAt: e.startsAt, endsAt: e.endsAt })),
+        guestCleanRequest: parseGuestCleanRequestTiming(room.guestRequests[0]?.detail),
         blockedRecheckMinutes: settings.blockedRecheckMinutes,
         weights,
       }

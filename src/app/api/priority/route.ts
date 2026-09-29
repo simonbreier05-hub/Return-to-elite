@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { getPriorityWeights, getSettings } from "@/lib/settings";
-import { computePriority } from "@/lib/priority/computePriority";
+import { computePriority, parseGuestCleanRequestTiming } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 
 /**
@@ -47,11 +47,19 @@ export async function GET(req: NextRequest) {
     include: {
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: now } } },
+      // Guest screen "Jetzt reinigen" (Prompt G2 Teil 4) — only the most
+      // recent still-open one matters for scoring.
+      guestRequests: {
+        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        orderBy: { createdAt: "desc" },
+        take: 1,
+      },
     },
   });
 
   const results = rooms
     .map((room) => {
+      const guestCleanRequest = parseGuestCleanRequestTiming(room.guestRequests[0]?.detail);
       const priority = computePriority(
         {
           id: room.id,
@@ -68,6 +76,7 @@ export async function GET(req: NextRequest) {
             eta: a.eta, vip: a.vip, earlyCheckIn: a.earlyCheckIn, neededNow: a.neededNow,
           })),
           excursions: room.excursions.map((e) => ({ startsAt: e.startsAt, endsAt: e.endsAt })),
+          guestCleanRequest,
           attendantSection,
           attendantFloor,
           blockedRecheckMinutes: settings.blockedRecheckMinutes,

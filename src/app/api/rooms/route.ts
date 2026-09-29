@@ -48,12 +48,44 @@ export async function GET(req: NextRequest) {
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: new Date() } } },
       notes: { orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
-      defects: { include: { workOrder: true }, orderBy: { createdAt: "desc" }, take: 2 },
+      defects: {
+        include: { workOrder: true, reportedBy: { select: { name: true, role: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 2,
+      },
+      // Guest screen requests (Prompt G2 Teil 4) — still-open ones only, for
+      // the room detail modal's "Gästeanfragen" list. Capped to the 5 most
+      // recent for display; guestDndActive below is computed separately so a
+      // burst of other open requests can never push an active DND out of
+      // this list and hide it.
+      guestRequests: {
+        where: { status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        orderBy: { createdAt: "desc" },
+        take: 5,
+      },
       _count: { select: { notes: { where: { status: "OPEN" } } } },
     },
   });
 
-  const roomsWithCounts = rooms.map(({ _count, ...room }) => ({ ...room, openNotesCount: _count.notes }));
+  // Guest DND never touches Room.status/blockReason (see
+  // src/lib/guestActions.ts), so this unlimited, DND-only query is the only
+  // way a screen knows a guest currently has Do Not Disturb active — it must
+  // not share the take: 5 cap above, which exists only for display.
+  const dndRoomIds = new Set(
+    (
+      await prisma.guestRequest.findMany({
+        where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        select: { roomId: true },
+      })
+    ).map((r) => r.roomId)
+  );
+
+  const roomsWithCounts = rooms.map(({ _count, guestRequests, ...room }) => ({
+    ...room,
+    openNotesCount: _count.notes,
+    guestRequests,
+    guestDndActive: dndRoomIds.has(room.id),
+  }));
 
   const attendants = await prisma.user.findMany({
     where: { role: "room_attendant" },

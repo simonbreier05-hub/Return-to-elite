@@ -120,6 +120,32 @@ describe("computePriority — explainable scoring", () => {
     expect(res.score).toBe(res.reasons.reduce((s, r) => s + r.points, 0));
     for (const r of res.reasons) expect(r.reason.length).toBeGreaterThan(5);
   });
+
+  describe("guest-initiated cleaning request (Prompt G2 Teil 4)", () => {
+    it("'NOW' matches front office's neededNow weight", () => {
+      const guestNow = computePriority(baseRoom, { ...emptyCtx, guestCleanRequest: { timing: "NOW" } });
+      const frontOfficeNow = computePriority(baseRoom, {
+        ...emptyCtx,
+        arrivals: [{ eta: null, vip: false, earlyCheckIn: false, neededNow: true }],
+      });
+      expect(guestNow.score).toBe(frontOfficeNow.score);
+      expect(guestNow.reasons.some((r) => r.signal === "guest_clean_request")).toBe(true);
+    });
+
+    it("scales down for a less urgent timing: NOW > IN_30 > LATER", () => {
+      const nowScore = computePriority(baseRoom, { ...emptyCtx, guestCleanRequest: { timing: "NOW" } }).score;
+      const soonScore = computePriority(baseRoom, { ...emptyCtx, guestCleanRequest: { timing: "IN_30" } }).score;
+      const laterScore = computePriority(baseRoom, { ...emptyCtx, guestCleanRequest: { timing: "LATER" } }).score;
+      expect(nowScore).toBeGreaterThan(soonScore);
+      expect(soonScore).toBeGreaterThan(laterScore);
+      expect(laterScore).toBeGreaterThan(0);
+    });
+
+    it("adds no signal when there is no open guest request", () => {
+      const res = computePriority(baseRoom, { ...emptyCtx, guestCleanRequest: null });
+      expect(res.reasons.some((r) => r.signal === "guest_clean_request")).toBe(false);
+    });
+  });
 });
 
 describe("predictCleaningMinutes — baseline ML hook", () => {

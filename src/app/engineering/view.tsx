@@ -138,10 +138,15 @@ export default function EngineeringView() {
                 /* eslint-disable-next-line @next/next/no-img-element */
                 <img src={wo.defect.photoPath} alt="Defect photo" className="mt-2 max-h-40 rounded-lg object-cover" />
               )}
-              <p className="mt-2 text-xs text-graphite/60">
+              <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-graphite/60">
                 {t("engineering.reportedBy", { name: wo.defect.reportedBy?.name ?? "—" })} ·{" "}
                 {new Date(wo.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 {wo.assignedTo && ` · ${t("engineering.assignedTo", { name: wo.assignedTo.name })}`}
+                {wo.defect.reportedBy?.role === "guest" && (
+                  <span className="rounded-full bg-status-out-of-order/10 px-2 py-0.5 font-semibold text-status-out-of-order">
+                    {t("engineering.sourceGuest")}
+                  </span>
+                )}
               </p>
               {NEXT[wo.status] && (
                 <button
