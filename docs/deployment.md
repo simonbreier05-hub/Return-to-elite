@@ -28,8 +28,8 @@ npm run build:railway  # prisma generate (Postgres) + next build
 npm run start:railway  # Schema anlegen/abgleichen, leere DB befüllen, Server starten
 ```
 
-Wichtig: Alles, was für den Build nötig ist (Tailwind, TypeScript, Typen, vitest), steht bewusst unter
-`dependencies`. Sonst schlägt der Build fehl, sobald der Hoster `NODE_ENV=production` setzt
+Wichtig: Alles, was für den Build nötig ist (Tailwind, TypeScript, Typen), steht bewusst unter
+`dependencies`. Testwerkzeug (`vitest`) bleibt in `devDependencies`; `tests/` und `vitest.config.ts` sind in `tsconfig.json` vom Build-Typcheck ausgeschlossen. Sonst schlägt der Build fehl, sobald der Hoster `NODE_ENV=production` setzt
 (Fehler `Cannot find module '@tailwindcss/postcss'`).
 
 Mit Docker:
