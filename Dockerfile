@@ -1,6 +1,6 @@
 # StayClean — runs on any Docker host (no Railway needed). See docs/deployment.md.
 #   docker build -t stayclean .
-#   docker run -p 3000:3000 -e DATABASE_URL=... -e AUTH_SECRET=... -v stayclean_uploads:/app/uploads stayclean
+#   docker run -p 3000:3000 -e DATABASE_URL=... -e AUTH_SECRET=... -v stayclean_uploads:/app/uploads stayclean   (Volume per -v, nicht per VOLUME: Railway lehnt VOLUME ab)
 
 # ---- Stage 1: install dependencies (includes everything the build needs)
 FROM node:22-slim AS deps
@@ -26,7 +26,6 @@ ENV NODE_ENV=production \
 COPY --from=build --chown=node:node /app /app
 RUN mkdir -p /app/uploads && chown node:node /app/uploads
 USER node
-VOLUME ["/app/uploads"]
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=90s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
