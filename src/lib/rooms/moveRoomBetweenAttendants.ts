@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import type { Session } from "@/lib/auth";
+import { berlinDate } from "@/lib/dayplan/time";
 
 /**
  * Moves one room from its current attendant to another, keeping both
@@ -56,7 +57,7 @@ export async function moveRoomBetweenAttendants(
   const nextRouteOrder = targetRooms.reduce((max, r) => Math.max(max, r.routeOrder ?? -1), -1) + 1;
 
   const [updated] = await prisma.$transaction([
-    updateRoom(roomId, { assignedToId: toAttendantId, routeOrder: nextRouteOrder }),
+    updateRoom(roomId, { assignedToId: toAttendantId, routeOrder: nextRouteOrder, assignedOn: berlinDate(new Date()) }),
     ...sourceSiblings.map((r, index) => prisma.room.update({ where: { id: r.id }, data: { routeOrder: index } })),
   ]);
 

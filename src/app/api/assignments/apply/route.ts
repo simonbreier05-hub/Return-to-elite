@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { berlinDate } from "@/lib/dayplan/time";
 import { assignDailyNumbers } from "@/lib/assignment/dailyNumbers";
 
 /**
@@ -77,7 +78,7 @@ export async function POST(req: NextRequest) {
       a.roomIds.map((roomId, index) =>
         prisma.room.update({
           where: { id: roomId },
-          data: { assignedToId: a.attendantId, routeOrder: index, deferredSince: null },
+          data: { assignedToId: a.attendantId, routeOrder: index, deferredSince: null, assignedOn: berlinDate(now) },
         })
       )
     ),

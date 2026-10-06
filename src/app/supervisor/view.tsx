@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
+import RedistributionCards from "@/components/RedistributionCards";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
@@ -314,6 +315,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
   return (
     <div className="animate-rise">
+      <RedistributionCards />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
