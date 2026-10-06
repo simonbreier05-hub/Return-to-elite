@@ -9,6 +9,7 @@ import {
   type RoomType,
   type SettingsShape,
 } from "./domain";
+import { AUTOPLAN_WEIGHTS, type AutoplanWeights } from "./autoplan/weights";
 import { PRIORITY_WEIGHTS, type PriorityWeights } from "./priority/computePriority";
 
 /** Priority weights are stored under this prefix so they cannot collide. */
@@ -86,4 +87,17 @@ export async function getPlanningCreditSettings(): Promise<PlanningCreditSetting
         ? targetCreditsPerAttendant
         : DEFAULT_TARGET_CREDITS_PER_ATTENDANT,
   };
+}
+
+/** Zuteilungs-Gewichte (M2b): Code-Standard, Setting "autoplanWeight.<name>" überschreibt (0 erlaubt). */
+export const AUTOPLAN_WEIGHT_PREFIX = "autoplanWeight.";
+export async function getAutoplanWeights(): Promise<AutoplanWeights> {
+  const rows = await prisma.setting.findMany({ where: { key: { startsWith: AUTOPLAN_WEIGHT_PREFIX } } });
+  const map = Object.fromEntries(rows.map((r) => [r.key.slice(AUTOPLAN_WEIGHT_PREFIX.length), r.value]));
+  const out = { ...AUTOPLAN_WEIGHTS } as AutoplanWeights;
+  for (const key of Object.keys(AUTOPLAN_WEIGHTS) as (keyof AutoplanWeights)[]) {
+    const parsed = Number(map[key]);
+    if (map[key] !== undefined && Number.isFinite(parsed) && parsed >= 0) out[key] = parsed;
+  }
+  return out;
 }
