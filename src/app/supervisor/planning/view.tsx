@@ -350,6 +350,9 @@ export default function PlanningView() {
           <Link href="/import" className="mt-1 inline-block text-sm font-medium text-gold-soft hover:underline">
             {t("nav.import")} →
           </Link>
+          <Link href="/planung" className="mt-1 ml-4 inline-block text-sm font-medium text-gold-soft hover:underline">
+            {t("planungTool.title")} →
+          </Link>
           {HOTEL.unconfirmedFloors.length > 0 && (
             <p className="mt-1 text-xs font-medium text-gold-soft">
               {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}

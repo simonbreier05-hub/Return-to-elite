@@ -57,6 +57,29 @@
   --color-status-out-of-service: #6b6152;
   --color-status-green-opt-out: #6e7a3e;
 
+  /* Planungstool (/planung, D1/D2) — dunkle Desktop-Variante B, Creme-Mobil C. Tokens, nie hartcodiert im Markup. */
+  --color-night-900: #0b2038; /* Hintergrund Desktop */
+  --color-night-800: #102b49; /* Gebäudekarte */
+  --color-night-700: #133457; /* Steuerpanel */
+  --color-night-600: #0f2a47; /* Karten im Panel */
+  --color-line-1: #1f4670; /* Rahmen */
+  --color-line-2: #3c6290; /* Rahmen, stärker */
+  --color-pl-text: #f7f3ea; /* Text auf Dunkel */
+  --color-pl-muted: #b7c4d3; /* gedämpfter Text auf Dunkel */
+  --color-brass-light: #d9bf86; /* Akzent auf Dunkel */
+  --color-brass-text: #7f6125; /* Messing-Text auf Hell (Kontrast ≥ 4,5:1) */
+  --color-ink: #0e2238; /* Text auf Hell */
+  /* Zimmerarten im Haus */
+  --color-tile-departure: #d9bf86;
+  --color-tile-turn: #f7f3ea;
+  --color-tile-stayover: #5e86ae;
+  --color-tile-arrival: #d9bf86; /* nur Rahmen */
+  --color-tile-empty: #1b3a5e;
+  /* Supervisor-Badges: drei Helligkeitsstufen (immer mit Buchstabe) */
+  --color-badge-1: #f2e4bd;
+  --color-badge-2: #a9c3dc;
+  --color-badge-3: #7da2c4;
+
   --font-serif: var(--font-display), "Hoefler Text", Garamond, Georgia, serif;
   --font-sans: var(--font-body), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
 
@@ -235,4 +258,64 @@ body {
   --g-brass: #a9843f;
   --g-panel: #ede6d6;
   --g-muted: #8a8578;
+}
+
+/* ───────────────────────────────────────────────────────────────────────
+ * Planungstool (/planung). Bewegung hat immer einen Zweck: nur transform und
+ * opacity, keine Dauerschleifen außer Spinner und Ring-Puls. Basiszustand =
+ * Endzustand, damit prefers-reduced-motion (Animation aus) das fertige Bild zeigt.
+ * ─────────────────────────────────────────────────────────────────────── */
+.planung-root { --pl-ease: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Schrittwechsel: 14 px hoch + einblenden, gestaffelt (--i je Element), 600 ms */
+@keyframes pl-rise { from { opacity: 0; transform: translateY(14px); } }
+.pl-rise { animation: pl-rise 600ms var(--pl-ease) both; animation-delay: calc(var(--i, 0) * 90ms); }
+
+/* Häkchen / Badge poppt (400 ms) */
+@keyframes pl-pop { 0% { opacity: 0; transform: scale(0.4); } 70% { transform: scale(1.18); } 100% { opacity: 1; transform: scale(1); } }
+.pl-pop { animation: pl-pop 400ms var(--pl-ease) both; }
+
+/* Stepper-Linie füllt sich (450 ms) */
+@keyframes pl-fill { from { transform: scaleX(0); } }
+.pl-fill { transform-origin: left center; animation: pl-fill 450ms var(--pl-ease) both; }
+
+/* Spinner und Laufbalken der Dateikarten (je Datei ca. 850 ms Lesen) */
+@keyframes pl-spin { to { transform: rotate(360deg); } }
+.pl-spin { animation: pl-spin 0.8s linear infinite; }
+@keyframes pl-run { from { transform: translateX(-100%); } to { transform: translateX(260%); } }
+.pl-run { animation: pl-run 0.85s var(--pl-ease) infinite; }
+
+/* Haus beim Einlesen: Kacheln flackern und färben sich um — Welle von oben nach unten (--d = Versatz) */
+@keyframes pl-flicker {
+  0% { opacity: 0.25; transform: scale(0.55); }
+  35% { opacity: 1; transform: scale(1.35); }
+  55% { opacity: 0.45; transform: scale(0.85); }
+  100% { opacity: 1; transform: scale(1); }
+}
+.pl-tile { animation: pl-flicker 650ms var(--pl-ease) both; animation-delay: calc(var(--d, 0) * 1ms); }
+
+/* Etagenbalken wachsen von 0 auf die Belegung (1100 ms, je Etage 120 ms später) */
+@keyframes pl-grow { from { transform: scaleX(0); } }
+.pl-bar { transform-origin: left center; animation: pl-grow 1100ms var(--pl-ease) both; animation-delay: calc(var(--i, 0) * 120ms); }
+
+/* Geänderte Zimmer nach Nachimport: kurze Hervorhebung */
+@keyframes pl-flash { 0%, 100% { transform: scale(1); opacity: 1; } 40% { transform: scale(1.7); opacity: 0.55; } }
+.pl-flash { animation: pl-flash 900ms var(--pl-ease) 2; }
+
+/* Lichtstrahl läuft einmal durchs Haus (2,4 s) */
+@keyframes pl-beam { from { transform: translateY(-120%); opacity: 0; } 15% { opacity: 1; } 85% { opacity: 1; } to { transform: translateY(1100%); opacity: 0; } }
+.pl-beam { animation: pl-beam 2400ms ease-in-out both; }
+
+/* Hauptbutton: sanfter Ring-Puls nur bei der wichtigsten nächsten Aktion (1,7 s) */
+@keyframes pl-ring { 0% { transform: scale(1); opacity: 0.55; } 100% { transform: scale(1.14, 1.5); opacity: 0; } }
+.pl-ring::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; border: 2px solid currentColor;
+  pointer-events: none; opacity: 0; animation: pl-ring 1.7s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .planung-root *, .planung-root *::before, .planung-root *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+  }
 }

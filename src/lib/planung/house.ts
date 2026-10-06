@@ -1,0 +1,50 @@
+import { prisma } from "@/lib/db";
+import { latestPlanDate } from "@/lib/dayplan/latest";
+import type { HouseData, HouseSupervisor, HouseTile, TileKind } from "./model";
+
+const KIND: Record<string, TileKind> = { DEPARTURE: "DEPARTURE", SAME_DAY_TURN: "TURN", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
+
+/** Drei Helligkeitsstufen, reihum — immer zusammen mit dem Buchstaben angezeigt. */
+const TONES: (1 | 2 | 3)[] = [1, 2, 3];
+
+/**
+ * Haus-Ansicht: eine Kachel je Zimmer, Art laut `DayRoomPlan`. Eine gemeinsame Abfrage für Kacheln,
+ * Etagenbalken und Kennzahlen. Vor dem ersten Import: leere Kacheln, `hasData = false`.
+ * Keine Gastdaten (weder Namen noch Reservierungen).
+ */
+export async function getHouseData(date?: string | null): Promise<HouseData> {
+  // Tag der letzten übernommenen Departures; ohne Batch (z. B. Tagesplan von Hand) der jüngste vorhandene Tagesplan
+  const day = date ?? (await latestPlanDate()) ?? (await prisma.dayRoomPlan.findFirst({ orderBy: { date: "desc" }, select: { date: true } }))?.date ?? null;
+  const rooms = await prisma.room.findMany({ select: { id: true, number: true, floor: true }, orderBy: { number: "asc" } });
+  const plan = day ? await prisma.dayRoomPlan.findMany({ where: { date: day } }) : [];
+  const byRoom = new Map(plan.map((p) => [p.roomId, p]));
+  const traces = await prisma.trace.groupBy({ by: ["roomId"], where: { status: "OPEN" }, _count: true });
+  const traceCount = new Map(traces.map((t) => [t.roomId, t._count]));
+
+  const floors = new Map<number, HouseTile[]>();
+  for (const r of rooms) {
+    const p = byRoom.get(r.id);
+    const tile: HouseTile = { number: r.number, kind: p ? KIND[p.cleaningType] ?? "EMPTY" : "EMPTY" };
+    if (p) { tile.vip = p.vip; tile.laundry = p.laundryDue; tile.eta = p.eta; tile.openTraces = traceCount.get(r.id) ?? 0; }
+    floors.set(r.floor, [...(floors.get(r.floor) ?? []), tile]);
+  }
+
+  // Supervisor je Etage aus der bestehenden Etagenzuweisung (User.assignedFloors)
+  const sups = await prisma.user.findMany({ where: { role: "supervisor" }, orderBy: { name: "asc" }, select: { name: true, assignedFloors: true } });
+  const supervisors: HouseData["supervisors"] = {};
+  const used = new Set<string>();
+  sups.forEach((s, i) => {
+    let letter = s.name.trim().charAt(0).toUpperCase() || "?";
+    if (used.has(letter)) letter = (s.name.trim().split(/\s+/)[1] ?? "").charAt(0).toUpperCase() || letter;
+    used.add(letter);
+    const badge: HouseSupervisor = { letter, tone: TONES[i % 3], name: s.name };
+    for (const f of s.assignedFloors.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n))) supervisors[f] = badge;
+  });
+
+  return {
+    date: day,
+    hasData: plan.length > 0,
+    floors: [...floors.entries()].sort(([a], [b]) => a - b).map(([floor, tiles]) => ({ floor, tiles })),
+    supervisors,
+  };
+}

@@ -1,33 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
-import { api } from "@/components/api";
+import { useRef, useState } from "react";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import DayPlanPanel from "./DayPlanPanel";
 import PurgeBanner from "@/components/PurgeBanner";
-import { crossCheckArrivals } from "@/lib/import/parsers";
-import { buildPreview, sha256Hex } from "@/lib/import/preview";
-import { loadList, parseList, type AnyResult, type LoadedList } from "@/lib/import/readFile";
-import type { ArrivalRow, DateFormatId, DepartureRow, ParseIssue, ParseResult } from "@/lib/import/types";
+import { buildPreview } from "@/lib/import/preview";
+import type { DateFormatId, ParseResult } from "@/lib/import/types";
+import { useImportSession, type ImportItem } from "@/components/planung/useImportSession";
 
-type Phase = "waiting" | "reading" | "read" | "error" | "applied" | "discarded";
-
-interface Item {
-  id: string;
-  name: string;
-  phase: Phase;
-  type: ImportType | null;
-  list?: LoadedList;
-  hash?: string;
-  result?: AnyResult;
-  confirmed?: DateFormatId;
-  error?: string;
-  serverIssues?: ParseIssue[];
-  busy?: boolean;
-}
-
-interface Status { [k: string]: { businessDate: string; appliedAt: string; rows: number } | null }
+type Item = ImportItem;
 
 const ICON = { CRITICAL: "✖", WARNING: "⚠", INFO: "ℹ" } as const;
 const TONE = {
@@ -55,86 +37,11 @@ function previewColumns(type: ImportType | null): { head: ColHead; key: string }
   ];
 }
 
-const todayIso = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD, Ortszeit
-
 export default function ImportView() {
   const { t } = useLocale();
-  const [items, setItems] = useState<Item[]>([]);
-  const [day, setDay] = useState(todayIso());
-  const [inventory, setInventory] = useState<number | undefined>();
-  const [status, setStatus] = useState<Status | null>(null);
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const dayRef = useRef(day);
-  dayRef.current = day;
-
-  const patch = useCallback((id: string, p: Partial<Item>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x))), []);
-  const loadStatus = useCallback(() => api<{ status: Status }>("/api/import/status").then((d) => setStatus(d.status)).catch(() => {}), []);
-
-  useEffect(() => {
-    loadStatus();
-    api<{ settings: { roomInventory: number } }>("/api/settings").then((d) => setInventory(d.settings.roomInventory)).catch(() => {});
-  }, [loadStatus]);
-
-  const read = useCallback(async (id: string, file: File) => {
-    patch(id, { phase: "reading" });
-    try {
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const list = await loadList(file.name, bytes);
-      const hash = await sha256Hex(bytes);
-      const type = list.type;
-      if (!type) { patch(id, { phase: "read", list, hash, type: null }); return; }
-      patch(id, { phase: "read", list, hash, type, result: parseList(type, list, { today: dayRef.current, roomInventory: inventory }) });
-    } catch (e) {
-      patch(id, { phase: "error", error: e instanceof Error ? e.message : "?" });
-    }
-  }, [patch, inventory]);
-
-  const addFiles = (files: FileList | File[]) => {
-    for (const f of Array.from(files)) {
-      const id = `${f.name}-${f.size}-${Math.random().toString(36).slice(2, 7)}`;
-      setItems((xs) => [...xs, { id, name: f.name, phase: "waiting", type: null }]);
-      void read(id, f);
-    }
-  };
-
-  const reparse = (it: Item, type: ImportType, confirmed?: DateFormatId) => {
-    if (!it.list) return;
-    patch(it.id, { type, confirmed, serverIssues: undefined, result: parseList(type, it.list, { today: day, roomInventory: inventory, confirmedDateFormat: confirmed }) });
-  };
-
-  const byType = (type: ImportType) => items.find((x) => x.type === type && x.result && x.phase === "read");
-  const cross = (): ParseIssue[] => {
-    const a = byType("ARRIVALS")?.result as unknown as ParseResult<ArrivalRow> | undefined;
-    const d = byType("DEPARTURES")?.result as unknown as ParseResult<DepartureRow> | undefined;
-    return a && d ? crossCheckArrivals(a, d) : [];
-  };
-  const issuesOf = (it: Item): ParseIssue[] => [...(it.result?.issues ?? []), ...(it.type === "ARRIVALS" ? cross() : []), ...(it.serverIssues ?? [])];
-  const isCritical = (it: Item) => !it.result || issuesOf(it).some((i) => i.severity === "CRITICAL");
-
-  const applyOne = async (it: Item) => {
-    if (!it.result || !it.type || !it.hash || isCritical(it)) return;
-    patch(it.id, { busy: true });
-    try {
-      const r = it.result;
-      const issues = issuesOf(it).filter((i) => !(it.serverIssues ?? []).includes(i));
-      const sub = await api<{ batchId: string; critical: boolean; issues: ParseIssue[] }>("/api/import/batches", {
-        body: { type: it.type, fileHash: it.hash, reportDate: r.reportDate, periodFrom: r.periodFrom, periodTo: r.periodTo, issues, rows: r.rows },
-      });
-      if (sub.critical) {
-        patch(it.id, { busy: false, serverIssues: sub.issues.filter((i) => !issues.some((x) => x.code === i.code && x.message === i.message)) });
-        await api(`/api/import/batches/${sub.batchId}/reject`, { method: "POST", body: {} });
-        return;
-      }
-      await api(`/api/import/batches/${sub.batchId}/apply`, { method: "POST", body: {} });
-      patch(it.id, { busy: false, phase: "applied", list: undefined, result: undefined });
-      loadStatus();
-    } catch (e) {
-      patch(it.id, { busy: false, phase: "error", error: e instanceof Error ? e.message : "?" });
-    }
-  };
-
-  const ready = items.filter((x) => x.phase === "read" && x.result && !isCritical(x));
+  const { items, day, setDay, status, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready } = useImportSession();
   const anyApplied = items.some((x) => x.phase === "applied");
 
   const statusLabel = (it: Item) => {
@@ -173,7 +80,7 @@ export default function ImportView() {
       </label>
 
       {items.length > 0 && ready.length > 1 && (
-        <button type="button" onClick={() => ready.forEach((x) => void applyOne(x))}
+        <button type="button" onClick={() => void applyAll()}
           className="mb-3 h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line">
           {t("importPage.applyAll")}
         </button>
@@ -261,7 +168,7 @@ export default function ImportView() {
                       className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line disabled:opacity-40">
                       {t("importPage.apply")}
                     </button>
-                    <button type="button" onClick={() => patch(it.id, { phase: "discarded", list: undefined, result: undefined })}
+                    <button type="button" onClick={() => discard(it)}
                       className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm hover:border-gold-line">
                       {t("importPage.discard")}
                     </button>

@@ -35,6 +35,8 @@ export interface MergeResult {
   figures: DayFiguresDerived;
   issues: ParseIssue[];
   counts: { stays: number; staysNeedingReview: number; traces: number; roomTasks: number; changedAssigned: number };
+  /** Zimmernummern, deren Art sich gegenüber dem vorigen Stand geändert hat (neu, anders, entfallen) — für die Hervorhebung im Haus. */
+  changedRooms: string[];
 }
 
 /**
@@ -107,6 +109,10 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   const oldByRoom = new Map(existingPlan.map((p) => [p.room.number, p]));
   const newByRoom = new Map(derived.rooms.map((r) => [r.room, r]));
   let changedAssigned = 0;
+  const changedRooms = [...new Set([
+    ...derived.rooms.filter((r) => oldByRoom.get(r.room)?.cleaningType !== r.cleaningType).map((r) => r.room),
+    ...[...oldByRoom.keys()].filter((n) => !newByRoom.has(n)),
+  ])];
   const notify = async (roomNumber: string, roomId: string, from: string, to: string) => {
     changedAssigned++;
     const message = `Zimmer ${roomNumber}: Reinigungsart nach Nachimport geändert (${from} → ${to}). Zuteilung bleibt unverändert — bitte prüfen.`;
@@ -184,7 +190,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
 
   await audit({ action: "DAY_PLAN_MERGED", userId, meta: { date, figures: derived.figures, newTraces, roomTasks, issues: issues.length } });
   return {
-    date, figures: derived.figures, issues,
+    date, figures: derived.figures, issues, changedRooms,
     counts: { stays: derived.stays.length, staysNeedingReview: missing.length, traces: newTraces, roomTasks, changedAssigned },
   };
 }
