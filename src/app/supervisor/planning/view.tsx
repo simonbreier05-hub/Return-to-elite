@@ -8,6 +8,7 @@ import Collapsible from "@/components/Collapsible";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { HOTEL } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import PurgeBanner from "@/components/PurgeBanner";
 
 interface Attendant {
   id: string;
@@ -337,11 +338,15 @@ export default function PlanningView() {
 
   return (
     <div className="animate-rise pb-28">
+      <PurgeBanner />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("planning.subtitle")}</p>
+          <Link href="/import" className="mt-1 inline-block text-sm font-medium text-gold-soft hover:underline">
+            {t("nav.import")} →
+          </Link>
           {HOTEL.unconfirmedFloors.length > 0 && (
             <p className="mt-1 text-xs font-medium text-gold-soft">
               {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}

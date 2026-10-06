@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import PurgePanel from "@/components/PurgePanel";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Thresholds {
@@ -14,6 +15,7 @@ interface Thresholds {
   roomsPerAttendantMin: number;
   roomsPerAttendantMax: number;
   attendantPoolMax: number;
+  roomInventory: number;
 }
 
 type Weights = Record<string, number>;
@@ -42,7 +44,7 @@ const WEIGHT_LABELS: Record<string, { titleKey: TKey; hintKey: TKey }> = {
 };
 
 type ThresholdKey = "blockedRecheckMinutes" | "welfareCheckMinutes" | "etaWarningMinutes" | "releaseQueueBacklogThreshold";
-type StaffingKey = "roomsPerAttendantMin" | "roomsPerAttendantMax" | "attendantPoolMax";
+type StaffingKey = "roomsPerAttendantMin" | "roomsPerAttendantMax" | "attendantPoolMax" | "roomInventory";
 
 const THRESHOLD_LABELS: Record<ThresholdKey, { titleKey: TKey; hintKey: TKey; unitKey: TKey }> = {
   blockedRecheckMinutes: { titleKey: "thresholdLabels.blockedRecheckMinutes.title", hintKey: "thresholdLabels.blockedRecheckMinutes.hint", unitKey: "common.minutesShort" },
@@ -56,6 +58,7 @@ const STAFFING_LABELS: Record<StaffingKey, { titleKey: TKey; hintKey: TKey; unit
   roomsPerAttendantMin: { titleKey: "thresholdLabels.roomsPerAttendantMin.title", hintKey: "thresholdLabels.roomsPerAttendantMin.hint", unitKey: "thresholdLabels.rooms" },
   roomsPerAttendantMax: { titleKey: "thresholdLabels.roomsPerAttendantMax.title", hintKey: "thresholdLabels.roomsPerAttendantMax.hint", unitKey: "thresholdLabels.rooms" },
   attendantPoolMax: { titleKey: "thresholdLabels.attendantPoolMax.title", hintKey: "thresholdLabels.attendantPoolMax.hint", unitKey: "thresholdLabels.attendants" },
+  roomInventory: { titleKey: "thresholdLabels.roomInventory.title", hintKey: "thresholdLabels.roomInventory.hint", unitKey: "thresholdLabels.rooms" },
 };
 
 export default function SettingsView() {
@@ -172,6 +175,8 @@ export default function SettingsView() {
           ))}
         </div>
       </section>
+
+      <PurgePanel />
 
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">

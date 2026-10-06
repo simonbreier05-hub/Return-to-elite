@@ -237,5 +237,23 @@ export const DEFAULT_SETTINGS = {
   // RoomNote freetext, guest-reported Defect photos) is purged this many days
   // after creation — see src/lib/guestDataRetention.ts.
   guestDataRetentionDays: 30,
+  // Zimmer, die das Hotel tatsächlich hat (Opera-Forecast: Auslastung ≈ belegt ÷ (Zimmer − OOO)).
+  // Das Hotel hat 145 Zimmer; die Grundriss-Digitalisierung (HOTEL, 139) ist davon unabhängig.
+  roomInventory: 145,
+  // DSGVO (M3): Uhrzeit (Europe/Berlin, volle Stunde), zu der jeden Abend alle Gastdaten gelöscht werden.
+  guestPurgeHour: 22,
+  // Aufenthalte (Stay) ohne Namen werden so viele Tage nach der Abreise ganz gelöscht.
+  guestStayDeleteDays: 30,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
+
+/** Morgen-Import der Opera-Listen (siehe src/lib/import). */
+export const IMPORT_TYPES = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES"] as const;
+export type ImportType = (typeof IMPORT_TYPES)[number];
+export const ImportTypeSchema = z.enum(IMPORT_TYPES);
+
+export const IMPORT_BATCH_STATUSES = ["PREVIEW", "APPLIED", "REJECTED"] as const;
+export type ImportBatchStatus = (typeof IMPORT_BATCH_STATUSES)[number];
+
+export const IMPORT_SEVERITIES = ["CRITICAL", "WARNING", "INFO"] as const;
+export type ImportSeverity = (typeof IMPORT_SEVERITIES)[number];
