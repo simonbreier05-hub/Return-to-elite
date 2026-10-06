@@ -25,9 +25,9 @@ export default function FileDropCard({
         <div className="flex shrink-0 items-center gap-2 text-xs text-pl-muted" role="status">
           {status === "reading" && <span className="pl-spin inline-block h-4 w-4 rounded-full border-2 border-line-2 border-t-brass-light" aria-hidden />}
           {(status === "read" || status === "applied") && (
-            <svg key={status} className="pl-pop h-4 w-4 text-brass-light" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10.5l4 4 8-9" /></svg>
+            <svg key={status} className="pl-pop h-4 w-4 text-brass-ink" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M4 10.5l4 4 8-9" /></svg>
           )}
-          {status === "warning" && <span aria-hidden className="text-brass-light">⚠</span>}
+          {status === "warning" && <span aria-hidden className="text-brass-ink">⚠</span>}
           {status === "error" && <span aria-hidden className="text-badge-2">✖</span>}
           <span className={status === "waiting" ? "" : "font-medium text-pl-text"}>{statusLabel}</span>
         </div>
@@ -38,7 +38,7 @@ export default function FileDropCard({
       {resultText && status !== "waiting" && status !== "reading" && <p className="mt-1.5 text-xs text-pl-muted">{resultText}</p>}
       {issues.length > 0 && (
         <ul className="mt-1.5 space-y-0.5 text-xs">
-          {issues.map((i, k) => <li key={k} className={i.severity === "INFO" ? "text-pl-muted" : "text-brass-light"}><span aria-hidden>{ICON[i.severity]}</span> {i.message}</li>)}
+          {issues.map((i, k) => <li key={k} className={i.severity === "INFO" ? "text-pl-muted" : "text-brass-ink"}><span aria-hidden>{ICON[i.severity]}</span> {i.message}</li>)}
         </ul>
       )}
       {children}

@@ -49,13 +49,13 @@ export default function HouseMap({
     <section aria-labelledby="house-title" className="relative">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
-          <div className="text-[12px] font-medium uppercase tracking-[2px] text-brass-light">StayClean · {dateLabel}</div>
+          <div className="text-[12px] font-medium uppercase tracking-[2px] text-brass-ink">StayClean · {dateLabel}</div>
           <h2 id="house-title" className="font-serif text-4xl font-semibold leading-none sm:text-5xl">{t("planungTool.houseToday")}</h2>
         </div>
         <dl className="flex gap-6 text-center">
           {([["kpiOccupied", totals.occupied, false], ["kpiDepartures", totals.departures, true], ["kpiArrivals", totals.arrivals, false]] as const).map(([k, n, accent]) => (
             <div key={k}>
-              <dd className={`font-serif text-4xl font-semibold leading-none ${accent ? "text-brass-light" : ""}`}>{kpi(n)}</dd>
+              <dd className={`font-serif text-4xl font-semibold leading-none ${accent ? "text-brass-ink" : ""}`}>{kpi(n)}</dd>
               <dt className="mt-1 text-xs text-pl-muted">{t(`planungTool.${k}` as "planungTool.kpiOccupied")}</dt>
             </div>
           ))}
@@ -71,9 +71,9 @@ export default function HouseMap({
             const stats = floorStats(f);
             const sup = house.supervisors[f.floor];
             return (
-              <div key={f.floor} className="flex items-center gap-3 sm:gap-4">
+              <div key={f.floor} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 sm:gap-x-4 lg:flex-nowrap">
                 <div className="w-6 shrink-0 text-center font-serif text-3xl font-semibold leading-none sm:w-8 sm:text-4xl" aria-hidden>{f.floor}</div>
-                <div className="grid min-w-0 flex-1 gap-[3px]" style={{ gridTemplateColumns: "repeat(33, minmax(0, 1fr))" }}>
+                <div className="order-last grid w-full min-w-0 gap-[2px] lg:order-none lg:w-auto lg:flex-1 lg:gap-[3px]" style={{ gridTemplateColumns: "repeat(33, minmax(0, 1fr))" }}>
                   {f.tiles.map((tile, i) => (
                     <button
                       key={`${animateKey}-${tile.number}`}
@@ -90,8 +90,8 @@ export default function HouseMap({
                     />
                   ))}
                 </div>
-                <FloorOccupancy stats={stats} hasData={house.hasData} index={row} animateKey={animateKey}
-                  textOccupied={t("planungTool.occupiedOf", { n: stats.occupied, total: stats.total })} textNoData={t("planungTool.noData")} />
+                <div className="ml-auto lg:ml-0"><FloorOccupancy stats={stats} hasData={house.hasData} index={row} animateKey={animateKey}
+                  textOccupied={t("planungTool.occupiedOf", { n: stats.occupied, total: stats.total })} textNoData={t("planungTool.noData")} /></div>
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${sup ? `${BADGE_TONE[sup.tone]} text-ink` : "border-[1.5px] border-dashed border-line-2"}`}
                   role="img" aria-label={sup ? t("planungTool.supervisorOf", { letter: sup.letter }) : t("planungTool.noSupervisor")}
