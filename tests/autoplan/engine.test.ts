@@ -106,6 +106,16 @@ describe("zu wenige Kräfte", () => {
   });
 });
 
+describe("mehr Kräfte als Arbeit", () => {
+  it("ein Gesamthinweis statt einer Warnung je Person", () => {
+    const res = proposePlan(makeInput(makeDay(20), TEAM()));
+    const codes = res.warnings.map((w) => w.code);
+    expect(codes).toContain("TOO_MANY_STAFF");
+    expect(codes).not.toContain("CREDITS_OUT_OF_BAND");
+    expect(res.warnings.find((w) => w.code === "TOO_MANY_STAFF")!.severity).toBe("INFO");
+  });
+});
+
 describe("Route", () => {
   it("Turn (nach Anreisezeit) → VIP → Abreise → Bleiber", () => {
     const base = { section: "1A", laundry: false, credits: 1, demanding: [], traces: 0, interconnect: [], state: "TODO", fixedTo: null } as const;

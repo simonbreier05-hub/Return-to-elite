@@ -69,9 +69,13 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
 
   // ── Warnungen (einfache Sprache) ───────────────────────────────────────
   const warnings: PlanWarning[] = [];
+  const totalAll = c.rooms.reduce((a, r) => a + r.credits, 0);
+  // Mehr Kräfte als Arbeit: dann sind "zu wenig Credits" keine Einzelwarnungen, sondern ein Hinweis fürs ganze Team.
+  const overstaffed = input.housekeepers.length > 0 && totalAll < input.housekeepers.reduce((a, h) => a + h.lo, 0) - 0.5;
   for (const m of metrics) {
     const name = nameOf.get(m.hkId)!;
-    if (m.credits > m.hi + CREDIT_WARN_SLACK || (m.credits < m.lo - CREDIT_WARN_SLACK && m.rooms > 0)) {
+    if (overstaffed && m.credits <= m.hi + CREDIT_WARN_SLACK) { /* siehe Gesamthinweis unten */ }
+    else if (m.credits > m.hi + CREDIT_WARN_SLACK || (m.credits < m.lo - CREDIT_WARN_SLACK && m.rooms > 0)) {
       warnings.push({ code: "CREDITS_OUT_OF_BAND", severity: "WARNING", hkId: m.hkId,
         message: `${name} hat ${fmt(m.credits)} Credits. Ziel sind ${fmt(m.lo)} bis ${fmt(m.hi)}.` });
     } else if (m.rooms === 0 && m.lo > 0) {
@@ -97,9 +101,13 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
         ? `Zimmer ${rs.map((r) => r.number).join(", ")} bleiben offen: keine Kraft der Stufe 2 oder 3 anwesend. Bitte selbst entscheiden.`
         : `Zimmer ${rs.map((r) => r.number).join(", ")} bleiben offen. Bitte selbst zuteilen.` });
   }
-  const totalCredits = c.rooms.reduce((a, r) => a + r.credits, 0);
+  const totalCredits = totalAll;
   const needed = Math.ceil(totalCredits / Math.max(1, input.fullTimeTarget));
   const present = input.housekeepers.length;
+  if (overstaffed) {
+    warnings.push({ code: "TOO_MANY_STAFF", severity: "INFO",
+      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}. Nicht benötigte Kräfte bitte abwählen.` });
+  }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
       message: `Zu wenige Kräfte: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}.` });
