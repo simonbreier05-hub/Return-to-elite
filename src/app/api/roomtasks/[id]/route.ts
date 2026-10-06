@@ -42,6 +42,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     include: INCLUDE,
   });
 
+  // Die zugehörige Hausmann-Trace-Zeile ist damit auch erledigt (eine Wahrheit für die Hausmann-Liste)
+  await prisma.trace.updateMany({ where: { roomTaskId: id, status: "OPEN" }, data: { status: "DONE", doneAt: new Date() } });
+
   await audit({
     action: "ROOM_TASK_DONE",
     userId: auth.session.userId,

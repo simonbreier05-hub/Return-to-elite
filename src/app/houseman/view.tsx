@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import HousemanList from "@/components/lists/HousemanList";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -27,6 +28,8 @@ export default function HousemanView() {
   const [tasks, setTasks] = useState<RoomTask[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  /** Aufgaben, die schon als Zeile der Hausmann-Liste (Trace) erscheinen — nicht doppelt zeigen. */
+  const [linked, setLinked] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const data = await api<{ roomTasks: RoomTask[] }>("/api/roomtasks");
@@ -63,7 +66,7 @@ export default function HousemanView() {
     }
   };
 
-  const open = tasks.filter((t) => t.status === "OPEN");
+  const open = tasks.filter((t) => t.status === "OPEN" && !linked.has(t.id));
 
   const taskLabel = (task: RoomTask) =>
     task.type === "SONSTIGES"
@@ -72,7 +75,8 @@ export default function HousemanView() {
 
   return (
     <div>
-      <h2 className="mb-1 font-serif text-3xl">{t("houseman.tasks")}</h2>
+      <HousemanList onLinkedTasks={setLinked} />
+      <h2 className="mb-1 font-serif text-3xl">{t("lists.hmOtherTasks")}</h2>
       <p className="mb-4 text-sm text-graphite/70">{t("houseman.openCount", { count: open.length })}</p>
 
       {error && (
