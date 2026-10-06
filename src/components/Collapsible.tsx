@@ -28,7 +28,7 @@ export default function Collapsible({
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition hover:bg-parchment/60"
+        className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-left transition hover:bg-parchment/60"
         aria-expanded={open}
       >
         {summary}
@@ -42,7 +42,7 @@ export default function Collapsible({
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && <div className="border-t border-charcoal/5 px-3 pb-3 pt-2.5">{children}</div>}
+      {open && <div className="animate-rise border-t border-charcoal/5 px-3 pb-3 pt-2.5">{children}</div>}
     </div>
   );
 }

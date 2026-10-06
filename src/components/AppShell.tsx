@@ -170,11 +170,11 @@ export default function AppShell({
           gap or a stacking mismatch between the two. */}
       <header className="sticky top-0 z-40 border-t-[3px] border-navy bg-linen text-charcoal shadow-lift">
         <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex items-center gap-3.5">
+          <div className="flex min-w-0 items-center gap-3.5">
             {backHref && (
               <button
                 onClick={() => router.push(backHref)}
-                className="-ml-2 flex h-12 shrink-0 items-center gap-1 rounded-full px-2 text-sm font-medium text-navy transition hover:bg-parchment sm:pr-3"
+                className="-ml-2 flex h-12 min-w-11 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium text-navy transition hover:bg-parchment sm:pr-3"
                 aria-label={t("appShell.back")}
                 title={t("appShell.back")}
               >
@@ -184,11 +184,11 @@ export default function AppShell({
                 <span className="hidden sm:inline">{t("appShell.back")}</span>
               </button>
             )}
-            <Image src="/brand/crest.png" alt="" width={34} height={27} className="h-[1.7rem] w-auto shrink-0" priority />
-            <div className="flex items-baseline gap-4">
-              <div className="leading-tight">
+            <Image src="/brand/crest.png" alt="" width={34} height={27} className={`h-[1.7rem] w-auto shrink-0 ${backHref ? "hidden sm:block" : ""}`} priority />
+            <div className="flex min-w-0 items-baseline gap-4">
+              <div className="min-w-0 leading-tight">
                 <p className="text-[0.62rem] uppercase tracking-[0.24em] text-gold-soft">{t("appShell.hotelBerlin")}</p>
-                <p className="font-serif text-xl tracking-[0.01em] text-navy">{t(title)}</p>
+                <p className="truncate font-serif text-xl tracking-[0.01em] text-navy">{t(title)}</p>
               </div>
             </div>
           </div>

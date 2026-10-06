@@ -145,14 +145,14 @@ export default function GuestAccessView() {
                     <div className="flex justify-end gap-2">
                       <button
                         onClick={() => copy(room)}
-                        className="h-8 rounded-md border border-charcoal/15 px-3 text-xs font-medium hover:border-gold-line"
+                        className="h-11 rounded-md border border-charcoal/15 px-3 text-xs font-medium hover:border-gold-line md:h-8"
                       >
                         {copiedId === room.id ? "Kopiert!" : "Kopieren"}
                       </button>
                       <button
                         onClick={() => regenerate(room)}
                         disabled={busyId === room.id}
-                        className="h-8 rounded-md border border-charcoal/15 px-3 text-xs font-medium text-status-out-of-order hover:border-status-out-of-order disabled:opacity-40"
+                        className="h-11 rounded-md border border-charcoal/15 px-3 text-xs font-medium text-status-out-of-order md:h-8 hover:border-status-out-of-order disabled:opacity-40"
                       >
                         {busyId === room.id ? "…" : "Neu erzeugen"}
                       </button>

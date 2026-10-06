@@ -14,7 +14,7 @@ export default function GuestLanguageSwitcher() {
           key={l}
           onClick={() => setLocale(l)}
           aria-pressed={locale === l}
-          className="h-8 w-10 rounded-md text-xs font-semibold tracking-wide transition"
+          className="h-11 w-11 rounded-md text-xs font-semibold tracking-wide transition"
           style={
             locale === l
               ? { background: "var(--g-navy)", color: "white" }

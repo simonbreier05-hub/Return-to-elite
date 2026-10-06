@@ -119,7 +119,7 @@ export default function EngineeringView() {
               <div className="mb-2 flex items-center justify-between">
                 <button
                   onClick={() => roomLookup.open(wo.defect.room.number)}
-                  className="flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
+                  className="tap flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
                 >
                   {t("engineering.room")} {wo.defect.room.number}
                   {wo.defect.room.openNotesCount > 0 && (

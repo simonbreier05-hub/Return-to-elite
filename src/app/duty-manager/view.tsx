@@ -257,7 +257,7 @@ export default function DutyManagerView() {
                       <button
                         key={floor}
                         onClick={() => toggleFloor(s.id, floor)}
-                        className={`h-10 rounded-lg border px-3 text-sm font-medium ${
+                        className={`h-11 min-w-11 rounded-lg border px-3 text-sm font-medium ${
                           draft.includes(floor) ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
                         }`}
                       >
@@ -267,7 +267,7 @@ export default function DutyManagerView() {
                     <button
                       onClick={() => saveFloors(s.id)}
                       disabled={savingId === s.id || !dirty}
-                      className="ml-2 h-10 rounded-lg bg-navy px-4 text-sm font-semibold text-ivory disabled:opacity-40"
+                      className="ml-2 h-11 rounded-lg bg-navy px-4 text-sm font-semibold text-ivory disabled:opacity-40"
                     >
                       {savingId === s.id ? t("common.saving") : t("dutyManager.saveFloors")}
                     </button>

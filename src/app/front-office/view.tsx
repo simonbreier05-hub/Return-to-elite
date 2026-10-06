@@ -127,6 +127,7 @@ export default function FrontOfficeView() {
         </div>
       )}
 
+      <p className="mb-1 text-xs text-graphite/60 md:hidden" aria-hidden>↔ {t("frontOffice.swipeHint")}</p>
       <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-sm">
         <table className="w-full min-w-[44rem] text-left text-sm">
           <thead className="border-b border-charcoal/10 text-xs uppercase tracking-wider text-graphite/60">
@@ -153,7 +154,7 @@ export default function FrontOfficeView() {
                   <td className="px-4 py-3">
                     <button
                       onClick={() => roomLookup.open(a.room.number)}
-                      className="flex items-center gap-1.5 font-serif text-lg hover:text-navy hover:underline"
+                      className="tap flex items-center gap-1.5 font-serif text-lg hover:text-navy hover:underline"
                     >
                       {a.room.number}
                       {a.room.openNotesCount > 0 && (

@@ -130,7 +130,7 @@ export default function ConciergeView() {
                 <div className="flex items-center justify-between">
                   <button
                     onClick={() => roomLookup.open(e.room.number)}
-                    className="flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
+                    className="tap flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
                   >
                     {e.room.number}
                     {e.room.openNotesCount > 0 && (
