@@ -40,6 +40,10 @@ export async function extractPdfLines(data: Uint8Array): Promise<PdfLine[]> {
   const pdfjs = isNode
     ? await import("pdfjs-dist/legacy/build/pdf.mjs")
     : await import("pdfjs-dist");
+  if (!isNode) {
+    // Im Browser läuft pdf.js in einem Web-Worker (Datei bleibt im Browser, wird nirgends hochgeladen).
+    pdfjs.GlobalWorkerOptions.workerSrc = new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+  }
   const doc = await pdfjs.getDocument({ data: data.slice(), useSystemFonts: true, verbosity: 0 }).promise;
   const out: PdfLine[] = [];
   for (let p = 1; p <= doc.numPages; p++) {

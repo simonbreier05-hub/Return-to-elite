@@ -237,6 +237,9 @@ export const DEFAULT_SETTINGS = {
   // RoomNote freetext, guest-reported Defect photos) is purged this many days
   // after creation — see src/lib/guestDataRetention.ts.
   guestDataRetentionDays: 30,
+  // Zimmer, die das Hotel tatsächlich hat (Opera-Forecast: Auslastung ≈ belegt ÷ (Zimmer − OOO)).
+  // Das Hotel hat 145 Zimmer; die Grundriss-Digitalisierung (HOTEL, 139) ist davon unabhängig.
+  roomInventory: 145,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 

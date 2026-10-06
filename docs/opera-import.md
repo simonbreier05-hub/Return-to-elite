@@ -12,7 +12,7 @@ zeigt Vorschau und Befunde und übernimmt sie nach Bestätigung. Opera bleibt da
 | Gast: Anrede, Titel, Nachname (voller Name nur für berechtigte Rollen) | |
 | Traces: Code, Datum, Text | |
 
-Das PDF wird im Browser gelesen (`pdfjs-dist`); gespeichert wird nur der SHA-256. Fotos/Scans ohne Textebene werden abgelehnt (keine OCR).
+Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`); gespeichert wird nur der SHA-256. Der Server nimmt nur Whitelist-Felder an (`src/lib/import/schema.ts`, `.strict()`) und prüft die Zimmer gegen den Zimmerstamm. Fotos/Scans ohne Textebene werden abgelehnt (keine OCR).
 
 ## Layouts
 
@@ -20,6 +20,13 @@ Das PDF wird im Browser gelesen (`pdfjs-dist`); gespeichert wird nur der SHA-256
 - **Departures** — Gruppen „Departure <Datum>" mit `Total`-Zeilen (werden gegen die Zeilen geprüft). Über einen Zeitraum ersetzt sie die fehlende In-House-Liste: Bleiber = Abreise nach heute, Anreise bis heute. Empfohlen: heute bis +30 Tage.
 - **History and Forecast** — nur heutiger und spätere Tage; Umsatz/Durchschnittspreis werden verworfen; Occ.% wird gegen belegt ÷ (Zimmer − OOO) geprüft.
 - **Traces** — PDF oder CSV; Twin-/Zusatzbett-Texte werden zu Hausmann-Aufgaben (`traceClassifier.ts`).
+
+## Oberfläche und API
+
+`/import` (Supervisor, Duty Manager; Link im Planungshub): mehrere Dateien per Drag-and-drop oder „Dateien wählen", Typ automatisch erkannt (sonst Auswahl), Vorschau mit maskierten Namen, Befunde, Datumsbestätigung, „Übernehmen"/„Verwerfen"/„Alle übernehmen", „Stand der Daten".
+`POST /api/import/batches` (Vorschau ablegen) → `POST /api/import/batches/[id]/apply|reject`; `GET /api/import/status`.
+Excel/CSV: jede Zeile = Zellen in Druckreihenfolge (gleiche Parser wie PDF); Tabellen haben kein Druckdatum, das Formularfeld „Geschäftsdatum" springt ein. Zimmernummern, die Excel als Zahl gespeichert hat (4), werden zu „004" aufgefüllt. Bei PDFs gilt immer das Druckdatum; weicht es vom gewählten Tag ab, gibt es die Warnung `LIST_NOT_TODAY`.
+Zimmeranzahl für die Forecast-Prüfung: Einstellung `roomInventory` (Standard 145, in /settings änderbar) — nicht die 139 Zimmer der Grundriss-Digitalisierung.
 
 ## Datumsformat
 

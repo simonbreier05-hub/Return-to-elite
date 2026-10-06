@@ -28,6 +28,7 @@ const Body = z.object({
   roomsPerAttendantMin: z.number().int().min(1).max(30).optional(),
   roomsPerAttendantMax: z.number().int().min(1).max(30).optional(),
   attendantPoolMax: z.number().int().min(1).max(50).optional(),
+  roomInventory: z.number().int().min(1).max(1000).optional(),
   /** Priority weights, by their name in PRIORITY_WEIGHTS. Zero is allowed — it
    *  is how a house switches a signal off entirely. */
   weights: z.record(z.string(), z.number().min(0).max(1000)).optional(),

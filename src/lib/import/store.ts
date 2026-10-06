@@ -3,12 +3,13 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import type { ImportType } from "@/lib/domain";
 import { UNKNOWN_ROOM_CRITICAL_RATIO } from "./mapping";
-import { maskName } from "./names";
+import { buildPreview } from "./preview";
 import { issue } from "./parseCommon";
 import type { ArrivalRow, DepartureRow, ForecastDayRow, ParseIssue, ParseResult, TraceRow } from "./types";
 
 type AnyRow = ArrivalRow | DepartureRow | TraceRow | ForecastDayRow;
 
+export { buildPreview };
 export const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
 
 /** Geschäftsdatum der Liste: Arrivals = Anreisetag der Liste, sonst Druckdatum. */
@@ -27,23 +28,6 @@ export function roomIssues(rooms: string[], known: Set<string>): ParseIssue[] {
 }
 
 export const isCritical = (issues: ParseIssue[]) => issues.some((i) => i.severity === "CRITICAL");
-
-/** Vorschau für die Oberfläche: Zähler, Zeitraum, erste Zeilen — Namen maskiert. */
-export function buildPreview(r: ParseResult<AnyRow>, sampleSize = 5) {
-  const mask = (row: AnyRow) => {
-    const g = "guest" in row ? row.guest : null;
-    const { guest: _g, ...rest } = row as AnyRow & { guest?: unknown };
-    void _g;
-    return g ? { ...rest, guest: [g.salutation, g.title, maskName(g.lastName)].filter(Boolean).join(" ") } : rest;
-  };
-  return {
-    type: r.type, count: r.rows.length, reportDate: r.reportDate, periodFrom: r.periodFrom, periodTo: r.periodTo,
-    pages: { seen: r.pagesSeen, total: r.pagesTotal }, dateFormat: r.dates,
-    sample: r.rows.slice(0, sampleSize).map(mask),
-    critical: r.issues.filter((i) => i.severity === "CRITICAL").length,
-    warnings: r.issues.filter((i) => i.severity === "WARNING").length,
-  };
-}
 
 /** Legt einen Listenstand als Vorschau (PREVIEW) ab. Nichts ist live, bevor applyBatch läuft. */
 export async function storeBatch(input: {

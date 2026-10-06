@@ -1,6 +1,7 @@
 import Papa from "papaparse";
 import { diffDays, parseTime, weekdayIndex } from "./dates";
-import { DEFAULT_MAPPING, DEFAULT_ROOM_INVENTORY, DEPARTURES_MIN_HORIZON_DAYS, FORECAST_OCC_TOLERANCE_PCT, type ImportMappingConfig } from "./mapping";
+import { DEFAULT_SETTINGS } from "@/lib/domain";
+import { DEFAULT_MAPPING, DEPARTURES_MIN_HORIZON_DAYS, FORECAST_OCC_TOLERANCE_PCT, type ImportMappingConfig } from "./mapping";
 import { parseGuestName } from "./names";
 import {
   DATE_RE, ROOM_RE, bodyLines, findHeaderDateRaw, issue, makeDateCtx, pageInfo, type DateCtx,
@@ -225,7 +226,7 @@ export function parseForecast(
   type Raw = { date: string; wd: string; v: Record<string, number>; line: PdfLine };
   const raws: Raw[] = [];
   for (const l of body) {
-    const m = /^(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4})(?:\s+([A-Za-z]{2,3}))?$/.exec(l.segments[0] ?? "");
+    const m = /^(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}-\d{2}-\d{2})(?:\s+([A-Za-z]{2,3}))?$/.exec(l.segments[0] ?? "");
     if (!m) continue; // History/Forecast/Subtotal/Total-Zeilen
     const wd = m[2] ?? l.segments[1] ?? "";
     const rest = tokens(m[2] ? l.segments.slice(1) : l.segments.slice(2)).map((x) => num(x.replace("%", "")));
@@ -240,7 +241,7 @@ export function parseForecast(
     [...raws.map((r) => (weekdayIndex(r.wd) !== null ? r.wd : null)), ...(hdrRaw ? [null] : [])]);
   const reportDate = hdrRaw ? ctx.iso(hdrRaw) : null;
   const today = opts.today ?? reportDate;
-  const inventory = opts.roomInventory ?? DEFAULT_ROOM_INVENTORY;
+  const inventory = opts.roomInventory ?? DEFAULT_SETTINGS.roomInventory;
 
   const rows: ForecastDayRow[] = [];
   if (ctx.res.format) {

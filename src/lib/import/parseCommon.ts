@@ -1,7 +1,7 @@
 import { resolveDateFormat, toIso } from "./dates";
 import type { DateFormatId, DateResolution, ParseIssue, PdfLine } from "./types";
 
-export const DATE_RE = /^\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}$/;
+export const DATE_RE = /^(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}-\d{2}-\d{2})$/;
 export const ROOM_RE = /^\d{3,4}$/;
 
 export function issue(

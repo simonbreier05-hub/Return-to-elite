@@ -24,7 +24,13 @@ function split(raw: string): [number, number, number] | null {
   return [Number(m[1]), Number(m[2]), m[3].length === 2 ? 2000 + yy : yy];
 }
 
+const ISO_RE = /^(\d{4})-(\d{2})-(\d{2})$/;
+export const isIsoDate = (raw: string) => ISO_RE.test(raw.trim());
+
+/** Excel-Datumszellen kommen als JJJJ-MM-TT an — unabhängig vom Format eindeutig. */
 export function toIso(raw: string, format: DateFormatId): string | null {
+  const iso = ISO_RE.exec(raw.trim());
+  if (iso) return validYmd(+iso[1], +iso[2], +iso[3]) ? raw.trim() : null;
   const p = split(raw);
   if (!p) return null;
   const [a, b, y] = p;
@@ -63,6 +69,7 @@ export function resolveDateFormat(
   opts: { weekdays?: (string | null)[]; confirmed?: DateFormatId } = {},
 ): DateResolution {
   const formats: DateFormatId[] = ["MDY", "DMY"];
+  if (raws.every(isIsoDate)) return { format: opts.confirmed ?? "MDY", via: "unique" }; // reine ISO-Werte: Format egal
   const valid = formats.filter((f) => raws.every((r) => toIso(r, f) !== null));
   let via: DateResolution["via"] = "unique";
   let left = valid;

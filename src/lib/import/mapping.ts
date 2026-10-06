@@ -43,5 +43,3 @@ export const UNKNOWN_ROOM_CRITICAL_RATIO = 0.2;
 export const DEPARTURES_MIN_HORIZON_DAYS = 30;
 /** Erlaubte Abweichung Occ.% vs. berechnet (Prozentpunkte), sonst Warnung. */
 export const FORECAST_OCC_TOLERANCE_PCT = 1.0;
-/** Standard-Zimmeranzahl für die Forecast-Prüfung (Hotel de Rome laut Forecast: 145). */
-export const DEFAULT_ROOM_INVENTORY = 145;
