@@ -44,7 +44,13 @@ export async function loadList(fileName: string, bytes: Uint8Array): Promise<Loa
   if (bytes.byteLength > MAX_FILE_BYTES) throw new Error("Datei größer als 10 MB.");
   const lower = fileName.toLowerCase();
   if (lower.endsWith(".pdf") || (bytes[0] === 0x25 && bytes[1] === 0x50)) {
-    const lines = await extractPdfLines(bytes);
+    let lines: PdfLine[];
+    try {
+      lines = await extractPdfLines(bytes);
+    } catch (e) {
+      console.error("PDF-Import:", e);
+      throw new Error("Datei konnte nicht gelesen werden. Ist es ein unbeschädigtes PDF mit Textebene (kein Foto/Scan)? Sonst bitte Excel/CSV nutzen oder einen anderen Browser probieren.");
+    }
     return { kind: "pdf", lines, csv: null, type: detectListType(lines, fileName) };
   }
   let rows: string[][];
