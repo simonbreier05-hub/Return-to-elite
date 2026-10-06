@@ -9,6 +9,8 @@ import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { HOTEL } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import PurgeBanner from "@/components/PurgeBanner";
+import AutoPlanPanel from "@/components/AutoPlanPanel";
+import RedistributionCards from "@/components/RedistributionCards";
 
 interface Attendant {
   id: string;
@@ -339,6 +341,7 @@ export default function PlanningView() {
   return (
     <div className="animate-rise pb-28">
       <PurgeBanner />
+      <RedistributionCards />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
@@ -360,6 +363,8 @@ export default function PlanningView() {
           {t("planning.liveBoardLink")}
         </Link>
       </div>
+
+      <AutoPlanPanel />
 
       {/* ---- 1 · The day ---------------------------------------------------- */}
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
-import { getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
+import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
+import { AUTOPLAN_WEIGHT_PREFIX, getAutoplanWeights, getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
 import { PRIORITY_WEIGHTS } from "@/lib/priority/computePriority";
 import { audit } from "@/lib/audit";
 
@@ -17,6 +18,8 @@ export async function GET() {
     // read here so the Planungshub never hardcodes a room type's credit value.
     roomTypeCredits: await getRoomTypeCredits(),
     planningCredits: await getPlanningCreditSettings(),
+    autoplanWeights: await getAutoplanWeights(),
+    autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
   });
 }
 
@@ -31,6 +34,19 @@ const Body = z.object({
   roomInventory: z.number().int().min(1).max(1000).optional(),
   guestPurgeHour: z.number().int().min(0).max(23).optional(),
   guestStayDeleteDays: z.number().int().min(1).max(3650).optional(),
+  autoplanTolerance: z.number().min(0).max(10).optional(),
+  autoplanMaxFloors: z.number().int().min(1).max(7).optional(),
+  stayoverFactor: z.number().min(0.1).max(2).optional(),
+  autoplanManyTraces: z.number().int().min(1).max(20).optional(),
+  azubiCreditsMin: z.number().min(0).max(40).optional(),
+  azubiCreditsMax: z.number().min(0).max(40).optional(),
+  teilzeitCreditsMin: z.number().min(0).max(40).optional(),
+  teilzeitCreditsMax: z.number().min(0).max(40).optional(),
+  minutesPerCredit: z.number().min(5).max(120).optional(),
+  earlyFinishMinutes: z.number().int().min(5).max(240).optional(),
+  redistributionMaxMoves: z.number().int().min(1).max(20).optional(),
+  /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
+  autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
   /** Priority weights, by their name in PRIORITY_WEIGHTS. Zero is allowed — it
    *  is how a house switches a signal off entirely. */
   weights: z.record(z.string(), z.number().min(0).max(1000)).optional(),
@@ -63,7 +79,7 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  const { weights, ...thresholds } = parsed.data;
+  const { weights, autoplanWeights, ...thresholds } = parsed.data;
 
   for (const [key, value] of Object.entries(thresholds)) {
     if (value === undefined) continue;
@@ -87,6 +103,14 @@ export async function PATCH(req: NextRequest) {
     });
   }
 
+  // Autoplan-Gewichte: nur bekannte Namen; 0 ist erlaubt (Regel ausschalten).
+  const knownAutoplan = new Set(Object.keys(AUTOPLAN_WEIGHTS));
+  for (const [name, value] of Object.entries(autoplanWeights ?? {})) {
+    if (!knownAutoplan.has(name)) continue;
+    const key = `${AUTOPLAN_WEIGHT_PREFIX}${name}`;
+    await prisma.setting.upsert({ where: { key }, create: { key, value: String(value) }, update: { value: String(value) } });
+  }
+
   await audit({ action: "SETTINGS_UPDATED", userId: auth.session.userId, meta: parsed.data });
   return NextResponse.json({
     settings: await getSettings(),
@@ -94,5 +118,7 @@ export async function PATCH(req: NextRequest) {
     weightDefaults: PRIORITY_WEIGHTS,
     roomTypeCredits: await getRoomTypeCredits(),
     planningCredits: await getPlanningCreditSettings(),
+    autoplanWeights: await getAutoplanWeights(),
+    autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
   });
 }

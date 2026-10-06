@@ -86,6 +86,21 @@ app.prepare().then(() => {
   setInterval(purgeTick, PURGE_TICK_MS);
   setTimeout(purgeTick, 20_000); // beim Start sofort nachholen, falls ein Lauf ausgefallen ist
 
+  // Live-Umverteilung (M2b): alle 10 Minuten prüfen, ob ein Umverteilungsvorschlag nötig ist
+  // (Ausfall, früher fertig, offenes Zimmer). Ereignisse (Nachimport, "abwesend") lösen sie zusätzlich sofort aus.
+  const redistributionTick = async () => {
+    try {
+      await fetch(`http://127.0.0.1:${port}/api/internal/redistribution-check`, {
+        method: "POST",
+        headers: { "x-internal-secret": process.env.INTERNAL_TICKER_SECRET },
+      });
+    } catch (err) {
+      console.error("[redistribution] tick failed:", err.message);
+    }
+  };
+  setInterval(redistributionTick, 10 * 60_000);
+  setTimeout(redistributionTick, 30_000);
+
   httpServer.listen(port, hostname, () => {
     console.log(`> StayClean ready on http://localhost:${port} (${dev ? "dev" : "prod"})`);
   });

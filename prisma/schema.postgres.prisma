@@ -38,6 +38,14 @@ model User {
   // only for now — see the duty-manager-screen prompt for why this doesn't
   // (yet) restrict what a supervisor can see in their own screen.
   assignedFloors String   @default("")
+  // M2b — Stammdaten für den Zuteilungsvorschlag. Beschäftigtendaten: nur Supervisor/Duty Manager
+  // dürfen sie sehen, nie Housekeeper; nie in Logs (siehe docs/autoplan.md).
+  hkType       String   @default("VOLLZEIT") // VOLLZEIT | TEILZEIT | AZUBI
+  hkLevel      Int      @default(2) // Stufe 1..3 (1 = nie anspruchsvolle Zimmer)
+  homeFloors   String   @default("") // Stammetagen, 0–2, komma-getrennt
+  dailyTarget  Float? // überschreibt das Tagesziel des Typs (Credits)
+  hkActive     Boolean  @default(true)
+  absentDate   String? // "YYYY-MM-DD": an diesem Tag abwesend (ein Tap)
   createdAt     DateTime  @default(now())
 
   assignedRooms   Room[]      @relation("RoomAssignee")
@@ -96,6 +104,8 @@ model Room {
   // The shift handover reads this to call out carried-over rooms by name
   // instead of silently mixing them into "still dirty".
   deferredSince    DateTime?
+  // M2b: Tag ("YYYY-MM-DD"), an dem assignedToId gesetzt wurde. Nur eine heutige Zuteilung gilt als fest; alte bleiben als Hinweis.
+  assignedOn       String?
   // Last day the bed linen/towels were actually changed — stayovers cycle
   // every N days (src/lib/rooms/laundryDue.ts), departures/arrivals always
   // get a full change so this isn't tracked for them. Stamped by
@@ -457,4 +467,39 @@ model PurgeRun {
   userId     String? // bei MANUAL/STAY: wer ausgelöst hat
 
   @@index([startedAt])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// M2b: Intelligenter Zuteilungsvorschlag und Live-Umverteilung.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Ein Zuteilungsvorschlag eines Tages (Entwurf → bestätigt). Nur IDs und Zähler, keine Gastdaten. */
+model AutoPlanProposal {
+  id            String    @id @default(cuid())
+  date          String // "YYYY-MM-DD"
+  status        String    @default("DRAFT") // DRAFT | CONFIRMED | SUPERSEDED
+  createdById   String
+  payload       String // JSON: { assignments:[{attendantId, roomIds}], metrics, warnings, unassigned }
+  deviations    String? // JSON: Abweichung Vorschlag → bestätigter Plan [{room, from, to}] — nur Auswertung, kein Nachjustieren
+  createdAt     DateTime  @default(now())
+  confirmedAt   DateTime?
+  confirmedById String?
+
+  @@index([date, status])
+}
+
+/** Konkreter Umverteilungsvorschlag tagsüber (Ausfall, früher fertig, neuer Turn). Der Supervisor entscheidet. */
+model RedistributionSuggestion {
+  id          String    @id @default(cuid())
+  date        String
+  kind        String // ABSENT | EARLY_FINISH | UNASSIGNED
+  status      String    @default("OPEN") // OPEN | CONFIRMED | REJECTED | SUPERSEDED
+  moves       String // JSON: [{roomId, roomNumber, fromId|null, toId}]
+  reason      String // JSON: { key, params } — Hausmitarbeiter-IDs, keine Namen im Log
+  signature   String // Hash der Verschiebungen: abgelehnte Vorschläge erscheinen nur wieder, wenn sich die Lage ändert
+  createdAt   DateTime  @default(now())
+  decidedAt   DateTime?
+  decidedById String?
+
+  @@index([date, status])
 }

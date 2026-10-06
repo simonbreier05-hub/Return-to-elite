@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { berlinDate } from "@/lib/dayplan/time";
 
 /** POST /api/rooms/[id]/assign — supervisor assigns/unassigns an attendant. */
 const Body = z.object({ attendantId: z.string().nullable() });
@@ -25,7 +26,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
   const room = await prisma.room.update({
     where: { id },
-    data: { assignedToId: parsed.data.attendantId },
+    data: { assignedToId: parsed.data.attendantId, assignedOn: parsed.data.attendantId ? berlinDate(new Date()) : null },
     include: { assignedTo: { select: { id: true, name: true, dailyNumber: true } } },
   });
   await audit({

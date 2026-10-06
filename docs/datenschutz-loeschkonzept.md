@@ -23,6 +23,7 @@ am nächsten Morgen kommen Namen und Traces über den Import aus den Opera-Liste
 | `RoomNote` vom Gäste-Systemkonto | gelöscht (alle Status) |
 | `AuditLog.meta`: Schlüssel `guestName`, `name`, `text`, `note`, `body`, `message` | Schlüssel entfernt, Rest des Eintrags bleibt |
 | Gäste-Fotos, geschlossene `GuestRequest` | bestehende Regel (`guestDataRetention`), im selben Lauf |
+| `AutoPlanProposal`, `RedistributionSuggestion` (M2b) | enthalten nur Zimmer-/Housekeeper-IDs und Zähler, keine Gastdaten — bleiben (Beschäftigtendaten: siehe `docs/autoplan.md`) |
 | **Bleibt** (nicht personenbezogen) | Zimmer, Reinigungsart, Zeiten, Status, Credits, Wäschewechsel, Zähler, Personenzahl, An-/Abreisedatum, VIP-Kennzeichen am Tagesplan, Zuteilungen, Hausmann-Aufgaben (Typ, Standardnotiz) |
 
 ## Zuständigkeiten

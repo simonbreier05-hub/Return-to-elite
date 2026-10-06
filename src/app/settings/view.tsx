@@ -5,6 +5,7 @@ import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import PurgePanel from "@/components/PurgePanel";
+import HousekeeperSettingsPanel from "@/components/HousekeeperSettingsPanel";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Thresholds {
@@ -175,6 +176,8 @@ export default function SettingsView() {
           ))}
         </div>
       </section>
+
+      <HousekeeperSettingsPanel />
 
       <PurgePanel />
 
