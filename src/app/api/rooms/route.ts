@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { resolveFloorScope } from "@/lib/floors";
+import { shortGuestName } from "@/lib/lists/guestName";
 
 /**
  * GET /api/rooms — full board (optionally ?mine=1 for the attendant view, or
@@ -80,8 +81,11 @@ export async function GET(req: NextRequest) {
     ).map((r) => r.roomId)
   );
 
+  // Housekeeper sehen Gäste nur als „Anrede Titel Nachname" — von Hand erfasste Namen werden hier gekürzt (nie Vornamen).
+  const attendantView = auth.session.role === "room_attendant";
   const roomsWithCounts = rooms.map(({ _count, guestRequests, ...room }) => ({
     ...room,
+    ...(attendantView ? { arrivals: room.arrivals.map((a) => ({ ...a, guestName: shortGuestName(a.guestName, a.source) ?? "—" })) } : {}),
     openNotesCount: _count.notes,
     guestRequests,
     guestDndActive: dndRoomIds.has(room.id),

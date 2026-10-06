@@ -13,6 +13,7 @@ import WindowPanel from "@/components/WindowPanel";
 import { type ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
 import NotificationsPanel from "@/components/NotificationsPanel";
+import HousekeeperList from "@/components/lists/HousekeeperList";
 import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import RoomDetailModal, { type RoomDetailActions } from "@/components/RoomDetailModal";
@@ -324,6 +325,8 @@ export default function AttendantView() {
       <NotificationsPanel targetRole="room_attendant" />
 
       <OfflineBar state={offline} />
+
+      <HousekeeperList />
 
       {/*
        * Focus mode: "Meine Zimmer" is the Housekeeper-Hub's default view —
