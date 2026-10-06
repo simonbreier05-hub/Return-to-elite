@@ -9,6 +9,8 @@ import { classifyTraceText } from "@/lib/import/traceClassifier";
 import type { ArrivalRow, DepartureRow, GuestName, ParseIssue, TraceRow } from "@/lib/import/types";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
 import { compareWithForecast, deriveDayPlan, type DayCleaningType, type DayFiguresDerived } from "./derive";
+import { berlinToUtc } from "./time";
+import { legacyTraceKey, traceKey } from "./traceKey";
 import { getTraceDeptMap, TRACE_DEPT_DEFAULTS } from "./traceDept";
 
 const issue = (severity: ParseIssue["severity"], code: string, message: string, room?: string): ParseIssue => ({ severity, code, message, room });
@@ -16,23 +18,16 @@ const utcDay = (iso: string) => new Date(`${iso}T00:00:00Z`);
 /** "Mrs. Testfrau" — Anrede, Titel, Nachname; nie der volle Name in Stay/Arrival. */
 const shortName = (g: GuestName) => [g.salutation, g.title, g.lastName].filter(Boolean).join(" ");
 
-/** "HH:MM" am Tag `date` in Berlin → UTC-Zeitpunkt. */
-export function berlinToUtc(date: string, hhmm: string): Date {
-  const guess = new Date(`${date}T${hhmm}:00Z`);
-  const p = Object.fromEntries(new Intl.DateTimeFormat("en-US", {
-    timeZone: "Europe/Berlin", hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit",
-  }).formatToParts(guess).map((x) => [x.type, x.value]));
-  const asUtc = Date.UTC(+p.year, +p.month - 1, +p.day, +p.hour, +p.minute);
-  return new Date(guess.getTime() - (asUtc - guess.getTime()));
-}
-
 async function appliedRows<T>(type: "DEPARTURES" | "ARRIVALS" | "TRACES", date: string, exact: boolean) {
   const batch = await prisma.importBatch.findFirst({
     where: { type, status: "APPLIED", ...(exact ? { businessDate: date } : {}) },
     orderBy: { appliedAt: "desc" },
     include: { rows: true },
   });
-  return batch ? { batch, rows: batch.rows.map((r) => JSON.parse(r.payload) as T) } : null;
+  if (!batch) return null;
+  // Nach der Nachtlöschung (M3) sind die Zeilen weg, der Batch bleibt: nicht mit leeren Listen weiterrechnen.
+  if (batch.rowCount > 0 && batch.rows.length === 0) return { batch, rows: [] as T[], purged: true };
+  return { batch, rows: batch.rows.map((r) => JSON.parse(r.payload) as T), purged: false };
 }
 
 export interface MergeResult {
@@ -50,10 +45,12 @@ export interface MergeResult {
 export async function mergeDay(date: string, userId: string): Promise<MergeResult> {
   const dep = await appliedRows<DepartureRow>("DEPARTURES", date, true);
   if (!dep) throw new Error(`Für den ${date} sind keine Departures übernommen. Bitte zuerst importieren.`);
+  if (dep.purged) throw new Error("Die Gastdaten wurden gelöscht (Nachtlöschung). Bitte die Listen neu importieren.");
   const arr = await appliedRows<ArrivalRow>("ARRIVALS", date, false);
   const trc = await appliedRows<TraceRow>("TRACES", date, false);
   const issues: ParseIssue[] = [];
-  if (!arr) issues.push(issue("WARNING", "NO_ARRIVALS", "Keine Arrivals übernommen — Anreisen heute fehlen im Plan (Frühanreisen stehen evtl. in den Departures)."));
+  if (arr?.purged) issues.push(issue("WARNING", "ARRIVALS_PURGED", "Die Arrivals wurden nachts gelöscht — bitte neu importieren."));
+  else if (!arr) issues.push(issue("WARNING", "NO_ARRIVALS", "Keine Arrivals übernommen — Anreisen heute fehlen im Plan (Frühanreisen stehen evtl. in den Departures)."));
   else if (arr.batch.businessDate !== date) issues.push(issue("WARNING", "ARRIVALS_OTHER_DAY", `Die Arrivals-Liste gilt für den ${arr.batch.businessDate}, nicht für ${date}. Nur Anreisen vom ${date} werden berücksichtigt.`));
 
   const rooms = await prisma.room.findMany({ select: { id: true, number: true, lastLinenChangeAt: true, assignedToId: true } });
@@ -153,8 +150,13 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   const unknownCodes = new Set<string>();
   let newTraces = 0;
   for (const c of candidates) {
-    const dedupeKey = `${c.room}|${c.code}|${c.date}|${c.text}`;
-    if (await prisma.trace.findUnique({ where: { dedupeKey } })) continue; // erledigte bleiben erledigt
+    const dedupeKey = traceKey(c.room, c.code, c.date, c.text);
+    const existing = (await prisma.trace.findUnique({ where: { dedupeKey } }))
+      ?? (await prisma.trace.findUnique({ where: { dedupeKey: legacyTraceKey(c.room, c.code, c.date, c.text) } }));
+    if (existing) { // erledigte bleiben erledigt; nach der Nachtlöschung kommt nur der Text zurück
+      if (existing.text === "") await prisma.trace.update({ where: { id: existing.id }, data: { text: c.text } });
+      continue;
+    }
     const classified = classifyTraceText(c.text);
     const code = c.code.toUpperCase();
     if (!classified && !(code in deptMap)) unknownCodes.add(code);

@@ -240,6 +240,10 @@ export const DEFAULT_SETTINGS = {
   // Zimmer, die das Hotel tatsächlich hat (Opera-Forecast: Auslastung ≈ belegt ÷ (Zimmer − OOO)).
   // Das Hotel hat 145 Zimmer; die Grundriss-Digitalisierung (HOTEL, 139) ist davon unabhängig.
   roomInventory: 145,
+  // DSGVO (M3): Uhrzeit (Europe/Berlin, volle Stunde), zu der jeden Abend alle Gastdaten gelöscht werden.
+  guestPurgeHour: 22,
+  // Aufenthalte (Stay) ohne Namen werden so viele Tage nach der Abreise ganz gelöscht.
+  guestStayDeleteDays: 30,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 

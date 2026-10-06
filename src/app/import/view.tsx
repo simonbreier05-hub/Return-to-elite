@@ -5,6 +5,7 @@ import { api } from "@/components/api";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import DayPlanPanel from "./DayPlanPanel";
+import PurgeBanner from "@/components/PurgeBanner";
 import { crossCheckArrivals } from "@/lib/import/parsers";
 import { buildPreview, sha256Hex } from "@/lib/import/preview";
 import { loadList, parseList, type AnyResult, type LoadedList } from "@/lib/import/readFile";
@@ -145,6 +146,7 @@ export default function ImportView() {
     <div className="animate-rise pb-28">
       <h2 className="font-serif text-4xl leading-none">{t("importPage.title")}</h2>
       <div className="rule-gold my-2 w-40" />
+      <PurgeBanner refreshKey={JSON.stringify(status ?? {})} />
       <p className="mb-4 max-w-2xl text-sm text-graphite/70">{t("importPage.intro")}</p>
 
       <div

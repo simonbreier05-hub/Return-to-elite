@@ -56,6 +56,10 @@ Pro Liste aus allen Werten bestimmt: Format mit ungültigem Wert (Monat > 12) sc
 Kritisch (nichts wird übernommen): kein Text (Foto/Scan), Pflichtfeld unlesbar, Datum mehrdeutig, > 20 % unbekannte Zimmer, Geschäftsdatum unlesbar.
 Warnung: Seite fehlt, Zeitraum < 30 Tage, Arrivals unvollständig (Gegenprobe gegen Departures), unbekannte Zimmer (einzelne), Summenzeile passt nicht, Auslastung unplausibel, doppelte Zeilen, Anrede fehlt.
 
+## Nachtlöschung (M3)
+
+Alle Gastdaten werden abends gelöscht und kommen mit dem Import zurück — siehe `docs/datenschutz-loeschkonzept.md`.
+
 ## Testdaten
 
 Nachbau-PDFs mit erfundenen Namen: `npm run fixtures:opera` (→ `tests/fixtures/opera/`). Durchlauf eines Morgens: `scripts/morning-demo.ts` (Wegwerf-DB, Aufruf im Kopf der Datei).

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import PurgePanel from "@/components/PurgePanel";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Thresholds {
@@ -174,6 +175,8 @@ export default function SettingsView() {
           ))}
         </div>
       </section>
+
+      <PurgePanel />
 
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">

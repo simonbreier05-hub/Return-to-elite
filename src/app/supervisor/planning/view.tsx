@@ -8,6 +8,7 @@ import Collapsible from "@/components/Collapsible";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { HOTEL } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import PurgeBanner from "@/components/PurgeBanner";
 
 interface Attendant {
   id: string;
@@ -337,6 +338,7 @@ export default function PlanningView() {
 
   return (
     <div className="animate-rise pb-28">
+      <PurgeBanner />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>

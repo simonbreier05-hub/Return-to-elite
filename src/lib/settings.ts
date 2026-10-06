@@ -24,7 +24,8 @@ export async function getSettings(): Promise<SettingsShape> {
   for (const key of Object.keys(DEFAULT_SETTINGS) as (keyof SettingsShape)[]) {
     const raw = map[key];
     const parsed = raw !== undefined ? Number(raw) : NaN;
-    if (Number.isFinite(parsed) && parsed > 0) out[key] = parsed;
+    // 0 is a valid hour (midnight) for the nightly purge; every other setting must be positive.
+    if (Number.isFinite(parsed) && (parsed > 0 || (key === "guestPurgeHour" && parsed === 0))) out[key] = parsed;
   }
   return out;
 }

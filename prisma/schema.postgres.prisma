@@ -444,3 +444,17 @@ model DayRoomPlan {
   @@unique([date, roomId])
   @@index([date])
 }
+
+/** Nachweis der Gastdaten-Löschung (M3). Enthält nur Zähler — keine personenbezogenen Daten. */
+model PurgeRun {
+  id         String    @id @default(cuid())
+  trigger    String // SCHEDULE | MANUAL | STAY (Einzellöschung)
+  status     String // RUNNING | OK | ERROR
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+  counts     String? // JSON: { kategorie: Anzahl }
+  error      String? // nur Fehlerart, nie Inhalte
+  userId     String? // bei MANUAL/STAY: wer ausgelöst hat
+
+  @@index([startedAt])
+}
