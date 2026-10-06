@@ -50,6 +50,7 @@ model User {
   createdRoomTasks  RoomTask[] @relation("RoomTaskCreator")
   assignedRoomTasks RoomTask[] @relation("RoomTaskAssignee")
   assignedGuestRequests GuestRequest[]
+  importBatches ImportBatch[] @relation("ImportBatchUploader")
 }
 
 model Room {
@@ -302,4 +303,86 @@ model Notification {
 model Setting {
   key   String @id
   value String
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Morgen-Import der Opera-Listen (M1). Gastdaten nur laut Whitelist
+// (docs/opera-import.md): keine Kreditkarten-, Preis-, Saldo- oder
+// Reservierungsnummern-Spalten, nirgends. Nachts von M3 geleert.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Ein hochgeladener Listenstand (eine Datei). Nachimport ersetzt den vorherigen (gleicher Typ + Tag). */
+model ImportBatch {
+  id           String    @id @default(cuid())
+  type         String // FORECAST | DEPARTURES | ARRIVALS | TRACES — ImportTypeSchema in src/lib/domain.ts
+  businessDate String // "YYYY-MM-DD" — Geschäftsdatum der Liste
+  periodFrom   String? // "YYYY-MM-DD" — Zeitraum (Departures, Forecast)
+  periodTo     String?
+  uploadedById String
+  uploadedBy   User      @relation("ImportBatchUploader", fields: [uploadedById], references: [id])
+  status       String    @default("PREVIEW") // PREVIEW | APPLIED | REJECTED
+  rowCount     Int       @default(0)
+  issueCount   Int       @default(0)
+  fileHash     String // SHA-256 der Datei; die Datei selbst wird nie gespeichert
+  createdAt    DateTime  @default(now())
+  appliedAt    DateTime?
+
+  rows   ImportRow[]
+  issues ImportIssue[]
+
+  @@index([type, businessDate])
+}
+
+/** Layout-Profil je Listentyp (Spaltenreihenfolge, Datums-/Zeitformat, Anreden). JSON in `config`. */
+model ImportMapping {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  version   Int      @default(1)
+  config    String // JSON — siehe ImportMappingConfig in src/lib/import/mapping.ts
+  updatedAt DateTime @updatedAt
+}
+
+/** Befund beim Auslesen. `message` enthält nie Gastdaten. */
+model ImportIssue {
+  id       String      @id @default(cuid())
+  batchId  String
+  batch    ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  severity String // CRITICAL | WARNING | INFO
+  page     Int?
+  line     Int?
+  room     String?
+  code     String // z. B. DATE_AMBIGUOUS, UNKNOWN_ROOM, PAGE_MISSING
+  message  String
+
+  @@index([batchId])
+}
+
+/** Ein Tag des Forecasts — nur Zählwerte, keine Umsatz-/Preisspalten. */
+model ForecastDay {
+  id            String   @id @default(cuid())
+  date          String   @unique // "YYYY-MM-DD"
+  occupiedRooms Int
+  arrivals      Int
+  departures    Int
+  occupancyPct  Float
+  outOfOrder    Int
+  dayUse        Int
+  noShow        Int
+  persons       Int
+  batchId       String?
+  updatedAt     DateTime @updatedAt
+}
+
+/** Zwischenablage für Departures/Arrivals/Traces (JSON laut Whitelist). M3 löscht sie nachts. */
+model ImportRow {
+  id        String      @id @default(cuid())
+  batchId   String
+  batch     ImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+  kind      String // DEPARTURE | ARRIVAL | TRACE | FORECAST (nur bis zum Übernehmen)
+  room      String?
+  payload   String // JSON
+  createdAt DateTime    @default(now())
+
+  @@index([batchId])
+  @@index([room])
 }

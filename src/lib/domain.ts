@@ -239,3 +239,14 @@ export const DEFAULT_SETTINGS = {
   guestDataRetentionDays: 30,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
+
+/** Morgen-Import der Opera-Listen (siehe src/lib/import). */
+export const IMPORT_TYPES = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES"] as const;
+export type ImportType = (typeof IMPORT_TYPES)[number];
+export const ImportTypeSchema = z.enum(IMPORT_TYPES);
+
+export const IMPORT_BATCH_STATUSES = ["PREVIEW", "APPLIED", "REJECTED"] as const;
+export type ImportBatchStatus = (typeof IMPORT_BATCH_STATUSES)[number];
+
+export const IMPORT_SEVERITIES = ["CRITICAL", "WARNING", "INFO"] as const;
+export type ImportSeverity = (typeof IMPORT_SEVERITIES)[number];

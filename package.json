@@ -30,6 +30,8 @@
     "bcryptjs": "^3.0.2",
     "jose": "^6.0.10",
     "next": "^15.3.2",
+    "papaparse": "^5.7.0",
+    "pdfjs-dist": "^6.4.299",
     "prisma": "^6.5.0",
     "qrcode": "^1.5.4",
     "react": "^19.1.0",
@@ -45,6 +47,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "@types/papaparse": "^5.5.2",
     "pdf-lib": "^1.17.1",
     "vitest": "^3.1.1"
   }
