@@ -14,6 +14,7 @@ import PriorityBanner from "@/components/PriorityBanner";
 import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import HousekeeperRoster from "@/components/HousekeeperRoster";
+import SupervisorList from "@/components/lists/SupervisorList";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
@@ -711,6 +712,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               })}
             </div>
           </div>
+
+          <SupervisorList />
 
           <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
             <h3 className="mb-2 font-serif text-xl">{t("roster.title")}</h3>

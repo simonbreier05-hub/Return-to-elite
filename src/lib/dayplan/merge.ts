@@ -188,7 +188,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
     roomTasks++;
   }
 
-  await audit({ action: "DAY_PLAN_MERGED", userId, meta: { date, figures: derived.figures, newTraces, roomTasks, issues: issues.length } });
+  await audit({ action: "DAY_PLAN_MERGED", userId, meta: { date, figures: derived.figures, newTraces, roomTasks, issues: issues.length, changedRooms, first: existingPlan.length === 0 } });
   return {
     date, figures: derived.figures, issues, changedRooms,
     counts: { stays: derived.stays.length, staysNeedingReview: missing.length, traces: newTraces, roomTasks, changedAssigned },
