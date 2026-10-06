@@ -75,7 +75,8 @@ const legacyText = (key: string, t: { code: string; date: string }) => key.split
 /** Kernlauf: löscht alle Gastdaten laut Datenkarte. Idempotent — ein zweiter Lauf findet nichts mehr. */
 export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> {
   const settings = await getSettings();
-  const guestSystemUserId = await getGuestSystemUserId();
+  // Fehlt das Gäste-Systemkonto (nicht gesät), darf das nicht die ganze Nachtlöschung verhindern.
+  const guestSystemUserId = await getGuestSystemUserId().catch(() => null);
   const counts: PurgeCounts = {};
 
   counts.stayNames = (await prisma.stay.updateMany({ where: { guestName: { not: "" } }, data: { guestName: "" } })).count;
@@ -85,15 +86,20 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
   })).count;
   counts.traceTexts = await purgeTraceTexts();
   counts.importRows = (await prisma.importRow.deleteMany({})).count;
-  counts.guestNotes = (await prisma.roomNote.deleteMany({ where: { authorId: guestSystemUserId } })).count;
+  counts.guestNotes = guestSystemUserId ? (await prisma.roomNote.deleteMany({ where: { authorId: guestSystemUserId } })).count : 0;
   counts.auditEntries = await scrubAuditMeta();
 
   const cutoff = new Date(now.getTime() - settings.guestStayDeleteDays * 86_400_000);
   counts.staysDeleted = (await prisma.stay.deleteMany({ where: { checkOut: { lt: cutoff } } })).count;
 
   // Bestehende Regel (Gäste-Fotos, geschlossene Anfragen) im selben Lauf.
-  const r = await runGuestDataRetention(now);
-  counts.retentionRun = Object.values(r as Record<string, number>).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+  try {
+    const r = await runGuestDataRetention(now);
+    counts.retentionRun = Object.values(r as Record<string, number>).reduce((a, b) => a + (typeof b === "number" ? b : 0), 0);
+  } catch {
+    counts.retentionRun = 0;
+    counts.retentionSkipped = 1; // z. B. Gäste-Systemkonto fehlt — übrige Löschungen sind trotzdem erledigt
+  }
   return counts;
 }
 
