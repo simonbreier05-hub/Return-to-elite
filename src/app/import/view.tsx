@@ -272,6 +272,20 @@ export default function ImportView() {
       {anyApplied && <p className="mt-4 text-sm text-graphite/70">{t("importPage.deleteFiles")}</p>}
 
       <section className="mt-6 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
+        <h3 className="mb-1 font-serif text-2xl">{t("importPage.sampleTitle")}</h3>
+        <p className="mb-3 max-w-2xl text-xs text-graphite/60">{t("importPage.sampleHint")}</p>
+        <div className="flex flex-wrap gap-2">
+          {([
+            ["arrivals", t("importPage.typeARRIVALS")], ["arrivals_page1", t("importPage.sampleArrivalsPage1")],
+            ["departures", t("importPage.typeDEPARTURES")], ["forecast", t("importPage.typeFORECAST")], ["traces", t("importPage.typeTRACES")],
+          ] as const).map(([file, label]) => (
+            <a key={file} href={`/api/import/sample?file=${file}`} download
+              className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-white px-4 text-sm hover:border-gold-line">{label} ↓</a>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-4 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
         <h3 className="mb-2 font-serif text-2xl">{t("importPage.dataStatus")}</h3>
         <ul className="space-y-1 text-sm">
           {IMPORT_TYPES.map((ty) => (

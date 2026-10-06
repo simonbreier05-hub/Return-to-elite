@@ -77,7 +77,7 @@ export function parseList(
 ): AnyResult {
   // Bei PDFs gilt das Druckdatum der Liste; `opts.today` (Formularfeld) ersetzt es nur bei Tabellen ohne Druckdatum.
   const userDay = opts.today;
-  if (list.kind === "pdf") opts = { ...opts, today: undefined };
+  opts = { ...opts, expectedDate: opts.expectedDate ?? userDay, ...(list.kind === "pdf" ? { today: undefined } : {}) };
   let r: AnyResult;
   if (type === "TRACES") {
     r = (list.kind === "sheet" ? parseTracesCsv(list.csv ?? "", opts, cfg) : parseTracesPdf(list.lines, opts, cfg)) as unknown as AnyResult;

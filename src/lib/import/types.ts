@@ -85,7 +85,7 @@ export type DateFormatId = "MDY" | "DMY";
 export interface DateResolution {
   /** Gewähltes Format, null wenn mehrdeutig und nicht bestätigt. */
   format: DateFormatId | null;
-  via: "unique" | "weekday" | "confirmed" | "ambiguous";
+  via: "unique" | "weekday" | "reportDate" | "confirmed" | "ambiguous";
   /** Nur bei Mehrdeutigkeit: früheste/späteste Lesart je Format, für die Vorschau. */
   readings?: Record<DateFormatId, { min: string; max: string }>;
 }
@@ -108,6 +108,8 @@ export interface ParseOptions {
   confirmedDateFormat?: DateFormatId;
   /** Heute (YYYY-MM-DD); Standard: Druckdatum der Liste. */
   today?: string;
+  /** Der Tag, für den der Nutzer die Listen importiert (heute). Löst ein mehrdeutiges Datum nur auf, wenn das Druckdatum im Kopf genau in einer Lesart auf diesen Tag fällt. */
+  expectedDate?: string;
   /** Zimmeranzahl für die Forecast-Plausibilitätsprüfung (Occ.% ≈ belegt ÷ (Anzahl − OOO)). */
   roomInventory?: number;
 }

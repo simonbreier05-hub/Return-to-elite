@@ -66,7 +66,7 @@ export function diffDays(fromIso: string, toIso_: string): number {
  */
 export function resolveDateFormat(
   raws: string[],
-  opts: { weekdays?: (string | null)[]; confirmed?: DateFormatId } = {},
+  opts: { weekdays?: (string | null)[]; confirmed?: DateFormatId; anchor?: { raw: string; iso: string } } = {},
 ): DateResolution {
   const formats: DateFormatId[] = ["MDY", "DMY"];
   if (raws.every(isIsoDate)) return { format: opts.confirmed ?? "MDY", via: "unique" }; // reine ISO-Werte: Format egal
@@ -84,6 +84,11 @@ export function resolveDateFormat(
     );
     if (matching.length >= 1 && matching.length < left.length) via = "weekday";
     if (matching.length >= 1) left = matching;
+  }
+  if (left.length > 1 && opts.anchor) {
+    // Gegenprobe: Das Druckdatum im Kopf muss in genau einer Lesart auf den erwarteten Tag (heute) fallen.
+    const hit = left.filter((f) => toIso(opts.anchor!.raw, f) === opts.anchor!.iso);
+    if (hit.length === 1) return { format: hit[0], via: "reportDate" };
   }
   if (left.length === 1) return { format: left[0], via };
   if (opts.confirmed && left.includes(opts.confirmed)) return { format: opts.confirmed, via: "confirmed" };

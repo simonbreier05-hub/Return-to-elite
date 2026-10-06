@@ -592,6 +592,9 @@ const en = {
     dataStatus: "Data status",
     notImported: "not imported",
     asOf: "as of {{date}} · {{count}} rows",
+    sampleTitle: "Try it with sample files",
+    sampleHint: "Invented names, today's date, real rooms of the hotel. They deliberately contain card numbers, prices and balances so you can see that StayClean discards them. Save them, then drop them above.",
+    sampleArrivalsPage1: "Arrivals (page 1 only)",
     replaces: "A newer upload of the same list and day replaces the previous one.",
   },
   thresholdLabels: {
@@ -1219,6 +1222,9 @@ const de = {
     dataStatus: "Stand der Daten",
     notImported: "nicht importiert",
     asOf: "Stand {{date}} · {{count}} Zeilen",
+    sampleTitle: "Mit Beispieldateien ausprobieren",
+    sampleHint: "Erfundene Namen, heutiges Datum, echte Zimmer des Hotels. Sie enthalten absichtlich Kartennummern, Preise und Salden — damit man sieht, dass StayClean sie verwirft. Herunterladen und oben ablegen.",
+    sampleArrivalsPage1: "Arrivals (nur Seite 1)",
     replaces: "Ein neuer Upload derselben Liste und desselben Tages ersetzt den vorherigen Stand.",
   },
   thresholdLabels: {

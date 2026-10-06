@@ -95,7 +95,7 @@ export function parseDepartures(
   const hdrRaw = findHeaderDateRaw(header);
   const allRaw = [...raws.flatMap((r) => [r.arr, r.dep, ...(r.group ? [r.group] : [])]),
     ...[fromRaw, toRaw, hdrRaw].filter((x): x is string => !!x)];
-  const ctx: DateCtx = makeDateCtx(allRaw, issues, cfg.dateFormat, opts.confirmedDateFormat);
+  const ctx: DateCtx = makeDateCtx(allRaw, issues, cfg.dateFormat, opts.confirmedDateFormat, undefined, { raw: hdrRaw, iso: opts.expectedDate });
 
   const rows: DepartureRow[] = [];
   if (ctx.res.format) {
@@ -170,7 +170,7 @@ export function parseArrivals(
   const hdrRaw = findHeaderDateRaw(header);
   const allRaw = [...raws.flatMap((r) => [r.arr, r.dep, ...r.traces.map((t) => t.date)]),
     ...[fromRaw, toRaw, hdrRaw].filter((x): x is string => !!x)];
-  const ctx = makeDateCtx(allRaw, issues, cfg.dateFormat, opts.confirmedDateFormat);
+  const ctx = makeDateCtx(allRaw, issues, cfg.dateFormat, opts.confirmedDateFormat, undefined, { raw: hdrRaw, iso: opts.expectedDate });
 
   const rows: ArrivalRow[] = [];
   if (ctx.res.format) {
@@ -238,7 +238,7 @@ export function parseForecast(
 
   const hdrRaw = findHeaderDateRaw(header);
   const ctx = makeDateCtx([...raws.map((r) => r.date), ...(hdrRaw ? [hdrRaw] : [])], issues, "DMY", opts.confirmedDateFormat,
-    [...raws.map((r) => (weekdayIndex(r.wd) !== null ? r.wd : null)), ...(hdrRaw ? [null] : [])]);
+    [...raws.map((r) => (weekdayIndex(r.wd) !== null ? r.wd : null)), ...(hdrRaw ? [null] : [])], { raw: hdrRaw, iso: opts.expectedDate });
   const reportDate = hdrRaw ? ctx.iso(hdrRaw) : null;
   const today = opts.today ?? reportDate;
   const inventory = opts.roomInventory ?? DEFAULT_SETTINGS.roomInventory;
@@ -284,7 +284,7 @@ function finishTraces(
 ): ParseResult<TraceRow> {
   const open = raw.filter((r) => !r.resolved);
   if (raw.length > open.length) issues.push(issue("INFO", "RESOLVED_SKIPPED", `${raw.length - open.length} erledigte Trace(s) übersprungen.`));
-  const ctx = makeDateCtx([...open.map((r) => r.date), ...(reportDateRaw ? [reportDateRaw] : [])], issues, cfg.dateFormat, opts.confirmedDateFormat);
+  const ctx = makeDateCtx([...open.map((r) => r.date), ...(reportDateRaw ? [reportDateRaw] : [])], issues, cfg.dateFormat, opts.confirmedDateFormat, undefined, { raw: reportDateRaw, iso: opts.expectedDate });
   const rows: TraceRow[] = ctx.res.format
     ? open.flatMap((r) => {
         const date = ctx.iso(r.date);

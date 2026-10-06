@@ -56,9 +56,12 @@ export interface DateCtx {
 /** Löst das Datumsformat für eine ganze Liste auf und meldet Mehrdeutigkeit als CRITICAL. */
 export function makeDateCtx(
   raws: string[], issues: ParseIssue[], configured: DateFormatId,
-  confirmed?: DateFormatId, weekdays?: (string | null)[],
+  confirmed?: DateFormatId, weekdays?: (string | null)[], anchor?: { raw: string | null; iso?: string },
 ): DateCtx {
-  const res = resolveDateFormat(raws, { weekdays, confirmed });
+  const res = resolveDateFormat(raws, { weekdays, confirmed, anchor: anchor?.raw && anchor.iso ? { raw: anchor.raw, iso: anchor.iso } : undefined });
+  if (res.via === "reportDate") {
+    issues.push(issue("INFO", "DATE_BY_REPORT_DATE", `Datumsformat über das Druckdatum bestätigt (${anchor!.iso} = heute).`));
+  }
   if (res.format === null) {
     const r = res.readings!;
     const text = (Object.keys(r) as DateFormatId[])
