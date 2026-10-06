@@ -103,7 +103,7 @@ export function todayScenario(todayIso: string, rooms: string[], inventory = 145
   const departureGroups = dates.map((d) => ({ date: d, guests: inHouse.filter((g) => g.dep === d).sort(byRoom) }));
 
   const traces: SampleTraceRow[] = [...dueOuts, ...stay, ...early, ...later].flatMap((g) => (g.traces ?? []).map((t) => ({
-    room: g.room, name: g.name, arrDate: g.arr, depDate: g.dep, dept: t.code, code: t.code === "HK" ? (/twin/i.test(t.text) ? "TWIN" : "XBED") : t.code,
+    room: g.room, name: g.name, arrDate: g.arr, depDate: g.dep, dept: t.code, code: t.code,
     traceDate: t.date, text: t.text, resolved: false,
   })));
   traces.push({ room: r[2], name: pick(2), arrDate: dueOuts[2].arr, depDate: today, dept: "FO", code: "LCO", traceDate: today, text: "Late check-out requested 2 PM", resolved: false });

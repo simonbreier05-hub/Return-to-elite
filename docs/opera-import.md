@@ -28,6 +28,25 @@ Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`);
 Excel/CSV: jede Zeile = Zellen in Druckreihenfolge (gleiche Parser wie PDF); Tabellen haben kein Druckdatum, das Formularfeld „Geschäftsdatum" springt ein. Zimmernummern, die Excel als Zahl gespeichert hat (4), werden zu „004" aufgefüllt. Bei PDFs gilt immer das Druckdatum; weicht es vom gewählten Tag ab, gibt es die Warnung `LIST_NOT_TODAY`.
 Zimmeranzahl für die Forecast-Prüfung: Einstellung `roomInventory` (Standard 145, in /settings änderbar) — nicht die 139 Zimmer der Grundriss-Digitalisierung.
 
+## Tagesplan (M2)
+
+`POST /api/dayplan/merge` führt die übernommenen Listen zusammen (Code: `src/lib/dayplan/`):
+
+| Art (`DayRoomPlan.cleaningType`) | Regel |
+|---|---|
+| `DEPARTURE` (im Konzept „CHECKOUT") | Abreise heute, kein anderer Gast reist heute ein |
+| `SAME_DAY_TURN` | Abreise heute und ein anderer Gast reist heute ein |
+| `STAYOVER` | Anreise vor heute, Abreise nach heute — täglich reinigen |
+| `ARRIVAL` | Anreise heute, Zimmer vorher leer — keine Reinigung, nur Anzeige (auch Frühanreisen, die schon eingecheckt sind) |
+
+- Aufenthalte (`Stay`) werden über **Zimmer + Anreisedatum** erkannt, nicht über die Reservierungsnummer. Fehlt einer in einem neuen Stand: `needsReview`, nie gelöscht. Widersprüche (z. B. unterschiedliche Abreise in beiden Listen) sind Hinweise, es gilt die Departures-Liste.
+- Wäschewechsel: Zähler ab Anreise (ein Wechsel vor der Anreise zählt nicht), Intervall `linenCycleDays` (3), Abhaken (`/api/rooms/[id]/linen`) setzt zurück. Logik: `isLaundryDue`.
+- Tageszahl = Abreisen (Turn einmal) + Bleiber. Gegenprobe gegen `ForecastDay` des Tages (Toleranz max(3, 5 %)): nur Warnung.
+- Traces: Dublettenschlüssel Zimmer|Code|Datum|Text, erledigte bleiben erledigt. Abteilung über Setting `traceDept.<CODE>` (Standard in `traceDept.ts`), unbekannter Code → Housekeeping + Warnung. Twin-/Zusatzbett-Texte → Hausmann-Aufgabe (Twin-Rückbau erst am Abreisetag).
+- `POST /api/dayplan/apply` überträgt auf die Felder, die Planungshub und Grundriss schon lesen (`isCheckoutToday`, `occupancy`, `Arrival`, `lastLinenChangeAt`). Zimmer ohne Eintrag werden nur auf „leer" gesetzt, wenn die Departures ≥ 30 Tage abdecken. Zuteilungen (`assignedToId`) und Status bleiben immer unberührt; ändert ein Nachimport die Art eines zugeteilten Zimmers, gibt es einen Hinweis an Supervisor und Room Attendants.
+- Reinigungsart ändern: `POST /api/dayplan/override` (Audit `CLEANING_TYPE_CHANGED`, Listenwert bleibt in `derivedType`).
+- Den Vorschlag „Plan auf das Team anwenden" liefert weiter der bestehende Planungshub (`/api/assignments/plan` + `apply`), er liest das Board. Der intelligente Vorschlag (Fairness, Stufen, 2-Etagen-Regel) ist M2b.
+
 ## Datumsformat
 
 Pro Liste aus allen Werten bestimmt: Format mit ungültigem Wert (Monat > 12) scheidet aus, beim Forecast zusätzlich über den Wochentag. Bleiben beide Lesarten gültig, wird **nicht geraten**: kritischer Befund `DATE_AMBIGUOUS`, die Vorschau zeigt beide Lesarten, der Nutzer bestätigt.

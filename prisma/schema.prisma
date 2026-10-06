@@ -109,6 +109,8 @@ model Room {
   arrivals      Arrival[]
   stays         Stay[]
   guestRequests GuestRequest[]
+  traces        Trace[]
+  dayPlans      DayRoomPlan[]
   excursions    Excursion[]
   auditLogs     AuditLog[]
   roomTasks     RoomTask[]
@@ -143,6 +145,7 @@ model Arrival {
   earlyCheckIn Boolean   @default(false)
   neededNow    Boolean   @default(false) // front office: "room needed now"
   notifyOnRelease Boolean @default(true) // FO gets a notification when the room turns INSPECTED
+  source       String    @default("MANUAL") // MANUAL | IMPORT (aus dem Opera-Tagesplan)
   status       String    @default("EXPECTED") // EXPECTED | CHECKED_IN | CANCELLED
   createdById  String
   createdBy    User      @relation(fields: [createdById], references: [id])
@@ -169,6 +172,15 @@ model Stay {
   checkOut  DateTime // departure date; stayToken expires checkOut + grace period (Setting, default 2h)
   status    String   @default("EXPECTED") // EXPECTED | IN_HOUSE | CHECKED_OUT | CANCELLED
   stayToken String   @unique // opaque, >=128 bit random — resolves /g/s/<stayToken>
+  // M2 (Opera-Import) — additiv; manuell angelegte Stays behalten die Standardwerte.
+  source      String   @default("MANUAL") // MANUAL | IMPORT
+  adults      Int      @default(1)
+  children    Int      @default(0)
+  vip         Boolean  @default(false)
+  arrivalTime String? // "HH:MM"
+  resStatus   String? // Opera-Status: RESV | CKIN | DUOT …
+  needsReview Boolean  @default(false) // fehlt in einem neueren Import — nicht gelöscht, nur markiert
+  lastImportAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -385,4 +397,50 @@ model ImportRow {
 
   @@index([batchId])
   @@index([room])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// M2: Zusammenführung der Import-Listen zum Tagesplan.
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Ein Trace (Gästewunsch/Auftrag) aus Arrivals oder der Traces-Liste. Text ist Gastdatum — M3 löscht ihn nachts. */
+model Trace {
+  id         String    @id @default(cuid())
+  roomId     String
+  room       Room      @relation(fields: [roomId], references: [id])
+  stayId     String?
+  code       String
+  date       String // "YYYY-MM-DD"
+  text       String
+  dept       String // HOUSEKEEPING | HOUSEMAN | ENGINEERING | FRONT_OFFICE — Zuordnung über Setting "traceDept.<CODE>"
+  status     String    @default("OPEN") // OPEN | DONE — erledigte bleiben erledigt
+  dedupeKey  String    @unique // Zimmer|Code|Datum|Text
+  roomTaskId String? // Hausmann-Aufgabe, die aus diesem Trace entstanden ist (Twin/Zusatzbett)
+  source     String // ARRIVALS | TRACES
+  createdAt  DateTime  @default(now())
+  doneAt     DateTime?
+
+  @@index([roomId])
+}
+
+/** Was an einem Tag in einem Zimmer zu tun ist — abgeleitet aus Departures + Arrivals (src/lib/dayplan). */
+model DayRoomPlan {
+  id             String   @id @default(cuid())
+  date           String // "YYYY-MM-DD"
+  roomId         String
+  room           Room     @relation(fields: [roomId], references: [id])
+  cleaningType   String // DEPARTURE | SAME_DAY_TURN | STAYOVER | ARRIVAL (NONE = keine Zeile)
+  laundryDue     Boolean  @default(false)
+  nights         Int? // Nacht des Aufenthalts (Stayover) bzw. Nächte seit Anreise
+  stayId         String? // bleibender bzw. abreisender Aufenthalt
+  arrivingStayId String? // anreisender Aufenthalt (Same-Day-Turn, Arrival)
+  vip            Boolean  @default(false)
+  eta            String? // "HH:MM", Anreisezeit
+  typeOverridden Boolean  @default(false) // Supervisor hat die Reinigungsart geändert
+  derivedType    String? // Art laut Listen, falls überschrieben
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([date, roomId])
+  @@index([date])
 }

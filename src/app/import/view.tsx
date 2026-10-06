@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/components/api";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import DayPlanPanel from "./DayPlanPanel";
 import { crossCheckArrivals } from "@/lib/import/parsers";
 import { buildPreview, sha256Hex } from "@/lib/import/preview";
 import { loadList, parseList, type AnyResult, type LoadedList } from "@/lib/import/readFile";
@@ -270,6 +271,8 @@ export default function ImportView() {
         })}
       </div>
       {anyApplied && <p className="mt-4 text-sm text-graphite/70">{t("importPage.deleteFiles")}</p>}
+
+      <DayPlanPanel date={status?.DEPARTURES?.businessDate ?? null} refreshKey={JSON.stringify(status ?? {})} />
 
       <section className="mt-6 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
         <h3 className="mb-1 font-serif text-2xl">{t("importPage.sampleTitle")}</h3>
