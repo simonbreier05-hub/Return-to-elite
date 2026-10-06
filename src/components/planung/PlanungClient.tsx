@@ -119,6 +119,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
       <div className="mb-8 hidden md:block">
         <Stepper current={step} reached={reached} labels={labels} onSelect={goStep} ariaLabel={t("planungTool.stepsLabel")} />
         <div className="mt-3 flex items-center justify-between text-xs text-pl-muted">
+          <Link href="/supervisor" className="-ml-3 inline-flex min-h-11 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden>←</span>{t("planungTool.leave")}</Link>
           <span>{t("planungTool.stepOf", { n: step })}</span>
           <Link href="/supervisor" className="rounded-full px-3 py-2 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
         </div>
@@ -237,7 +238,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     </>
   );
 
-  const top = <StepSegments current={step} labels={labels} dateText={dateLabel(house.date).split(",").slice(-1)[0]?.trim() ?? ""} stepText={t("planungTool.stepOf", { n: step })} ariaLabel={t("planungTool.stepsLabel")} />;
+  const top = <StepSegments current={step} labels={labels} dateText={dateLabel(house.date).split(",").slice(-1)[0]?.trim() ?? ""} stepText={t("planungTool.stepOf", { n: step })} ariaLabel={t("planungTool.stepsLabel")} leaveLabel={t("planungTool.leave")} />;
 
   return <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date)} />} panel={panel} />;
 }

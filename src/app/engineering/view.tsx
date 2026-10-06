@@ -1,5 +1,6 @@
 "use client";
 
+import ImageLightbox from "@/components/ImageLightbox";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -135,8 +136,7 @@ export default function EngineeringView() {
                 <strong>{t(`defectCategory.${wo.defect.category}` as TKey)}</strong> — {wo.defect.note}
               </p>
               {wo.defect.photoPath && (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img src={wo.defect.photoPath} alt="Defect photo" className="mt-2 max-h-40 rounded-lg object-cover" />
+                <div className="mt-2"><ImageLightbox src={wo.defect.photoPath} alt="Defect photo" className="max-h-40 rounded-lg object-cover" /></div>
               )}
               <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-graphite/60">
                 {t("engineering.reportedBy", { name: wo.defect.reportedBy?.name ?? "—" })} ·{" "}

@@ -15,6 +15,8 @@ import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import HousekeeperRoster from "@/components/HousekeeperRoster";
 import SupervisorList from "@/components/lists/SupervisorList";
+import CloseButton from "@/components/CloseButton";
+import { useEscapeKey } from "@/components/useEscapeKey";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
@@ -952,6 +954,8 @@ function RoomDrawer({
   const style = STATUS_STYLES[room.status];
 
 
+  useEscapeKey(onClose);
+
   return (
     <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
       <div className="h-full w-full max-w-md overflow-y-auto bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -966,7 +970,7 @@ function RoomDrawer({
               {t("supervisor.floorN", { floor: room.floor })} · {room.section} · {t(`roomType.${room.type}` as TKey)}
             </p>
           </div>
-          <button onClick={onClose} className="h-12 w-12 rounded-lg hover:bg-parchment">✕</button>
+          <CloseButton onClick={onClose} />
         </div>
 
         <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${style.chip}`}>

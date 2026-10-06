@@ -1,5 +1,7 @@
 "use client";
 
+import CloseButton from "@/components/CloseButton";
+import { useEscapeKey } from "@/components/useEscapeKey";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -242,6 +244,7 @@ function Flag({ on, label, hot, onClick }: { on: boolean; label: string; hot?: b
 }
 
 function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (arrival: Arrival) => void }) {
+  useEscapeKey(onClose);
   const { t } = useLocale();
   const [roomNumber, setRoomNumber] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -277,7 +280,10 @@ function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (ar
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-2xl bg-white p-5" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-4 font-serif text-2xl">{t("frontOffice.newArrival")}</h3>
+        <div className="mb-4 flex items-start justify-between gap-3">
+          <h3 className="font-serif text-2xl">{t("frontOffice.newArrival")}</h3>
+          <CloseButton onClick={onClose} />
+        </div>
         <div className="mb-3 grid grid-cols-2 gap-3">
           <div>
             <label className="mb-1 block text-sm font-medium">{t("frontOffice.roomNumber")}</label>

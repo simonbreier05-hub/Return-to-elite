@@ -15,6 +15,8 @@ import ErrorBoundary from "./ErrorBoundary";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import LanguageSwitcher from "./LanguageSwitcher";
+import CloseButton from "./CloseButton";
+import { useEscapeKey } from "./useEscapeKey";
 
 interface Notification {
   id: string;
@@ -143,6 +145,8 @@ export default function AppShell({
     },
   });
 
+  useEscapeKey(() => setOpen(false), open);
+
   const unread = notifications.filter((n) => !n.acknowledged).length;
 
   const logout = async () => {
@@ -170,13 +174,14 @@ export default function AppShell({
             {backHref && (
               <button
                 onClick={() => router.push(backHref)}
-                className="-ml-2 flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-navy transition hover:bg-parchment"
+                className="-ml-2 flex h-12 shrink-0 items-center gap-1 rounded-full px-2 text-sm font-medium text-navy transition hover:bg-parchment sm:pr-3"
                 aria-label={t("appShell.back")}
                 title={t("appShell.back")}
               >
                 <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                 </svg>
+                <span className="hidden sm:inline">{t("appShell.back")}</span>
               </button>
             )}
             <Image src="/brand/crest.png" alt="" width={34} height={27} className="h-[1.7rem] w-auto shrink-0" priority />
@@ -288,7 +293,7 @@ export default function AppShell({
               <button onClick={ackAll} className="h-10 rounded-sm px-3 text-sm text-gold-soft hover:bg-parchment">
                 {t("appShell.markAllRead")}
               </button>
-              <button onClick={() => setOpen(false)} className="h-10 w-10 rounded-sm hover:bg-parchment">✕</button>
+              <CloseButton onClick={() => setOpen(false)} />
             </div>
           </div>
           <div className="max-h-96 overflow-y-auto p-2">
