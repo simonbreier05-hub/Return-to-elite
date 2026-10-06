@@ -22,6 +22,7 @@ interface Notification {
   level: string;
   message: string;
   targetRole: string;
+  targetUserId?: string | null;
   acknowledged: boolean;
   createdAt: string;
 }
@@ -137,6 +138,7 @@ export default function AppShell({
       const n = p?.notification;
       if (!n) return;
       if (role !== "duty_manager" && n.targetRole !== role) return;
+      if (n.targetUserId) { load(); return; } // an eine Person gerichtet: der Server entscheidet, ob es meine ist
       setNotifications((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50)));
     },
   });

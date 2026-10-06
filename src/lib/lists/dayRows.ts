@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 import { getRoomTypeCredits, getSettings } from "@/lib/settings";
 import type { RoomType } from "@/lib/domain";
+import { creditFactor } from "@/lib/rooms/stayoverCredit";
 import { shortGuestName, timesInText } from "./guestName";
 
 /** Tag der Listen: zuletzt übernommene Departures, sonst der jüngste vorhandene Tagesplan. */
@@ -68,7 +69,7 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
     const p = planBy.get(r.id);
     const stay = p ? stayBy.get(stayIdFor(p) ?? "") : undefined;
     const kind = (p?.cleaningType as Kind | undefined) ?? null;
-    const factor = kind === "STAYOVER" ? settings.stayoverFactor : 1;
+    const factor = kind === "STAYOVER" ? creditFactor("STAYOVER", !!p?.laundryDue, settings) : 1;
     return {
       id: r.id, number: r.number, floor: r.floor, status: r.status, routeOrder: r.routeOrder, assignedToId: r.assignedToId, assignedOn: r.assignedOn,
       occupancy: r.occupancy, blockReason: r.blockReason, kind, laundry: !!p?.laundryDue, vip: !!(p?.vip || stay?.vip), eta: p?.eta ?? null,

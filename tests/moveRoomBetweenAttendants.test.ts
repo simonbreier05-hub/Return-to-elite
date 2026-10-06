@@ -27,6 +27,7 @@ vi.mock("@/lib/db", () => ({
 }));
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
+vi.mock("@/lib/rooms/notifyReassignment", () => ({ notifyReassignment: vi.fn().mockResolvedValue(0) })); // eigene Tests: tests/lists/reassign.integration.test.ts
 
 import { moveRoomBetweenAttendants } from "@/lib/rooms/moveRoomBetweenAttendants";
 

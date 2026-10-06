@@ -90,14 +90,14 @@ describe("Zimmermädchen-Liste", () => {
     expect(JSON.stringify(body)).not.toContain("Klimaanlage");
   });
 
-  it("Kopf: Fortschritt x von y und Credits-Summe (Bleiber × 0,7)", async () => {
+  it("Kopf: Fortschritt x von y und Credits-Summe (Bleiber normal 0,5, mit Wäschewechsel voll)", async () => {
     getSessionMock.mockReset(); getSessionMock.mockResolvedValue({ userId: ids.anna, name: "anna Test", role: "room_attendant" });
     const { progress } = await (await housekeeperGet()).json();
     expect(progress.total).toBe(4);
     expect(progress.done).toBe(1); // 202 ist CLEAN
-    expect(progress.creditsTotal).toBeGreaterThan(0);
-    expect(progress.creditsDone).toBeGreaterThan(0);
-    expect(progress.creditsDone).toBeLessThan(progress.creditsTotal);
+    // 201 Abreise 1 + 202 Bleiber mit Wäschewechsel 1 + 203 Bleiber normal 0,5 + 204 Turn 1
+    expect(progress.creditsTotal).toBe(3.5);
+    expect(progress.creditsDone).toBe(1); // 202 ist fertig
   });
 
   it("Rollen: Gast/anderer Rolle → 401/403 (Supervisor hat keine eigene Zimmerliste)", async () => {

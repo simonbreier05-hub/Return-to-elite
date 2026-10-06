@@ -19,7 +19,7 @@ Grundlage: Interview vom 06.10.2026. **Das System schlägt vor, der Supervisor e
 
 **Anspruchsvoll** = mindestens eines von: VIP (Tagesplan), Suite (Zimmertyp `JUNIOR_SUITE`, `SUITE`, `PENTHOUSE`), Allergiker-Zimmer (`Room.isAntiAllergic`), viele offene Traces (≥ `autoplanManyTraces`, Standard 2).
 
-**Credits:** Abreise/Turn = Wert des Zimmertyps (`getRoomTypeCredits`); **Bleiber = 0,7 × Zimmertyp** (`stayoverFactor`). Ein Bleiber mit Wäschewechsel zählt vorerst genauso 0,7 (offene Frage 1), wird aber getrennt gezählt. *Der ältere Planungshub rechnet Bleiber noch mit 0,5 (Tidy) bzw. voll bei Wäschewechsel — bis zur Klärung gibt es zwei Credit-Definitionen.*
+**Credits:** Abreise/Turn = Wert des Zimmertyps (`getRoomTypeCredits`); **Bleiber normal = 0,5 × Zimmertyp** (`stayoverFactor`), **Bleiber mit Wäschewechsel = voller Zimmertyp-Wert** (`stayoverLaundryFactor`, 1,0) — dieselbe Rechnung wie im älteren Planungshub; eine Definition in `src/lib/rooms/stayoverCredit.ts` für Vorschlag und Listen.
 
 **Ziele:** Vollzeit = `targetCreditsPerAttendant` (14) ± `autoplanTolerance` (1,5); Azubi/Teilzeit = 6–8 (`azubiCredits*`, `teilzeitCredits*`); je Person überschreibbar (`dailyTarget`). Credit-Abweichungen unter 0,25 lösen keine Warnung aus (ein Zimmer lässt sich nicht teilen).
 

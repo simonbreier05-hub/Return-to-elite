@@ -247,7 +247,8 @@ export const DEFAULT_SETTINGS = {
   // M2b — Zuteilungsvorschlag (docs/autoplan.md). Gewichte der Kostenfunktion: Setting "autoplanWeight.<name>".
   autoplanTolerance: 1.5, // ± Credits um das Tagesziel (Vollzeit)
   autoplanMaxFloors: 2, // höchstens so viele Etagen je Housekeeper (weich)
-  stayoverFactor: 0.7, // Bleiber zählt Faktor × Zimmertyp-Wert
+  stayoverFactor: 0.5, // Bleiber normal (ohne Wäschewechsel) zählt Faktor × Zimmertyp-Wert
+  stayoverLaundryFactor: 1, // Bleiber mit Wäschewechsel: voller Zimmertyp-Wert (wie im älteren Planungshub)
   autoplanManyTraces: 2, // ab so vielen offenen Traces gilt ein Zimmer als anspruchsvoll
   azubiCreditsMin: 6,
   azubiCreditsMax: 8,

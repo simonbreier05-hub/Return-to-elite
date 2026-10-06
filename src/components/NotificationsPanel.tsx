@@ -12,6 +12,7 @@ interface Notification {
   level: string;
   message: string;
   targetRole: string;
+  targetUserId?: string | null;
   acknowledged: boolean;
   createdAt: string;
 }
@@ -55,6 +56,7 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
     "notification:new": (p: { notification: Notification }) => {
       const n = p?.notification;
       if (!n || n.targetRole !== targetRole) return;
+      if (n.targetUserId) { load(); return; } // an eine Person gerichtet: der Server entscheidet, ob es meine ist
       setNotifications((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50)));
     },
   });

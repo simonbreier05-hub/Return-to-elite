@@ -8,8 +8,8 @@ import { DEFAULT_SETTINGS } from "@/lib/domain";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Hk { id: string; name: string; hkType: string; hkLevel: number; homeFloors: string; dailyTarget: number | null; hkActive: boolean }
-type SettingKey = "autoplanTolerance" | "autoplanMaxFloors" | "stayoverFactor" | "autoplanManyTraces" | "azubiCreditsMin" | "azubiCreditsMax" | "teilzeitCreditsMin" | "teilzeitCreditsMax" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves";
-const SETTING_KEYS: SettingKey[] = ["autoplanTolerance", "autoplanMaxFloors", "stayoverFactor", "autoplanManyTraces", "azubiCreditsMin", "azubiCreditsMax", "teilzeitCreditsMin", "teilzeitCreditsMax", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves"];
+type SettingKey = "autoplanTolerance" | "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "azubiCreditsMin" | "azubiCreditsMax" | "teilzeitCreditsMin" | "teilzeitCreditsMax" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves";
+const SETTING_KEYS: SettingKey[] = ["autoplanTolerance", "autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "azubiCreditsMin", "azubiCreditsMax", "teilzeitCreditsMin", "teilzeitCreditsMax", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves"];
 const WEIGHT_KEYS = Object.keys(AUTOPLAN_WEIGHTS) as (keyof typeof AUTOPLAN_WEIGHTS)[];
 
 /** Einstellungen: Stammdaten der Housekeeper (Typ, Stufe, Stammetagen, Tagesziel) und Regeln/Gewichte des Zuteilungsvorschlags. Nur Supervisor/Duty Manager. */

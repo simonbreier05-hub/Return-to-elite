@@ -37,6 +37,7 @@ const Body = z.object({
   autoplanTolerance: z.number().min(0).max(10).optional(),
   autoplanMaxFloors: z.number().int().min(1).max(7).optional(),
   stayoverFactor: z.number().min(0.1).max(2).optional(),
+  stayoverLaundryFactor: z.number().min(0.1).max(2).optional(),
   autoplanManyTraces: z.number().int().min(1).max(20).optional(),
   azubiCreditsMin: z.number().min(0).max(40).optional(),
   azubiCreditsMax: z.number().min(0).max(40).optional(),

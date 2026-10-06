@@ -14,9 +14,10 @@ Drei Listen aus derselben Quelle (`src/lib/lists/dayRows.ts`: `DayRoomPlan` + `S
 - **Housekeeper** sehen nur eigene Zimmer und nur Traces der Abteilung Housekeeping.
 - **Supervisor** sehen nur ihre Etagen (`floorsFor`): `?floors=` wird für Supervisor ignoriert, ohne zugeteilte Etage ist die Liste leer (mit Hinweis). Verschieben über `POST /api/rooms/[id]/move` ist unverändert (prüft keine Etage).
 - **Live**: Socket.IO `room:update`, `assignments:applied`, `dayplan:updated` (geänderte Zimmer werden 3,5 s hervorgehoben), `trace:update`, `roomtask:update`.
+- **Verschieben über Etagen** ist erlaubt. Jede Änderung der Zuteilung meldet (`notifyReassignment`): dem neuen und dem bisherigen Zimmermädchen (Zimmer, Etage) und den Supervisoren der Zimmer-Etage bzw. der Etagen des neuen Zimmermädchens (mit Namen, außer dem Verursacher).
 - **Nachimport-Hinweis**: aus dem Audit `DAY_PLAN_MERGED` (`changedRooms`, `first`); beim ersten Import des Tages wird nichts als „geändert" markiert.
 - **Erledigte Traces** bleiben erledigt (`Trace.status`/`doneAt`, Schlüssel `dedupeKey`); Abhaken zieht die verknüpfte Aufgabe (`RoomTask`) mit und umgekehrt.
-- Credits: Typ-Wert × Bleiber-Faktor (Setting `stayoverFactor`, 0,7) wie im Zuteilungsvorschlag; reine Anreisen zählen nicht.
+- Credits: Typ-Wert × Faktor wie im Zuteilungsvorschlag (`creditFactor`: Bleiber normal 0,5, mit Wäschewechsel voll); reine Anreisen zählen nicht.
 
 ## Tests
 

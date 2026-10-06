@@ -10,12 +10,17 @@ import { broadcast } from "@/lib/realtime";
  * "need more Room Attendants" ask from the planning board).
  * PATCH — acknowledge one ({id}) or all ({all:true}) of my role's alerts.
  */
+/** Meldungen für mich: meine Rolle, und wenn eine Meldung an eine Person gerichtet ist, nur wenn ich es bin (Duty Manager sieht alle). */
+function scopeFor(session: { role: string; userId: string }) {
+  return session.role === "duty_manager" ? {} : { targetRole: session.role, OR: [{ targetUserId: null }, { targetUserId: session.userId }] };
+}
+
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const { role } = auth.session;
   const notifications = await prisma.notification.findMany({
-    where: role === "duty_manager" ? {} : { targetRole: role },
+    where: scopeFor(auth.session),
     orderBy: { createdAt: "desc" },
     take: 50,
   });
@@ -54,7 +59,7 @@ export async function PATCH(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Pass {id} or {all:true}." }, { status: 400 });
 
-  const roleFilter = auth.session.role === "duty_manager" ? {} : { targetRole: auth.session.role };
+  const roleFilter = scopeFor(auth.session);
   if ("all" in parsed.data) {
     await prisma.notification.updateMany({ where: { ...roleFilter, acknowledged: false }, data: { acknowledged: true } });
   } else {

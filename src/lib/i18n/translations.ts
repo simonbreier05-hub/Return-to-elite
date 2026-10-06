@@ -720,7 +720,8 @@ const en = {
     setting: {
       autoplanTolerance: "Tolerance around the full-time target (credits)",
       autoplanMaxFloors: "Max. floors per housekeeper",
-      stayoverFactor: "Stayover credit factor",
+      stayoverFactor: "Stayover credit factor (normal)",
+      stayoverLaundryFactor: "Stayover credit factor (with linen change)",
       autoplanManyTraces: "Open traces that make a room demanding",
       azubiCreditsMin: "Trainee target: from (credits)",
       azubiCreditsMax: "Trainee target: to (credits)",
@@ -1668,7 +1669,8 @@ const de = {
     setting: {
       autoplanTolerance: "Toleranz um das Ziel Vollzeit (Credits)",
       autoplanMaxFloors: "Höchstens Etagen je Housekeeper",
-      stayoverFactor: "Credit-Faktor Bleiber",
+      stayoverFactor: "Credit-Faktor Bleiber (normal)",
+      stayoverLaundryFactor: "Credit-Faktor Bleiber (mit Wäschewechsel)",
       autoplanManyTraces: "Offene Traces, ab denen ein Zimmer anspruchsvoll ist",
       azubiCreditsMin: "Ziel Azubi: von (Credits)",
       azubiCreditsMax: "Ziel Azubi: bis (Credits)",

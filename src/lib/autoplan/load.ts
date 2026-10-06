@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getAutoplanWeights, getPlanningCreditSettings, getRoomTypeCredits, getSettings } from "@/lib/settings";
 import { berlinToUtc } from "@/lib/dayplan/time";
+import { creditFactor } from "@/lib/rooms/stayoverCredit";
 import { estimateSpeeds } from "./speed";
 import type { LiveInput } from "./redistribute";
 import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, PlanRoom, RoomState } from "./types";
@@ -59,7 +60,7 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     const assignee = r.assignedToId && (today || state !== "TODO") ? r.assignedToId : null;
     if (state !== "TODO" && !assignee) continue; // schon erledigt/begonnen, niemandem zugeordnet: nichts zu planen
     const kind = p.cleaningType === "SAME_DAY_TURN" ? "TURN" : p.cleaningType === "DEPARTURE" ? "DEPARTURE" : "STAYOVER";
-    const factor = kind === "STAYOVER" ? settings.stayoverFactor : 1; // Bleiber: 0,7 × Zimmertyp (Wäschewechsel vorerst gleich, getrennt gezählt)
+    const factor = creditFactor(kind, p.laundryDue, settings); // Bleiber normal 0,5, mit Wäschewechsel voll (siehe stayoverCredit.ts)
     const credits = Math.round((typeCredits[r.type as keyof typeof typeCredits] ?? 1) * factor * 100) / 100;
     const traceN = traceCount.get(r.id) ?? 0;
     const demanding: DemandingReason[] = [];

@@ -31,7 +31,7 @@ beforeAll(async () => {
   await mk("s1", "Petra Sup", "supervisor", { assignedFloors: "1,2" });
   await mk("s2", "Jonas Sup", "supervisor", { assignedFloors: "3" });
   await mk("m1", "Hans Mann", "houseman");
-  // 1 Zimmer Abreise (1 Credit), 1 Bleiber (0,7 laut Einstellung) → Bedarf ≈ 1,7 mit Standardzimmer
+  // 1 Zimmer Abreise (1 Credit), 1 Bleiber (0,5 laut Einstellung) → Bedarf ≈ 1,5 mit Standardzimmer
   for (const [n, f, t] of [["101", 1, "DEPARTURE"], ["102", 1, "STAYOVER"]] as const) {
     const r = await prisma.room.create({ data: { number: n, floor: f, section: "1A", type: "STANDARD" } });
     await prisma.dayRoomPlan.create({ data: { date: D, roomId: r.id, cleaningType: t } });
