@@ -16,6 +16,7 @@
     "db:push:postgres": "prisma db push --schema prisma/schema.postgres.prisma",
     "db:generate:postgres": "prisma generate --schema prisma/schema.postgres.prisma",
     "db:seed": "tsx prisma/seed.ts",
+    "fixtures:opera": "tsx scripts/generate-opera-fixtures.ts",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -44,6 +45,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "pdf-lib": "^1.17.1",
     "vitest": "^3.1.1"
   }
 }

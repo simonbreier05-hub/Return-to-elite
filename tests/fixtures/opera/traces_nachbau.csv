@@ -1,0 +1,13 @@
+Room No.;Name;Arr. Date;Dep. Date;Dept.;Trace Code;Trace Date;Trace Text;Resolved
+004;Testfrau, Anna;05-15-18;05-17-18;BQ;BQ;05-15-18;Give extra chair & Notepad;N
+203;Beispiel, Bernd;05-15-18;05-19-18;BQ;BQ;05-15-18;Collect White Board & Marker;N
+626;Probe, Carla;05-15-18;05-19-18;BQ;BQ;05-15-18;Collect First Aid kit;N
+301;Demo, Dieter;05-15-18;05-19-18;HK;TWIN;05-16-18;Twin beds please (2 single beds);N
+209;Muster, Eva;05-15-18;05-19-18;HK;TWIN;05-15-18;Bitte Zimmer mit getrennten Betten vorbereiten;N
+805;Fiktiv, Franz;05-15-18;05-19-18;HK;XBED;05-15-18;Extra bed for child;N
+204;Probe, Gerda;05-15-18;05-19-18;HK;XBED;05-15-18;2 extra beds needed;N
+903;Test, Hans;05-15-18;05-17-18;HK;XBED;05-15-18;Zustellbett bitte;N
+624;Beispiel, Ida;05-15-18;05-17-18;HK;TWIN;05-17-18;Twin back to king bed after departure;N
+101;Demo, Jonas;05-15-18;05-16-18;FO;LCO;05-16-18;Late check-out requested 2 PM;N
+625;Muster, Karin;05-15-18;05-16-18;ENG;MISC;05-16-18;TV remote not working;N
+902;Fiktiv, Leo;05-15-18;05-16-18;HK;XBED;05-14-18;Baby cot already delivered;Y
