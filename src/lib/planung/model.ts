@@ -111,3 +111,27 @@ export function dateLabel(iso: string | null, locale = "de-DE"): string {
   const d = iso ? new Date(`${iso}T12:00:00Z`) : new Date();
   return d.toLocaleDateString(locale, { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", timeZone: iso ? "UTC" : "Europe/Berlin" }).replace(", ", ", ").toUpperCase();
 }
+
+// ─────────────────────────────────────────────────────────────────────────
+// D2 — Supervisor-Badges
+// ─────────────────────────────────────────────────────────────────────────
+
+/** Drei Helligkeitsstufen, reihum — immer zusammen mit dem Buchstaben angezeigt. */
+const TONES: (1 | 2 | 3)[] = [1, 2, 3];
+
+/**
+ * Badge je Supervisor (Buchstabe + Helligkeit). Die Reihenfolge ist die alphabetische aller Supervisoren,
+ * damit dasselbe Badge im Haus, im Schritt „Etagen" und nach dem Neuladen gleich aussieht.
+ */
+export function supervisorBadges(sups: { id: string; name: string }[]): Record<string, HouseSupervisor> {
+  const sorted = [...sups].sort((a, b) => a.name.localeCompare(b.name, "de"));
+  const used = new Set<string>();
+  const out: Record<string, HouseSupervisor> = {};
+  sorted.forEach((s, i) => {
+    let letter = s.name.trim().charAt(0).toUpperCase() || "?";
+    if (used.has(letter)) letter = (s.name.trim().split(/\s+/)[1] ?? "").charAt(0).toUpperCase() || letter;
+    used.add(letter);
+    out[s.id] = { letter, tone: TONES[i % 3], name: s.name };
+  });
+  return out;
+}

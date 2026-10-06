@@ -69,6 +69,9 @@
   --color-brass-light: #d9bf86; /* Akzent auf Dunkel */
   --color-brass-text: #7f6125; /* Messing-Text auf Hell (Kontrast ≥ 4,5:1) */
   --color-ink: #0e2238; /* Text auf Hell */
+  --color-brass-ink: #d9bf86; /* Messing als Text: auf Dunkel hell, auf Mobil (hell) dunkel #7f6125 */
+  --color-btn: #d9bf86; /* Hauptbutton (Mobil: Navy) */
+  --color-btn-text: #0b2038;
   /* Zimmerarten im Haus */
   --color-tile-departure: #d9bf86;
   --color-tile-turn: #f7f3ea;
@@ -266,6 +269,32 @@ body {
  * Endzustand, damit prefers-reduced-motion (Animation aus) das fertige Bild zeigt.
  * ─────────────────────────────────────────────────────────────────────── */
 .planung-root { --pl-ease: cubic-bezier(0.2, 0.8, 0.2, 1); }
+
+/* Mobil-Design C (unter 768 px): helle Variante derselben Tokens. Ab 768 px gilt die dunkle Desktop-Aufteilung. */
+@media (max-width: 767px) {
+  .planung-root {
+    --color-night-900: #f7f3ea; /* creme */
+    --color-night-800: #ffffff;
+    --color-night-700: #f7f3ea;
+    --color-night-600: #ffffff;
+    --color-line-1: #e7dfcb;
+    --color-line-2: #cfc3a3;
+    --color-pl-text: #0e2238; /* ink */
+    --color-pl-muted: #56667a;
+    --color-brass-light: #a9843f; /* Füllung/Rahmen; Text nimmt brass-ink */
+    --color-brass-ink: #7f6125;
+    --color-btn: #133457;
+    --color-btn-text: #f7f3ea;
+    --color-tile-empty: #e3dcc8;
+    --color-badge-1: #d9bf86;
+    --color-badge-2: #7da2c4;
+    --color-badge-3: #3c6290;
+  }
+}
+
+/* Gefächerte Ergebniskarten (Plan erstellen, einmalig) */
+@keyframes pl-fan { from { opacity: 0; transform: translateY(18px) rotate(0deg) scale(0.94); } }
+.pl-fan { animation: pl-fan 600ms var(--pl-ease) both; animation-delay: calc(var(--i, 0) * 140ms + 200ms); }
 
 /* Schrittwechsel: 14 px hoch + einblenden, gestaffelt (--i je Element), 600 ms */
 @keyframes pl-rise { from { opacity: 0; transform: translateY(14px); } }

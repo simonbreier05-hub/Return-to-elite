@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PurgeBanner from "@/components/PurgeBanner";
@@ -12,9 +13,15 @@ import { buildPreview } from "@/lib/import/preview";
 import type { DateFormatId, ParseResult } from "@/lib/import/types";
 import { dateLabel, fileStatus, listsReady, type HouseData, type StepId } from "@/lib/planung/model";
 import FileDropCard from "./FileDropCard";
+import FloorStep from "./FloorStep";
 import HouseMap from "./HouseMap";
 import PlanungShell from "./PlanungShell";
+import PlanStep from "./PlanStep";
 import PrimaryButton from "./PrimaryButton";
+import ProgressRing from "./ProgressRing";
+import StepSegments from "./StepSegments";
+import TeamStep from "./TeamStep";
+import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
 import Stepper from "./Stepper";
 import { useImportSession, type ImportItem } from "./useImportSession";
 
@@ -60,6 +67,9 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     } finally { setMerging(false); }
   }, { minReadMs: READ_MS });
   const { items, status, addFiles, reparse, discard, applyAll, issuesOf, isCritical, ready } = session;
+  const router = useRouter();
+  const team = usePlanungTeam(house.date);
+  const plan = usePlanRun(house.date);
 
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
@@ -79,10 +89,26 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const mode: "read" | "apply" | "next" = ready.length > 0 ? "apply" : canNext ? "next" : "read";
   const main = () => {
     if (mode === "apply") void applyAll();
-    else if (mode === "next") { setStep(2); setReached((r) => (r < 2 ? 2 : r)); }
+    else if (mode === "next") goNext(2);
     else input.current?.click();
   };
   const goStep = (s: StepId) => setStep(s);
+  const goNext = (n: StepId) => { setStep(n); setReached((r) => (r < n ? n : r)); };
+  // Team einmal laden, sobald „Team" erreicht ist (Auswahl bleibt beim Vor- und Zurückgehen erhalten)
+  useEffect(() => { if (step >= 2 && !team.state && !team.loading && house.date) void team.load(); }, [step, team, house.date]);
+
+  const next2 = async () => { if (await team.saveTeam()) goNext(3); };
+  const next3 = async () => { if (await team.saveFloors()) goNext(4); };
+  const startPlan = () => { void plan.run(team.sel, team.floorSel); };
+
+  // Haus: ab „Etagen" zeigen die Badges sofort die gewählte Zuteilung (vor dem Speichern)
+  const houseView = useMemo<HouseData>(() => {
+    if (step < 3 || !team.state) return house;
+    const supervisors: HouseData["supervisors"] = {};
+    for (const f of [1, 2, 3, 4, 5]) { const m = team.state.members.sup.find((x) => x.id === team.floorSel[f]); if (m) supervisors[f] = m.badge; }
+    return { ...house, supervisors };
+  }, [step, team.state, team.floorSel, house]);
+  const doneCount = SLOTS.filter((ty) => appliedMap[ty] || itemFor(ty)?.phase === "read").length;
   const labels = { 1: t("planungTool.step1"), 2: t("planungTool.step2"), 3: t("planungTool.step3"), 4: t("planungTool.step4") } as Record<StepId, string>;
 
   const slotText = (ty: ImportType) => ({ title: t(`planungTool.slot${ty}` as "planungTool.slotFORECAST"), sub: t(`planungTool.slot${ty}sub` as "planungTool.slotFORECASTsub") });
@@ -90,7 +116,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
 
   const panel = (
     <>
-      <div className="mb-8">
+      <div className="mb-8 hidden md:block">
         <Stepper current={step} reached={reached} labels={labels} onSelect={goStep} ariaLabel={t("planungTool.stepsLabel")} />
         <div className="mt-3 flex items-center justify-between text-xs text-pl-muted">
           <span>{t("planungTool.stepOf", { n: step })}</span>
@@ -106,8 +132,11 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
 
         {step === 1 ? (
           <>
-            <p className="pl-rise mb-5 mt-2 max-w-md text-[15px] text-pl-muted" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1Intro")}</p>
+            <p className="pl-rise mb-5 mt-2 hidden max-w-md text-[15px] text-pl-muted md:block" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1Intro")}</p>
+            <p className="pl-rise mb-1 mt-2 max-w-md text-[15px] text-pl-muted md:hidden" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1IntroMobile")}</p>
             <PurgeBanner refreshKey={JSON.stringify(status ?? {})} />
+            <ProgressRing done={doneCount} total={SLOTS.length} pulse={!reading && !merging} disabled={reading || merging} label={t("planungTool.progressLabel")} onClick={main}
+              hint={mode === "next" ? t("planungTool.nextTeam") : mode === "apply" ? t("planungTool.applyLists") : items.length ? t("planungTool.filesOfN", { done: doneCount, total: SLOTS.length }) : t("planungTool.ringStart")} />
             <div className="space-y-2.5">
               {SLOTS.map((ty, idx) => {
                 const it = itemFor(ty);
@@ -155,7 +184,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
               ))}
             </div>
 
-            <div className={`pl-rise mt-4 flex min-h-[8.5rem] flex-1 flex-col items-center justify-center gap-2 rounded-[18px] border-2 border-dashed p-4 text-center transition-colors ${over ? "border-brass-light bg-night-600" : "border-line-2"}`} style={{ ["--i" as string]: 6 }}>
+            <div className={`pl-rise mt-4 hidden min-h-[8.5rem] md:flex flex-1 flex-col items-center justify-center gap-2 rounded-[18px] border-2 border-dashed p-4 text-center transition-colors ${over ? "border-brass-light bg-night-600" : "border-line-2"}`} style={{ ["--i" as string]: 6 }}>
               <div className="font-serif text-xl font-semibold">{t("planungTool.dropTitle")}</div>
               <div className="text-xs text-pl-muted">{t("planungTool.dropHint")}</div>
               <button type="button" onClick={() => input.current?.click()} className="min-h-11 rounded-full border border-line-2 px-5 text-sm font-medium hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.chooseFiles")}</button>
@@ -163,41 +192,52 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
                 onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
             </div>
             {items.some((i) => i.phase === "applied") && <p className="mt-3 text-xs text-pl-muted">{t("planungTool.deleteFiles")}</p>}
-            {changedNote > 0 && <p role="status" className="mt-2 text-xs text-brass-light">{t("planungTool.changedRooms", { n: changedNote })}</p>}
+            {changedNote > 0 && <p role="status" className="mt-2 text-xs text-brass-ink">{t("planungTool.changedRooms", { n: changedNote })}</p>}
             {!listsReady(appliedMap) && items.length > 0 && !reading && <p className="mt-2 text-xs text-pl-muted">{t("planungTool.needDepartures")}</p>}
           </>
+        ) : step === 2 ? (
+          <TeamStep state={team.state} sel={team.sel} onToggle={team.toggle} verdict={team.verdict} missing={team.missing} loading={team.loading} previous={team.state?.source === "previous"} />
+        ) : step === 3 ? (
+          <>
+            <FloorStep house={house} sups={team.chosenSups} assign={team.floorSel} onPick={team.pickFloor} animateKey={1} />
+            <p role="status" className="mt-3 min-h-5 text-sm text-brass-ink">{team.openFloors.length ? t("planungTool.floorOpen", { list: team.openFloors.join(", ") }) : ""}</p>
+          </>
         ) : (
-          <div className="mt-3 space-y-4">
-            <p className="pl-rise max-w-md text-[15px] text-pl-muted" style={{ ["--i" as string]: 1 }}>{t("planungTool.comingD2")}</p>
-            {step === 4 && (
-              <div className="rounded-[18px] bg-ivory p-3 text-charcoal">
-                <h2 className="mb-1 font-serif text-xl">{t("planungTool.dayPlanTitle")}</h2>
-                <DayPlanPanel date={status?.DEPARTURES?.businessDate ?? null} refreshKey={JSON.stringify(status ?? {})} />
-                <Link href="/supervisor/planning" className="mt-2 inline-block min-h-11 py-2 text-sm font-medium text-brass-text hover:underline">{t("planungTool.toPlanningHub")}</Link>
-              </div>
-            )}
-          </div>
+          <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.result?.warnings ?? []} error={plan.error} started={plan.started} />
         )}
+        {step >= 2 && team.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {team.error}</p>}
       </div>
 
-      <div className="mt-6 flex items-center justify-between gap-3">
+    </>
+  );
+
+  const busyStep1 = reading || merging;
+  const mainLabel = step === 1
+    ? (merging || items.some((i) => i.busy) ? t("planungTool.applying") : mode === "apply" ? t("planungTool.applyLists") : mode === "next" ? t("planungTool.nextTeam") : t("planungTool.readLists"))
+    : step === 2 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextFloors"))
+    : step === 3 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextPlan"))
+    : plan.running ? t("planungTool.planRunning") : plan.done ? t("planungTool.reviewConfirm") : plan.error ? t("planungTool.planRetry") : t("planungTool.startPlan");
+  const mainDisabled = step === 1 ? busyStep1
+    : step === 2 ? team.saving || team.loading || !team.state?.hasPlan || team.missing.length > 0
+    : step === 3 ? team.saving || team.openFloors.length > 0
+    : plan.running;
+  const mainPulse = !mainDisabled && (step === 1 ? mode !== "read" || items.length === 0 : step === 4 ? !plan.running : true);
+  const mainClick = step === 1 ? main : step === 2 ? () => void next2() : step === 3 ? () => void next3() : plan.done ? () => router.push("/supervisor/planning") : startPlan;
+
+  const actions = (
+    <>
+      <div className="flex items-center justify-between gap-3">
         <button type="button" disabled={step === 1} onClick={() => goStep((step - 1) as StepId)}
           className="inline-flex h-14 items-center rounded-full border border-line-2 px-7 text-base text-pl-muted transition-colors enabled:hover:border-pl-text enabled:hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light disabled:cursor-not-allowed disabled:opacity-50">
           {t("planungTool.back")}
         </button>
-        {step === 1 ? (
-          <PrimaryButton onClick={main} pulse={!reading && !merging && (mode !== "read" || items.length === 0)} disabled={reading || merging}>
-            {merging || items.some((i) => i.busy) ? t("planungTool.applying") : mode === "apply" ? t("planungTool.applyLists") : mode === "next" ? t("planungTool.nextTeam") : t("planungTool.readLists")}
-          </PrimaryButton>
-        ) : (
-          <PrimaryButton disabled={step === 4} pulse={step !== 4} onClick={() => { const n = (step + 1) as StepId; setStep(n); setReached((r) => (r < n ? n : r)); }}>
-            {t("planungTool.next")}
-          </PrimaryButton>
-        )}
+        <PrimaryButton onClick={mainClick} pulse={mainPulse} disabled={mainDisabled} className="min-w-0 flex-1 lg:flex-none">{mainLabel}</PrimaryButton>
       </div>
-      <div aria-live="polite" className="sr-only">{merging ? t("planungTool.applying") : ""}</div>
+      <div aria-live="polite" className="sr-only">{merging ? t("planungTool.applying") : plan.running ? t("planungTool.planRunning") : ""}</div>
     </>
   );
 
-  return <PlanungShell house={<HouseMap house={house} animateKey={animateKey} highlight={highlight} dateLabel={dateLabel(house.date)} />} panel={panel} />;
+  const top = <StepSegments current={step} labels={labels} dateText={dateLabel(house.date).split(",").slice(-1)[0]?.trim() ?? ""} stepText={t("planungTool.stepOf", { n: step })} ariaLabel={t("planungTool.stepsLabel")} />;
+
+  return <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date)} />} panel={panel} />;
 }

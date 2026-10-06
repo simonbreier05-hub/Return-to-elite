@@ -15,7 +15,7 @@ export default function CapacityBar({
           </div>
         </div>
       ))}
-      <p className={`mt-1 text-sm font-medium ${ok ? "text-brass-light" : "text-pl-text"}`}>{ok ? "✓ " : "⚠ "}{verdict}</p>
+      <p className={`mt-1 text-sm font-medium ${ok ? "text-brass-ink" : "text-pl-text"}`}>{ok ? "✓ " : "⚠ "}{verdict}</p>
     </div>
   );
 }

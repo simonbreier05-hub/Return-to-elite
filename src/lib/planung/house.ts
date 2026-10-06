@@ -1,11 +1,8 @@
 import { prisma } from "@/lib/db";
 import { latestPlanDate } from "@/lib/dayplan/latest";
-import type { HouseData, HouseSupervisor, HouseTile, TileKind } from "./model";
+import { supervisorBadges, type HouseData, type HouseTile, type TileKind } from "./model";
 
 const KIND: Record<string, TileKind> = { DEPARTURE: "DEPARTURE", SAME_DAY_TURN: "TURN", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
-
-/** Drei Helligkeitsstufen, reihum — immer zusammen mit dem Buchstaben angezeigt. */
-const TONES: (1 | 2 | 3)[] = [1, 2, 3];
 
 /**
  * Haus-Ansicht: eine Kachel je Zimmer, Art laut `DayRoomPlan`. Eine gemeinsame Abfrage für Kacheln,
@@ -30,16 +27,12 @@ export async function getHouseData(date?: string | null): Promise<HouseData> {
   }
 
   // Supervisor je Etage aus der bestehenden Etagenzuweisung (User.assignedFloors)
-  const sups = await prisma.user.findMany({ where: { role: "supervisor" }, orderBy: { name: "asc" }, select: { name: true, assignedFloors: true } });
+  const sups = await prisma.user.findMany({ where: { role: "supervisor" }, orderBy: { name: "asc" }, select: { id: true, name: true, assignedFloors: true } });
+  const badges = supervisorBadges(sups);
   const supervisors: HouseData["supervisors"] = {};
-  const used = new Set<string>();
-  sups.forEach((s, i) => {
-    let letter = s.name.trim().charAt(0).toUpperCase() || "?";
-    if (used.has(letter)) letter = (s.name.trim().split(/\s+/)[1] ?? "").charAt(0).toUpperCase() || letter;
-    used.add(letter);
-    const badge: HouseSupervisor = { letter, tone: TONES[i % 3], name: s.name };
-    for (const f of s.assignedFloors.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n))) supervisors[f] = badge;
-  });
+  for (const s of sups) {
+    for (const f of s.assignedFloors.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n))) supervisors[f] = badges[s.id];
+  }
 
   return {
     date: day,
