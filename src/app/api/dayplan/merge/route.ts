@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
 import { mergeDay } from "@/lib/dayplan/merge";
+import { broadcast } from "@/lib/realtime";
 import { checkRedistribution } from "@/lib/autoplan/service";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 
@@ -19,6 +20,8 @@ export async function POST(req: NextRequest) {
     const result = await mergeDay(date, auth.session.userId);
     // Neuer Turn / geänderte Reinigungsart: Umverteilung prüfen (Fehler hier dürfen den Tagesplan nicht kippen).
     await checkRedistribution(date).catch(() => null);
+    // Haus-Ansicht live aktualisieren (nur Zimmernummern, keine Gastdaten)
+    broadcast("dayplan:updated", { date, changedRooms: result.changedRooms });
     return NextResponse.json(result);
   } catch (e) {
     return NextResponse.json({ error: e instanceof Error ? e.message : "Berechnung fehlgeschlagen." }, { status: 409 });

@@ -87,7 +87,8 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
 
   it("zweiter Lauf ändert nichts (idempotent)", async () => {
     const before = [await prisma.stay.count(), await prisma.trace.count(), await prisma.roomTask.count(), await prisma.dayRoomPlan.count()];
-    await mergeDay(TODAY, userId);
+    const again = await mergeDay(TODAY, userId);
+    expect(again.changedRooms).toEqual([]); // nichts geändert → keine Hervorhebung im Haus
     expect([await prisma.stay.count(), await prisma.trace.count(), await prisma.roomTask.count(), await prisma.dayRoomPlan.count()]).toEqual(before);
   });
 
