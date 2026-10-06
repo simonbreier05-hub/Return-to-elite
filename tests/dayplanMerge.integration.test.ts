@@ -25,6 +25,7 @@ import * as build from "@/lib/import/sample/build";
 import { todayScenario, TEST_CARD } from "@/lib/import/sample/scenario";
 import { loadList, parseList } from "@/lib/import/readFile";
 import { applyBatch, sha256, storeBatch } from "@/lib/import/store";
+import { getHousemanList, setHousemanTraceStatus } from "@/lib/lists/housemanList";
 
 const TODAY = "2026-10-06";
 const ROOMS = Array.from({ length: 20 }, (_, i) => String(101 + i));
@@ -134,5 +135,47 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
       await prisma.arrival.findMany(), await prisma.auditLog.findMany(), await prisma.importRow.findMany(), await prisma.importIssue.findMany(),
     ]);
     for (const s of [TEST_CARD, "299.00", "598.00", "RACK", "Banquet", "1920"]) expect(dump, s).not.toContain(s);
+  });
+});
+
+describe("Hausmann-Liste aus dem Import", () => {
+  it("zeigt die Hausmann-Traces des Tages mit Etage, Gast nur als Kurzname", async () => {
+    const list = await getHousemanList();
+    expect(list.date).toBe(TODAY);
+    expect(list.items.length).toBeGreaterThanOrEqual(4);
+    expect(list.items.every((i) => i.status === "OPEN")).toBe(true);
+    expect(list.items.some((i) => /twin|zusatz|extra/i.test(i.text))).toBe(true);
+    // Gast: nie ein Vorname — im Beispiel nur erfundene Nachnamen mit Anrede
+    for (const i of list.items) if (i.guest) expect(i.guest.split(" ").length).toBeLessThanOrEqual(3);
+    expect((await getHousemanList(1)).items.length).toBe(list.items.length); // alle Beispielzimmer stehen auf Etage 1
+    expect((await getHousemanList(2)).items).toHaveLength(0);
+  });
+
+  it("Abhaken speichert Zeitstempel, zieht die Aufgabe mit — und bleibt nach einem Nachimport erledigt", async () => {
+    const before = await getHousemanList();
+    const target = before.items.find((i) => i.roomTaskId)!;
+    const res = await setHousemanTraceStatus(target.id, "DONE", { userId, role: "supervisor" });
+    expect(res?.changed).toBe(true);
+    const trace = await prisma.trace.findUniqueOrThrow({ where: { id: target.id } });
+    expect(trace.status).toBe("DONE");
+    expect(trace.doneAt).toBeInstanceOf(Date);
+    expect((await prisma.roomTask.findUniqueOrThrow({ where: { id: target.roomTaskId! } })).status).toBe("DONE");
+
+    const tasks = await prisma.roomTask.count();
+    await importAll(); // Nachimport derselben Listen
+    await mergeDay(TODAY, userId);
+    expect((await prisma.trace.findUniqueOrThrow({ where: { id: target.id } })).status).toBe("DONE");
+    expect(await prisma.roomTask.count()).toBe(tasks); // keine Dubletten
+    const after = await getHousemanList();
+    expect(after.items.find((i) => i.id === target.id)?.status).toBe("DONE");
+    expect(after.items.at(-1)?.status).toBe("DONE"); // Erledigte stehen unten
+  }, 60_000);
+
+  it("Wieder öffnen setzt Zeitstempel zurück; Traces anderer Abteilungen lassen sich hier nicht abhaken", async () => {
+    const done = (await getHousemanList()).items.find((i) => i.status === "DONE")!;
+    await setHousemanTraceStatus(done.id, "OPEN", { userId, role: "supervisor" });
+    expect((await prisma.trace.findUniqueOrThrow({ where: { id: done.id } })).doneAt).toBeNull();
+    const other = await prisma.trace.findFirst({ where: { dept: { not: "HOUSEMAN" } } });
+    if (other) expect(await setHousemanTraceStatus(other.id, "DONE", { userId, role: "supervisor" })).toBeNull();
   });
 });

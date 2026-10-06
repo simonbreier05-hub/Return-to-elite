@@ -315,6 +315,7 @@ model Notification {
   type         String // ROOM_RELEASED | BLOCKED_RECHECK | WELFARE_CHECK | ETA_AT_RISK | RELEASE_QUEUE_BACKLOG | WORK_ORDER | ...
   level        String    @default("info") // info | warning | critical
   targetRole   String // role that should see it (duty_manager sees all)
+  targetUserId String? // optional: nur diese Person (z. B. Zimmer verschoben); null = alle der Rolle
   roomId       String?
   message      String
   dedupeKey    String? // prevents the escalation ticker from re-firing the same alert

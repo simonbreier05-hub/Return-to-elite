@@ -161,7 +161,9 @@ describe("Zuteilungsvorschlag und Umverteilung (Wegwerf-DB)", () => {
   });
 
   it("Protokoll und Meldungen enthalten keine Namen oder Stufen", async () => {
-    const dump = JSON.stringify([await prisma.auditLog.findMany(), await prisma.notification.findMany()]);
+    // Meldungen an Supervisoren über verschobene Zimmer (ROOM_MOVED) nennen bewusst, wer von wem zu wem verschoben hat (Prompt 3, Verschieben über Etagen).
+    const notes = (await prisma.notification.findMany()).filter((n) => n.type !== "ROOM_MOVED");
+    const dump = JSON.stringify([await prisma.auditLog.findMany(), notes]);
     expect(dump).not.toMatch(/Anna|Bea|Cem|Dora|hkLevel|Stufe/);
   });
 });

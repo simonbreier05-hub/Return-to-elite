@@ -3,6 +3,7 @@ import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import type { Session } from "@/lib/auth";
 import { berlinDate } from "@/lib/dayplan/time";
+import { notifyReassignment } from "./notifyReassignment";
 
 /**
  * Moves one room from its current attendant to another, keeping both
@@ -67,6 +68,8 @@ export async function moveRoomBetweenAttendants(
     roomId,
     meta: { fromAttendantId, toAttendantId },
   });
+
+  await notifyReassignment({ room: { id: room.id, number: room.number, floor: room.floor }, fromId: fromAttendantId, toId: toAttendantId, actorId: session.userId });
 
   broadcast("room:update", { room: updated });
   broadcast("route:reordered", { attendantId: fromAttendantId, roomIds: sourceSiblings.map((r) => r.id) });
