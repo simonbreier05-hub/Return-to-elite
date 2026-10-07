@@ -91,6 +91,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [moreOpen, setMoreOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
@@ -336,40 +337,42 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link
-            href="/supervisor/handover"
-            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          <button
+            type="button"
+            onClick={() => setMoreOpen((o) => !o)}
+            aria-expanded={moreOpen}
+            className="flex h-14 items-center gap-2 rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
           >
-            {t("supervisor.handoverLink")}
-          </Link>
-          {isDutyManager && (
-            <Link
-              href="/settings"
-              className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-            >
-              {t("supervisor.settingsLink")}
-            </Link>
-          )}
+            {guestDndCount > 0 && <span aria-hidden>🔕</span>}
+            {t("supervisor.more")}
+            <span aria-hidden className={`transition-transform duration-150 ${moreOpen ? "rotate-180" : ""}`}>▾</span>
+          </button>
           <Link
-            href="/supervisor/guest-access"
-            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-          >
-            {t("supervisor.guestAccessLink")}
-          </Link>
-          <Link
-            href="/supervisor/guest-requests"
-            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-          >
-            {guestDndCount > 0 && "🔕 "}
-            {t("supervisor.guestRequestsLink")}
-          </Link>
-          <Link
-            href="/supervisor/planning"
+            href="/planung"
             className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >
             {t("supervisor.morningPlanningLink")}
           </Link>
         </div>
+        {moreOpen && (
+          <div className="animate-rise flex w-full flex-wrap gap-2">
+            <Link href="/supervisor/handover" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+              {t("supervisor.handoverLink")}
+            </Link>
+            <Link href="/supervisor/guest-access" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+              {t("supervisor.guestAccessLink")}
+            </Link>
+            <Link href="/supervisor/guest-requests" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+              {guestDndCount > 0 && "🔕 "}
+              {t("supervisor.guestRequestsLink")}
+            </Link>
+            {isDutyManager && (
+              <Link href="/settings" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+                {t("supervisor.settingsLink")}
+              </Link>
+            )}
+          </div>
+        )}
       </div>
 
       <PriorityBanner

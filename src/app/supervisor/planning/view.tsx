@@ -347,14 +347,9 @@ export default function PlanningView() {
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("planning.subtitle")}</p>
-          <div className="mt-1 flex flex-wrap gap-x-5">
-            <Link href="/import" className="tap justify-start text-sm font-medium text-gold-soft hover:underline">
-              {t("nav.import")} →
-            </Link>
-            <Link href="/planung" className="tap justify-start text-sm font-medium text-gold-soft hover:underline">
-              {t("planungTool.title")} →
-            </Link>
-          </div>
+          <Link href="/planung" className="tap justify-start text-sm font-medium text-gold-soft hover:underline">
+            {t("planungTool.title")} →
+          </Link>
           {HOTEL.unconfirmedFloors.length > 0 && (
             <p className="mt-1 text-xs font-medium text-gold-soft">
               {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}

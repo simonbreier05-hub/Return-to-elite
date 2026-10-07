@@ -187,7 +187,7 @@ export default function DutyManagerView() {
           <p className="text-sm text-graphite/70">{t("dutyManager.subtitle")}</p>
         </div>
         <Link
-          href="/supervisor/planning"
+          href="/planung"
           className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
         >
           {t("dutyManager.planningLink")}
