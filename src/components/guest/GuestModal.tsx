@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useGuestLocale } from "@/lib/guestI18n/GuestLocaleContext";
+import { useEscapeKey } from "@/components/useEscapeKey";
 
 /**
  * Guest-screen modal frame — a copy of src/components/Modal.tsx (same
@@ -31,6 +32,7 @@ export default function GuestModal({
     setClosing(true);
     setTimeout(onClose, CLOSE_MS);
   };
+  useEscapeKey(close, !closing);
 
   return (
     <div
@@ -62,10 +64,11 @@ export default function GuestModal({
           <button
             onClick={close}
             aria-label={t("common.close")}
-            className="-mr-1 -mt-1 h-11 w-11 shrink-0 rounded-lg text-lg hover:bg-black/5"
+            className="-mr-1 -mt-1 inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium hover:bg-black/5"
             style={{ color: "var(--g-navy)" }}
           >
-            ✕
+            <span aria-hidden className="text-base leading-none">✕</span>
+            <span>{t("common.close")}</span>
           </button>
         </div>
         {children}

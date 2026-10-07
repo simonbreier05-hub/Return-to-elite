@@ -73,7 +73,7 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
       title={t("appShell.notifications")}
       right={
         unread > 0 && (
-          <button onClick={ackAll} className="h-8 rounded-sm px-2 text-xs font-medium text-gold-soft hover:bg-parchment">
+          <button onClick={ackAll} className="h-11 rounded-sm px-3 text-xs font-medium text-gold-soft hover:bg-parchment">
             {t("appShell.markAllRead")} ({unread})
           </button>
         )

@@ -347,10 +347,7 @@ export default function PlanningView() {
           <h2 className="font-serif text-4xl leading-none">{t("planning.title")}</h2>
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("planning.subtitle")}</p>
-          <Link href="/import" className="mt-1 inline-block text-sm font-medium text-gold-soft hover:underline">
-            {t("nav.import")} →
-          </Link>
-          <Link href="/planung" className="mt-1 ml-4 inline-block text-sm font-medium text-gold-soft hover:underline">
+          <Link href="/planung" className="tap justify-start text-sm font-medium text-gold-soft hover:underline">
             {t("planungTool.title")} →
           </Link>
           {HOTEL.unconfirmedFloors.length > 0 && (
@@ -359,12 +356,6 @@ export default function PlanningView() {
             </p>
           )}
         </div>
-        <Link
-          href="/supervisor"
-          className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-        >
-          {t("planning.liveBoardLink")}
-        </Link>
       </div>
 
       <AutoPlanPanel />

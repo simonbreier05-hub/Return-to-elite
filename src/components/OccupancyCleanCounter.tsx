@@ -21,7 +21,7 @@ export default function OccupancyCleanCounter({
   return (
     <div className={className}>
       <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{t("common.occupancyCleanLabel")}</div>
-      <div className="mt-1 font-serif text-3xl">{t("common.occupancyCleanValue", { occupied, cleaned })}</div>
+      <div className="mt-1 font-serif text-2xl leading-tight sm:text-3xl">{t("common.occupancyCleanValue", { occupied, cleaned })}</div>
     </div>
   );
 }

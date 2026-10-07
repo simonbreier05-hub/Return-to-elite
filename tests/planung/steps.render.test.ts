@@ -108,7 +108,7 @@ describe("Schritt Plan", () => {
 
 describe("Mobil (Design C)", () => {
   it("Fortschrittssegmente: aktuelles Segment ist aria-current, Text je Schritt", () => {
-    const out = html(h(StepSegments, { current: 2, labels: { 1: "Listen", 2: "Team", 3: "Etagen", 4: "Plan" }, dateText: "22.09.2026", stepText: "Schritt 2 von 4", ariaLabel: "Schritte" }));
+    const out = html(h(StepSegments, { current: 2, labels: { 1: "Listen", 2: "Team", 3: "Etagen", 4: "Plan" }, dateText: "22.09.2026", stepText: "Schritt 2 von 4", ariaLabel: "Schritte", leaveLabel: "Zurück zum Live-Board" }));
     expect(out).toContain('aria-current="step"');
     expect(out).toContain("Listen ✓");
     expect(out).toContain("Schritt 2 von 4");

@@ -75,12 +75,6 @@ export default function HandoverView() {
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("handover.subtitle")}</p>
         </div>
-        <Link
-          href="/supervisor"
-          className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-        >
-          {t("handover.liveBoardLink")}
-        </Link>
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-2">
@@ -152,7 +146,7 @@ export default function HandoverView() {
           <section className="rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
             <button
               onClick={() => setShowFacts((s) => !s)}
-              className="flex w-full items-center justify-between text-left"
+              className="flex min-h-11 w-full items-center justify-between text-left"
             >
               <span className="font-serif text-xl">{t("handover.factsTitle")}</span>
               <span className="text-sm text-gold">{showFacts ? `${t("common.hide")} ▲` : `${t("common.show")} ▼`}</span>

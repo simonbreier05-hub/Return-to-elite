@@ -145,6 +145,10 @@ body {
 }
 
 /* Hairline rule used under section headings — the printed-menu detail. */
+/* Mindest-Tippfläche (44 px) für kleine Knöpfe/Links — gemeinsame Basis statt Einzel-h-Werten pro Screen. */
+.tap { min-height: 2.75rem; min-width: 2.75rem; display: inline-flex; align-items: center; justify-content: center; }
+@media (min-width: 768px) { .tap-md-auto { min-height: 0; min-width: 0; } }
+
 .rule-gold {
   background: linear-gradient(90deg, var(--color-gold-line), transparent);
   height: 1px;

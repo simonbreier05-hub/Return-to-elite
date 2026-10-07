@@ -117,12 +117,6 @@ export default function SettingsView() {
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("settings.dutyManagerOnly")}</p>
         </div>
-        <Link
-          href="/supervisor"
-          className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-        >
-          {t("settings.liveBoardLink")}
-        </Link>
       </div>
 
       {error && (

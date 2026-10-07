@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { useLocale } from "@/lib/i18n/LocaleContext";
+import CloseButton from "./CloseButton";
+import { useEscapeKey } from "./useEscapeKey";
 
 /**
  * Shared modal frame. Bottom sheet on phones, centred dialog from `sm` up,
@@ -27,13 +28,13 @@ export default function Modal({
   onClose: () => void;
   children: React.ReactNode;
 }) {
-  const { t } = useLocale();
   const [closing, setClosing] = useState(false);
 
   const close = () => {
     setClosing(true);
     setTimeout(onClose, CLOSE_MS);
   };
+  useEscapeKey(close, !closing);
 
   return (
     <div
@@ -55,13 +56,7 @@ export default function Modal({
             <h3 className="font-serif text-2xl leading-tight text-navy">{title}</h3>
             {subtitle && <p className="mt-0.5 text-sm text-graphite">{subtitle}</p>}
           </div>
-          <button
-            onClick={close}
-            aria-label={t("common.close")}
-            className="-mr-1 -mt-1 h-11 w-11 shrink-0 rounded-lg text-lg hover:bg-parchment"
-          >
-            ✕
-          </button>
+          <CloseButton onClick={close} />
         </div>
         {children}
       </div>

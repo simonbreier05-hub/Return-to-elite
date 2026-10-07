@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import QRCode from "qrcode";
 import { api, ApiError } from "@/components/api";
+import ImageLightbox from "@/components/ImageLightbox";
 
 interface GuestAccessRoom {
   id: string;
@@ -75,8 +76,7 @@ export default function GuestAccessPrintView() {
               key={room.id}
               className="flex flex-col items-center rounded-xl border border-charcoal/15 p-4 text-center break-inside-avoid print:border-black/40"
             >
-              {/* eslint-disable-next-line @next/next/no-img-element -- local data: URL, next/image adds nothing here */}
-              <img src={room.qrDataUrl} alt={`QR-Code Zimmer ${room.number}`} className="h-28 w-28" />
+              <ImageLightbox src={room.qrDataUrl} alt={`QR-Code Zimmer ${room.number}`} className="h-28 w-28" />
               <div className="mt-2 text-lg font-semibold">Zimmer {room.number}</div>
               <div className="text-xs text-graphite/60">Etage {room.floor}</div>
             </div>
