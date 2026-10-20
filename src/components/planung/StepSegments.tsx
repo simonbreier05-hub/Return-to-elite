@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 
+import LiveClock from "@/components/LiveClock";
 import type { StepId } from "@/lib/planung/model";
 
 /**
@@ -14,7 +15,7 @@ export default function StepSegments({ current, labels, dateText, stepText, aria
       <Link href="/supervisor" className="-ml-3 mb-1 inline-flex min-h-11 items-center gap-1 rounded-full px-3 text-sm font-medium text-pl-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden>←</span>{leaveLabel}</Link>
       <div className="flex items-baseline justify-between">
         <span className="font-serif text-2xl font-semibold">StayClean</span>
-        <span className="text-xs text-pl-muted">{dateText} · {stepText}</span>
+        <span className="text-xs text-pl-muted"><LiveClock tone="pl" /> · {stepText}</span>
       </div>
       <ol aria-label={ariaLabel} className="mt-3 flex gap-2">
         {([1, 2, 3, 4] as StepId[]).map((s) => (
