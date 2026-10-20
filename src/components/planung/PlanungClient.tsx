@@ -25,7 +25,7 @@ import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
 import Stepper from "./Stepper";
 import { useImportSession, type ImportItem } from "./useImportSession";
 
-const SLOTS: ImportType[] = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES"];
+const SLOTS: ImportType[] = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES", "INHOUSE"];
 const READ_MS = 850;
 
 /** Planungstool: Gerüst, Schritt 1 „Listen" und Haus-Ansicht. Schritte 2–4 folgen in D2 (hier Platzhalter). */

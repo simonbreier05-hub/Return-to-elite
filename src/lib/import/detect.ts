@@ -9,10 +9,12 @@ export function detectListType(lines: PdfLine[], fileName = ""): ImportType | nu
   if (has(/History and Forecast/i)) return "FORECAST";
   if (has(/^Departures?$/i)) return "DEPARTURES";
   if (has(/^Traces$/i)) return "TRACES";
+  if (has(/^In[\s-]?House(\s+Guests?)?$/i)) return "INHOUSE";
   const n = fileName.toLowerCase();
   if (/arriv|res_detail/.test(n)) return "ARRIVALS";
   if (/depart/.test(n)) return "DEPARTURES";
   if (/forecast|history/.test(n)) return "FORECAST";
   if (/trace/.test(n)) return "TRACES";
+  if (/in[-_ ]?house|inhs|belegung/.test(n)) return "INHOUSE";
   return null;
 }

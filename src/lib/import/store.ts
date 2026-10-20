@@ -1,13 +1,14 @@
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
-import type { ImportType } from "@/lib/domain";
+import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { UNKNOWN_ROOM_CRITICAL_RATIO } from "./mapping";
 import { buildPreview } from "./preview";
+import { missingLists } from "./readiness";
 import { issue } from "./parseCommon";
-import type { ArrivalRow, DepartureRow, ForecastDayRow, ParseIssue, ParseResult, TraceRow } from "./types";
+import type { ArrivalRow, DepartureRow, ForecastDayRow, InHouseRow, ParseIssue, ParseResult, TraceRow } from "./types";
 
-type AnyRow = ArrivalRow | DepartureRow | TraceRow | ForecastDayRow;
+type AnyRow = ArrivalRow | DepartureRow | TraceRow | ForecastDayRow | InHouseRow;
 
 export { buildPreview };
 export const sha256 = (bytes: Uint8Array) => createHash("sha256").update(bytes).digest("hex");
@@ -26,6 +27,8 @@ export function roomIssues(rooms: string[], known: Set<string>): ParseIssue[] {
   return [issue(critical ? "CRITICAL" : "WARNING", "UNKNOWN_ROOM",
     `${unknown.length} von ${uniq.length} Zimmern sind im Zimmerstamm unbekannt: ${unknown.sort().join(", ")}.`)];
 }
+
+const ROW_KIND = { DEPARTURES: "DEPARTURE", ARRIVALS: "ARRIVAL", TRACES: "TRACE", INHOUSE: "INHOUSE" } as const;
 
 export const isCritical = (issues: ParseIssue[]) => issues.some((i) => i.severity === "CRITICAL");
 
@@ -49,7 +52,7 @@ export async function storeBatch(input: {
       issues: { create: issues.map((i) => ({ severity: i.severity, code: i.code, message: i.message, page: i.page ?? null, line: i.line ?? null, room: i.room ?? null })) },
       rows: result.type === "FORECAST" ? undefined : {
         create: result.rows.map((row) => ({
-          kind: result.type === "DEPARTURES" ? "DEPARTURE" : result.type === "ARRIVALS" ? "ARRIVAL" : "TRACE",
+          kind: ROW_KIND[result.type as Exclude<ImportType, "FORECAST">],
           room: (row as { room: string }).room, payload: JSON.stringify(row),
         })),
       },
@@ -95,10 +98,15 @@ export async function rejectBatch(batchId: string, userId: string) {
   await audit({ action: "IMPORT_REJECTED", userId, meta: { batchId } });
 }
 
+/** Server-Gate: welche der fünf Listen fehlen noch (nur übernommene Stände zählen). */
+export async function missingAppliedLists(): Promise<ImportType[]> {
+  return missingLists(await dataStatus());
+}
+
 /** "Stand der Daten" je Liste für das Planungshub. */
 export async function dataStatus(): Promise<Record<ImportType, { businessDate: string; appliedAt: Date; rows: number } | null>> {
   const out = {} as Awaited<ReturnType<typeof dataStatus>>;
-  for (const type of ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES"] as const) {
+  for (const type of IMPORT_TYPES) {
     const b = await prisma.importBatch.findFirst({ where: { type, status: "APPLIED" }, orderBy: { appliedAt: "desc" } });
     out[type] = b ? { businessDate: b.businessDate, appliedAt: b.appliedAt!, rows: b.rowCount } : null;
   }

@@ -4,6 +4,7 @@ import { requireRole } from "@/lib/rbac";
 import { mergeDay } from "@/lib/dayplan/merge";
 import { broadcast } from "@/lib/realtime";
 import { checkRedistribution } from "@/lib/autoplan/service";
+import { missingAppliedLists } from "@/lib/import/store";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 
 const Body = z.object({ date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() }).strict();
@@ -14,6 +15,8 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Ungültiges Datum." }, { status: 400 });
+  const missing = await missingAppliedLists();
+  if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, missing }, { status: 409 });
   const date = parsed.data.date ?? (await latestPlanDate());
   if (!date) return NextResponse.json({ error: "Noch keine Departures übernommen." }, { status: 409 });
   try {

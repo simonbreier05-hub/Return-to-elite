@@ -202,7 +202,7 @@ export default function ImportView() {
         <ul className="space-y-1 text-sm">
           {IMPORT_TYPES.map((ty) => (
             <li key={ty}>
-              <span className="inline-block w-28 font-medium">{t(`importPage.type${ty}` as "importPage.typeFORECAST")}</span>
+              <span className="inline-block w-36 font-medium">{t(`importPage.type${ty}` as "importPage.typeFORECAST")}</span>
               {status?.[ty] ? t("importPage.asOf", { date: status[ty]!.businessDate, count: status[ty]!.rows }) : <span className="text-graphite/60">{t("importPage.notImported")}</span>}
             </li>
           ))}
