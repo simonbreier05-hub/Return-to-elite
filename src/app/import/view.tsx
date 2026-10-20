@@ -189,7 +189,7 @@ export default function ImportView() {
         <div className="flex flex-wrap gap-2">
           {([
             ["arrivals", t("importPage.typeARRIVALS")], ["arrivals_page1", t("importPage.sampleArrivalsPage1")],
-            ["departures", t("importPage.typeDEPARTURES")], ["forecast", t("importPage.typeFORECAST")], ["traces", t("importPage.typeTRACES")],
+            ["departures", t("importPage.typeDEPARTURES")], ["forecast", t("importPage.typeFORECAST")], ["traces", t("importPage.typeTRACES")], ["inhouse", t("importPage.typeINHOUSE")],
           ] as const).map(([file, label]) => (
             <a key={file} href={`/api/import/sample?file=${file}`} download
               className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-white px-4 text-sm hover:border-gold-line">{label} ↓</a>

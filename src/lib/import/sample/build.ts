@@ -104,6 +104,35 @@ export async function buildDeparturesPdf(
   return doc.save();
 }
 
+// ───────────────────────── In House (Tagesbelegung) ─────────────────────────
+
+/** Alle Gäste, die laut Szenario heute im Haus sind (Abreisen, Bleiber, Frühanreisen) — eine Zeile je Zimmer. */
+export async function buildInHousePdf(sc: Scenario, opts: { reportDate?: string } = {}) {
+  const { doc, c } = await canvas(A4L);
+  c.newPage();
+  c.t("OPERA DEMO HOTEL", 380, 570, { i: true, s: 10 }); c.t(opts.reportDate ?? sc.reportDate, 780, 570); c.t("04:35 AM", 780, 555);
+  c.t("In House", 395, 540, { b: true, i: true, s: 10 });
+  let y = 505;
+  for (const [t, x] of [["Room No.", 20], ["Name", 60], ["Company", 150], ["VIP Code", 235], ["Arr. Date", 290], ["Dep. Date", 340], ["Adl.", 385], ["Chl.", 405], ["Rms", 425],
+    ["Nts", 445], ["Room Type", 462], ["Rate Code", 560], ["Res. Status", 605], ["Pay Mth", 705], ["Balance", 770]] as const) c.t(t, x, y);
+  c.line(y - 8); y -= 24;
+  const guests = sc.departureGroups.flatMap((g) => g.guests).sort((a, b) => a.room.localeCompare(b.room));
+  const sum = { adl: 0, chl: 0 };
+  for (const g of guests) {
+    c.t(g.room, 20, y); c.t(g.name, 60, y); if (g.company) c.t(g.company, 150, y); if (g.vip) c.t("V1", 238, y);
+    c.t(g.arr, 290, y); c.t(g.dep, 340, y); c.t(String(g.adl), 387, y); c.t(String(g.chl), 407, y); c.t("1", 427, y);
+    c.t(String(g.nts), 447, y); c.t(g.type, 466, y);
+    if (g.rateCode) c.t(g.rateCode, 565, y);
+    c.t(g.status, 610, y); c.t("CA", 710, y); c.t(g.balance, 770, y);
+    sum.adl += g.adl; sum.chl += g.chl;
+    y -= 14;
+  }
+  c.line(y + 8, 20, 822);
+  c.t("Total", 250, y - 2, { b: true }); c.t(String(sum.adl), 387, y - 2); c.t(String(sum.chl), 407, y - 2); c.t(String(guests.length), 427, y - 2);
+  c.t("Page 1 of 1", 400, 40, { i: true }); c.t("inhouse_guests", 780, 40, { i: true });
+  return doc.save();
+}
+
 // ───────────────────────── Forecast (History and Forecast) ─────────────────────────
 
 const WD = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];

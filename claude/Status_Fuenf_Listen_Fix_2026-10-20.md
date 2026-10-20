@@ -27,7 +27,10 @@
 
 ## Offen / unsicher
 1. **In-House-Layout ist angenommen** (Spalten wie Departures). Bitte einen echten Opera-„In House"-Export (anonymisiert) bereitstellen.
-2. Kein Beispiel-PDF/Sample-Download für In House (`/api/import/sample`) und keine PDF-Fixture.
+2. ~~Kein Beispiel-PDF~~ erledigt: `buildInHousePdf`, `/api/import/sample?file=inhouse`, Fixture `inhouse_nachbau.pdf`, Button auf der Import-Seite.
 3. In-House-Daten werden gespeichert und geprüft, aber noch nicht in `mergeDay` als Abgleich (Bleiber-Plausibilität) genutzt.
 4. Kein Integrationstest für die 409-Antworten der Routen (Gate-Logik selbst ist unit-getestet).
 5. Soll das Gate auch das Geschäftsdatum prüfen (alle fünf für denselben Tag)? Aktuell zählt jeder übernommene Stand.
+
+## Nachtrag
+- Live-Uhr mit Datum (Berlin) im AppShell-Banner: `src/components/LiveClock.tsx`.

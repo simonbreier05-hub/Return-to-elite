@@ -69,3 +69,19 @@ describe("Einreichungs-Gate: erst bei allen fünf Listen", () => {
     expect(listsComplete({ ...all, INHOUSE: { x: 1 } })).toBe(true);
   });
 });
+
+describe("In House — Beispiel-PDF", () => {
+  it("wird erkannt, gelesen, verwirft Karte/Saldo und passt durch die Whitelist", async () => {
+    const { extractPdfLines } = await import("@/lib/import/pdfText");
+    const { buildInHousePdf } = await import("./fixtures/opera/build");
+    const lines = await extractPdfLines(await buildInHousePdf());
+    expect(detectListType(lines)).toBe("INHOUSE");
+    const r = parseInHouse(lines);
+    expect(r.issues.filter((i) => i.severity === "CRITICAL")).toEqual([]);
+    expect(r.rows.length).toBeGreaterThan(5);
+    expect(new Set(r.rows.map((x) => x.room)).size).toBe(r.rows.length);
+    expect(JSON.stringify(r.rows)).not.toMatch(/4111|balance|598\.00/);
+    const body = { type: "INHOUSE", fileHash: "a".repeat(64), reportDate: r.reportDate, periodFrom: null, periodTo: null, issues: [], rows: r.rows };
+    expect(SubmitBatchSchema.safeParse(body).success).toBe(true);
+  });
+});

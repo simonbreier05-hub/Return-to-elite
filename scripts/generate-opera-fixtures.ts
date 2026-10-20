@@ -6,7 +6,7 @@
  */
 import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
-import { buildArrivalsPdf, buildDeparturesPdf, buildForecastPdf, buildTracesPdf } from "../tests/fixtures/opera/build";
+import { buildArrivalsPdf, buildDeparturesPdf, buildForecastPdf, buildInHousePdf, buildTracesPdf } from "../tests/fixtures/opera/build";
 import { TRACES_SAMPLE } from "../tests/fixtures/opera/tracesSample";
 
 const OUT = path.join(__dirname, "..", "tests", "fixtures", "opera");
@@ -17,6 +17,7 @@ async function main() {
   writeFileSync(path.join(OUT, "arrivals_nachbau_nur_seite1.pdf"), await buildArrivalsPdf({ onlyFirstPage: true }));
   writeFileSync(path.join(OUT, "departures_nachbau.pdf"), await buildDeparturesPdf());
   writeFileSync(path.join(OUT, "forecast_nachbau.pdf"), await buildForecastPdf());
+  writeFileSync(path.join(OUT, "inhouse_nachbau.pdf"), await buildInHousePdf());
   writeFileSync(path.join(OUT, "traces_nachbau.pdf"), await buildTracesPdf());
   const head = "Room No.;Name;Arr. Date;Dep. Date;Dept.;Trace Code;Trace Date;Trace Text;Resolved";
   const lines = TRACES_SAMPLE.map((r) =>
