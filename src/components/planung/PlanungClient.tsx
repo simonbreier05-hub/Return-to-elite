@@ -12,6 +12,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { buildPreview } from "@/lib/import/preview";
 import type { DateFormatId, ParseResult } from "@/lib/import/types";
 import LiveClock from "@/components/LiveClock";
+import { listStateOf } from "@/lib/import/readiness";
 import { dateLabel, fileStatus, listsReady, type HouseData, type StepId } from "@/lib/planung/model";
 import FileDropCard from "./FileDropCard";
 import FloorStep from "./FloorStep";
@@ -80,7 +81,9 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   useEffect(() => { void refreshHouse(); }, [refreshHouse]);
 
   const appliedMap: Record<string, boolean> = {};
-  for (const ty of IMPORT_TYPES) appliedMap[ty] = !!status?.[ty] || items.some((i) => i.type === ty && i.phase === "applied");
+  // „Übernommen“ zählt nur, wenn die Liste zum Betriebstag passt oder als veraltet bestätigt wurde.
+  const stateOf = (ty: ImportType) => listStateOf(status?.[ty] ?? null, session.today);
+  for (const ty of IMPORT_TYPES) appliedMap[ty] = stateOf(ty) === "fresh" || stateOf(ty) === "accepted";
   const reading = items.some((i) => i.phase === "reading" || i.phase === "waiting");
   const itemFor = (ty: ImportType): ImportItem | undefined => [...items].reverse().find((i) => i.type === ty && i.phase !== "discarded");
   const unknown = items.filter((i) => i.phase === "read" && !i.type);
@@ -143,12 +146,14 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
               {SLOTS.map((ty, idx) => {
                 const it = itemFor(ty);
                 const issues = it ? issuesOf(it) : [];
-                const st = it ? fileStatus({ phase: it.phase, severities: issues.map((i) => i.severity) }) : appliedMap[ty] ? "applied" : "waiting";
+                const isStale = !it && stateOf(ty) === "stale";
+                const st = it ? fileStatus({ phase: it.phase, severities: issues.map((i) => i.severity) }) : isStale ? "warning" : appliedMap[ty] ? "applied" : "waiting";
                 const pv = it?.result ? buildPreview(it.result as unknown as ParseResult<unknown>) : null;
                 const stand = status?.[ty]?.businessDate;
                 const resultText = it?.phase === "error" ? it.error
                   : pv ? `${t("importPage.rowCount", { count: pv.count })}${pv.periodFrom ? ` · ${t("importPage.period", { from: pv.periodFrom, to: pv.periodTo ?? "—" })}` : ""}`
-                  : stand ? t("planungTool.asOf", { date: stand }) : undefined;
+                  : isStale ? t("planungTool.stale", { date: stand ?? "" })
+                  : stand ? (stateOf(ty) === "accepted" ? t("planungTool.staleAccepted", { date: stand }) : t("planungTool.asOf", { date: stand })) : undefined;
                 const { title, sub } = slotText(ty);
                 return (
                   <FileDropCard key={ty} index={idx + 2} title={title} subtitle={sub} status={st} statusLabel={statusLabel(st)} resultText={resultText} issues={issues}>
@@ -163,6 +168,9 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
                           ))}
                         </div>
                       </div>
+                    )}
+                    {isStale && (
+                      <button type="button" onClick={() => void session.acceptStale(ty)} className="mt-1.5 min-h-11 rounded-full border border-line-2 px-4 text-xs hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.useAnyway")}</button>
                     )}
                     {it && (it.phase === "read" || it.phase === "error") && (
                       <button type="button" onClick={() => discard(it)} className="mt-1.5 min-h-11 rounded-full px-1 text-xs text-pl-muted underline-offset-2 hover:text-pl-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.discard")}</button>

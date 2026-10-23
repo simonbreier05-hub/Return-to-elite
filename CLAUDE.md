@@ -49,3 +49,8 @@
 - `ImportBatch.type`/`ImportRow.kind` sind Strings: ein neuer Listentyp braucht keine Schema-Änderung/Migration.
 - INHOUSE-Layout ist angenommen (Departures-Zeilenform), nicht an einem echten Opera-Export geprüft; Parser nutzt als Kopfmarker die Zeile „Room …".
 - Gate ist bewusst nicht in `mergeDay()` selbst (Tests/Skripte rufen es mit Teildaten); es sitzt in den API-Routen.
+- Betriebstag = `berlinToday()` (`src/lib/import/businessDay.ts`, App-Uhr Europe/Berlin), nie das Dateidatum: Das Datum in einer Opera-Datei ist nur Abgleich. Druckdatum: `findHeaderDateRaw(header, lines)` (Label → erstes Datum im Kopf, auch „06/10/26 07:06“ → erste Seitenzeilen; Filter-/Datenzeilen zählen nie); nichts gefunden = Hinweis `NO_PRINT_DATE`, Liste läuft mit Betriebstag.
+- Gate = `listBlockers`/`planningAllowed` (`readiness.ts`): fünf Listen UND Stand == Betriebstag. Veraltete Liste zählt nur nach „Trotzdem verwenden“ (`POST /api/import/stale` → `ImportBatch.staleAcceptedAt/ById`, AuditLog `IMPORT_STALE_ACCEPTED`); `merge`/`propose` prüfen das serverseitig (409 mit `missing`/`stale`).
+- Datumsformat-Layout je Listentyp in `ImportMapping` (`GET/PUT /api/import/layout`), wird nach „Übernehmen“ gespeichert; Abweichung vom Layout ist nur INFO, wenn Anreisen/Abreisen ≥ Betriebstag (`implausibleDateCount`), sonst `DATE_IMPLAUSIBLE`. Mehrdeutiges Datum wird weiter nie geraten.
+- Anrede ist optional (`salutationIssues`): fehlt sie überall, ein INFO `NO_SALUTATION_COLUMN`, nie eine Warnung je Zeile.
+
