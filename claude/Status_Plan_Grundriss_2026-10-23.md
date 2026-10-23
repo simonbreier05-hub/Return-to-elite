@@ -54,3 +54,8 @@ Siehe Abschlussmeldung im Chat.
 2. „Mehr Kräfte anfragen“ und „Zimmer auf morgen zurückstellen“ gab es nur im alten Planer. Sollen sie im Grundriss wieder auftauchen?
 3. Personalüberhang: bewusst „alle gleichmäßig + Nicht einplanen per Knopf“. Alternative: automatisch die nicht benötigte Kraft weglassen — wer soll das sein (Teilzeit/Azubi zuerst)?
 4. Das Dev-Kopfzeilen-Menü („Rolle wechseln“) ist bei 820 px zu breit (nur mit Dev-Login sichtbar, schon vorher so).
+
+## Nachtrag (Antworten auf die offenen Fragen)
+1. Supervisor-/Hausmann-Liste im Entwurf: bleibt wie es ist.
+2./3. Kräfte hinzu- und abwählen: im Plan-Schritt über „Nicht einplanen“/„Einplanen“ für **alle** Kräfte des Teams (neuer Vorschlag), und nachher im Grundriss (`/floor-plan`, Abschnitt „Wer arbeitet heute?“, ein Tap → `POST /api/housekeepers/[id]/absent`; Zimmer einer abgewählten Kraft zählen als offen, ein Umverteilungsvorschlag erscheint). „Mehr Kräfte anfragen“/„Zurückstellen“ entfallen bewusst.
+4. Dev-Kopfzeile bleibt unverändert.

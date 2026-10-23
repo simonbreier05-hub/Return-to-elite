@@ -97,8 +97,8 @@ describe("Schritt Plan", () => {
     expect(out).toContain("Offene Zimmer zuteilen");
     expect(out).toContain("14,5 / 12,5–15,5");
     expect(out).toContain("Nicht einplanen");
-    expect(out).toContain("Wieder einplanen");
-    expect(out).toContain("Heute nicht eingeplant");
+    expect(out).toContain("Einplanen");
+    expect(out).toContain("Nicht eingeplant");
     expect((out.match(/min-h-11/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
   it("Statuszeilen folgen dem Fortschritt", () => {

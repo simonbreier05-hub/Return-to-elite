@@ -149,9 +149,11 @@ export default function PlanningFloorPlanPanel({
 
   const occupiedNow = useMemo(() => liveRooms.filter((r) => r.occupancy === "OCCUPIED").length, [liveRooms]);
 
+  // Zimmer, die einer heute nicht arbeitenden Kraft gehören, zählen als offen (sie müssen neu zugeteilt werden).
+  const onShiftIds = useMemo(() => new Set(onShiftAttendants.map((a) => a.id)), [onShiftAttendants]);
   const assignedToIdByRoomId = useMemo(
-    () => Object.fromEntries(liveRooms.map((r) => [r.id, r.assignedToId])),
-    [liveRooms]
+    () => Object.fromEntries(liveRooms.map((r) => [r.id, r.assignedToId && onShiftIds.has(r.assignedToId) ? r.assignedToId : null])),
+    [liveRooms, onShiftIds]
   );
   const { totalActionable, unassignedRoomIds } = useMemo(
     () => unassignedActionableRooms({ actionableRoomIds, deferredRoomIds, assignedToIdByRoomId }),

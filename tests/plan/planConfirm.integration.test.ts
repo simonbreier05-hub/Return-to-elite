@@ -27,6 +27,8 @@ import { prisma } from "@/lib/db";
 import { confirmProposal, PlanConfirmError, proposeForDate } from "@/lib/autoplan/service";
 import { berlinDate } from "@/lib/dayplan/time";
 import { GET as notificationsGet } from "@/app/api/notifications/route";
+import { GET as dayGet } from "@/app/api/assignments/day/route";
+import { POST as absentPost } from "@/app/api/housekeepers/[id]/absent/route";
 import { GET as roomsGet } from "@/app/api/rooms/route";
 import { POST as assignPost } from "@/app/api/rooms/[id]/assign/route";
 import { POST as movePost } from "@/app/api/rooms/[id]/move/route";
@@ -154,5 +156,24 @@ describe("Nach der Bestätigung: keine Sperren, eine Wahrheit", () => {
       expect(onBoard).toEqual(inDb.map((r) => r.id).sort());
       for (const r of inDb) expect(list).toContain(r.number);
     }
+  });
+});
+
+describe("Kräfte hinzu- und abwählen (Grundriss)", () => {
+  it("abwählen: Kraft verschwindet aus den anwesenden, bleibt im Roster; hinzuwählen bringt sie zurück", async () => {
+    as("sup", "supervisor");
+    const call = async () => (await (await dayGet()).json()) as { attendants: { id: string }[]; roster: { id: string; absent: boolean }[]; actionableRoomIds: string[] };
+    expect((await call()).attendants.map((a) => a.id)).toContain(ids.hk2);
+    expect((await absentPost(post("/x", { absent: true }), { params: Promise.resolve({ id: ids.hk2 }) })).status).toBe(200);
+    const off = await call();
+    expect(off.attendants.map((a) => a.id)).not.toContain(ids.hk2);
+    expect(off.roster.find((r) => r.id === ids.hk2)?.absent).toBe(true);
+    expect(off.actionableRoomIds.length).toBe(12);
+    expect((await absentPost(post("/x", { absent: false }), { params: Promise.resolve({ id: ids.hk2 }) })).status).toBe(200);
+    expect((await call()).attendants.map((a) => a.id)).toContain(ids.hk2);
+  });
+  it("nur Supervisor/Duty Manager dürfen die Anwesenheit ändern", async () => {
+    as("hk1", "room_attendant");
+    expect((await absentPost(post("/x", { absent: true }), { params: Promise.resolve({ id: ids.hk3 }) })).status).toBe(403);
   });
 });

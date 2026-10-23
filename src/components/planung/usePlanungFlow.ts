@@ -86,7 +86,8 @@ export function usePlanRun(date: string | null) {
   const [beamKey, setBeamKey] = useState(0);
   const [draft, setDraft] = useState<PlanDraft | null>(null);
   const [startedOk, setStartedOk] = useState<Set<string>>(new Set());
-  const [excluded, setExcluded] = useState<string[]>([]);
+  /** Kräfte, die der Vorschlag gerade einplant (Start: Team aus Schritt 2). Hinzu-/Abwählen rechnet neu. */
+  const [active, setActive] = useState<string[]>([]);
   const [confirmed, setConfirmed] = useState<{ assigned: number; open: number } | null>(null);
   const [confirming, setConfirming] = useState(false);
   const busy = useRef(false);
@@ -103,7 +104,7 @@ export function usePlanRun(date: string | null) {
     if (!date || busy.current) return;
     busy.current = true;
     last.current = { team, floorAssign };
-    setStarted(true); setRunning(true); setError(null); setFailedAt(null); setResult(null); setCompleted(0); setDraft(null); setExcluded([]); setConfirmed(null);
+    setStarted(true); setRunning(true); setError(null); setFailedAt(null); setResult(null); setCompleted(0); setDraft(null); setActive(team.hk); setConfirmed(null);
     const beat = () => (reduced() ? Promise.resolve() : wait(380)); // damit jede fertige Zeile sichtbar wird
     let phase: PlanPhase = "merge";
     try {
@@ -123,17 +124,16 @@ export function usePlanRun(date: string | null) {
     } finally { setRunning(false); busy.current = false; }
   }, [date, propose]);
 
-  /** Eine Kraft nicht einplanen (Supervisor entscheidet): neuer Vorschlag ohne sie; ihre Zimmer verteilen sich auf die anderen. */
-  const toggleExcluded = useCallback(async (hkId: string) => {
-    if (!last.current || busy.current) return;
+  /** Eine Kraft hinzu- oder abwählen (Supervisor entscheidet): neuer Vorschlag mit den gewählten Kräften; Handänderungen am Entwurf gehen dabei verloren. */
+  const toggleHk = useCallback(async (hkId: string) => {
+    if (busy.current) return;
     busy.current = true; setError(null);
-    const next = excluded.includes(hkId) ? excluded.filter((x) => x !== hkId) : [...excluded, hkId];
-    const ids = last.current.team.hk.filter((id) => !next.includes(id));
+    const next = active.includes(hkId) ? active.filter((x) => x !== hkId) : [...active, hkId];
     try {
-      if (!ids.length) throw new Error("Mindestens eine Kraft muss eingeplant bleiben.");
-      await propose(ids); setExcluded(next);
+      if (!next.length) throw new Error("Mindestens eine Kraft muss eingeplant bleiben.");
+      await propose(next); setActive(next);
     } catch (e) { setError(e instanceof Error ? e.message : ""); } finally { busy.current = false; }
-  }, [excluded, propose]);
+  }, [active, propose]);
 
   /** Zimmer von Hand zuteilen/verschieben/entfernen — ohne Sperren; Warnungen werden live neu gerechnet. */
   const assign = useCallback((roomId: string, hkId: string | null, confirmStarted: boolean) => {
@@ -159,5 +159,5 @@ export function usePlanRun(date: string | null) {
   }, [draft]);
 
   const states = phaseStates(completed, running, failedAt);
-  return { run, states, started, running, error, result, beamKey, done: !!result && !running, draft, view, assign, excluded, toggleExcluded, startedOk, confirm, confirming, confirmed };
+  return { run, states, started, running, error, result, beamKey, done: !!result && !running, draft, view, assign, active, toggleHk, startedOk, confirm, confirming, confirmed };
 }

@@ -15,9 +15,8 @@ export async function GET() {
   const today = berlinDate(new Date());
   const date = (await latestPlanDate()) ?? today;
   const plan = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER"] } }, select: { roomId: true } });
-  const attendants = await prisma.user.findMany({
-    where: { role: "room_attendant", hkActive: true, OR: [{ absentDate: null }, { absentDate: { not: today } }] },
-    select: { id: true, name: true }, orderBy: { name: "asc" },
-  });
-  return NextResponse.json({ date, today, actionableRoomIds: plan.map((p) => p.roomId), attendants });
+  const roster = (await prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, select: { id: true, name: true, absentDate: true }, orderBy: { name: "asc" } }))
+    .map((u) => ({ id: u.id, name: u.name, absent: u.absentDate === today }));
+  const attendants = roster.filter((u) => !u.absent).map(({ id, name }) => ({ id, name }));
+  return NextResponse.json({ date, today, actionableRoomIds: plan.map((p) => p.roomId), attendants, roster });
 }

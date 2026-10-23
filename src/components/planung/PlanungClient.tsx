@@ -78,10 +78,10 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const plan = usePlanRun(house.date);
   // Schritt „Plan“: Kräfte (auch bewusst nicht eingeplante), Supervisor- und Hausmann-Listen für den Entwurf
   const hkNames = Object.fromEntries((team.state?.members.hk ?? []).map((m) => [m.id, m.name]));
-  const planHkRows = [...(plan.draft?.input.housekeepers.map((h) => h.id) ?? []), ...plan.excluded].map((id) => {
-    const h = plan.draft?.input.housekeepers.find((x) => x.id === id);
-    const m = plan.view?.metrics.find((x) => x.hkId === id);
-    return { id, name: h?.name ?? hkNames[id] ?? id, rooms: m?.rooms ?? 0, credits: m?.credits ?? 0, lo: h?.lo ?? 0, hi: h?.hi ?? 0, excluded: plan.excluded.includes(id) };
+  const planHkRows = (team.state?.members.hk ?? []).map((m) => {
+    const h = plan.draft?.input.housekeepers.find((x) => x.id === m.id);
+    const v = plan.view?.metrics.find((x) => x.hkId === m.id);
+    return { id: m.id, name: m.name, rooms: v?.rooms ?? 0, credits: v?.credits ?? 0, lo: h?.lo ?? 0, hi: h?.hi ?? 0, excluded: !plan.active.includes(m.id) };
   });
   const supFloors = Object.entries(
     [1, 2, 3, 4, 5].reduce<Record<string, number[]>>((acc, f) => { const id = team.floorSel[f]; if (id) (acc[id] ??= []).push(f); return acc; }, {}),
@@ -231,7 +231,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         ) : (
           <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.view?.warnings ?? []} error={plan.error} started={plan.started}
             summary={plan.view && plan.draft ? { assigned: plan.draft.input.rooms.length - plan.view.unassigned.length, total: plan.draft.input.rooms.length, open: plan.view.unassigned.length } : null}
-            hkRows={planHkRows} onEdit={() => setEditor(true)} onToggleHk={(id) => void plan.toggleExcluded(id)} confirmed={plan.confirmed} />
+            hkRows={planHkRows} onEdit={() => setEditor(true)} onToggleHk={(id) => void plan.toggleHk(id)} confirmed={plan.confirmed} />
         )}
         {step >= 2 && team.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {team.error}</p>}
       </div>
