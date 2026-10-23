@@ -17,6 +17,8 @@ export type AutoplanWeights = { -readonly [K in keyof typeof AUTOPLAN_WEIGHTS]: 
 
 /** Zimmer ohne möglichen Housekeeper (z. B. nur Stufe 1 anwesend): bleibt offen, kostet fix. */
 export const UNASSIGNED_PENALTY = 500;
+/** Anspruchsvolles Zimmer bei einer Kraft der Stufe 1: nur eine Strafe (Warnung im Plan), nie eine Sperre. */
+export const LEVEL1_DEMANDING_PENALTY = 300;
 /** Zusatzterm: Zug zur Mitte des Tagesziels (nur innerhalb der Toleranz, damit nicht alle am Rand landen). */
 export const CENTER_PULL = 0.2;
 /** Abstand zweier Zimmernummern ab dem ein Sprung gezählt wird (gleiche Etage, anderer Flügel zählt immer). */

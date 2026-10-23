@@ -15,7 +15,10 @@ export class NetworkError extends Error {
 export class ApiError extends Error {
   constructor(
     message: string,
-    readonly status: number
+    readonly status: number,
+    /** Maschinenlesbarer Grund (z. B. STARTED_ROOM, OPEN_ROOMS), wenn der Server einen mitschickt. */
+    readonly code?: string,
+    readonly data?: Record<string, unknown>,
   ) {
     super(message);
     this.name = "ApiError";
@@ -42,7 +45,8 @@ export async function api<T = unknown>(
 
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
-    throw new ApiError((data as { error?: string }).error ?? `Request failed (${res.status})`, res.status);
+    const d = data as { error?: string; code?: string };
+    throw new ApiError(d.error ?? `Request failed (${res.status})`, res.status, d.code, data as Record<string, unknown>);
   }
   return data as T;
 }

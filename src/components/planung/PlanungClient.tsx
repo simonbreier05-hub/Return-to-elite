@@ -18,6 +18,8 @@ import FileDropCard from "./FileDropCard";
 import FloorStep from "./FloorStep";
 import HouseMap from "./HouseMap";
 import PlanungShell from "./PlanungShell";
+import PlanEditorWindow from "./PlanEditorWindow";
+import PlanConfirmDialog from "./PlanConfirmDialog";
 import PlanStep from "./PlanStep";
 import PrimaryButton from "./PrimaryButton";
 import ProgressRing from "./ProgressRing";
@@ -41,6 +43,8 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const [changedNote, setChangedNote] = useState<number>(0);
   const [over, setOver] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [editor, setEditor] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   const hadData = useRef(initialHouse.hasData);
@@ -72,6 +76,18 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const router = useRouter();
   const team = usePlanungTeam(house.date);
   const plan = usePlanRun(house.date);
+  // Schritt „Plan“: Kräfte (auch bewusst nicht eingeplante), Supervisor- und Hausmann-Listen für den Entwurf
+  const hkNames = Object.fromEntries((team.state?.members.hk ?? []).map((m) => [m.id, m.name]));
+  const planHkRows = [...(plan.draft?.input.housekeepers.map((h) => h.id) ?? []), ...plan.excluded].map((id) => {
+    const h = plan.draft?.input.housekeepers.find((x) => x.id === id);
+    const m = plan.view?.metrics.find((x) => x.hkId === id);
+    return { id, name: h?.name ?? hkNames[id] ?? id, rooms: m?.rooms ?? 0, credits: m?.credits ?? 0, lo: h?.lo ?? 0, hi: h?.hi ?? 0, excluded: plan.excluded.includes(id) };
+  });
+  const supFloors = Object.entries(
+    [1, 2, 3, 4, 5].reduce<Record<string, number[]>>((acc, f) => { const id = team.floorSel[f]; if (id) (acc[id] ??= []).push(f); return acc; }, {}),
+  ).map(([id, floors]) => ({ name: team.state?.members.sup.find((x) => x.id === id)?.name ?? id, floors }));
+  const housemen = (team.state?.members.hm ?? []).filter((m) => team.sel.hm.includes(m.id)).map((m) => m.name);
+
 
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
@@ -213,7 +229,9 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
             <p role="status" className="mt-3 min-h-5 text-sm text-brass-ink">{team.openFloors.length ? t("planungTool.floorOpen", { list: team.openFloors.join(", ") }) : ""}</p>
           </>
         ) : (
-          <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.result?.warnings ?? []} error={plan.error} started={plan.started} />
+          <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.view?.warnings ?? []} error={plan.error} started={plan.started}
+            summary={plan.view && plan.draft ? { assigned: plan.draft.input.rooms.length - plan.view.unassigned.length, total: plan.draft.input.rooms.length, open: plan.view.unassigned.length } : null}
+            hkRows={planHkRows} onEdit={() => setEditor(true)} onToggleHk={(id) => void plan.toggleExcluded(id)} confirmed={plan.confirmed} />
         )}
         {step >= 2 && team.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {team.error}</p>}
       </div>
@@ -226,13 +244,13 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     ? (merging || items.some((i) => i.busy) ? t("planungTool.applying") : mode === "apply" ? t("planungTool.applyLists") : mode === "next" ? t("planungTool.nextTeam") : t("planungTool.readLists"))
     : step === 2 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextFloors"))
     : step === 3 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextPlan"))
-    : plan.running ? t("planungTool.planRunning") : plan.done ? t("planungTool.reviewConfirm") : plan.error ? t("planungTool.planRetry") : t("planungTool.startPlan");
+    : plan.running ? t("planungTool.planRunning") : plan.confirmed ? t("planungTool.toAssignmentBtn") : plan.done ? t("planungTool.reviewConfirm") : plan.error ? t("planungTool.planRetry") : t("planungTool.startPlan");
   const mainDisabled = step === 1 ? busyStep1
     : step === 2 ? team.saving || team.loading || !team.state?.hasPlan || team.missing.length > 0
     : step === 3 ? team.saving || team.openFloors.length > 0
     : plan.running;
   const mainPulse = !mainDisabled && (step === 1 ? mode !== "read" || items.length === 0 : step === 4 ? !plan.running : true);
-  const mainClick = step === 1 ? main : step === 2 ? () => void next2() : step === 3 ? () => void next3() : plan.done ? () => router.push("/supervisor/planning") : startPlan;
+  const mainClick = step === 1 ? main : step === 2 ? () => void next2() : step === 3 ? () => void next3() : plan.confirmed ? () => router.push("/floor-plan") : plan.done ? () => setConfirmOpen(true) : startPlan;
 
   const actions = (
     <>
@@ -249,5 +267,22 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
 
   const top = <StepSegments current={step} labels={labels} dateText={dateLabel(house.date).split(",").slice(-1)[0]?.trim() ?? ""} stepText={t("planungTool.stepOf", { n: step })} ariaLabel={t("planungTool.stepsLabel")} leaveLabel={t("planungTool.leave")} />;
 
-  return <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date)} />} panel={panel} />;
+  const overlays = (
+    <>
+      {editor && plan.draft && (
+        <PlanEditorWindow draft={plan.draft} supervisors={supFloors} housemen={housemen} onAssign={plan.assign} onClose={() => setEditor(false)} onEditFloors={() => goStep(3)} />
+      )}
+      {confirmOpen && plan.view && plan.draft && (
+        <PlanConfirmDialog view={plan.view} names={Object.fromEntries(plan.draft!.input.housekeepers.map((h) => [h.id, h.name]))} confirming={plan.confirming}
+          onConfirm={plan.confirm} onClose={() => setConfirmOpen(false)} />
+      )}
+    </>
+  );
+
+  return (
+    <>
+      {overlays}
+      <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date)} />} panel={panel} />
+    </>
+  );
 }

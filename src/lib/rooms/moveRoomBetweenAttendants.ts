@@ -4,6 +4,7 @@ import { broadcast } from "@/lib/realtime";
 import type { Session } from "@/lib/auth";
 import { berlinDate } from "@/lib/dayplan/time";
 import { notifyReassignment } from "./notifyReassignment";
+import { isStartedStatus } from "./startedStatus";
 
 /**
  * Moves one room from its current attendant to another, keeping both
@@ -28,18 +29,18 @@ function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["
 
 export type MoveRoomResult =
   | { ok: true; room: Awaited<ReturnType<typeof updateRoom>> }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; error: string; code?: "STARTED_ROOM" };
+
+export { isStartedStatus };
 
 export async function moveRoomBetweenAttendants(
   session: Session,
   roomId: string,
-  toAttendantId: string
+  toAttendantId: string,
+  opts: { confirmStarted?: boolean } = {},
 ): Promise<MoveRoomResult> {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
   if (!room) return { ok: false, status: 404, error: "Room not found." };
-  if (!room.assignedToId) {
-    return { ok: false, status: 409, error: "Room is not currently assigned to anyone — use assign instead." };
-  }
   if (room.assignedToId === toAttendantId) {
     return { ok: false, status: 409, error: "Room is already assigned to this attendant." };
   }
@@ -49,11 +50,16 @@ export async function moveRoomBetweenAttendants(
     return { ok: false, status: 400, error: "toAttendantId must reference a room attendant." };
   }
 
+  // Keine Sperren: jedes Zimmer darf jederzeit jeder Kraft zugeteilt werden. Begonnene/fertige nur nach ausdrücklicher Bestätigung.
+  if (isStartedStatus(room.status) && !opts.confirmStarted) {
+    return { ok: false, status: 409, code: "STARTED_ROOM", error: `Zimmer ${room.number} ist schon begonnen oder fertig. Trotzdem verschieben?` };
+  }
+
   const fromAttendantId = room.assignedToId;
 
   const [targetRooms, sourceSiblings] = await Promise.all([
     prisma.room.findMany({ where: { assignedToId: toAttendantId }, orderBy: { routeOrder: "asc" } }),
-    prisma.room.findMany({ where: { assignedToId: fromAttendantId, id: { not: roomId } }, orderBy: { routeOrder: "asc" } }),
+    fromAttendantId ? prisma.room.findMany({ where: { assignedToId: fromAttendantId, id: { not: roomId } }, orderBy: { routeOrder: "asc" } }) : Promise.resolve([]),
   ]);
   const nextRouteOrder = targetRooms.reduce((max, r) => Math.max(max, r.routeOrder ?? -1), -1) + 1;
 
@@ -63,16 +69,16 @@ export async function moveRoomBetweenAttendants(
   ]);
 
   await audit({
-    action: "ROOM_MOVED",
+    action: isStartedStatus(room.status) ? "ROOM_MOVED_STARTED" : "ROOM_MOVED",
     userId: session.userId,
     roomId,
-    meta: { fromAttendantId, toAttendantId },
+    meta: { fromAttendantId, toAttendantId, status: room.status },
   });
 
   await notifyReassignment({ room: { id: room.id, number: room.number, floor: room.floor }, fromId: fromAttendantId, toId: toAttendantId, actorId: session.userId });
 
   broadcast("room:update", { room: updated });
-  broadcast("route:reordered", { attendantId: fromAttendantId, roomIds: sourceSiblings.map((r) => r.id) });
+  if (fromAttendantId) broadcast("route:reordered", { attendantId: fromAttendantId, roomIds: sourceSiblings.map((r) => r.id) });
   broadcast("route:reordered", { attendantId: toAttendantId, roomIds: [...targetRooms.map((r) => r.id), roomId] });
 
   return { ok: true, room: updated };
