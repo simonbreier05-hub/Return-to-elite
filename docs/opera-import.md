@@ -28,7 +28,7 @@ Betriebstag ist immer der heutige Tag der App-Uhr (Berlin). Das Datum in der Dat
 
 ## Einreichungs-Gate (fünf Listen)
 
-Zusätzlich muss der Stand jeder Liste dem Betriebstag entsprechen (oder bestätigt sein). Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `missingAppliedLists()` → HTTP 409 mit der Liste der fehlenden Typen.
+Zusätzlich muss der Stand jeder Liste dem Betriebstag entsprechen (oder bestätigt sein). Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `listBlockersNow()` → HTTP 409 mit den fehlenden bzw. unbestätigt veralteten Typen.
 
 ## Oberfläche und API
 
