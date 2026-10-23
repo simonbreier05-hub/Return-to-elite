@@ -6,9 +6,10 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { LiveOverview } from "@/lib/lists/overview";
+import ServiceOverview from "./ServiceOverview";
 import SupervisorList from "./SupervisorList";
 
-type Tab = "hk" | "sup" | "hm";
+type Tab = "overview" | "hk" | "sup" | "hm";
 
 /**
  * Duty Manager: Live-Einsicht auf alle Listen — Zimmermädchen-Listen (alle Etagen), Supervisor-Listen (Fortschritt je
@@ -17,14 +18,14 @@ type Tab = "hk" | "sup" | "hm";
  */
 export default function LiveListsPanel() {
   const { t } = useLocale();
-  const [tab, setTab] = useState<Tab>("hk");
+  const [tab, setTab] = useState<Tab>("overview");
   const [data, setData] = useState<LiveOverview | null>(null);
   const load = useCallback(() => api<LiveOverview>("/api/lists/overview").then(setData).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
   useSocket({ "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon() });
 
-  const tabs: [Tab, string][] = [["hk", t("dutyManager.liveHk")], ["sup", t("dutyManager.liveSup")], ["hm", t("dutyManager.liveHm")]];
+  const tabs: [Tab, string][] = [["overview", t("service.title")], ["hk", t("dutyManager.liveHk")], ["sup", t("dutyManager.liveSup")], ["hm", t("dutyManager.liveHm")]];
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-2" role="tablist">
@@ -34,6 +35,7 @@ export default function LiveListsPanel() {
         ))}
       </div>
 
+      {tab === "overview" && <ServiceOverview />}
       {tab === "hk" && <SupervisorList />}
 
       {tab === "sup" && (

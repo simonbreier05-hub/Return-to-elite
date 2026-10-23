@@ -8,6 +8,7 @@ import { DEPARTURES_MIN_HORIZON_DAYS } from "@/lib/import/mapping";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import type { ArrivalRow, DepartureRow, GuestName, ParseIssue, TraceRow } from "@/lib/import/types";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
+import { notifyListUpdate, type NewTrace, type RoomChange } from "@/lib/rooms/notifyListUpdate";
 import { compareWithForecast, deriveDayPlan, type DayCleaningType, type DayFiguresDerived } from "./derive";
 import { berlinToUtc } from "./time";
 import { legacyTraceKey, traceKey } from "./traceKey";
@@ -55,7 +56,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   else if (!arr) issues.push(issue("WARNING", "NO_ARRIVALS", "Keine Arrivals übernommen — Anreisen heute fehlen im Plan (Frühanreisen stehen evtl. in den Departures)."));
   else if (arr.batch.businessDate !== date) issues.push(issue("WARNING", "ARRIVALS_OTHER_DAY", `Die Arrivals-Liste gilt für den ${arr.batch.businessDate}, nicht für ${date}. Nur Anreisen vom ${date} werden berücksichtigt.`));
 
-  const rooms = await prisma.room.findMany({ select: { id: true, number: true, lastLinenChangeAt: true, assignedToId: true } });
+  const rooms = await prisma.room.findMany({ select: { id: true, number: true, floor: true, lastLinenChangeAt: true, assignedToId: true } });
   const roomByNumber = new Map(rooms.map((r) => [r.number, r]));
   const known = <T extends { room: string }>(rows: T[]) => {
     const unknown = [...new Set(rows.filter((r) => !roomByNumber.has(r.room)).map((r) => r.room))];
@@ -113,22 +114,17 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
     ...derived.rooms.filter((r) => oldByRoom.get(r.room)?.cleaningType !== r.cleaningType).map((r) => r.room),
     ...[...oldByRoom.keys()].filter((n) => !newByRoom.has(n)),
   ])];
-  const notify = async (roomNumber: string, roomId: string, from: string, to: string) => {
-    changedAssigned++;
-    const message = `Zimmer ${roomNumber}: Reinigungsart nach Nachimport geändert (${from} → ${to}). Zuteilung bleibt unverändert — bitte prüfen.`;
-    for (const targetRole of ["supervisor", "room_attendant"]) {
-      const dedupeKey = `DAYPLAN:${date}:${roomNumber}:${to}:${targetRole}`;
-      if (await prisma.notification.findFirst({ where: { dedupeKey } })) continue; // gleiche Meldung schon vorhanden
-      const n = await prisma.notification.create({ data: { type: "DAY_PLAN_CHANGED", level: "warning", targetRole, roomId, message, dedupeKey } });
-      broadcast("notification:new", { notification: n });
-    }
-  };
+  // Geänderte Arten (ohne manuell überschriebene) für die Meldungen an die Betroffenen — nach dem Schreiben, einmal je Person
+  const typeChanges: RoomChange[] = [];
   for (const [number, old] of oldByRoom) {
     const nu = newByRoom.get(number);
     if (old.typeOverridden) continue;
-    if (!nu && old.room.assignedToId) await notify(number, old.roomId, old.cleaningType, "—");
-    else if (nu && nu.cleaningType !== old.cleaningType && old.room.assignedToId) await notify(number, old.roomId, old.cleaningType, nu.cleaningType);
+    const r = roomByNumber.get(number);
+    if (!r) continue;
+    if (!nu) typeChanges.push({ number, floor: r.floor, roomId: old.roomId, from: old.cleaningType, to: "—" });
+    else if (nu.cleaningType !== old.cleaningType) typeChanges.push({ number, floor: r.floor, roomId: old.roomId, from: old.cleaningType, to: nu.cleaningType });
   }
+  changedAssigned = typeChanges.filter((c) => !!roomByNumber.get(c.number)?.assignedToId).length;
   for (const [number, old] of oldByRoom) if (!newByRoom.has(number) && !old.typeOverridden) await prisma.dayRoomPlan.delete({ where: { id: old.id } });
   for (const r of derived.rooms) {
     const room = roomByNumber.get(r.room)!;
@@ -155,6 +151,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   ];
   const unknownCodes = new Set<string>();
   let newTraces = 0;
+  const createdTraces: NewTrace[] = [];
   for (const c of candidates) {
     const dedupeKey = traceKey(c.room, c.code, c.date, c.text);
     const existing = (await prisma.trace.findUnique({ where: { dedupeKey } }))
@@ -171,6 +168,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
       dept: classified ? "HOUSEMAN" : deptMap[code] ?? "HOUSEKEEPING",
     } });
     newTraces++;
+    createdTraces.push({ number: c.room, floor: roomByNumber.get(c.room)!.floor, dept: classified ? "HOUSEMAN" : deptMap[code] ?? "HOUSEKEEPING" });
   }
   if (unknownCodes.size) issues.push(issue("WARNING", "UNKNOWN_TRACE_CODE",
     `Unbekannte Trace-Codes (${[...unknownCodes].sort().join(", ")}): Housekeeping vorbelegt. Zuordnung unter Einstellungen "traceDept.<CODE>" ergänzen. Bekannt: ${Object.keys(TRACE_DEPT_DEFAULTS).join(", ")}.`));
@@ -188,6 +186,8 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
     roomTasks++;
   }
 
+  // Jede betroffene Person erfährt von Änderungen ihrer Liste (nicht beim allerersten Import des Tages)
+  if (existingPlan.length > 0) await notifyListUpdate({ date, actorId: userId, changes: typeChanges, newTraces: createdTraces, source: "IMPORT" });
   await audit({ action: "DAY_PLAN_MERGED", userId, meta: { date, figures: derived.figures, newTraces, roomTasks, issues: issues.length, changedRooms, first: existingPlan.length === 0 } });
   return {
     date, figures: derived.figures, issues, changedRooms,
@@ -260,5 +260,7 @@ export async function overrideCleaningType(date: string, roomNumber: string, cle
   const same = cleaningType === derivedType;
   const updated = await prisma.dayRoomPlan.update({ where: { id: row.id }, data: { cleaningType, typeOverridden: !same, derivedType: same ? null : derivedType } });
   await audit({ action: "CLEANING_TYPE_CHANGED", userId, roomId: row.roomId, meta: { date, from: row.cleaningType, to: cleaningType } });
+  const room = await prisma.room.findUnique({ where: { id: row.roomId }, select: { number: true, floor: true } });
+  if (room && row.cleaningType !== cleaningType) await notifyListUpdate({ date, actorId: userId, changes: [{ number: room.number, floor: room.floor, roomId: row.roomId, from: row.cleaningType, to: cleaningType }], newTraces: [], source: "MANUAL" });
   return updated;
 }

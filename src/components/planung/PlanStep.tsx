@@ -22,7 +22,7 @@ export default function PlanStep({
   onEdit: () => void;
   onToggleHk: (id: string) => void;
   /** Karte, Kraft-Zeile oder „offen“ angetippt: öffnet die Detailansicht (Tab, Ansicht). */
-  onOpen: (tab: "rooms" | "supervisors" | "houseman", view?: "plan" | "list") => void;
+  onOpen: (tab: "rooms" | "supervisors" | "houseman" | "overview", view?: "plan" | "list") => void;
   confirmed: { assigned: number; open: number } | null;
 }) {
   const { t } = useLocale();
@@ -91,9 +91,14 @@ export default function PlanStep({
                   </li>
                 ))}
               </ul>
-              <button type="button" onClick={onEdit} className="mt-3 inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
-                {summary.open > 0 ? t("planungTool.openAssign") : t("planungTool.editDraft")}
-              </button>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                  {summary.open > 0 ? t("planungTool.openAssign") : t("planungTool.editDraft")}
+                </button>
+                <button type="button" onClick={() => onOpen("overview")} className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                  {t("service.title")}
+                </button>
+              </div>
             </section>
           )}
           <section className="mt-5" aria-labelledby="plan-warn">

@@ -4,12 +4,13 @@ import { useEffect, useState } from "react";
 import { api } from "@/components/api";
 import CloseButton from "@/components/CloseButton";
 import { useEscapeKey } from "@/components/useEscapeKey";
+import ServiceOverview from "@/components/lists/ServiceOverview";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { HousemanItem } from "@/lib/lists/housemanList";
 import type { PlanDraft } from "./usePlanungFlow";
 
-export type EditorTab = "rooms" | "supervisors" | "houseman";
+export type EditorTab = "rooms" | "supervisors" | "houseman" | "overview";
 
 /**
  * Entwurf ansehen und bearbeiten (Vollbild-Sheet, mobil und iPad): Zimmerlisten (Grundriss im Entwurfsmodus oder Liste je
@@ -41,7 +42,7 @@ export default function PlanEditorWindow({
     api<{ items: HousemanItem[] }>("/api/lists/houseman").then((d) => setTasks(d.items)).catch(() => setTasks([]));
   }, [tab, tasks]);
 
-  const tabs: [EditorTab, string][] = [["rooms", t("planungTool.tabRooms")], ["supervisors", t("planungTool.tabSupervisors")], ["houseman", t("planungTool.tabHouseman")]];
+  const tabs: [EditorTab, string][] = [["overview", t("service.title")], ["rooms", t("planungTool.tabRooms")], ["supervisors", t("planungTool.tabSupervisors")], ["houseman", t("planungTool.tabHouseman")]];
   const roomsByFloor = (f: number) => draft.input.rooms.filter((r) => r.floor === f);
   const sel = "h-11 w-full rounded-lg border border-charcoal/20 bg-white px-2 text-sm sm:w-56";
   return (
@@ -60,6 +61,8 @@ export default function PlanEditorWindow({
               className={`h-11 rounded-lg border px-4 text-sm font-medium ${tab === id ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white"}`}>{label}</button>
           ))}
         </div>
+
+        {tab === "overview" && <ServiceOverview />}
 
         {tab === "rooms" && (
           <PlanningFloorPlanPanel
