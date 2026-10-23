@@ -348,6 +348,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             <span aria-hidden className={`transition-transform duration-150 ${moreOpen ? "rotate-180" : ""}`}>▾</span>
           </button>
           <Link
+            href="/supervisor/service"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            {t("service.title")}
+          </Link>
+          <Link
             href="/planung"
             className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >

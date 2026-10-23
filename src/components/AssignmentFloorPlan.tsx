@@ -6,8 +6,6 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import Collapsible from "@/components/Collapsible";
-import ServiceOverview from "@/components/lists/ServiceOverview";
 import RedistributionCards from "@/components/RedistributionCards";
 
 interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[] }
@@ -36,11 +34,6 @@ export default function AssignmentFloorPlan() {
   if (!day) return null;
   return (
     <div>
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card" aria-label={t("service.title")}>
-        <Collapsible defaultOpen summary={<h3 className="font-serif text-xl">{t("service.title")}</h3>}>
-          <div className="pt-2"><ServiceOverview key={version} /></div>
-        </Collapsible>
-      </section>
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card" aria-label={t("planning.presentTitle")}>
         <h3 className="font-serif text-xl">{t("planning.presentTitle")}</h3>
         <p className="mb-2 text-xs text-graphite/60">{t("planning.presentHint")}</p>
