@@ -86,6 +86,21 @@ describe("Schritt Etagen", () => {
 describe("Schritt Plan", () => {
   const plan = (counts: { roomLists: number; supervisorLists: number; hausmannLists: number } | null, extra = {}) =>
     html(h(PlanStep, { states: phaseStates(counts ? 5 : 1, !counts, null), counts, warnings: [], error: null, started: true, ...extra }));
+  it("Entwurf: „X von Y zugeteilt“, Zähler offener Zimmer, Kräfte mit Credits und „Nicht einplanen“ (je Tippfläche ≥ 44 px)", () => {
+    const counts = { roomLists: 3, supervisorLists: 1, hausmannLists: 1 };
+    const out = plan(counts, {
+      summary: { assigned: 28, total: 30, open: 2 }, onEdit: () => {}, onToggleHk: () => {}, confirmed: null,
+      hkRows: [{ id: "a", name: "Anna Test", rooms: 10, credits: 14.5, lo: 12.5, hi: 15.5, excluded: false }, { id: "b", name: "Bea Test", rooms: 0, credits: 0, lo: 12.5, hi: 15.5, excluded: true }],
+    });
+    expect(out).toContain("28 von 30 Zimmern zugeteilt");
+    expect(out).toContain("2 offen");
+    expect(out).toContain("Offene Zimmer zuteilen");
+    expect(out).toContain("14,5 / 12,5–15,5");
+    expect(out).toContain("Nicht einplanen");
+    expect(out).toContain("Wieder einplanen");
+    expect(out).toContain("Heute nicht eingeplant");
+    expect((out.match(/min-h-11/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  });
   it("Statuszeilen folgen dem Fortschritt", () => {
     const out = plan(null);
     expect(out).toContain('data-state="done"');

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { api } from "@/components/api";
+import { api, ApiError } from "@/components/api";
+import { isStartedStatus } from "@/lib/rooms/startedStatus";
+import type { Assignment, PlanRoom } from "@/lib/autoplan/types";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
 import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse, type RoomFlags } from "@/components/FloorPlanGrid";
@@ -40,6 +42,15 @@ interface SettingsResponse {
 }
 
 type AssignMode = "room-first" | "housekeeper-first";
+type PanelView = "plan" | "list";
+
+/** Entwurfsmodus (Planungstool, Schritt „Plan“): dieselbe Ansicht, aber die Zuteilung kommt aus dem Entwurf und geht dorthin zurück. */
+export interface DraftBinding {
+  rooms: PlanRoom[];
+  assignment: Assignment;
+  /** Die Kraft wechselt; `confirmStarted` ist gesetzt, wenn für ein begonnenes/fertiges Zimmer ausdrücklich bestätigt wurde. */
+  onAssign: (roomId: string, attendantId: string | null, confirmStarted: boolean) => void;
+}
 
 const DAY_CATEGORY_KEY: Record<RoomDayCategory, TKey | null> = {
   ARRIVAL: "planning.dayCategoryArrival",
@@ -67,15 +78,19 @@ const DAY_CATEGORY_KEY: Record<RoomDayCategory, TKey | null> = {
 export default function PlanningFloorPlanPanel({
   onShiftAttendants,
   actionableRoomIds,
-  deferredRoomIds,
+  deferredRoomIds = [],
+  draft,
 }: {
   onShiftAttendants: OnShiftAttendant[];
   actionableRoomIds: string[];
-  deferredRoomIds: string[];
+  deferredRoomIds?: string[];
+  draft?: DraftBinding;
 }) {
   const { t } = useLocale();
   const [plan, setPlan] = useState<FloorPlanResponse | null>(null);
-  const [liveRooms, setLiveRooms] = useState<LiveRoom[]>([]);
+  const [rawRooms, setLiveRooms] = useState<LiveRoom[]>([]);
+  const [view, setView] = useState<PanelView>("plan");
+  const [startedPrompt, setStartedPrompt] = useState<{ room: RoomFlags; number: string; attendantId: string | null } | null>(null);
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<AssignMode>("housekeeper-first");
@@ -118,6 +133,17 @@ export default function PlanningFloorPlanPanel({
     setPickingRoom(null);
   };
 
+  // Im Entwurfsmodus kommt die Zuteilung aus dem Entwurf (nicht aus der Datenbank).
+  const liveRooms = useMemo<LiveRoom[]>(() => {
+    if (!draft) return rawRooms;
+    const nameOf = new Map(onShiftAttendants.map((a) => [a.id, a.name]));
+    const inDraft = new Set(draft.rooms.map((r) => r.id));
+    return rawRooms.map((r) => {
+      const to = inDraft.has(r.id) ? draft.assignment[r.id] ?? null : null;
+      return { ...r, assignedToId: to, assignedTo: to ? { id: to, name: nameOf.get(to) ?? "" } : null };
+    });
+  }, [rawRooms, draft, onShiftAttendants]);
+
   const liveByNumber = useMemo(() => new Map(liveRooms.map((r) => [r.number, r])), [liveRooms]);
   const liveById = useMemo(() => new Map(liveRooms.map((r) => [r.id, r])), [liveRooms]);
 
@@ -142,6 +168,7 @@ export default function PlanningFloorPlanPanel({
   const roomFacts = useMemo(() => {
     const linenCycleDays = settings?.planningCredits.linenCycleDays ?? 3;
     const credits = settings?.roomTypeCredits ?? {};
+    const draftCredit = new Map((draft?.rooms ?? []).map((r) => [r.id, r.credits]));
     const tidyCredit = settings?.planningCredits.tidyCredit ?? 0.5;
     const map = new Map<
       string,
@@ -161,10 +188,10 @@ export default function PlanningFloorPlanPanel({
         linenCycleDays,
       });
       const credit = computeRoomCredit({ type: r.type as RoomType, category, laundryDue, credits: credits as Record<RoomType, number>, tidyCredit });
-      map.set(r.id, { category, laundryDue, credit, guestDndActive: r.guestDndActive ?? false });
+      map.set(r.id, { category, laundryDue, credit: draftCredit.get(r.id) ?? credit, guestDndActive: r.guestDndActive ?? false });
     }
     return map;
-  }, [liveRooms, settings, now]);
+  }, [liveRooms, settings, now, draft?.rooms]);
 
   const creditsByAttendant = useMemo(() => {
     const totals = new Map<string, number>();
@@ -183,9 +210,19 @@ export default function PlanningFloorPlanPanel({
 
   const targetCredits = settings?.planningCredits.targetCreditsPerAttendant ?? 14;
 
-  const assignRoom = async (room: RoomFlags, attendantId: string | null) => {
+  /**
+   * Zuteilen, verschieben oder entfernen — ohne Sperren. Begonnene/fertige Zimmer fragen zuerst nach (Fortschritt bleibt erhalten).
+   * Credit-Ziel und Etagenlimit sind nur Hinweise und blockieren nie.
+   */
+  const assignRoom = async (room: RoomFlags, attendantId: string | null, confirmStarted = false) => {
     const live = liveByNumber.get(room.number);
     if (!live) return;
+    if (live.assignedToId === attendantId) return;
+    if (!confirmStarted && isStartedStatus(live.status) && live.assignedToId) {
+      setStartedPrompt({ room, number: room.number, attendantId });
+      return;
+    }
+    if (draft) { draft.onAssign(live.id, attendantId, confirmStarted); return; }
     const attendantName = attendantId ? onShiftAttendants.find((a) => a.id === attendantId)?.name ?? "" : null;
     // Optimistic: the tap should show up on the grid immediately, not after
     // a round trip — reverted from a fresh fetch if the write fails.
@@ -197,9 +234,10 @@ export default function PlanningFloorPlanPanel({
       )
     );
     try {
-      await api(`/api/rooms/${live.id}/assign`, { body: { attendantId } });
+      await api(`/api/rooms/${live.id}/assign`, { body: { attendantId, confirmStarted } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      if (e instanceof ApiError && e.code === "STARTED_ROOM") setStartedPrompt({ room, number: room.number, attendantId });
+      else setError(e instanceof Error ? e.message : String(e));
       loadLive();
     }
   };
@@ -249,10 +287,13 @@ export default function PlanningFloorPlanPanel({
           </div>
         </div>
         <div>
-          <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{t("planning.floorPlanUnassignedLegend")}</div>
+          <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{t("planning.floorPlanAssignmentLabel")}</div>
           <div className={`mt-1 font-serif text-3xl ${unassignedRoomIds.length > 0 ? "text-gold-soft" : "text-status-clean"}`}>
-            {t("planning.floorPlanUnassignedOfActionable", { unassigned: unassignedRoomIds.length, total: totalActionable })}
+            {t("planning.floorPlanAssignedOf", { assigned: totalActionable - unassignedRoomIds.length, total: totalActionable })}
           </div>
+          {unassignedRoomIds.length > 0 && (
+            <div className="mt-0.5 text-sm font-medium text-gold-soft">{t("planning.floorPlanUnassignedOfActionable", { unassigned: unassignedRoomIds.length, total: totalActionable })}</div>
+          )}
         </div>
         <OccupancyCleanCounter rooms={liveRooms.map((r) => ({ occupancy: r.occupancy ?? "VACANT", status: r.status }))} />
       </div>
@@ -294,6 +335,15 @@ export default function PlanningFloorPlanPanel({
         </button>
       </div>
 
+      <div className="mb-3 flex flex-wrap gap-2">
+        {(["plan", "list"] as const).map((v) => (
+          <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v}
+            className={`h-11 rounded-lg border px-4 text-sm font-medium transition ${view === v ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white"}`}>
+            {v === "plan" ? t("planning.floorPlanViewPlan") : t("planning.floorPlanViewList")}
+          </button>
+        ))}
+      </div>
+
       {mode === "room-first" ? (
         <p className="mb-3 text-sm text-graphite/60">{t("planning.floorPlanModeRoomFirstHint")}</p>
       ) : (
@@ -326,6 +376,34 @@ export default function PlanningFloorPlanPanel({
         </>
       )}
 
+      {view === "list" ? (
+        <div className="grid gap-3 lg:grid-cols-2">
+          {[...onShiftAttendants.map((a) => ({ id: a.id as string | null, name: a.name })), { id: null as string | null, name: t("planning.floorPlanOpenCard") }].map((col) => {
+            const rooms = liveRooms.filter((r) => (col.id === null ? unassignedRoomIds.includes(r.id) : r.assignedToId === col.id) && (col.id === null || totalActionable === 0 || actionableRoomIds.includes(r.id)));
+            const credits = col.id ? creditsByAttendant.get(col.id) ?? 0 : null;
+            return (
+              <section key={col.id ?? "open"} className={`rounded-2xl border p-3 ${col.id === null && rooms.length ? "border-status-in-progress/40 bg-white" : "border-charcoal/10 bg-white"}`}>
+                <div className="mb-2 flex items-baseline justify-between gap-2">
+                  <h4 className="font-serif text-lg">{col.name} <span className="text-sm text-graphite/60">· {rooms.length}</span></h4>
+                  {credits !== null && <span className={`text-sm ${credits > targetCredits ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>{Math.round(credits * 10) / 10} {t("planning.floorPlanCreditsShort")}</span>}
+                </div>
+                {rooms.length === 0 ? <p className="text-xs text-graphite/50">{t("planning.floorPlanNoRooms")}</p> : (
+                  <ul className="flex flex-wrap gap-1.5">
+                    {rooms.map((r) => (
+                      <li key={r.id}>
+                        <button type="button" onClick={() => { const f = plan.rooms.find((x) => x.number === r.number); if (f) setPickingRoom(f); }}
+                          className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium hover:border-gold-line">
+                          {r.number}{isStartedStatus(r.status) ? " ▶" : ""} <span className="text-xs text-graphite/60">{Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            );
+          })}
+        </div>
+      ) : (
       <FloorPlanGrid
         plan={plan}
         onRoomClick={handleRoomClick}
@@ -353,6 +431,7 @@ export default function PlanningFloorPlanPanel({
           };
         }}
       />
+      )}
 
       {roomsDueForLinen.length > 0 && (
         <div className="mt-3 rounded-2xl border border-status-in-progress/30 bg-status-in-progress/10 p-4">
@@ -415,7 +494,7 @@ export default function PlanningFloorPlanPanel({
         </div>
       )}
 
-      {mode === "room-first" && pickingRoom && (
+      {pickingRoom && (mode === "room-first" || view === "list") && (
         <Modal
           title={t("planning.floorPlanPickAttendantForRoom", { number: pickingRoom.number })}
           onClose={() => setPickingRoom(null)}
@@ -442,6 +521,23 @@ export default function PlanningFloorPlanPanel({
                 </button>
               );
             })}
+            {liveByNumber.get(pickingRoom.number)?.assignedToId && (
+              <button type="button" onClick={() => { assignRoom(pickingRoom, null); setPickingRoom(null); }}
+                className="flex h-12 items-center justify-center rounded-xl border border-charcoal/15 px-4 text-sm font-medium text-graphite hover:border-status-out-of-order/40">
+                {t("planning.floorPlanOpenCard")}
+              </button>
+            )}
+          </div>
+        </Modal>
+      )}
+
+      {startedPrompt && (
+        <Modal title={t("planning.floorPlanStartedTitle", { number: startedPrompt.number })} onClose={() => setStartedPrompt(null)}>
+          <p className="mb-4 text-sm text-graphite/80">{t("planning.floorPlanStartedBody")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => { const p = startedPrompt; setStartedPrompt(null); void assignRoom(p.room, p.attendantId, true); }}
+              className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line">{t("planning.floorPlanStartedConfirm")}</button>
+            <button type="button" onClick={() => setStartedPrompt(null)} className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("common.cancel")}</button>
           </div>
         </Modal>
       )}

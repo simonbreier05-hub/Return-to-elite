@@ -136,7 +136,7 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
             {applied && (
               <>
                 <span className="text-sm text-status-clean">{applied}</span>
-                <Link href="/supervisor/planning" className="text-sm font-medium text-gold-soft hover:underline">{t("importPage.dpToPlanning")}</Link>
+                <Link href="/floor-plan" className="text-sm font-medium text-gold-soft hover:underline">{t("importPage.dpToPlanning")}</Link>
               </>
             )}
           </div>

@@ -1048,21 +1048,10 @@ function RoomDrawer({
 
         <div className="mt-4">
           <label className="mb-1 block text-sm font-medium">{t("supervisor.assignedAttendant")}</label>
-          <select
-            value={room.assignedTo?.id ?? ""}
-            onChange={async (e) => {
-              const res = await api<{ room: Room }>(`/api/rooms/${room.id}/assign`, {
-                body: { attendantId: e.target.value || null },
-              });
-              onAssigned(res.room);
-            }}
-            className="h-12 w-full rounded-lg border border-charcoal/20 bg-white px-3"
-          >
-            <option value="">{t("supervisor.unassignedOption")}</option>
-            {attendants.map((a) => (
-              <option key={a.id} value={a.id}>{attendantLabel(a)}</option>
-            ))}
-          </select>
+          <p className="flex min-h-12 items-center rounded-lg border border-charcoal/10 bg-parchment/40 px-3 text-sm">
+            {room.assignedTo ? attendantLabel(room.assignedTo as Attendant) : t("supervisor.unassignedOption")}
+          </p>
+          <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
         </div>
 
         <div className="mt-4">

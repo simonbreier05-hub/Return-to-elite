@@ -90,23 +90,20 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     const k = idx[i];
     if (k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length) {
       warnings.push({ code: "LEVEL1_DEMANDING", severity: "WARNING", roomIds: [r.id], hkId: input.housekeepers[k].id,
-        message: `${input.housekeepers[k].name} (Stufe 1) hat das anspruchsvolle Zimmer ${r.number}. Bitte prüfen.` });
+        message: `${input.housekeepers[k].name} (Stufe 1) hat das anspruchsvolle Zimmer ${r.number}. Wurde zugeteilt, weil sonst niemand mehr frei ist — bitte prüfen.` });
     }
   });
   if (unassigned.length) {
     const rs = unassigned.map((id) => roomById.get(id)!);
-    const noSenior = !input.housekeepers.some((h) => h.level >= 2);
     warnings.push({ code: "UNASSIGNED", severity: "WARNING", roomIds: unassigned,
-      message: rs.some((r) => r.demanding.length) && noSenior
-        ? `Zimmer ${rs.map((r) => r.number).join(", ")} bleiben offen: keine Kraft der Stufe 2 oder 3 anwesend. Bitte selbst entscheiden.`
-        : `Zimmer ${rs.map((r) => r.number).join(", ")} bleiben offen. Bitte selbst zuteilen.` });
+      message: `${unassigned.length} Zimmer sind noch offen (${rs.map((r) => r.number).join(", ")}). Bitte im Grundriss zuteilen.` });
   }
   const totalCredits = totalAll;
   const needed = Math.ceil(totalCredits / Math.max(1, input.fullTimeTarget));
   const present = input.housekeepers.length;
   if (overstaffed) {
     warnings.push({ code: "TOO_MANY_STAFF", severity: "INFO",
-      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}. Nicht benötigte Kräfte bitte abwählen.` });
+      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}. Wenn jemand nicht eingeplant werden soll, bitte „Nicht einplanen“ wählen — sonst sind alle Anwesenden gleichmäßig eingeplant.` });
   }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
