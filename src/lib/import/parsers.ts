@@ -7,7 +7,7 @@ import {
   DATE_RE, ROOM_RE, bodyLines, findHeaderDateRaw, issue, makeDateCtx, pageInfo, type DateCtx,
 } from "./parseCommon";
 import type {
-  ArrivalRow, DepartureRow, ForecastDayRow, ParseIssue, ParseOptions, ParseResult, PdfLine, TraceEntry, TraceRow,
+  ArrivalRow, DepartureRow, ForecastDayRow, InHouseRow, ParseIssue, ParseOptions, ParseResult, PdfLine, TraceEntry, TraceRow,
 } from "./types";
 
 const NO_TEXT_MSG = "Foto/Scan wird nicht unterstützt. Bitte PDF- oder Excel-Export aus Opera hochladen.";
@@ -122,6 +122,59 @@ export function parseDepartures(
   }
   if (!periodTo) issues.push(issue("WARNING", "PERIOD_UNKNOWN", "Exportzeitraum nicht im Fuß der Liste gefunden."));
   return { type: "DEPARTURES", rows, issues, reportDate, periodFrom, periodTo, pagesSeen: seen, pagesTotal: total, dates: ctx.res };
+}
+
+// ───────────────────────────── In House (Tagesbelegung) ─────────────────────────────
+
+/**
+ * Opera „In House": eine Zeile je belegtes Zimmer — Zimmer, Name, Anreise, Abreise,
+ * Erwachsene, Kinder, Zimmer, Nächte (gleiche Zellenfolge wie die Departures-Zeilen).
+ * Geschäftsdatum = Druckdatum der Liste.
+ */
+export function parseInHouse(
+  lines: PdfLine[], opts: ParseOptions = {}, cfg: ImportMappingConfig = DEFAULT_MAPPING,
+): ParseResult<InHouseRow> {
+  const issues: ParseIssue[] = [];
+  if (!lines.length) return empty("INHOUSE", [issue("CRITICAL", "NO_TEXT", NO_TEXT_MSG)]);
+  const { body, header } = bodyLines(lines, /^(Room|Rm)\b/i);
+  const { seen, total } = pageIssues(lines, issues);
+  const vipRe = new RegExp(cfg.vipPattern, "i");
+
+  type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; nts: number; vip: boolean; line: PdfLine };
+  const raws: Raw[] = [];
+  for (const l of body) {
+    const s = l.segments;
+    if (!ROOM_RE.test(s[0] ?? "")) continue;
+    const di = s.map((x, i) => (DATE_RE.test(x) ? i : -1)).filter((i) => i >= 0);
+    if (di.length < 2) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Zeile ohne zwei Datumswerte.", { room: s[0], page: l.page })); continue; }
+    const t = tokens(s.slice(di[1] + 1));
+    const ntsM = /^(\d+)([A-Z]+)?$/.exec(t[3] ?? "");
+    if (!isInt(t[0]) || !isInt(t[1]) || !ntsM) {
+      issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen/Nächte nicht lesbar.", { room: s[0], page: l.page })); continue;
+    }
+    raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: Number(t[0]), chl: Number(t[1]), nts: Number(ntsM[1]),
+      vip: s.slice(2, di[0]).some((x) => vipRe.test(x)), line: l });
+  }
+
+  const hdrRaw = findHeaderDateRaw(header);
+  const ctx: DateCtx = makeDateCtx([...raws.flatMap((r) => [r.arr, r.dep]), ...(hdrRaw ? [hdrRaw] : [])], issues, cfg.dateFormat,
+    opts.confirmedDateFormat, undefined, { raw: hdrRaw, iso: opts.expectedDate });
+
+  const rows: InHouseRow[] = [];
+  if (ctx.res.format) {
+    for (const r of raws) {
+      const arrDate = ctx.iso(r.arr), depDate = ctx.iso(r.dep);
+      if (!arrDate || !depDate) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Datum nicht lesbar.", { room: r.room, page: r.line.page })); continue; }
+      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg), arrDate, depDate, adults: r.adl, children: r.chl, nights: r.nts, vip: r.vip });
+    }
+  }
+  const dup = rows.length - new Set(rows.map((r) => r.room)).size;
+  if (dup > 0) issues.push(issue("WARNING", "DUPLICATE_ROWS", `${dup} Zimmer kommen mehrfach vor.`));
+  if (ctx.res.format && !rows.length && !issues.some((i) => i.severity === "CRITICAL")) {
+    issues.push(issue("CRITICAL", "NO_ROWS", "Keine Zimmerzeilen gefunden — ist das die „In House“-Liste?"));
+  }
+  const reportDate = hdrRaw ? ctx.iso(hdrRaw) : null;
+  return { type: "INHOUSE", rows, issues, reportDate, periodFrom: null, periodTo: null, pagesSeen: seen, pagesTotal: total, dates: ctx.res };
 }
 
 // ───────────────────────────── Arrivals ─────────────────────────────

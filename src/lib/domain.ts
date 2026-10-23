@@ -261,7 +261,7 @@ export const DEFAULT_SETTINGS = {
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 
 /** Morgen-Import der Opera-Listen (siehe src/lib/import). */
-export const IMPORT_TYPES = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES"] as const;
+export const IMPORT_TYPES = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES", "INHOUSE"] as const;
 export type ImportType = (typeof IMPORT_TYPES)[number];
 export const ImportTypeSchema = z.enum(IMPORT_TYPES);
 

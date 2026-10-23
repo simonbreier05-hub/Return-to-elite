@@ -68,10 +68,12 @@ describe("Dateistatus", () => {
     expect(s("error")).toBe("error");
     expect(s("applied")).toBe("applied");
   });
-  it("Weiter geht nur mit übernommenen Departures", () => {
+  it("Weiter geht erst, wenn alle fünf Listen übernommen sind — auch vier von fünf reichen nicht", () => {
     expect(listsReady({})).toBe(false);
     expect(listsReady({ FORECAST: true, ARRIVALS: true })).toBe(false);
-    expect(listsReady({ DEPARTURES: true })).toBe(true);
+    expect(listsReady({ DEPARTURES: true })).toBe(false);
+    expect(listsReady({ FORECAST: true, DEPARTURES: true, ARRIVALS: true, TRACES: true })).toBe(false);
+    expect(listsReady({ FORECAST: true, DEPARTURES: true, ARRIVALS: true, TRACES: true, INHOUSE: true })).toBe(true);
   });
 });
 

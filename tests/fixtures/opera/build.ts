@@ -1,5 +1,5 @@
 import {
-  buildArrivalsPdf as arrivals, buildDeparturesPdf as departures, buildForecastPdf as forecast, buildTracesPdf as traces,
+  buildArrivalsPdf as arrivals, buildDeparturesPdf as departures, buildForecastPdf as forecast, buildInHousePdf as inhouse, buildTracesPdf as traces,
 } from "@/lib/import/sample/build";
 import type { SampleGuest, Scenario } from "@/lib/import/sample/scenario";
 import {
@@ -24,3 +24,4 @@ export const buildArrivalsPdf = (o: { onlyFirstPage?: boolean; guests?: SampleGu
 export const buildDeparturesPdf = (o: { to?: string; breakTotals?: boolean; reportDate?: string } = {}) => departures(DEMO, o);
 export const buildForecastPdf = (o: { wrongOccAt?: number; dmyAmbiguousNoWeekday?: boolean } = {}) => forecast(DEMO, o);
 export const buildTracesPdf = () => traces(DEMO);
+export const buildInHousePdf = (o: { reportDate?: string } = {}) => inhouse(DEMO, o);

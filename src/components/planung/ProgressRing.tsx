@@ -1,7 +1,7 @@
 "use client";
 
 /**
- * Fortschrittsring für „Listen" (nur Mobil): vier Viertel, eines je Liste. Ein Viertel füllt sich per Opacity —
+ * Fortschrittsring für „Listen" (nur Mobil): ein Segment je Liste. Ein Viertel füllt sich per Opacity —
  * so bewegt sich nur `opacity`. Die ganze Fläche ist ein Button (Antippen startet); die Zahl steht auch als Text.
  */
 export default function ProgressRing({

@@ -2,17 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { getSettings } from "@/lib/settings";
-import { buildArrivalsPdf, buildDeparturesPdf, buildForecastPdf, buildTracesPdf } from "@/lib/import/sample/build";
+import { buildArrivalsPdf, buildDeparturesPdf, buildForecastPdf, buildInHousePdf, buildTracesPdf } from "@/lib/import/sample/build";
 import { todayScenario } from "@/lib/import/sample/scenario";
 
 /**
- * GET /api/import/sample?file=arrivals|arrivals_page1|departures|forecast|traces
+ * GET /api/import/sample?file=arrivals|arrivals_page1|departures|forecast|traces|inhouse
  *
  * Beispiel-PDFs im Opera-Layout mit ERFUNDENEN Namen, datiert auf heute und mit
  * echten Zimmern des Hotels — zum Ausprobieren des Morgen-Imports ohne echte
  * Gastdaten. Enthält absichtlich Kartennummern/Preise/Salden, die der Import verwerfen muss.
  */
-const FILES = ["arrivals", "arrivals_page1", "departures", "forecast", "traces"] as const;
+const FILES = ["arrivals", "arrivals_page1", "departures", "forecast", "traces", "inhouse"] as const;
 
 export async function GET(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
@@ -34,8 +34,9 @@ export async function GET(req: NextRequest) {
     departures: () => buildDeparturesPdf(sc),
     forecast: () => buildForecastPdf(sc),
     traces: () => buildTracesPdf(sc),
+    inhouse: () => buildInHousePdf(sc),
   }[file]();
-  const name = { arrivals: "res_detail", arrivals_page1: "res_detail_nur_seite_1", departures: "departure_all", forecast: "history_forecast", traces: "traces_all" }[file];
+  const name = { arrivals: "res_detail", arrivals_page1: "res_detail_nur_seite_1", departures: "departure_all", forecast: "history_forecast", traces: "traces_all", inhouse: "in_house" }[file];
   return new NextResponse(Buffer.from(await bytes), {
     headers: {
       "Content-Type": "application/pdf",

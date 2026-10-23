@@ -2,6 +2,7 @@
  * Reine Logik des Planungstools (/planung): Haus-Kacheln, Etagenbalken, Stepper- und Dateizustände.
  * Keine DB, kein React — dadurch testbar und von Server und Client gleich genutzt.
  */
+import { listsComplete } from "@/lib/import/readiness";
 
 export type TileKind = "DEPARTURE" | "TURN" | "STAYOVER" | "ARRIVAL" | "EMPTY";
 
@@ -101,9 +102,9 @@ export function fileStatus(i: FileStatusInput): FileStatus {
   return i.severities.includes("WARNING") ? "warning" : "read";
 }
 
-/** Darf es mit dem Hauptbutton weitergehen? Departures müssen übernommen sein (sonst gibt es keinen Tagesplan). */
+/** Darf es mit dem Hauptbutton weitergehen? Erst wenn alle fünf Listen übernommen sind — nicht früher. */
 export function listsReady(applied: Record<string, boolean>): boolean {
-  return !!applied.DEPARTURES;
+  return listsComplete(applied);
 }
 
 /** "DIENSTAG, 22.09.2026" — Kalendertag unabhängig von der Zeitzone des Rechners. */

@@ -11,7 +11,7 @@ import path from "node:path";
 import { prisma } from "../src/lib/db";
 import { detectListType } from "../src/lib/import/detect";
 import { extractPdfLines } from "../src/lib/import/pdfText";
-import { crossCheckArrivals, parseArrivals, parseDepartures, parseForecast, parseTracesPdf } from "../src/lib/import/parsers";
+import { crossCheckArrivals, parseArrivals, parseDepartures, parseForecast, parseInHouse, parseTracesPdf } from "../src/lib/import/parsers";
 import { applyBatch, buildPreview, dataStatus, sha256, storeBatch } from "../src/lib/import/store";
 import { classifyTraceText } from "../src/lib/import/traceClassifier";
 import type { ArrivalRow, DepartureRow, ParseIssue, ParseResult } from "../src/lib/import/types";
@@ -27,7 +27,7 @@ async function drop(file: string) {
   const lines = await extractPdfLines(bytes);
   const type = detectListType(lines, file);
   console.log(`📄 ${file} → erkannt als ${type ?? "UNBEKANNT (StayClean fragt nach)"}  [${lines.length} Textzeilen, Hash ${sha256(bytes).slice(0, 8)}…]`);
-  const parse = { ARRIVALS: parseArrivals, DEPARTURES: parseDepartures, FORECAST: parseForecast, TRACES: parseTracesPdf }[type!];
+  const parse = { ARRIVALS: parseArrivals, DEPARTURES: parseDepartures, FORECAST: parseForecast, TRACES: parseTracesPdf, INHOUSE: parseInHouse }[type!];
   return { bytes, result: parse(lines) as ParseResult<never>, type: type! };
 }
 

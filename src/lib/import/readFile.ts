@@ -3,7 +3,7 @@ import type { ImportType } from "@/lib/domain";
 import { detectListType } from "./detect";
 import { DEFAULT_MAPPING, type ImportMappingConfig } from "./mapping";
 import { extractPdfLines } from "./pdfText";
-import { decodeText, parseArrivals, parseDepartures, parseForecast, parseTracesCsv, parseTracesPdf } from "./parsers";
+import { decodeText, parseArrivals, parseDepartures, parseForecast, parseInHouse, parseTracesCsv, parseTracesPdf } from "./parsers";
 import type { ParseOptions, ParseResult, PdfLine } from "./types";
 
 export const MAX_FILE_BYTES = 10 * 1024 * 1024;
@@ -88,7 +88,7 @@ export function parseList(
   if (type === "TRACES") {
     r = (list.kind === "sheet" ? parseTracesCsv(list.csv ?? "", opts, cfg) : parseTracesPdf(list.lines, opts, cfg)) as unknown as AnyResult;
   } else {
-    const fn = { ARRIVALS: parseArrivals, DEPARTURES: parseDepartures, FORECAST: parseForecast }[type];
+    const fn = { ARRIVALS: parseArrivals, DEPARTURES: parseDepartures, FORECAST: parseForecast, INHOUSE: parseInHouse }[type];
     r = fn(list.lines, opts, cfg) as unknown as AnyResult;
   }
   if (list.kind === "sheet" && userDay) {

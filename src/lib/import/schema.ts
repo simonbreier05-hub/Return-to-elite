@@ -21,6 +21,11 @@ export const DepartureRowSchema = z.object({
   nights: z.number().int().min(0).max(999), status: short(10).nullable(), depTime: hhmm.nullable(), vip: z.boolean(),
 }).strict();
 
+export const InHouseRowSchema = z.object({
+  room, guest: Guest, arrDate: iso, depDate: iso, adults: z.number().int().min(0).max(50), children: z.number().int().min(0).max(50),
+  nights: z.number().int().min(0).max(999), vip: z.boolean(),
+}).strict();
+
 export const ArrivalRowSchema = z.object({
   room, guest: Guest, arrDate: iso, depDate: iso, arrTime: hhmm.nullable(), adults: z.number().int().min(0).max(50),
   children: z.number().int().min(0).max(50), status: short(10).nullable(), vip: z.boolean(), traces: z.array(Trace).max(50),
@@ -44,7 +49,7 @@ const Issue = z.object({
 }).strict();
 
 const ROW_SCHEMAS = {
-  DEPARTURES: DepartureRowSchema, ARRIVALS: ArrivalRowSchema, TRACES: TraceRowSchema, FORECAST: ForecastDayRowSchema,
+  DEPARTURES: DepartureRowSchema, ARRIVALS: ArrivalRowSchema, TRACES: TraceRowSchema, FORECAST: ForecastDayRowSchema, INHOUSE: InHouseRowSchema,
 } as const;
 
 export const SubmitBatchSchema = z.object({

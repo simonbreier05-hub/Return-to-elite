@@ -11,6 +11,7 @@ import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { buildPreview } from "@/lib/import/preview";
 import type { DateFormatId, ParseResult } from "@/lib/import/types";
+import LiveClock from "@/components/LiveClock";
 import { dateLabel, fileStatus, listsReady, type HouseData, type StepId } from "@/lib/planung/model";
 import FileDropCard from "./FileDropCard";
 import FloorStep from "./FloorStep";
@@ -25,7 +26,7 @@ import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
 import Stepper from "./Stepper";
 import { useImportSession, type ImportItem } from "./useImportSession";
 
-const SLOTS: ImportType[] = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES"];
+const SLOTS: ImportType[] = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES", "INHOUSE"];
 const READ_MS = 850;
 
 /** Planungstool: Gerüst, Schritt 1 „Listen" und Haus-Ansicht. Schritte 2–4 folgen in D2 (hier Platzhalter). */
@@ -120,7 +121,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         <Stepper current={step} reached={reached} labels={labels} onSelect={goStep} ariaLabel={t("planungTool.stepsLabel")} />
         <div className="mt-3 flex items-center justify-between text-xs text-pl-muted">
           <Link href="/supervisor" className="-ml-3 inline-flex min-h-11 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden>←</span>{t("planungTool.leave")}</Link>
-          <span>{t("planungTool.stepOf", { n: step })}</span>
+          <span>{t("planungTool.stepOf", { n: step })} · <LiveClock tone="pl" /></span>
           <Link href="/supervisor" className="rounded-full px-3 py-2 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
         </div>
       </div>

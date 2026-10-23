@@ -15,6 +15,7 @@ import ErrorBoundary from "./ErrorBoundary";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import LanguageSwitcher from "./LanguageSwitcher";
+import LiveClock from "./LiveClock";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
 
@@ -193,6 +194,7 @@ export default function AppShell({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <LiveClock />
             <Link
               href="/floor-plan"
               className="hidden h-10 items-center rounded-sm border border-charcoal/15 px-3 text-xs font-medium uppercase tracking-wider text-charcoal/85 transition hover:bg-parchment sm:flex"

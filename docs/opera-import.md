@@ -19,7 +19,12 @@ Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`);
 - **Arrivals: Detailed** — Block je Reservierung (Zeile 1: Zimmer/Name/Daten/Personen/Status; Zeile 2: Conf-Nr., VIP, Anreisezeit; danach `Fixed Charges:`, `Traces:`, `Inventory Items:`). Geschäftsdatum = Anreisetag der Liste (Fuß: „Stay From Date"), nicht das Druckdatum.
 - **Departures** — Gruppen „Departure <Datum>" mit `Total`-Zeilen (werden gegen die Zeilen geprüft). Über einen Zeitraum ersetzt sie die fehlende In-House-Liste: Bleiber = Abreise nach heute, Anreise bis heute. Empfohlen: heute bis +30 Tage.
 - **History and Forecast** — nur heutiger und spätere Tage; Umsatz/Durchschnittspreis werden verworfen; Occ.% wird gegen belegt ÷ (Zimmer − OOO) geprüft.
+- **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je belegtes Zimmer (Zimmer, Name, Anreise, Abreise, Erw., Kinder, Nächte). Geschäftsdatum = Druckdatum. **Layout angenommen** (wie die Departures-Zeilen) — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
 - **Traces** — PDF oder CSV; Twin-/Zusatzbett-Texte werden zu Hausmann-Aufgaben (`traceClassifier.ts`).
+
+## Einreichungs-Gate (fünf Listen)
+
+Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `missingAppliedLists()` → HTTP 409 mit der Liste der fehlenden Typen.
 
 ## Oberfläche und API
 

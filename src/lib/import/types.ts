@@ -68,6 +68,18 @@ export interface TraceRow {
   text: string;
 }
 
+/** Tagesbelegung (Opera „In House"): wer heute im Haus ist. */
+export interface InHouseRow {
+  room: string;
+  guest: GuestName;
+  arrDate: string;
+  depDate: string;
+  adults: number;
+  children: number;
+  nights: number;
+  vip: boolean;
+}
+
 export interface ForecastDayRow {
   date: string;
   occupiedRooms: number;
