@@ -80,16 +80,23 @@ export default function PlanningFloorPlanPanel({
   actionableRoomIds,
   deferredRoomIds = [],
   draft,
+  initialView = "plan",
+  bands,
 }: {
   onShiftAttendants: OnShiftAttendant[];
   actionableRoomIds: string[];
   deferredRoomIds?: string[];
   draft?: DraftBinding;
+  /** Mit welcher Ansicht das Fenster startet (Grundriss oder Liste je Zimmermädchen). */
+  initialView?: PanelView;
+  /** Zielband der Credits je Kraft (nur Anzeige, nie eine Sperre). */
+  bands?: Record<string, { lo: number; hi: number }>;
 }) {
   const { t } = useLocale();
   const [plan, setPlan] = useState<FloorPlanResponse | null>(null);
   const [rawRooms, setLiveRooms] = useState<LiveRoom[]>([]);
-  const [view, setView] = useState<PanelView>("plan");
+  const [view, setView] = useState<PanelView>(initialView);
+  const [addingTo, setAddingTo] = useState<string | null>(null);
   const [startedPrompt, setStartedPrompt] = useState<{ room: RoomFlags; number: string; attendantId: string | null } | null>(null);
   const [settings, setSettings] = useState<SettingsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -387,15 +394,23 @@ export default function PlanningFloorPlanPanel({
               <section key={col.id ?? "open"} className={`rounded-2xl border p-3 ${col.id === null && rooms.length ? "border-status-in-progress/40 bg-white" : "border-charcoal/10 bg-white"}`}>
                 <div className="mb-2 flex items-baseline justify-between gap-2">
                   <h4 className="font-serif text-lg">{col.name} <span className="text-sm text-graphite/60">· {rooms.length}</span></h4>
-                  {credits !== null && <span className={`text-sm ${credits > targetCredits ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>{Math.round(credits * 10) / 10} {t("planning.floorPlanCreditsShort")}</span>}
+                  {credits !== null && (
+                    <span className={`text-sm ${(bands?.[col.id!] ? credits > bands[col.id!].hi + 0.25 || (rooms.length > 0 && credits < bands[col.id!].lo - 0.25) : credits > targetCredits) ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>
+                      {Math.round(credits * 10) / 10}{bands?.[col.id!] ? ` / ${bands[col.id!].lo}–${bands[col.id!].hi}` : ""} {t("planning.floorPlanCreditsShort")}
+                    </span>
+                  )}
                 </div>
+                {col.id && (
+                  <button type="button" onClick={() => setAddingTo(col.id)} className="mb-2 min-h-11 rounded-lg border border-dashed border-charcoal/25 px-3 text-xs font-medium hover:border-gold-line">+ {t("planning.floorPlanAddRoom")}</button>
+                )}
                 {rooms.length === 0 ? <p className="text-xs text-graphite/50">{t("planning.floorPlanNoRooms")}</p> : (
                   <ul className="flex flex-wrap gap-1.5">
                     {rooms.map((r) => (
                       <li key={r.id}>
                         <button type="button" onClick={() => { const f = plan.rooms.find((x) => x.number === r.number); if (f) setPickingRoom(f); }}
                           className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium hover:border-gold-line">
-                          {r.number}{isStartedStatus(r.status) ? " ▶" : ""} <span className="text-xs text-graphite/60">{Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
+                          {r.number}{isStartedStatus(r.status) ? " ▶" : ""}
+                          <span className="ml-1 text-xs text-graphite/60">E{r.number.slice(0, 1)} · {r.type.replace("_", " ").toLowerCase()} · {Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
                         </button>
                       </li>
                     ))}
@@ -530,6 +545,23 @@ export default function PlanningFloorPlanPanel({
               </button>
             )}
           </div>
+        </Modal>
+      )}
+
+      {addingTo && (
+        <Modal title={t("planning.floorPlanAddRoomTitle", { name: onShiftAttendants.find((a) => a.id === addingTo)?.name ?? "" })} onClose={() => setAddingTo(null)}>
+          {unassignedRoomIds.length === 0 ? <p className="text-sm text-graphite/70">{t("planning.floorPlanNoOpenRooms")}</p> : (
+            <ul className="flex flex-wrap gap-1.5">
+              {unassignedRoomIds.map((id) => liveById.get(id)).filter((r): r is LiveRoom => !!r).map((r) => (
+                <li key={r.id}>
+                  <button type="button" onClick={() => { const f = plan.rooms.find((x) => x.number === r.number); if (f) void assignRoom(f, addingTo); }}
+                    className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium hover:border-gold-line">
+                    {r.number} <span className="text-xs text-graphite/60">· {Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </Modal>
       )}
 

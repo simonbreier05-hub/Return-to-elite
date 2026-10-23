@@ -13,6 +13,8 @@ export interface HousemanItem {
   status: "OPEN" | "DONE";
   doneAt: string | null;
   roomTaskId: string | null;
+  /** Dem Hausmann zugeteilt (null = für alle). */
+  assignedToId: string | null;
   /** „Herr Dr. Krüger" — nie Vornamen. */
   guest: string | null;
   /** Rückbau (Twin zurück) ist erst nach der Abreise dran. */
@@ -24,7 +26,7 @@ export interface HousemanList { date: string | null; floors: number[]; items: Ho
  * Hausmann-Liste: Traces der Abteilung Hausmann für den Tag (z. B. „Twinbett 207", „Twin zurück 208").
  * Erledigte bleiben erledigt (Trace.status bleibt beim Nachimport erhalten).
  */
-export async function getHousemanList(floor?: number | null): Promise<HousemanList> {
+export async function getHousemanList(floor?: number | null, forUserId?: string | null): Promise<HousemanList> {
   const date = await listDay();
   if (!date) return { date: null, floors: [], items: [] };
   const traces = await prisma.trace.findMany({ where: { date, dept: "HOUSEMAN" }, include: { room: { select: { id: true, number: true, floor: true } } }, orderBy: [{ createdAt: "asc" }] });
@@ -41,13 +43,15 @@ export async function getHousemanList(floor?: number | null): Promise<HousemanLi
     const task = classifyTraceText(t.text);
     return {
       id: t.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text, times: timesInText(t.text),
-      status: t.status === "DONE" ? "DONE" : "OPEN", doneAt: t.doneAt?.toISOString() ?? null, roomTaskId: t.roomTaskId,
+      status: t.status === "DONE" ? "DONE" : "OPEN", doneAt: t.doneAt?.toISOString() ?? null, roomTaskId: t.roomTaskId, assignedToId: t.assignedToId,
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
       waitsForDeparture: task?.type === "TWIN_REVERT" && kind !== "DEPARTURE" && kind !== "SAME_DAY_TURN",
     };
   }).sort((a, b) => Number(a.status === "DONE") - Number(b.status === "DONE") || a.roomNumber.localeCompare(b.roomNumber));
-  const floors = [...new Set(items.map((i) => i.floor))].sort((a, b) => a - b);
-  return { date, floors, items: floor ? items.filter((i) => i.floor === floor) : items };
+  // Ein Hausmann sieht seine eigenen und die nicht zugeteilten Aufgaben; Supervisor sehen alle.
+  const visible = forUserId ? items.filter((i) => !i.assignedToId || i.assignedToId === forUserId) : items;
+  const floors = [...new Set(visible.map((i) => i.floor))].sort((a, b) => a - b);
+  return { date, floors, items: floor ? visible.filter((i) => i.floor === floor) : visible };
 }
 
 /** Hakt einen Hausmann-Trace ab bzw. öffnet ihn wieder und zieht die verknüpfte Aufgabe (RoomTask) mit. Gibt null zurück, wenn der Trace nicht zur Abteilung Hausmann gehört. */

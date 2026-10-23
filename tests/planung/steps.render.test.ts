@@ -101,6 +101,16 @@ describe("Schritt Plan", () => {
     expect(out).toContain("Nicht eingeplant");
     expect((out.match(/min-h-11/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
+  it("Karten, Kraft-Zeilen und „offen“ sind anklickbare Knöpfe (≥ 44 px) mit Hinweis auf die Details", () => {
+    const out = plan({ roomLists: 4, supervisorLists: 2, hausmannLists: 1 }, {
+      summary: { assigned: 34, total: 57, open: 23 }, onEdit: () => {}, onOpen: () => {}, onToggleHk: () => {}, confirmed: null,
+      hkRows: [{ id: "a", name: "Anna Test", rooms: 10, credits: 8.5, lo: 12.5, hi: 15.5, excluded: false }],
+    });
+    expect((out.match(/<button[^>]*aria-label="[^"]*Details öffnen"/g) ?? []).length).toBe(3); // drei Karten
+    expect(out).toContain("23 offen ›");
+    expect(out).toContain("Anna Test ›");
+    expect(out).toContain("8,5 / 12,5–15,5");
+  });
   it("Statuszeilen folgen dem Fortschritt", () => {
     const out = plan(null);
     expect(out).toContain('data-state="done"');

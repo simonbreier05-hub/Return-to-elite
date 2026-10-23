@@ -7,5 +7,5 @@ export async function GET(req: NextRequest) {
   const auth = await requireRole(["houseman", "supervisor"]);
   if (!auth.ok) return auth.response;
   const floor = parseInt(req.nextUrl.searchParams.get("floor") ?? "", 10);
-  return NextResponse.json(await getHousemanList(Number.isFinite(floor) ? floor : null));
+  return NextResponse.json(await getHousemanList(Number.isFinite(floor) ? floor : null, auth.session.role === "houseman" ? auth.session.userId : null));
 }

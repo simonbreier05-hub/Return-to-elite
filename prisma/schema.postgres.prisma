@@ -430,6 +430,7 @@ model Trace {
   status     String    @default("OPEN") // OPEN | DONE — erledigte bleiben erledigt
   dedupeKey  String    @unique // Zimmer|Code|Datum|Text
   roomTaskId String? // Hausmann-Aufgabe, die aus diesem Trace entstanden ist (Twin/Zusatzbett)
+  assignedToId String? // Hausmann, dem der Supervisor die Aufgabe zugeteilt hat (null = für alle Hausmänner sichtbar)
   source     String // ARRIVALS | TRACES
   createdAt  DateTime  @default(now())
   doneAt     DateTime?

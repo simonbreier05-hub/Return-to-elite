@@ -25,8 +25,11 @@ vi.mock("@/lib/realtime", () => ({ broadcast: (...a: unknown[]) => broadcastMock
 
 import { prisma } from "@/lib/db";
 import { confirmProposal, PlanConfirmError, proposeForDate } from "@/lib/autoplan/service";
+import { buildResult } from "@/lib/autoplan/result";
 import { berlinDate } from "@/lib/dayplan/time";
 import { GET as notificationsGet } from "@/app/api/notifications/route";
+import { PUT as housemanPut } from "@/app/api/planung/houseman/route";
+import { GET as housemanGet } from "@/app/api/lists/houseman/route";
 import { GET as dayGet } from "@/app/api/assignments/day/route";
 import { POST as absentPost } from "@/app/api/housekeepers/[id]/absent/route";
 import { GET as roomsGet } from "@/app/api/rooms/route";
@@ -175,5 +178,48 @@ describe("Kräfte hinzu- und abwählen (Grundriss)", () => {
   it("nur Supervisor/Duty Manager dürfen die Anwesenheit ändern", async () => {
     as("hk1", "room_attendant");
     expect((await absentPost(post("/x", { absent: true }), { params: Promise.resolve({ id: ids.hk3 }) })).status).toBe(403);
+  });
+});
+
+describe("Ursache „offen trotz Credit-Ziel“: Zimmer einer nicht eingeplanten Kraft", () => {
+  it("heute schon zugeteilte Zimmer einer nicht gewählten Kraft werden neu verteilt, nicht offen gelassen; Begonnenes bleibt außen vor", async () => {
+    // Vorbedingung: Zimmer gehören hk2 (heute), hk2 wird nicht eingeplant; 104 ist bei hk2 begonnen
+    for (const n of ["101", "102", "103", "105", "106", "107"]) await prisma.room.update({ where: { id: room[n] }, data: { assignedToId: ids.hk2, assignedOn: DATE, status: "DIRTY" } });
+    await prisma.room.update({ where: { id: room["104"] }, data: { assignedToId: ids.hk2, assignedOn: DATE, status: "IN_PROGRESS" } });
+    const r = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]);
+    expect(r.payload.result.unassigned).toEqual([]);
+    expect(buildResult(r.payload.input, r.payload.result.assignment).unassigned).toEqual([]); // so rechnet die Oberfläche („X offen“)
+    expect(r.payload.input.rooms.map((x) => x.id)).not.toContain(room["104"]); // begonnen: bleibt bei hk2
+    for (const n of ["101", "102", "103", "105", "106", "107"]) {
+      const to = r.payload.result.assignment[room[n]];
+      expect([ids.hk1, ids.hk3]).toContain(to);
+    }
+  });
+  it("„Nicht einplanen“ ist umkehrbar: mit der Kraft sind alle Zimmer zugeteilt, ohne sie auch, danach wieder mit ihr", async () => {
+    for (const team of [[ids.hk1, ids.hk2, ids.hk3], [ids.hk1, ids.hk3], [ids.hk1, ids.hk2, ids.hk3]]) {
+      const r = await proposeForDate(DATE, ids.sup, team);
+      expect(r.payload.result.unassigned).toEqual([]);
+      expect(new Set(Object.values(r.payload.result.assignment))).toEqual(new Set(team.filter((id) => r.payload.result.metrics.find((m) => m.hkId === id)!.rooms > 0)));
+    }
+  });
+});
+
+describe("Hausmann-Liste: Aufgaben zuteilen (Entwurf → beim Bestätigen gespeichert)", () => {
+  it("Supervisor teilt zu; der Hausmann sieht eigene und nicht zugeteilte Aufgaben; andere Hausmänner nur ihre", async () => {
+    await prisma.user.create({ data: { email: "hm2@x.test", name: "hm2 Test", passwordHash: "x", role: "houseman" } }).then((u) => { ids.hm2 = u.id; });
+    const mk = (n: string, text: string) => prisma.trace.create({ data: { roomId: room[n], code: "HK", date: DATE, text, dept: "HOUSEMAN", dedupeKey: `k-${n}`, source: "TRACES" } });
+    const t1 = await mk("101", "Twin bed"); const t2 = await mk("102", "Extra bed");
+    as("sup", "supervisor");
+    const res = await housemanPut(new NextRequest("http://x/api/planung/houseman", { method: "PUT", body: JSON.stringify({ assignments: [{ traceId: t1.id, userId: ids.hm }] }) }));
+    expect((await res.json()).changed).toBe(1);
+    const items = async (key: string, role: string) => { as(key, role); return ((await (await housemanGet(new NextRequest("http://x/api/lists/houseman"))).json()).items as { id: string }[]).map((i) => i.id); };
+    expect(await items("hm", "houseman")).toEqual(expect.arrayContaining([t1.id, t2.id]));
+    expect(await items("hm2", "houseman")).toEqual([t2.id]); // t1 gehört hm
+    expect((await items("sup", "supervisor")).length).toBe(2);
+    // Housekeeper dürfen nicht zuteilen; unbekannter Hausmann wird abgelehnt
+    as("hk1", "room_attendant");
+    expect((await housemanPut(new NextRequest("http://x/y", { method: "PUT", body: JSON.stringify({ assignments: [] }) }))).status).toBe(403);
+    as("sup", "supervisor");
+    expect((await housemanPut(new NextRequest("http://x/y", { method: "PUT", body: JSON.stringify({ assignments: [{ traceId: t2.id, userId: ids.hk1 }] }) }))).status).toBe(400);
   });
 });

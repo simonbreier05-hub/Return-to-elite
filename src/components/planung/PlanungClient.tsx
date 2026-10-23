@@ -18,8 +18,9 @@ import FileDropCard from "./FileDropCard";
 import FloorStep from "./FloorStep";
 import HouseMap from "./HouseMap";
 import PlanungShell from "./PlanungShell";
-import PlanEditorWindow from "./PlanEditorWindow";
+import PlanEditorWindow, { type EditorTab } from "./PlanEditorWindow";
 import PlanConfirmDialog from "./PlanConfirmDialog";
+import Modal from "@/components/Modal";
 import PlanStep from "./PlanStep";
 import PrimaryButton from "./PrimaryButton";
 import ProgressRing from "./ProgressRing";
@@ -43,7 +44,10 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const [changedNote, setChangedNote] = useState<number>(0);
   const [over, setOver] = useState(false);
   const [merging, setMerging] = useState(false);
-  const [editor, setEditor] = useState(false);
+  const [editor, setEditor] = useState<{ tab: EditorTab; view: "plan" | "list" } | null>(null);
+  const [hmEdits, setHmEdits] = useState<Record<string, string | null>>({});
+  const [skipAsk, setSkipAsk] = useState<{ id: string; name: string; rooms: number } | null>(null);
+  const [undo, setUndo] = useState<{ id: string; name: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
@@ -83,11 +87,25 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     const v = plan.view?.metrics.find((x) => x.hkId === m.id);
     return { id: m.id, name: m.name, rooms: v?.rooms ?? 0, credits: v?.credits ?? 0, lo: h?.lo ?? 0, hi: h?.hi ?? 0, excluded: !plan.active.includes(m.id) };
   });
-  const supFloors = Object.entries(
-    [1, 2, 3, 4, 5].reduce<Record<string, number[]>>((acc, f) => { const id = team.floorSel[f]; if (id) (acc[id] ??= []).push(f); return acc; }, {}),
-  ).map(([id, floors]) => ({ name: team.state?.members.sup.find((x) => x.id === id)?.name ?? id, floors }));
-  const housemen = (team.state?.members.hm ?? []).filter((m) => team.sel.hm.includes(m.id)).map((m) => m.name);
-
+  /** Abwählen fragt nach, wenn die Kraft schon Zimmer hat (ihre Zimmer werden neu verteilt) und ist über „Rückgängig“ umkehrbar; Einplanen sofort. */
+  const toggleHk = (id: string) => {
+    const row = planHkRows.find((r) => r.id === id);
+    if (!row) return;
+    if (row.excluded) { setUndo(null); void plan.toggleHk(id); return; }
+    if (row.rooms > 0) setSkipAsk({ id, name: row.name, rooms: row.rooms });
+    else { void plan.toggleHk(id); setUndo({ id, name: row.name }); }
+  };
+  const confirmSkip = async () => { if (!skipAsk) return; const s = skipAsk; setSkipAsk(null); await plan.toggleHk(s.id); setUndo({ id: s.id, name: s.name }); };
+  /** Bestätigen; erst danach werden die im Entwurf geänderten Etagen (Supervisor) und Hausmann-Zuteilungen gespeichert. */
+  const confirmAndSave = async (opts: { acceptOpen?: boolean; confirmStarted?: boolean }) => {
+    const r = await plan.confirm(opts);
+    if (r.ok) {
+      await team.saveFloors();
+      const assignments = Object.entries(hmEdits).map(([traceId, userId]) => ({ traceId, userId }));
+      if (assignments.length) await api("/api/planung/houseman", { method: "PUT", body: { assignments } }).catch(() => null);
+    }
+    return r;
+  };
 
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
@@ -231,7 +249,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         ) : (
           <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.view?.warnings ?? []} error={plan.error} started={plan.started}
             summary={plan.view && plan.draft ? { assigned: plan.draft.input.rooms.length - plan.view.unassigned.length, total: plan.draft.input.rooms.length, open: plan.view.unassigned.length } : null}
-            hkRows={planHkRows} onEdit={() => setEditor(true)} onToggleHk={(id) => void plan.toggleHk(id)} confirmed={plan.confirmed} />
+            hkRows={planHkRows} onEdit={() => setEditor({ tab: "rooms", view: "plan" })} onOpen={(tab, view) => setEditor({ tab, view: view ?? "plan" })} onToggleHk={toggleHk} confirmed={plan.confirmed} />
         )}
         {step >= 2 && team.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {team.error}</p>}
       </div>
@@ -270,11 +288,29 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const overlays = (
     <>
       {editor && plan.draft && (
-        <PlanEditorWindow draft={plan.draft} supervisors={supFloors} housemen={housemen} onAssign={plan.assign} onClose={() => setEditor(false)} onEditFloors={() => goStep(3)} />
+        <PlanEditorWindow draft={plan.draft} initialTab={editor.tab} initialView={editor.view} floorSel={team.floorSel}
+          supOptions={team.chosenSups.map((x) => ({ id: x.id, name: x.name }))} onPickFloor={team.pickFloor}
+          housemen={(team.state?.members.hm ?? []).filter((m) => team.sel.hm.includes(m.id)).map((m) => ({ id: m.id, name: m.name }))}
+          hmEdits={hmEdits} onHmEdit={(id, uid) => setHmEdits((e) => ({ ...e, [id]: uid }))} onAssign={plan.assign} onClose={() => setEditor(null)} />
+      )}
+      {skipAsk && (
+        <Modal title={t("planungTool.skipAskTitle", { name: skipAsk.name })} onClose={() => setSkipAsk(null)}>
+          <p className="mb-4 text-sm text-graphite/80">{t("planungTool.skipAskBody", { name: skipAsk.name, n: skipAsk.rooms })}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => void confirmSkip()} className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line">{t("planungTool.skipAskConfirm")}</button>
+            <button type="button" onClick={() => setSkipAsk(null)} className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("common.cancel")}</button>
+          </div>
+        </Modal>
+      )}
+      {undo && !plan.confirmed && (
+        <div role="status" className="fixed bottom-24 left-4 right-4 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-line-2 bg-night-600 px-4 py-2 text-sm text-pl-text shadow-lg">
+          <span>{t("planungTool.skippedBar", { name: undo.name })}</span>
+          <button type="button" onClick={() => { const u = undo; setUndo(null); void plan.toggleHk(u.id); }} className="min-h-11 rounded-full px-3 font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.undoSkip")}</button>
+        </div>
       )}
       {confirmOpen && plan.view && plan.draft && (
         <PlanConfirmDialog view={plan.view} names={Object.fromEntries(plan.draft!.input.housekeepers.map((h) => [h.id, h.name]))} confirming={plan.confirming}
-          onConfirm={plan.confirm} onClose={() => setConfirmOpen(false)} />
+          onConfirm={confirmAndSave} onClose={() => setConfirmOpen(false)} />
       )}
     </>
   );
