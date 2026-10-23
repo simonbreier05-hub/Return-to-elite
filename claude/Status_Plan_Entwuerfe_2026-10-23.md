@@ -28,3 +28,12 @@ Additiv: `Trace.assignedToId String?` (beide Schema-Dateien). Kein lokales Dev-D
 ## Offen / Fragen
 1. Supervisor-Zuteilung gilt je **Etage** (so speichert StayClean sie); „Zimmer eines Supervisors“ einzeln gibt es nicht. Reicht das?
 2. Hausmann-Zuteilung sendet beim Bestätigen noch keine Meldung an den Hausmann (nur die allgemeine Plan-Meldung). Soll er „N Aufgaben für dich“ bekommen?
+
+## Nachtrag (Antworten)
+1. Zuständigkeit je Etage ist richtig (Zimmer ergeben sich aus den Etagen) — unverändert.
+2. Hausmann-Meldung + Live-Einsicht umgesetzt:
+   - Beim Bestätigen werden Hausmann-Zuteilungen in derselben Transaktion gespeichert; jeder Hausmann bekommt „Dein Plan für heute: N Aufgaben (M dir zugeteilt)“. Spätere Änderung über `PUT /api/planung/houseman` meldet nur die Betroffenen.
+   - Erledigt/Wieder geöffnet (`PATCH /api/traces/[id]`): Supervisor der Etage werden gemeldet (nur Zimmer + Etage), der Duty Manager sieht alle Meldungen.
+   - Duty Manager: neues Fenster „Live-Listen“ im DM-Board (Tabs Zimmermädchen / Supervisor / Hausmann; Fortschritt, wer was hat, was erledigt ist und von wem; Socket-Live). Nicht abgedeckte Etagen (kein Supervisor) werden markiert.
+   - Supervisor sieht nur zugeteilte Etagen: Zimmermädchen-Liste (war schon so) und jetzt auch die Hausmann-Liste (ohne Etage: leer). Hausmann: eigene + nicht zugeteilte Aufgaben.
+   - Tests: 3 neue Integrationstests (Meldungen, Erledigt-Sichtbarkeit, Live-Einsicht/Rechte); keine neue Migration (Spalte `Trace.assignedToId` aus dem vorigen Schritt).

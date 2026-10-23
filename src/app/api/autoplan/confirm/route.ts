@@ -8,6 +8,7 @@ const Body = z.object({
   assignment: z.record(z.string(), z.string().nullable()),
   acceptOpen: z.boolean().optional(),
   confirmStarted: z.boolean().optional(),
+  housemanAssignments: z.array(z.object({ traceId: z.string().min(1), userId: z.string().min(1).nullable() }).strict()).max(500).optional(),
 }).strict();
 
 /** POST /api/autoplan/confirm — Entwurf (ggf. mit Handänderungen) bestätigen; erst jetzt live bei den Housekeepern. */

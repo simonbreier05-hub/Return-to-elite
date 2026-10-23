@@ -4,6 +4,8 @@ import { broadcast } from "@/lib/realtime";
 export interface PlanNotifyInput {
   /** Eindeutig je Bestätigung (z. B. Id des Entwurfs) — verhindert doppelte Meldungen bei erneutem Aufruf. */
   planId: string;
+  /** Betriebstag des Plans (für die Hausmann-Aufgaben). */
+  date: string;
   actorId: string;
   /** Je Zimmermädchen: Zimmer/Credits nach der Bestätigung und ob sich ihre Liste gegenüber vorher geändert hat. */
   attendants: { id: string; rooms: number; credits: number; changed: boolean }[];
@@ -32,11 +34,16 @@ export async function notifyPlanConfirmed(input: PlanNotifyInput): Promise<numbe
       : "Dein Plan für heute wurde geändert: Du hast keine Zimmer mehr auf der Liste.");
   }
 
-  const openTasks = await prisma.roomTask.count({ where: { status: "OPEN" } });
   const staff = await prisma.user.findMany({ where: { role: { in: ["houseman", "supervisor", "duty_manager"] }, id: { not: actorId } }, select: { id: true, role: true } });
   const working = attendants.filter((a) => a.rooms > 0).length;
   for (const u of staff) {
-    if (u.role === "houseman") add("PLAN_CONFIRMED", "houseman", u.id, `Dein Plan für heute: ${openTasks} ${openTasks === 1 ? "Aufgabe" : "Aufgaben"}.`);
+    if (u.role === "houseman") {
+      // Hausmann-Aufgaben des Tages: eigene (zugeteilte) und nicht zugeteilte, noch offen
+      const mine = await prisma.trace.count({ where: { date: input.date, dept: "HOUSEMAN", status: "OPEN", assignedToId: u.id } });
+      const free = await prisma.trace.count({ where: { date: input.date, dept: "HOUSEMAN", status: "OPEN", assignedToId: null } });
+      const n = mine + free;
+      add("PLAN_CONFIRMED", "houseman", u.id, `Dein Plan für heute: ${n} ${n === 1 ? "Aufgabe" : "Aufgaben"}${mine ? ` (${mine} dir zugeteilt)` : ""}.`);
+    }
     else add("PLAN_CONFIRMED", u.role, u.id,
       `Tagesplan bestätigt: ${totalRooms - openRooms} von ${totalRooms} Zimmern an ${working} Kräfte verteilt${openRooms ? `, ${openRooms} noch offen` : ""}.`,
       openRooms ? "warning" : "info");

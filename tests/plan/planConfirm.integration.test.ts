@@ -30,6 +30,8 @@ import { berlinDate } from "@/lib/dayplan/time";
 import { GET as notificationsGet } from "@/app/api/notifications/route";
 import { PUT as housemanPut } from "@/app/api/planung/houseman/route";
 import { GET as housemanGet } from "@/app/api/lists/houseman/route";
+import { PATCH as tracePatch } from "@/app/api/traces/[id]/route";
+import { GET as overviewGet } from "@/app/api/lists/overview/route";
 import { GET as dayGet } from "@/app/api/assignments/day/route";
 import { POST as absentPost } from "@/app/api/housekeepers/[id]/absent/route";
 import { GET as roomsGet } from "@/app/api/rooms/route";
@@ -215,11 +217,59 @@ describe("Hausmann-Liste: Aufgaben zuteilen (Entwurf → beim Bestätigen gespei
     const items = async (key: string, role: string) => { as(key, role); return ((await (await housemanGet(new NextRequest("http://x/api/lists/houseman"))).json()).items as { id: string }[]).map((i) => i.id); };
     expect(await items("hm", "houseman")).toEqual(expect.arrayContaining([t1.id, t2.id]));
     expect(await items("hm2", "houseman")).toEqual([t2.id]); // t1 gehört hm
-    expect((await items("sup", "supervisor")).length).toBe(2);
+    expect((await items("sup", "supervisor")).length).toBe(0); // Supervisor ohne Etage sieht nichts (nur zugeteilte Etagen)
+    expect((await items("dm", "duty_manager")).length).toBe(2); // Duty Manager sieht alles
     // Housekeeper dürfen nicht zuteilen; unbekannter Hausmann wird abgelehnt
     as("hk1", "room_attendant");
     expect((await housemanPut(new NextRequest("http://x/y", { method: "PUT", body: JSON.stringify({ assignments: [] }) }))).status).toBe(403);
     as("sup", "supervisor");
     expect((await housemanPut(new NextRequest("http://x/y", { method: "PUT", body: JSON.stringify({ assignments: [{ traceId: t2.id, userId: ids.hk1 }] }) }))).status).toBe(400);
+  });
+});
+
+describe("Hausmann: Meldung bei Zuteilung, Erledigt sichtbar für Supervisor (eigene Etage) und Duty Manager (alles)", () => {
+  it("beim Bestätigen: der zugeteilte Hausmann bekommt „N Aufgaben (M dir zugeteilt)“, der andere nur die allgemeinen", async () => {
+    const t3 = await prisma.trace.create({ data: { roomId: room["110"], code: "HK", date: DATE, text: "Twin bed", dept: "HOUSEMAN", dedupeKey: "k-110", source: "TRACES" } });
+    ids.t3 = t3.id;
+    const t1 = await prisma.trace.findFirstOrThrow({ where: { dedupeKey: "k-101" } });
+    const r = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]);
+    await confirmProposal(r.proposalId, r.payload.result.assignment, sup, { acceptOpen: true, confirmStarted: true, housemanAssignments: [{ traceId: t3.id, userId: ids.hm2 }] });
+    expect((await prisma.trace.findUniqueOrThrow({ where: { id: t3.id } })).assignedToId).toBe(ids.hm2);
+    const mine = (await inbox("hm2", "houseman")).filter((n) => n.type === "PLAN_CONFIRMED").map((n) => n.message);
+    expect(mine.at(0)).toMatch(/^Dein Plan für heute: \d+ Aufgaben? \(1 dir zugeteilt\)\.$/);
+    const other = (await inbox("hm", "houseman")).filter((n) => n.type === "PLAN_CONFIRMED").map((n) => n.message);
+    expect(other.at(0)).toMatch(/^Dein Plan für heute: 2 Aufgaben \(1 dir zugeteilt\)\.$/); // eigene t1 + freie t2; t3 gehört hm2
+    void t1;
+    // ungültige Zuteilung (Housekeeper statt Hausmann) bricht ab
+    const r2 = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]);
+    await expect(confirmProposal(r2.proposalId, r2.payload.result.assignment, sup, { acceptOpen: true, confirmStarted: true, housemanAssignments: [{ traceId: t3.id, userId: ids.hk1 }] })).rejects.toMatchObject({ code: "INVALID" });
+  });
+
+  it("Aufgabe erledigt: nur der Supervisor der Etage wird gemeldet (ohne Aufgabentext), der Duty Manager sieht alles", async () => {
+    await prisma.user.update({ where: { id: ids.sup2 }, data: { assignedFloors: "1" } });
+    const sup3 = await prisma.user.create({ data: { email: "sup3@x.test", name: "sup3 Test", passwordHash: "x", role: "supervisor", assignedFloors: "2" } });
+    ids.sup3 = sup3.id;
+    as("hm2", "houseman");
+    const res = await tracePatch(new NextRequest("http://x/api/traces/x", { method: "PATCH", body: JSON.stringify({ status: "DONE" }) }), { params: Promise.resolve({ id: ids.t3 }) });
+    expect(res.status).toBe(200);
+    const msgs = async (k: string, role: string) => (await inbox(k, role)).filter((n) => n.type === "HOUSEMAN_TASK_DONE").map((n) => n.message);
+    expect(await msgs("sup2", "supervisor")).toEqual(["Zimmer 110 (Etage 1): Hausmann-Aufgabe erledigt."]);
+    expect(await msgs("sup3", "supervisor")).toEqual([]); // fremde Etage
+    expect((await msgs("dm", "duty_manager")).length).toBe(1); // Duty Manager sieht alle Meldungen
+  });
+
+  it("Live-Einsicht: nur der Duty Manager; zeigt zugeteilt/erledigt und wer es abgehakt hat; Supervisor sieht nur Aufgaben der eigenen Etagen", async () => {
+    as("sup", "supervisor");
+    expect((await overviewGet()).status).toBe(403);
+    as("dm", "duty_manager");
+    const o = await (await overviewGet()).json();
+    const hm2 = o.housemen.find((h: { id: string }) => h.id === ids.hm2);
+    expect(hm2).toMatchObject({ assigned: 1, done: 1 });
+    expect(o.tasks.find((t: { id: string }) => t.id === ids.t3)).toMatchObject({ status: "DONE", doneByName: "hm2 Test", assignedToName: "hm2 Test" });
+    expect(o.supervisors.find((s: { id: string }) => s.id === ids.sup2).floors).toEqual([1]);
+    const itemsFor = async (k: string, role: string) => { as(k, role); return ((await (await housemanGet(new NextRequest("http://x/api/lists/houseman"))).json()).items as { id: string }[]).map((i) => i.id); };
+    expect(await itemsFor("sup2", "supervisor")).toContain(ids.t3); // Etage 1
+    expect(await itemsFor("sup3", "supervisor")).toEqual([]); // Etage 2: nichts von Etage 1
+    expect((await itemsFor("dm", "duty_manager")).length).toBeGreaterThanOrEqual(3); // alles
   });
 });

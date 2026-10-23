@@ -19,7 +19,7 @@ export default function PlanConfirmDialog({
   view: PlanResult;
   names: Record<string, string>;
   confirming: boolean;
-  onConfirm: (opts: { acceptOpen?: boolean; confirmStarted?: boolean }) => Promise<ConfirmOutcome>;
+  onConfirm: (opts: { acceptOpen?: boolean; confirmStarted?: boolean; housemanAssignments?: { traceId: string; userId: string | null }[] }) => Promise<ConfirmOutcome>;
   onClose: () => void;
 }) {
   const { t } = useLocale();

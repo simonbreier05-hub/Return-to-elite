@@ -46,6 +46,8 @@ export interface ConfirmOptions {
   acceptOpen?: boolean;
   /** Der Supervisor hat ausdrücklich bestätigt, dass begonnene/fertige Zimmer die Kraft wechseln (Fortschritt bleibt erhalten). */
   confirmStarted?: boolean;
+  /** Hausmann-Aufgaben (Traces) → Hausmann (null = für alle); wird in derselben Transaktion gespeichert. */
+  housemanAssignments?: { traceId: string; userId: string | null }[];
 }
 
 const isStarted = isStartedStatus;
@@ -85,6 +87,13 @@ export async function confirmProposal(proposalId: string, final: Assignment, ses
   const before = new Map<string, Set<string>>();
   for (const r of db) if (r.assignedToId && (r.assignedOn === row.date || isStarted(r.status))) (before.get(r.assignedToId) ?? before.set(r.assignedToId, new Set()).get(r.assignedToId)!).add(r.id);
 
+  // Hausmann-Zuteilungen prüfen (nur Hausmann-Traces, nur Hausmänner)
+  const hmAssign = opts.housemanAssignments ?? [];
+  if (hmAssign.length) {
+    const hms = new Set((await prisma.user.findMany({ where: { role: "houseman" }, select: { id: true } })).map((u) => u.id));
+    const traces = new Map((await prisma.trace.findMany({ where: { id: { in: hmAssign.map((a) => a.traceId) }, dept: "HOUSEMAN" }, select: { id: true } })).map((t) => [t.id, true]));
+    for (const a of hmAssign) if (!traces.has(a.traceId) || (a.userId && !hms.has(a.userId))) throw new PlanConfirmError("INVALID", "Ungültige Hausmann-Zuteilung.");
+  }
   const movedStarted = new Set(startedMoves.map((r) => r.id));
   const todo = new Set(db.filter((r) => !isStarted(r.status)).map((r) => r.id));
   const updates = [];
@@ -106,6 +115,7 @@ export async function confirmProposal(proposalId: string, final: Assignment, ses
   await prisma.$transaction([
     ...updates,
     ...numbers.map((n) => prisma.user.update({ where: { id: n.id }, data: { dailyNumber: n.dailyNumber } })),
+    ...hmAssign.map((a) => prisma.trace.update({ where: { id: a.traceId }, data: { assignedToId: a.userId } })),
     prisma.autoPlanProposal.updateMany({ where: { date: row.date, status: "CONFIRMED" }, data: { status: "SUPERSEDED" } }),
     prisma.autoPlanProposal.update({ where: { id: row.id }, data: { status: "CONFIRMED", confirmedAt: new Date(), confirmedById: session.userId, deviations: JSON.stringify(deviations.map((d) => ({ ...d, at: new Date().toISOString() }))) } }),
   ]);
@@ -121,7 +131,7 @@ export async function confirmProposal(proposalId: string, final: Assignment, ses
     const changed = now.size !== was.size || [...now].some((id) => !was.has(id));
     return { id: h.id, rooms: m.rooms, credits: m.credits, changed };
   });
-  await notifyPlanConfirmed({ planId: row.id, actorId: session.userId, attendants, totalRooms: input.rooms.length, openRooms: result.unassigned.length });
+  await notifyPlanConfirmed({ planId: row.id, date: row.date, actorId: session.userId, attendants, totalRooms: input.rooms.length, openRooms: result.unassigned.length });
   broadcast("assignments:applied", { by: session.name, totalRooms: input.rooms.length, attendantIds: withRooms });
   void dbById;
   return { assigned: input.rooms.length - result.unassigned.length, open: result.unassigned.length, changed: deviations.length, date: row.date };

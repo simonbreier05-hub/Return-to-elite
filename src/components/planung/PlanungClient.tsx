@@ -96,14 +96,11 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     else { void plan.toggleHk(id); setUndo({ id, name: row.name }); }
   };
   const confirmSkip = async () => { if (!skipAsk) return; const s = skipAsk; setSkipAsk(null); await plan.toggleHk(s.id); setUndo({ id: s.id, name: s.name }); };
-  /** Bestätigen; erst danach werden die im Entwurf geänderten Etagen (Supervisor) und Hausmann-Zuteilungen gespeichert. */
+  /** Bestätigen: Hausmann-Zuteilungen gehen in derselben Transaktion mit; die geänderten Etagen (Supervisor) werden danach gespeichert. */
   const confirmAndSave = async (opts: { acceptOpen?: boolean; confirmStarted?: boolean }) => {
-    const r = await plan.confirm(opts);
-    if (r.ok) {
-      await team.saveFloors();
-      const assignments = Object.entries(hmEdits).map(([traceId, userId]) => ({ traceId, userId }));
-      if (assignments.length) await api("/api/planung/houseman", { method: "PUT", body: { assignments } }).catch(() => null);
-    }
+    const housemanAssignments = Object.entries(hmEdits).map(([traceId, userId]) => ({ traceId, userId })); // in derselben Transaktion + Meldung an die Hausmänner
+    const r = await plan.confirm({ ...opts, housemanAssignments });
+    if (r.ok) await team.saveFloors();
     return r;
   };
 

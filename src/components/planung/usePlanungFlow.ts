@@ -143,7 +143,7 @@ export function usePlanRun(date: string | null) {
 
   const view = useMemo(() => (draft ? buildResult(draft.input, draft.assignment) : null), [draft]);
 
-  const confirm = useCallback(async (opts: { acceptOpen?: boolean; confirmStarted?: boolean }): Promise<ConfirmOutcome> => {
+  const confirm = useCallback(async (opts: { acceptOpen?: boolean; confirmStarted?: boolean; housemanAssignments?: { traceId: string; userId: string | null }[] }): Promise<ConfirmOutcome> => {
     if (!draft) return { ok: false, code: "OTHER", message: "" };
     setConfirming(true);
     try {
