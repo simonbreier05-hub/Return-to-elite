@@ -22,9 +22,13 @@ Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`);
 - **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je belegtes Zimmer (Zimmer, Name, Anreise, Abreise, Erw., Kinder, Nächte). Geschäftsdatum = Druckdatum. **Layout angenommen** (wie die Departures-Zeilen) — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
 - **Traces** — PDF oder CSV; Twin-/Zusatzbett-Texte werden zu Hausmann-Aufgaben (`traceClassifier.ts`).
 
+## Betriebstag und veraltete Listen
+
+Betriebstag ist immer der heutige Tag der App-Uhr (Berlin). Das Datum in der Datei dient nur dem Abgleich: Liste vom anderen Tag = „veraltet (Datum)“ (Warnung `LIST_NOT_TODAY`, übernehmbar). Das Gate zählt eine veraltete Liste erst nach „Trotzdem verwenden“ (Supervisor/Duty Manager, wird im Logbuch protokolliert). Ohne lesbares Druckdatum: Hinweis `NO_PRINT_DATE`, die Liste gilt für den Betriebstag. Das Datumsformat je Listentyp wird nach dem Übernehmen als Layout gespeichert (`ImportMapping`).
+
 ## Einreichungs-Gate (fünf Listen)
 
-Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `missingAppliedLists()` → HTTP 409 mit der Liste der fehlenden Typen.
+Zusätzlich muss der Stand jeder Liste dem Betriebstag entsprechen (oder bestätigt sein). Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `missingAppliedLists()` → HTTP 409 mit der Liste der fehlenden Typen.
 
 ## Oberfläche und API
 

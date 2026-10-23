@@ -1,5 +1,6 @@
 import Papa from "papaparse";
 import type { ImportType } from "@/lib/domain";
+import { implausibleDateCount } from "./businessDay";
 import { detectListType } from "./detect";
 import { DEFAULT_MAPPING, type ImportMappingConfig } from "./mapping";
 import { extractPdfLines } from "./pdfText";
@@ -83,7 +84,9 @@ export function parseList(
 ): AnyResult {
   // Bei PDFs gilt das Druckdatum der Liste; `opts.today` (Formularfeld) ersetzt es nur bei Tabellen ohne Druckdatum.
   const userDay = opts.today;
-  opts = { ...opts, expectedDate: opts.expectedDate ?? userDay, ...(list.kind === "pdf" ? { today: undefined } : {}) };
+  // Betriebstag = `expectedDate` (App-Uhr). Bei PDFs ist das Druckdatum nur Abgleich — außer bei Forecast, dort schneidet der Betriebstag die History ab.
+  opts = { ...opts, expectedDate: opts.expectedDate ?? userDay, ...(list.kind === "pdf" && type !== "FORECAST" ? { today: undefined } : {}) };
+  if (opts.layoutDateFormat) cfg = { ...cfg, dateFormat: opts.layoutDateFormat };
   let r: AnyResult;
   if (type === "TRACES") {
     r = (list.kind === "sheet" ? parseTracesCsv(list.csv ?? "", opts, cfg) : parseTracesPdf(list.lines, opts, cfg)) as unknown as AnyResult;
@@ -95,8 +98,21 @@ export function parseList(
     r.reportDate ??= userDay;
     if (type === "ARRIVALS") r.periodFrom ??= userDay;
   }
-  if (userDay && r.reportDate && r.reportDate !== userDay) {
-    r.issues.push({ severity: "WARNING", code: "LIST_NOT_TODAY", message: `Die Liste ist vom ${r.reportDate}, ausgewählt ist der ${userDay}. Veraltete Liste?` });
+  // Betriebstag-Abgleich: weicht das Dateidatum ab, ist die Liste „veraltet“ (Warnung, übernehmbar; das Gate verlangt dann eine Bestätigung).
+  const fileDate = type === "ARRIVALS" ? r.periodFrom ?? r.reportDate : r.reportDate;
+  if (opts.expectedDate && fileDate && fileDate !== opts.expectedDate) {
+    r.issues.push({ severity: "WARNING", code: "LIST_NOT_TODAY", message: `Veraltete Liste (${fileDate}): Betriebstag ist der ${opts.expectedDate}. Sie zählt für die Planung erst nach „Trotzdem verwenden“.` });
+  }
+  // Datumsformat gegen den Betriebstag prüfen: Anreisen/Abreisen heute oder später. Passt es, ist die Abweichung vom gespeicherten Layout nur ein Hinweis.
+  if (opts.expectedDate && r.rows.length) {
+    const bad = implausibleDateCount(type, r.rows as unknown as { arrDate?: string; depDate?: string }[], opts.expectedDate);
+    const differs = r.issues.find((i) => i.code === "DATE_FORMAT_DIFFERS");
+    if (bad > 0 && !r.issues.some((i) => i.code === "LIST_NOT_TODAY")) {
+      r.issues.push({ severity: "WARNING", code: "DATE_IMPLAUSIBLE", message: `${bad} Zeile(n) mit Datum vor dem ${opts.expectedDate} (Abreise bzw. Anreise in der Vergangenheit) — Datumsformat oder Liste prüfen.` });
+    } else if (differs && bad === 0) {
+      differs.severity = "INFO";
+      differs.message = "Datumsformat weicht vom gespeicherten Layout ab, passt aber zum Betriebstag. Es wird beim Übernehmen als Layout gespeichert.";
+    }
   }
   return r;
 }

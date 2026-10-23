@@ -6,7 +6,7 @@ import type { GuestName } from "./types";
  * "Nachname, Vorname [Anrede]" und "[Anrede] [Titel] Vorname Nachname".
  * Unbekanntes Muster → Nachname = Fallback (siehe `salutation === null`).
  */
-export function parseGuestName(raw: string, cfg: ImportMappingConfig = DEFAULT_MAPPING): GuestName {
+export function parseGuestName(raw: string, cfg: ImportMappingConfig = DEFAULT_MAPPING, cells: string[] = []): GuestName {
   const clean = raw.replace(/\s+/g, " ").trim();
   const sal = new Set(cfg.salutations.map((s) => s.toLowerCase()));
   const tit = new Set(cfg.titles.map((s) => s.toLowerCase()));
@@ -30,6 +30,11 @@ export function parseGuestName(raw: string, cfg: ImportMappingConfig = DEFAULT_M
   } else {
     const parts = strip(clean.split(" "));
     lastName = parts[parts.length - 1] ?? clean;
+  }
+  // Steht die Anrede in einer eigenen Spalte neben dem Namen, ein exakter Treffer genügt.
+  if (!salutation) {
+    const hit = cells.find((c) => sal.has(c.trim().toLowerCase()));
+    if (hit) salutation = hit.trim();
   }
   return { salutation, title, lastName: lastName || clean, fullName: clean };
 }
