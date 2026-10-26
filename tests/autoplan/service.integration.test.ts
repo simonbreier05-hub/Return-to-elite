@@ -93,9 +93,9 @@ describe("Zuteilungsvorschlag und Umverteilung (Wegwerf-DB)", () => {
     expect(rooms.get("103")!.fixedTo).toBe(started.assignedToId);
     expect(rooms.get("103")!.state).toBe("STARTED");
     for (const x of r.payload.input.rooms.filter((y) => y.fixedTo)) expect(r.payload.result.assignment[x.id]).toBe(x.fixedTo);
-    // Feste Zimmer lassen sich nicht umbiegen
+    // Keine Sperren — aber ein begonnenes Zimmer nur nach ausdrücklicher Bestätigung (Fortschritt bleibt)
     const bad = { ...r.payload.result.assignment, [started.id]: hkId.d };
-    await expect(confirmProposal(r.proposalId, bad, sup)).rejects.toThrow(/fest zugeteilt/);
+    await expect(confirmProposal(r.proposalId, bad, sup, { acceptOpen: true })).rejects.toThrow(/begonnen oder fertig/);
     await prisma.room.update({ where: { id: started.id }, data: { status: "DIRTY" } });
     await prisma.autoPlanProposal.updateMany({ data: { status: "SUPERSEDED" } });
   });

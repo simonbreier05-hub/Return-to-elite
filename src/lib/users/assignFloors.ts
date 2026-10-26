@@ -31,5 +31,11 @@ export async function assignFloors({
   });
 
   broadcast("user:floors", { userId: updated.id, floors });
+  // Der Supervisor erfährt, dass sich seine Liste (Etagen) geändert hat — außer er hat es selbst getan.
+  if (updated.id !== actorId) {
+    const notification = await prisma.notification.create({ data: { type: "FLOORS_ASSIGNED", level: "info", targetRole: "supervisor", targetUserId: updated.id,
+      message: floors.length ? `Deine Etagen wurden geändert: Etage ${floors.join(", ")}.` : "Dir sind keine Etagen mehr zugeteilt." } });
+    broadcast("notification:new", { notification });
+  }
   return updated;
 }

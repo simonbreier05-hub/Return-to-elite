@@ -6,9 +6,9 @@ import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
 import type { PlanRoom } from "@/lib/autoplan/types";
 import { makeDay, makeInput, TEAM } from "./scenario";
 
-function live(mutate: (rooms: PlanRoom[], current: Record<string, string | null>) => void = () => {}, absentIds: string[] = []): LiveInput {
-  const rooms = makeDay(94).map((r) => ({ ...r }));
-  const team = TEAM();
+function live(mutate: (rooms: PlanRoom[], current: Record<string, string | null>) => void = () => {}, absentIds: string[] = [], opts: { days?: number; team?: ReturnType<typeof TEAM> } = {}): LiveInput {
+  const rooms = makeDay(opts.days ?? 94).map((r) => ({ ...r }));
+  const team = opts.team ?? TEAM();
   const plan = proposePlan(makeInput(rooms, team));
   const current = { ...plan.assignment };
   mutate(rooms, current);
@@ -98,7 +98,9 @@ describe("Früher fertig", () => {
   });
 
   it("gleichmäßig ausgelastet: keine Umverteilung", () => {
-    expect(suggestRedistribution(live()).filter((x) => x.kind === "EARLY_FINISH")).toEqual([]);
+    // Fünf Vollzeitkräfte, Arbeit passend zum Zielband → niemand ist früher fertig
+    const full = TEAM().filter((h) => h.type === "VOLLZEIT" && h.level >= 2);
+    expect(suggestRedistribution(live(() => {}, [], { days: 70, team: full })).filter((x) => x.kind === "EARLY_FINISH")).toEqual([]);
   });
 
   it("schnellere Kraft (aus Zeitstempeln) gilt früher als fertig", () => {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api } from "@/components/api";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
@@ -51,20 +52,8 @@ export default function SupervisorList() {
 
   if (!data) return null;
   const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const move = async (room: SupRoom, toId: string, fromId: string | null) => {
-    setBusy(room.id); setError(null);
-    try {
-      if (fromId) await api(`/api/rooms/${room.id}/move`, { body: { toAttendantId: toId } });
-      else await api(`/api/rooms/${room.id}/assign`, { body: { attendantId: toId } });
-      await load();
-    } catch (e) { setError(e instanceof Error ? e.message : t("lists.supMoveFailed")); } finally { setBusy(null); }
-  };
-  const mover = (room: SupRoom, fromId: string | null) => (
-    <select value="" disabled={busy === room.id} aria-label={t("lists.supMove")} onChange={(e) => e.target.value && void move(room, e.target.value, fromId)}
-      className="mt-1.5 h-11 w-full rounded-lg border border-charcoal/20 bg-white px-2 text-sm outline-none focus:border-gold disabled:opacity-50">
-      <option value="">{busy === room.id ? t("lists.supMoving") : `→ ${t("lists.supMove")}`}</option>
-      {data.attendants.filter((a) => a.id !== fromId).map((a) => <option key={a.id} value={a.id}>{label(a)}</option>)}
-    </select>
+  const mover = (_room: SupRoom, _fromId: string | null) => (
+    <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
   );
   const roomItem = (room: SupRoom, fromId: string | null) => (
     <div key={room.id}>

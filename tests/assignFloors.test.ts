@@ -8,11 +8,12 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  */
 
 const userUpdate = vi.fn();
+const notificationCreate = vi.fn().mockResolvedValue({ id: "n1" });
 const auditMock = vi.fn();
 const broadcastMock = vi.fn();
 
 vi.mock("@/lib/db", () => ({
-  prisma: { user: { update: (...args: unknown[]) => userUpdate(...args) } },
+  prisma: { user: { update: (...args: unknown[]) => userUpdate(...args) }, notification: { create: (...a: unknown[]) => notificationCreate(...a) } },
 }));
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
@@ -22,6 +23,7 @@ import { assignFloors } from "@/lib/users/assignFloors";
 describe("assignFloors", () => {
   beforeEach(() => {
     userUpdate.mockReset();
+    notificationCreate.mockClear();
     auditMock.mockReset();
     broadcastMock.mockReset();
   });
@@ -72,5 +74,14 @@ describe("assignFloors", () => {
     const result = await assignFloors({ user: { id: "sup-1", name: "Sofia Marchetti" }, floors: [1, 2, 5], actorId: "manager-1" });
 
     expect(result).toEqual(updated);
+  });
+
+  it("meldet dem Supervisor die geänderten Etagen (nicht, wenn er es selbst war)", async () => {
+    userUpdate.mockResolvedValue({ id: "sup-1", name: "S", email: "s@x", role: "supervisor", assignedFloors: "1,2" });
+    await assignFloors({ user: { id: "sup-1", name: "S" }, floors: [1, 2], actorId: "dm-1" });
+    expect(notificationCreate).toHaveBeenCalledWith({ data: expect.objectContaining({ type: "FLOORS_ASSIGNED", targetUserId: "sup-1", message: "Deine Etagen wurden geändert: Etage 1, 2." }) });
+    notificationCreate.mockClear();
+    await assignFloors({ user: { id: "sup-1", name: "S" }, floors: [1, 2], actorId: "sup-1" });
+    expect(notificationCreate).not.toHaveBeenCalled();
   });
 });

@@ -101,8 +101,14 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
 }
 
 export function morningInput(d: DayData): PlanInput {
+  // Zimmer, die heute einer jetzt nicht eingeplanten Kraft gehören (und noch nicht begonnen sind), werden neu verteilt — nie offen gelassen.
+  const presentIds = new Set(d.hks.filter((h) => h.present).map((h) => h.id));
+  // Begonnene Zimmer einer nicht eingeplanten Kraft bleiben bei ihr und gehören nicht in den Entwurf.
+  const rooms = d.rooms
+    .filter((r) => !(r.fixedTo && !presentIds.has(r.fixedTo) && r.state !== "TODO"))
+    .map((r) => (r.fixedTo && !presentIds.has(r.fixedTo) ? { ...r, fixedTo: null } : r));
   return {
-    rooms: d.rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
+    rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
     weights: d.weights, maxFloors: d.settings.autoplanMaxFloors, fullTimeTarget: d.fullTimeTarget,
   };
 }
