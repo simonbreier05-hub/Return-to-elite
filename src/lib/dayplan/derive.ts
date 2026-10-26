@@ -119,14 +119,13 @@ export function deriveDayPlan(input: DeriveInput): {
       rooms.push({ room, cleaningType: "DEPARTURE", laundryDue: false, nights: diffDays(dep.arrDate, date), vip: dep.vip, eta: null, stay: dep.arrDate, arrivingStay: null });
     } else if (stay) {
       const linen = input.lastLinenChange?.[room] ?? null;
-      // Zähler ab Anreise: ein Wäschewechsel vor der Anreise gehört dem Vorgänger und zählt nicht.
-      const ref = linen && linen > stay.arrDate ? linen : stay.arrDate;
-      const due = isLaundryDue({
-        category: "STAYOVER",
-        lastLinenChangeAt: new Date(`${ref}T00:00:00Z`),
-        now: new Date(`${date}T00:00:00Z`),
-        linenCycleDays: input.linenCycleDays,
-      });
+      const nights = diffDays(stay.arrDate, date);
+      // Datengrundlage: Anreisedatum (Opera) + tatsächlich erfasster Wechsel (Room.lastLinenChangeAt, nie aus der Anreise abgeleitet).
+      // Mit erfasstem Wechsel nach der Anreise: fällig, wenn seitdem das Intervall vergangen ist. Ohne: Rhythmus ab Anreise
+      // (jede n-te Nacht) — nicht „alles seit n Tagen", sonst wäre fast jedes Zimmer dauerhaft fällig.
+      const due = linen && linen > stay.arrDate
+        ? isLaundryDue({ category: "STAYOVER", lastLinenChangeAt: new Date(`${linen}T00:00:00Z`), now: new Date(`${date}T00:00:00Z`), linenCycleDays: input.linenCycleDays })
+        : input.linenCycleDays > 0 && nights > 0 && nights % input.linenCycleDays === 0;
       rooms.push({ room, cleaningType: "STAYOVER", laundryDue: due, nights: diffDays(stay.arrDate, date), vip: stay.vip, eta: null, stay: stay.arrDate, arrivingStay: null });
     } else if (arr) {
       rooms.push({ room, cleaningType: "ARRIVAL", laundryDue: false, nights: null, vip: arr.vip, eta: arr.arrTime, stay: null, arrivingStay: arr.arrDate });

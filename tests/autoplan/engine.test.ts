@@ -110,7 +110,7 @@ describe("zu wenige Kräfte", () => {
     const res = proposePlan(makeInput(rooms, [hk("a", "VOLLZEIT", 3), hk("b", "VOLLZEIT", 2), hk("c", "VOLLZEIT", 2)]));
     expect(res.unassigned).toEqual([]);
     expect(res.needed).toMatchObject({ housekeepers: 6, targetCredits: 14, present: 3 });
-    expect(res.warnings.find((w) => w.code === "TOO_FEW_STAFF")!.message).toContain("benötigt werden 6 Housekeeper bei 14 Credits");
+    expect(res.warnings.find((w) => w.code === "TOO_FEW_STAFF")!.message).toContain("Personal reicht nicht: benötigt 6 Kräfte, ausgewählt 3");
     expect(res.warnings.map((w) => w.code)).toContain("TOO_MANY_FLOORS");
   });
 });

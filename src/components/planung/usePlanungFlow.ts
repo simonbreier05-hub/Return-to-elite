@@ -141,6 +141,12 @@ export function usePlanRun(date: string | null) {
     if (confirmStarted) setStartedOk((s) => new Set(s).add(roomId));
   }, []);
 
+  /** Mehrere Zimmer auf einmal (Mehrfachauswahl, Ziehen) — ein Zustandswechsel, ein Neuberechnen. */
+  const assignMany = useCallback((roomIds: string[], hkId: string | null, confirmStarted: boolean) => {
+    setDraft((d) => (d ? { ...d, assignment: { ...d.assignment, ...Object.fromEntries(roomIds.map((id) => [id, hkId])) } } : d));
+    if (confirmStarted) setStartedOk((s) => new Set([...s, ...roomIds]));
+  }, []);
+
   const view = useMemo(() => (draft ? buildResult(draft.input, draft.assignment) : null), [draft]);
 
   const confirm = useCallback(async (opts: { acceptOpen?: boolean; confirmStarted?: boolean; housemanAssignments?: { traceId: string; userId: string | null }[] }): Promise<ConfirmOutcome> => {
@@ -159,5 +165,5 @@ export function usePlanRun(date: string | null) {
   }, [draft]);
 
   const states = phaseStates(completed, running, failedAt);
-  return { run, states, started, running, error, result, beamKey, done: !!result && !running, draft, view, assign, active, toggleHk, startedOk, confirm, confirming, confirmed };
+  return { run, states, started, running, error, result, beamKey, done: !!result && !running, draft, view, assign, assignMany, active, toggleHk, startedOk, confirm, confirming, confirmed };
 }

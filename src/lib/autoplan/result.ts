@@ -107,7 +107,7 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
-      message: `Zu wenige Kräfte: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}.` });
+      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${fmt(input.fullTimeTarget)} Credits je Kraft). Alle Zimmer sind trotzdem verteilt — Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
   }
 
   const { total, parts } = cost(c, idx);

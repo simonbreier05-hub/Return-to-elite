@@ -241,12 +241,9 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
     const checkout = p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN";
     const arrivingStay = p.arrivingStayId ? await prisma.stay.findUnique({ where: { id: p.arrivingStayId } }) : null;
     const occupied = p.cleaningType !== "ARRIVAL" || arrivingStay?.status === "IN_HOUSE";
-    const data: { isCheckoutToday: boolean; occupancy: string; lastLinenChangeAt?: Date } = { isCheckoutToday: checkout, occupancy: occupied ? "OCCUPIED" : "VACANT" };
-    if (p.cleaningType === "STAYOVER" && p.stayId) {
-      const stay = await prisma.stay.findUnique({ where: { id: p.stayId } });
-      if (stay && (!p.room.lastLinenChangeAt || p.room.lastLinenChangeAt < stay.checkIn)) data.lastLinenChangeAt = stay.checkIn; // Zähler ab Anreise
-    }
-    if (p.room.isCheckoutToday !== data.isCheckoutToday || p.room.occupancy !== data.occupancy || data.lastLinenChangeAt) {
+    const data: { isCheckoutToday: boolean; occupancy: string } = { isCheckoutToday: checkout, occupancy: occupied ? "OCCUPIED" : "VACANT" };
+    // Wäschewechsel-Datum wird nie aus der Anreise erfunden: Room.lastLinenChangeAt kommt nur aus einem erfassten Wechsel.
+    if (p.room.isCheckoutToday !== data.isCheckoutToday || p.room.occupancy !== data.occupancy) {
       const room = await prisma.room.update({ where: { id: p.roomId }, data });
       broadcast("room:update", { room });
       changed++;

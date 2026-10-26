@@ -50,7 +50,7 @@ export default function AssignmentFloorPlan() {
         {error && <p role="alert" className="mt-2 text-sm text-status-out-of-order">{error}</p>}
       </section>
       <RedistributionCards />
-      <PlanningFloorPlanPanel key={version} onShiftAttendants={day.attendants} actionableRoomIds={day.actionableRoomIds} />
+      <PlanningFloorPlanPanel reloadToken={version} onShiftAttendants={day.attendants} actionableRoomIds={day.actionableRoomIds} />
     </div>
   );
 }
