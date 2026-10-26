@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import Modal from "./Modal";
 import NoteCountBadge from "./NoteCountBadge";
 import NoteThread, { type ThreadNote } from "./NoteThread";
@@ -63,10 +64,13 @@ export default function RoomDetailModal({
   room,
   onClose,
   actions,
+  editor,
 }: {
   room: SearchedRoom;
   onClose: () => void;
   actions?: RoomDetailActions;
+  /** Bearbeiten-Bereich (nur Duty Manager/Supervisor, siehe RoomEditPanel) — ohne ihn bleibt das Modal reine Ansicht. */
+  editor?: ReactNode;
 }) {
   const { t } = useLocale();
   const style = STATUS_STYLES[room.status];
@@ -203,12 +207,14 @@ export default function RoomDetailModal({
         </div>
       )}
 
+      {editor}
+
       <div className="mt-4">
         <div className="mb-1 flex items-center gap-2">
           <h4 className="text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
           <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
         </div>
-        <NoteThread roomId={room.id} initialNotes={room.notes} onNoteAdded={actions?.onNoteAdded} onNoteUpdated={actions?.onNoteUpdated} />
+        <NoteThread key={room.notes.map((n) => `${n.id}${n.status}`).join()} roomId={room.id} initialNotes={room.notes} onNoteAdded={actions?.onNoteAdded} onNoteUpdated={actions?.onNoteUpdated} />
       </div>
     </Modal>
   );
