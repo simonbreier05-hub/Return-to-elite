@@ -814,6 +814,12 @@ const en = {
     hmOtherTasks: "More jobs",
     hmFailed: "Could not save.",
   },
+  hubDay: {
+    missingTitle: "No lists have been read in for today ({{date}}) yet.",
+    missingPlanner: "StayClean only works with today's data from the planning hub. Read in the five Opera lists there — the board, lists and floor plan fill up straight away.",
+    missingAttendant: "Your rooms appear as soon as today's planning has been done in the planning hub.",
+    toHub: "Open planning hub",
+  },
   planungTool: {
     title: "Planning",
     houseToday: "The house today",
@@ -1877,6 +1883,12 @@ const de = {
     hmTimes: "Zeiten: {{list}}",
     hmOtherTasks: "Weitere Aufgaben",
     hmFailed: "Speichern hat nicht geklappt.",
+  },
+  hubDay: {
+    missingTitle: "Für heute ({{date}}) sind noch keine Listen eingelesen.",
+    missingPlanner: "StayClean arbeitet nur mit den Tagesdaten aus dem Planungshub. Dort die fünf Opera-Listen einlesen — Board, Listen und Grundriss füllen sich danach sofort.",
+    missingAttendant: "Deine Zimmer erscheinen, sobald die Tagesplanung im Planungshub gemacht ist.",
+    toHub: "Zum Planungshub",
   },
   planungTool: {
     title: "Planung",

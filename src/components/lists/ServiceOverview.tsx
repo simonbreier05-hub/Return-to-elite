@@ -8,7 +8,10 @@ import { DAY_CATEGORY_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import type { RoomDayCategory } from "@/lib/rooms/roomDayCategory";
-import { SERVICE_ORDER, needsCleaning, type ServiceKey, type ServiceOverview as Data } from "@/lib/lists/serviceOverview";
+import { SERVICE_ORDER, needsCleaning, type ServiceKey, type ServiceOverview } from "@/lib/lists/serviceOverview";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+
+type Data = ServiceOverview & { hub?: HubState };
 
 const CATEGORY: Record<ServiceKey, RoomDayCategory> = { TURN: "SAME_DAY_TURN", DEPARTURE: "DEPARTURE", STAYOVER_LINEN: "STAYOVER", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
 const NAME: Record<ServiceKey, TKey> = { TURN: "service.TURN", DEPARTURE: "service.DEPARTURE", STAYOVER_LINEN: "service.STAYOVER_LINEN", STAYOVER: "service.STAYOVER", ARRIVAL: "service.ARRIVAL" };
@@ -54,6 +57,7 @@ export default function ServiceOverview() {
 
   return (
     <div>
+      <HubMissingNotice hub={data.hub} planner />
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <div className="col-span-2 rounded-xl border border-charcoal/15 bg-parchment/50 p-3 sm:col-span-3 lg:col-span-6">
           <span className="font-serif text-4xl">{data.counts.clean}</span>

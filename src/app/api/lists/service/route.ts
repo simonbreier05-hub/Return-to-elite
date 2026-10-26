@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hubDay } from "@/lib/dayplan/hubDay";
 import { requireRole } from "@/lib/rbac";
 import { getServiceOverview } from "@/lib/lists/serviceOverview";
 
@@ -6,5 +7,5 @@ import { getServiceOverview } from "@/lib/lists/serviceOverview";
 export async function GET() {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
-  return NextResponse.json(await getServiceOverview(auth.session));
+  return NextResponse.json({ hub: await hubDay(), ...(await getServiceOverview(auth.session)) });
 }

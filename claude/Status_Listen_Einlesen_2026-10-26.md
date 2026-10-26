@@ -47,3 +47,34 @@ Branch: `feat/listen-einlesen-loeschen` — enthält `feat/plan-grundriss` (per 
 3. Der **Tagesplan** (Zimmerarten im Haus-Bild) bleibt nach dem Löschen stehen, bis neu importiert wird. Soll er beim Löschen von Departures sofort geleert werden?
 4. Löschen gibt es im Planungstool; auf der Seite `/import` noch nicht. Gewünscht?
 5. Der Fehler trat lokal mit SQLite sehr deutlich auf; auf Railway (Postgres) vermutlich durch knappe Verbindungen/Latenz. Bitte einmal auf der Preview mit echten Listen prüfen, und vor einem Release einmal in echtem Safari.
+
+---
+
+# Nachtrag 26.10.: Planungshub als einzige Datenquelle
+
+**Vorgabe:** Die App arbeitet ausschließlich mit den Daten aus dem Planungshub. Entscheidungen: ohne eingelesene Listen für heute → leer + Hinweis; Demo-Tagesdaten entfernen; Statusänderungen, manuelle Anreisen (Front Office) und Zuteilungsänderungen im Grundriss bleiben erlaubt.
+
+**Ist-Stand vorher (Ursachen):**
+- Ansichten fielen auf „zuletzt eingelesenen Tag" bzw. den jüngsten Tagesplan zurück (`latestPlanDate`, `dayRoomPlan.findFirst`) → still der Stand von gestern.
+- Belegung/Abreise auf dem Board kamen **nie automatisch** aus dem Hub: nur per Knopf „aufs Board" auf `/import`. Sonst standen dort die erfundenen Seed-Werte.
+- Zimmer ohne Tagesplan-Eintrag behielten alte Werte, wenn die Departures-Liste < 30 Tage abdeckte.
+- Zuteilungen von gestern erschienen weiter auf Board und „Meine Zimmer".
+- Seed legte Demo-Status, Belegung, Abreisen, Zuteilungen, Anreisen, einen Aufenthalt, Ausflüge, Defekt, Aufgaben, Notizen an.
+
+**Änderungen:**
+- `src/lib/dayplan/hubDay.ts`: eine Prüfung „gibt es für heute einen Tagesplan?". Tag ist immer der Betriebstag.
+- `POST /api/dayplan/merge` rechnet nur für den Betriebstag und übernimmt den Plan sofort aufs Board; Zimmer ohne Eintrag: keine Abreise, belegt nur laut In-House-Liste. Eine im Hub als veraltet bestätigte Departures-Liste wird für heute verwendet.
+- Ohne Tagesplan für heute: Board (Supervisor, Duty Manager), Grundriss, „Meine Zimmer", Priorität, Umverteilungskarten, alter Planer → leer + Hinweis „Für heute sind noch keine Listen eingelesen" (Planer mit Knopf „Zum Planungshub"). Hausmann-Liste und „Zimmer und Service heute" ebenso. Schnellsuche findet Zimmer weiter, ohne Tagesdaten.
+- Zuteilungen zählen nur, wenn sie von heute sind (`assignedOn`).
+- Ansichten laden automatisch nach, sobald der Hub den Tagesplan berechnet (`dayplan:updated`).
+- Seed: nur Mitarbeiter, Zimmer-Stammdaten, Etagen-Einrichtungen, Einstellungen.
+- `prisma/reset-day-data.ts`: entfernt einmalig Demo-Tagesdaten aus einer bestehenden DB (Hub-Daten bleiben). Läuft beim Start nur mit `RESET_DAY_DATA_ONCE=1` — gesetzt nur am Preview-Dienst, nicht an Production.
+- Keine Schema-Änderung.
+
+**Tests:** 73 Dateien, 601 Tests grün (neu `tests/hubDay.integration.test.ts`; 5 bestehende Testdateien stellen jetzt die Uhr auf ihren Testtag). `tsc` sauber, Build ok. Browser (390 px / Desktop): Hinweis vor dem Einlesen auf Supervisor-Board, Duty-Manager-Board, „Meine Zimmer", Grundriss; nach dem Einlesen im Hub Board sofort gefüllt (139 Zimmer, Belegung/Abreisen laut Listen), keine Fehler.
+
+**Offene Fragen:**
+1. Zimmerstatus (schmutzig/sauber …) kommt nicht aus den Opera-Listen. Neue/bereinigte Zimmer starten mit dem Schema-Standard „schmutzig". Soll der Status morgens aus dem Tagesplan gesetzt werden (z. B. Abreise/Bleiber → schmutzig, sonst geprüft)?
+2. Die Gast-Vorschau-Kachel auf der Login-Seite brauchte den Demo-Aufenthalt in 301 und zeigt jetzt „Zurzeit nicht verfügbar", bis ein echter Aufenthalt aus dem Hub da ist. Kachel entfernen oder auf ein Zimmer aus dem Tagesplan zeigen lassen?
+3. Production hat vermutlich noch Demo-Tagesdaten. Dort ebenfalls einmal bereinigen (`RESET_DAY_DATA_ONCE=1` am Production-Dienst)? Ich habe Production nicht angefasst.
+4. Der Knopf „Tagesplan aufs Board" auf `/import` ist jetzt überflüssig (läuft automatisch). Entfernen?

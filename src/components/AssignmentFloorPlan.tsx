@@ -7,8 +7,9 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import RedistributionCards from "@/components/RedistributionCards";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
-interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[] }
+interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[]; hub?: HubState }
 
 /**
  * Die einzige Zuteilungsansicht (nur Supervisor/Duty Manager): Grundriss oder Liste je Zimmermädchen, beide Zuteilungsmodi.
@@ -34,6 +35,7 @@ export default function AssignmentFloorPlan() {
   if (!day) return null;
   return (
     <div>
+      <HubMissingNotice hub={day.hub} planner />
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card" aria-label={t("planning.presentTitle")}>
         <h3 className="font-serif text-xl">{t("planning.presentTitle")}</h3>
         <p className="mb-2 text-xs text-graphite/60">{t("planning.presentHint")}</p>

@@ -12,6 +12,7 @@ import OccupancyCleanCounter from "@/components/OccupancyCleanCounter";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface Room {
   id: string;
@@ -61,15 +62,17 @@ export default function DutyManagerView() {
   const [roomTasks, setRoomTasks] = useState<RoomTask[]>([]);
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [hub, setHub] = useState<HubState | null>(null);
 
   const load = useCallback(async () => {
     const [roomsData, workOrdersData, roomTasksData, supervisorsData] = await Promise.all([
-      api<{ rooms: Room[] }>("/api/rooms"),
+      api<{ rooms: Room[]; hub?: HubState }>("/api/rooms"),
       api<{ workOrders: WorkOrder[] }>("/api/workorders"),
       api<{ roomTasks: RoomTask[] }>("/api/roomtasks"),
       api<{ supervisors: Supervisor[] }>("/api/users/supervisors"),
     ]);
     setRooms(roomsData.rooms);
+    setHub(roomsData.hub ?? null);
     setWorkOrders(workOrdersData.workOrders);
     setRoomTasks(roomTasksData.roomTasks);
     setSupervisors(supervisorsData.supervisors);
@@ -83,6 +86,7 @@ export default function DutyManagerView() {
 
   useSocket({
     "room:update": () => refetchSoon(),
+    "dayplan:updated": () => refetchSoon(),
     "arrival:update": () => refetchSoon(),
     "assignments:applied": () => refetchSoon(),
     "workorder:update": () => refetchSoon(),
@@ -195,6 +199,7 @@ export default function DutyManagerView() {
         </Link>
       </div>
 
+      <HubMissingNotice hub={hub} planner />
       {error && (
         <div className="mb-3 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-4 py-2 text-sm text-status-out-of-order">
           {error}

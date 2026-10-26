@@ -76,3 +76,7 @@ Alle Gastdaten werden abends gelöscht und kommen mit dem Import zurück — sie
 ## Testdaten
 
 Nachbau-PDFs mit erfundenen Namen: `npm run fixtures:opera` (→ `tests/fixtures/opera/`). Durchlauf eines Morgens: `scripts/morning-demo.ts` (Wegwerf-DB, Aufruf im Kopf der Datei).
+
+## Planungshub = einzige Datenquelle des Arbeitstags
+
+Board, Grundriss, Arbeitslisten, Priorität und Zuteilung arbeiten ausschließlich mit dem Tagesplan des **Betriebstags** (`src/lib/dayplan/hubDay.ts`). `POST /api/dayplan/merge` berechnet ihn für heute und übernimmt ihn sofort aufs Board (Belegung, Abreise, erwartete Anreisen; Zimmer ohne Eintrag: belegt nur laut In-House-Liste). Gibt es für heute keinen Tagesplan, zeigen die Ansichten keine Tagesdaten, sondern den Hinweis „Für heute sind noch keine Listen eingelesen“ (Supervisor/Duty Manager mit Link zum Planungshub) — nie den Stand eines älteren Tages. Tagsüber bleiben Statusänderungen, manuelle Anreisen (Front Office) und Zuteilungsänderungen im Grundriss erlaubt; Zuteilungen gelten nur am Tag, an dem sie gemacht wurden (`assignedOn`).

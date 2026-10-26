@@ -30,6 +30,7 @@ import {
 } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface Note {
   id: string;
@@ -107,10 +108,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   // assigned floor(s) — see GET /api/rooms. Null for duty_manager (never
   // scoped) and for a supervisor with no floors assigned yet (fails open).
   const [floorScope, setFloorScope] = useState<number[] | null>(null);
+  const [hub, setHub] = useState<HubState | null>(null);
 
   const load = useCallback(async () => {
-    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null }>("/api/rooms");
+    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null; hub?: HubState }>("/api/rooms");
     setRooms(data.rooms);
+    setHub(data.hub ?? null);
     setAttendants(data.attendants);
     setFloorScope(data.floorScope);
   }, []);
@@ -124,6 +127,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const refetchSoon = useCoalescedRefetch(load, 2000);
 
   useSocket({
+    // Tagesplan im Planungshub berechnet/geändert → Board neu laden (auch der erste Plan des Tages).
+    "dayplan:updated": () => refetchSoon(),
     // Patch the changed room in place. The broadcast carries only scalar room
     // fields plus assignedTo, so spreading it preserves the nested arrivals,
     // notes and defects already held in state.
@@ -320,6 +325,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   return (
     <div className="animate-rise">
       <RedistributionCards />
+      <HubMissingNotice hub={hub} planner />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>

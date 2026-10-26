@@ -4,7 +4,7 @@ import { requireRole } from "@/lib/rbac";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 import { compareWithForecast, type DayCleaningType } from "@/lib/dayplan/derive";
 
-/** GET /api/dayplan?date= — gespeicherter Tagesplan mit Kennzahlen (Standard: Tag der letzten Departures). */
+/** GET /api/dayplan?date= — gespeicherter Tagesplan mit Kennzahlen (Standard: Betriebstag). */
 export async function GET(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;

@@ -5,9 +5,9 @@ import type { RoomType } from "@/lib/domain";
 import { creditFactor } from "@/lib/rooms/stayoverCredit";
 import { shortGuestName, timesInText } from "./guestName";
 
-/** Tag der Listen: zuletzt übernommene Departures, sonst der jüngste vorhandene Tagesplan. */
+/** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
-  return (await latestPlanDate()) ?? (await prisma.dayRoomPlan.findFirst({ orderBy: { date: "desc" }, select: { date: true } }))?.date ?? null;
+  return latestPlanDate();
 }
 
 export type Kind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL";

@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { resolveFloorScope } from "@/lib/floors";
 import { shortGuestName } from "@/lib/lists/guestName";
+import { assignedToday, hubDay } from "@/lib/dayplan/hubDay";
 
 /**
  * GET /api/rooms — full board (optionally ?mine=1 for the attendant view, or
@@ -17,6 +18,10 @@ import { shortGuestName } from "@/lib/lists/guestName";
  * silently locked out. Pass ?allFloors=1 to bypass this for a caller that
  * genuinely needs the whole house regardless of role — the floor-plan
  * reference page (wayfinding, not "my work area") is the one place that does.
+ *
+ * Tagesdaten kommen nur aus dem Planungshub (`hubDay`): Gibt es für heute keinen Tagesplan, liefern Board,
+ * Grundriss und „Meine Zimmer" keine Zimmer, sondern `hub.ready=false` (die Oberfläche zeigt den Hinweis).
+ * Die Schnellsuche (?q=) findet Zimmer weiter, aber ohne Tagesdaten. Zuteilungen zählen nur, wenn sie von heute sind.
  */
 export async function GET(req: NextRequest) {
   const auth = await requireAuth();
@@ -25,10 +30,12 @@ export async function GET(req: NextRequest) {
   const mine = req.nextUrl.searchParams.get("mine") === "1";
   const q = req.nextUrl.searchParams.get("q")?.trim();
   const allFloors = req.nextUrl.searchParams.get("allFloors") === "1";
-  const where: { number?: { contains: string }; assignedToId?: string; floor?: { in: number[] } } = q
+  const hub = await hubDay();
+  if (!hub.ready && !q) return NextResponse.json({ rooms: [], attendants: [], floorScope: null, hub });
+  const where: { number?: { contains: string }; assignedToId?: string; assignedOn?: string; floor?: { in: number[] } } = q
     ? { number: { contains: q } }
     : mine
-      ? { assignedToId: auth.session.userId }
+      ? { assignedToId: auth.session.userId, assignedOn: hub.date }
       : {};
 
   let floorScope: number[] | null = null;
@@ -84,7 +91,11 @@ export async function GET(req: NextRequest) {
   // Housekeeper sehen Gäste nur als „Anrede Titel Nachname" — von Hand erfasste Namen werden hier gekürzt (nie Vornamen).
   const attendantView = auth.session.role === "room_attendant";
   const me = auth.session.userId;
-  const roomsWithCounts = rooms.map(({ _count, guestRequests, ...room }) => ({
+  const roomsWithCounts = rooms.map(({ _count, guestRequests, ...raw }) => {
+    // Ohne heutigen Tagesplan (nur Schnellsuche) bzw. bei einer Zuteilung von gestern: keine Tagesdaten zeigen.
+    const room = !hub.ready ? { ...raw, isCheckoutToday: false, assignedToId: null, assignedTo: null, routeOrder: null, arrivals: [] }
+      : assignedToday(raw.assignedOn, hub.date) ? raw : { ...raw, assignedToId: null, assignedTo: null, routeOrder: null };
+    return {
     ...room,
     // Housekeeper sehen fremde Zuteilungen nicht (nur ihre eigenen Zimmer tragen einen Namen).
     ...(attendantView && room.assignedToId !== me ? { assignedToId: null, assignedTo: null, routeOrder: null } : {}),
@@ -92,12 +103,13 @@ export async function GET(req: NextRequest) {
     openNotesCount: _count.notes,
     guestRequests,
     guestDndActive: dndRoomIds.has(room.id),
-  }));
+  };
+  });
 
   const attendants = await prisma.user.findMany({
     where: { role: "room_attendant" },
     select: { id: true, name: true, section: true, currentRoomId: true, lastSeenAt: true, dailyNumber: true },
   });
 
-  return NextResponse.json({ rooms: roomsWithCounts, attendants, floorScope });
+  return NextResponse.json({ rooms: roomsWithCounts, attendants, floorScope, hub });
 }

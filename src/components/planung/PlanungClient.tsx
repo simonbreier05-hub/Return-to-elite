@@ -76,8 +76,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     setMerging(true); setMergeError(null);
     try {
       const st = await api<{ status: ListStatus; today: string }>("/api/import/status");
-      const date = st.status.DEPARTURES?.businessDate;
-      if (date && planningAllowed(st.status, st.today)) await api("/api/dayplan/merge", { body: { date } });
+      if (planningAllowed(st.status, st.today)) await api("/api/dayplan/merge", { body: {} }); // Server rechnet für den Betriebstag
       await refreshHouse({ wave: true });
     } catch (e) {
       setMergeError(errorText(e));

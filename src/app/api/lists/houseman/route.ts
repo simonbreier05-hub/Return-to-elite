@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { hubDay } from "@/lib/dayplan/hubDay";
 import { requireRole } from "@/lib/rbac";
 import { getHousemanList } from "@/lib/lists/housemanList";
 import { floorsFor } from "@/lib/lists/supervisorList";
@@ -9,5 +10,5 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const floor = parseInt(req.nextUrl.searchParams.get("floor") ?? "", 10);
   const onlyFloors = auth.session.role === "supervisor" ? await floorsFor(auth.session) : null; // Supervisor: nur die zugeteilten Etagen
-  return NextResponse.json(await getHousemanList(Number.isFinite(floor) ? floor : null, auth.session.role === "houseman" ? auth.session.userId : null, onlyFloors));
+  return NextResponse.json({ hub: await hubDay(), ...(await getHousemanList(Number.isFinite(floor) ? floor : null, auth.session.role === "houseman" ? auth.session.userId : null, onlyFloors)) });
 }

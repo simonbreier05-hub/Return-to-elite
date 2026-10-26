@@ -5,6 +5,7 @@ import { api } from "@/components/api";
 import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse } from "@/components/FloorPlanGrid";
 import AssignmentFloorPlan from "@/components/AssignmentFloorPlan";
 import { roomDayCategory } from "@/lib/rooms/roomDayCategory";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface LiveRoom {
   id: string;
@@ -33,6 +34,7 @@ interface LiveRoom {
 function ReferenceFloorPlan() {
   const [plan, setPlan] = useState<FloorPlanResponse | null>(null);
   const [liveRooms, setLiveRooms] = useState<LiveRoom[]>([]);
+  const [hub, setHub] = useState<HubState | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = () => {
@@ -40,11 +42,12 @@ function ReferenceFloorPlan() {
       api<FloorPlanResponse>("/api/floor-plan"),
       // allFloors=1: this is a hotel-wide wayfinding reference, not "my work
       // area" — a floor-scoped supervisor still needs the whole floor plan.
-      api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1"),
+      api<{ rooms: LiveRoom[]; hub?: HubState }>("/api/rooms?allFloors=1"),
     ])
       .then(([planData, roomsData]) => {
         setPlan(planData);
         setLiveRooms(roomsData.rooms);
+        setHub(roomsData.hub ?? null);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   };
@@ -67,6 +70,7 @@ function ReferenceFloorPlan() {
         </p>
       </div>
 
+      <HubMissingNotice hub={hub} planner />
       <div className="mb-4 rounded-xl border border-gold-line/40 bg-parchment/60 p-3 text-xs text-graphite/70">
         <strong>Staff &amp; housekeeping always arrive on a floor via the SVC (service) lift.</strong>{" "}
         Everything a room attendant needs is kept in the HSK office marked <strong>★ primary</strong> below —
