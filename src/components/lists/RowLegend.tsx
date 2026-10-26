@@ -24,6 +24,8 @@ export default function RowLegend() {
           {item(<span aria-hidden>✨</span>, t("lists.wishCLEAN_REQUEST"))}
           {item(<span aria-hidden>💬</span>, t("lists.wishCONTACT"))}
           {item(<span aria-hidden>▸</span>, t("lists.rowTraces", { n: "n" }))}
+          {item(<span aria-hidden>📌</span>, t("lists.precheckNoted"))}
+          {item(<span aria-hidden>🔎</span>, t("lists.precheckArrival"))}
         </ul>
         <p className="mt-1 text-xs text-graphite/70">{t("lists.legendStatus")}. {t("lists.legendNotes")}</p>
       </div>

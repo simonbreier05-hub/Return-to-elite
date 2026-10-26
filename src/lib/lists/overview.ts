@@ -27,12 +27,14 @@ export async function getLiveOverview(): Promise<LiveOverview> {
   const sups = await prisma.user.findMany({ where: { role: "supervisor" }, select: { id: true, name: true, assignedFloors: true }, orderBy: { name: "asc" } });
   const housemenAll = await prisma.user.findMany({ where: { role: "houseman" }, select: { id: true, name: true }, orderBy: { name: "asc" } });
   const list = await getHousemanList(null, null, null);
-  const rows = date ? (await loadRoomRows(date, { floors: [...FLOORS] as number[] }, null, { extra: true })).filter((r) => r.kind !== null && r.kind !== "ARRIVAL") : [];
+  const allRows = date ? (await loadRoomRows(date, { floors: [...FLOORS] as number[] }, null, { extra: true })).filter((r) => r.kind !== null) : [];
+  const rows = allRows.filter((r) => r.kind !== "ARRIVAL"); // Zähler: nur Zimmer mit Reinigung
   const supervisors = sups.map((s) => {
     const floors = parseAssignedFloors(s.assignedFloors);
     const mine = rows.filter((r) => floors.includes(r.floor));
+    const listed = allRows.filter((r) => floors.includes(r.floor)); // Liste: auch Anreise-Zimmer (ohne Reinigung)
     const done = mine.filter((r) => isDone(r.status)).length;
-    return { id: s.id, name: s.name, floors, rooms: mine.length, done, open: mine.length - done, list: mine };
+    return { id: s.id, name: s.name, floors, rooms: mine.length, done, open: mine.length - done, list: listed };
   });
   const covered = new Set(supervisors.flatMap((s) => s.floors));
   const uncoveredFloors = ([...FLOORS] as number[]).filter((f) => !covered.has(f) && rows.some((r) => r.floor === f));

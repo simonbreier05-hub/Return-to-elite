@@ -6,6 +6,7 @@ import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
 import { AUTOPLAN_WEIGHT_PREFIX, getAutoplanWeights, getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
 import { PRIORITY_WEIGHTS } from "@/lib/priority/computePriority";
 import { audit } from "@/lib/audit";
+import { getRoomTypeMap, getRoomTypeSeen, saveRoomTypeMap } from "@/lib/import/roomTypes";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -20,6 +21,8 @@ export async function GET() {
     planningCredits: await getPlanningCreditSettings(),
     autoplanWeights: await getAutoplanWeights(),
     autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
+    roomTypeMap: await getRoomTypeMap(),
+    roomTypeSeen: Object.fromEntries(Object.entries(await getRoomTypeSeen()).map(([c, n]) => [c, n.length])),
   });
 }
 
@@ -49,6 +52,8 @@ const Body = z.object({
   redistributionMaxMoves: z.number().int().min(1).max(20).optional(),
   /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
   autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
+  /** Opera-Zimmerart-Code → Zimmerart (Einstellungen). */
+  roomTypeMap: z.record(z.string(), z.string()).optional(),
   /** Priority weights, by their name in PRIORITY_WEIGHTS. Zero is allowed — it
    *  is how a house switches a signal off entirely. */
   weights: z.record(z.string(), z.number().min(0).max(1000)).optional(),
@@ -81,7 +86,9 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  const { weights, autoplanWeights, ...thresholds } = parsed.data;
+  const { weights, autoplanWeights, roomTypeMap, ...thresholds } = parsed.data;
+  let roomTypesApplied: number | undefined;
+  if (roomTypeMap) roomTypesApplied = (await saveRoomTypeMap(roomTypeMap)).applied;
 
   for (const [key, value] of Object.entries(thresholds)) {
     if (value === undefined) continue;

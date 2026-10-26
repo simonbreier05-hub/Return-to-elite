@@ -25,7 +25,7 @@ const chip = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 tex
  * Eine Zimmerzeile der Arbeitslisten. Jede Information steht als Icon **und** Text (nie nur Farbe/Symbol).
  * Gast nur als „Anrede Titel Nachname"; keine Altersangaben, keine Vornamen.
  */
-export default function RoomRowView({ room, highlight = false, showDept = false, onOpen }: { room: ListRoom; highlight?: boolean; showDept?: boolean; onOpen?: (room: ListRoom) => void }) {
+export default function RoomRowView({ room, highlight = false, showDept = false, onOpen, precheck = false }: { room: ListRoom; highlight?: boolean; showDept?: boolean; onOpen?: (room: ListRoom) => void; precheck?: boolean }) {
   const { t } = useLocale();
   const KindIcon = room.kind ? KIND_ICON[room.kind] : null;
   const style = STATUS_STYLES[room.status as RoomStatus];
@@ -48,6 +48,8 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             {room.laundry && <span className={`${chip} border-gold-line/60 bg-gold-soft/30 text-charcoal`}><IconLaundry className="h-3.5 w-3.5" />{t("lists.laundry")}</span>}
             {room.vip && <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><span aria-hidden>★</span>{t("lists.vip")}</span>}
             {room.dnd && <span className={`${chip} border-status-blocked/40 bg-status-blocked/10 text-status-blocked`}><IconBan className="h-3.5 w-3.5" />{t("lists.dnd")}</span>}
+            {precheck && room.kind === "ARRIVAL" && <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><span aria-hidden>🔎</span>{t("lists.precheckArrival")}</span>}
+            {precheck && room.kind === "DEPARTURE" && <span className={`${chip} border-gold-line/60 bg-parchment text-charcoal`}><span aria-hidden>📌</span>{t("lists.precheckNoted")}</span>}
             {room.type && <span className={`${chip} border-charcoal/15 bg-white text-graphite`}>{t(`roomType.${room.type}` as TKey)}</span>}
             {room.traces.length > 0 && <span className={`${chip} border-charcoal/15 bg-white text-graphite`}><span aria-hidden>▸</span>{t("lists.rowTraces", { n: room.traces.length })}</span>}
             {(room.defects ?? 0) > 0 && <span className={`${chip} border-status-defect/40 bg-status-defect/10 text-status-defect`}><IconWrench className="h-3.5 w-3.5" />{t("lists.rowDefects", { n: room.defects ?? 0 })}</span>}

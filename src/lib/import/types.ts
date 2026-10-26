@@ -44,6 +44,8 @@ export interface DepartureRow {
   status: string | null;
   depTime: string | null; // HH:MM, 24 h
   vip: boolean;
+  /** Opera-Zimmerart-Code (z. B. „DLX“) — nur der Code, die Zuordnung zur Zimmerart steht in den Einstellungen (roomTypes.ts). */
+  roomType?: string | null;
 }
 
 export interface ArrivalRow {
@@ -56,6 +58,7 @@ export interface ArrivalRow {
   children: number;
   status: string | null;
   vip: boolean;
+  roomType?: string | null;
   traces: TraceEntry[];
 }
 
@@ -78,6 +81,7 @@ export interface InHouseRow {
   children: number;
   nights: number;
   vip: boolean;
+  roomType?: string | null;
 }
 
 export interface ForecastDayRow {

@@ -13,7 +13,7 @@ const field = "min-h-11 w-full rounded-lg border border-charcoal/20 bg-white px-
 const h4 = "mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60";
 const ACTION_LABEL: Record<string, string> = {
   ROOM_ASSIGNED: "Zuteilung", ROOM_MOVED_STARTED: "Zuteilung (begonnen)", TRACE_ADDED: "Trace hinzugefügt", TRACE_EDITED: "Trace geändert", TRACE_DONE: "Trace erledigt",
-  TRACE_REOPENED: "Trace wieder geöffnet", NOTE_ADDED: "Notiz", NOTE_EDITED: "Notiz geändert", NOTE_STATUS_CHANGED: "Notiz-Status", STATUS_CHANGE: "Status",
+  TRACE_REOPENED: "Trace wieder geöffnet", NOTE_ADDED: "Notiz", NOTE_EDITED: "Notiz geändert", NOTE_STATUS_CHANGED: "Notiz-Status", GUEST_REQUEST_UPDATED: "Gästewunsch", STATUS_CHANGE: "Status",
 };
 
 /**
@@ -51,6 +51,8 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
     else await api(`/api/rooms/${room.id}/notes/${editing.id}`, { method: "PATCH", body: { body: editing.text } });
     setEditing(null);
   }); };
+  const guestDnd = room.guestRequests.find((g) => g.kind === "DND");
+  const clearGuestDnd = () => guestDnd && run(() => api(`/api/guest-requests/${guestDnd.id}`, { method: "PATCH", body: { status: "DONE" } }));
   const isDnd = room.status === "BLOCKED" && room.blockReason === "DND";
   const editRow = (kind: "trace" | "note", id: string) => editing && editing.kind === kind && editing.id === id && (
     <div className="mt-1 flex flex-col gap-2 sm:flex-row">
@@ -90,6 +92,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
         {isDnd
           ? <TwoTapButton onConfirm={() => setDnd(false)}>{t("roomEdit.dndClear")}</TwoTapButton>
           : <TwoTapButton disabled={!room.canBlock} onConfirm={() => setDnd(true)}>{t("roomEdit.dndSet")}</TwoTapButton>}
+        {guestDnd && <div className="mt-2"><TwoTapButton onConfirm={clearGuestDnd}>{t("roomEdit.guestDndClear")}</TwoTapButton></div>}
       </section>
 
       <section>

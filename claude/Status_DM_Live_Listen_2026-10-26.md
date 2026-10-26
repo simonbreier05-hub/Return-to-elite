@@ -24,8 +24,12 @@
 ## Deploy
 - Siehe PR; Preview-Quelle auf `feat/dm-live-listen` (keine Schemaänderung). Production unberührt.
 
+## Nachtrag (Antworten auf die offenen Fragen)
+1. Supervisor darf Zimmer fremder Etagen ändern — bleibt so (keine Änderung).
+2. Gast-DND beenden: Knopf „Gast-„Bitte nicht stören“ beenden“ im Modal (Zwei-Tap, setzt die Gästeanfrage auf erledigt, Logbuch).
+3. Supervisor-Karte listet auch Anreise-Zimmer (nicht in den Zählern); Abreise-Zimmer „Vorgemerkt: vor nächster Anreise prüfen“, Anreise-Zimmer „Anreise heute: nochmal prüfen“.
+4. Zimmerart aus Opera: Parser lesen den Code, Zuordnung Code → Zimmerart in den Einstellungen; gilt für Zimmer ohne Art, nichts wird geraten. Spaltenlage nur am Demo-Export geprüft.
+
 ## Offene Fragen
-1. Soll ein Supervisor im Modal auch Zimmer fremder Etagen ändern dürfen? (Jetzt: ja, wie bisher bei Zuteilung.)
-2. Soll „Bitte nicht stören" auch das Gast-DND (Gast-Bildschirm) aufheben können? (Jetzt nur die Mitarbeiter-Sperre.)
-3. Soll die Supervisor-Karte auch die Zimmer ohne Reinigung (Anreise) zeigen? (Jetzt nur Service-Zimmer.)
-4. Zimmertyp zeigt „Typ noch nicht erfasst", solange er nicht gepflegt ist — soll er aus den Opera-Listen kommen?
+1. Echte Opera-Codes für die Zimmerarten: nach dem ersten Import erscheinen sie in den Einstellungen — bitte einmal zuordnen und prüfen, ob die Codes stimmen.
+2. „Vorgemerkt" ist heute nur eine Markierung aus der Art des Zimmers. Soll es eine echte Merkliste werden (Zimmer bleibt vorgemerkt, bis die nächste Anreise geprüft ist)? Dafür bräuchte es Daten künftiger Anreisen und eine kleine Schema-Ergänzung.

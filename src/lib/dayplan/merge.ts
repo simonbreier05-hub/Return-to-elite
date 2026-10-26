@@ -1,3 +1,4 @@
+import { recordRoomTypes } from "@/lib/import/roomTypes";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
@@ -65,6 +66,10 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   };
   const departures = known(dep.rows);
   const arrivals = known(arr?.rows ?? []);
+
+  // Zimmerart aus den Listen (nur Code → Zuordnung aus den Einstellungen; nie geraten)
+  const rt = await recordRoomTypes([...departures, ...arrivals]);
+  if (rt.unmapped.length) issues.push(issue("INFO", "ROOM_TYPE_UNMAPPED", `Zimmerarten ohne Zuordnung: ${rt.unmapped.join(", ")} — in den Einstellungen zuordnen.`));
 
   const settings = await getPlanningCreditSettings();
   const derived = deriveDayPlan({

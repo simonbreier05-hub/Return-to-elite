@@ -32,6 +32,15 @@ describe("Zimmerzeile: alles auf einen Blick", () => {
   });
 });
 
+describe("Vorgemerkt / vor Anreise prüfen", () => {
+  const row = (kind: ListRoom["kind"]) => html(h("ol", null, h(RoomRowView, { room: room({ kind, dnd: false }), precheck: true })));
+  it("Abreise ohne Anreise ist vorgemerkt, Anreise-Zimmer heißt „nochmal prüfen“ — nur in der Supervisor-Karte", () => {
+    expect(row("DEPARTURE")).toContain("Vorgemerkt: vor nächster Anreise prüfen");
+    expect(row("ARRIVAL")).toContain("Anreise heute: nochmal prüfen");
+    expect(html(h("ol", null, h(RoomRowView, { room: room({ kind: "ARRIVAL" }) })))).not.toContain("nochmal prüfen");
+  });
+});
+
 describe("Legende", () => {
   it("nennt jedes Symbol mit Wort", () => {
     const out = html(h(RowLegend));

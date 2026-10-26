@@ -65,7 +65,7 @@ export default function LiveListsPanel() {
                   {isOpen && (
                     <div className="border-t border-charcoal/10 px-3 py-3">
                       {s.list.length === 0 ? <p className="text-sm text-graphite/60">{t("lists.supNoRooms")}</p> : (
-                        <ol className="space-y-2">{s.list.map((r) => <RoomRowView key={r.id} room={r} showDept onOpen={(x) => setRoomRef(x.id)} />)}</ol>
+                        <ol className="space-y-2">{s.list.map((r) => <RoomRowView key={r.id} room={r} showDept precheck onOpen={(x) => setRoomRef(x.id)} />)}</ol>
                       )}
                     </div>
                   )}
