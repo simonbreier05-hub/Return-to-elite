@@ -73,8 +73,12 @@ Branch: `feat/listen-einlesen-loeschen` — enthält `feat/plan-grundriss` (per 
 
 **Tests:** 73 Dateien, 601 Tests grün (neu `tests/hubDay.integration.test.ts`; 5 bestehende Testdateien stellen jetzt die Uhr auf ihren Testtag). `tsc` sauber, Build ok. Browser (390 px / Desktop): Hinweis vor dem Einlesen auf Supervisor-Board, Duty-Manager-Board, „Meine Zimmer", Grundriss; nach dem Einlesen im Hub Board sofort gefüllt (139 Zimmer, Belegung/Abreisen laut Listen), keine Fehler.
 
-**Offene Fragen:**
-1. Zimmerstatus (schmutzig/sauber …) kommt nicht aus den Opera-Listen. Neue/bereinigte Zimmer starten mit dem Schema-Standard „schmutzig". Soll der Status morgens aus dem Tagesplan gesetzt werden (z. B. Abreise/Bleiber → schmutzig, sonst geprüft)?
-2. Die Gast-Vorschau-Kachel auf der Login-Seite brauchte den Demo-Aufenthalt in 301 und zeigt jetzt „Zurzeit nicht verfügbar", bis ein echter Aufenthalt aus dem Hub da ist. Kachel entfernen oder auf ein Zimmer aus dem Tagesplan zeigen lassen?
-3. Production hat vermutlich noch Demo-Tagesdaten. Dort ebenfalls einmal bereinigen (`RESET_DAY_DATA_ONCE=1` am Production-Dienst)? Ich habe Production nicht angefasst.
-4. Der Knopf „Tagesplan aufs Board" auf `/import` ist jetzt überflüssig (läuft automatisch). Entfernen?
+**Entscheidungen des Nutzers (spätere Nachricht) und Umsetzung:**
+1. **Zimmerstatus:** alle von Grund auf sauber (INSPECTED); schmutzig nur nachweislich belegte/belegt gewesene (Abreise, Turn, Bleiber laut Tagesplan, Zimmer der In-House-Liste). Wird beim Übernehmen des Tagesplans gesetzt (`src/lib/dayplan/boardStatus.ts`); heute schon bearbeitete Zimmer und OUT_OF_ORDER/OUT_OF_SERVICE bleiben, ein Nachimport am selben Tag macht neu abreisende Zimmer schmutzig. Seed und Aufräumen starten mit „sauber".
+2. **Gast-Vorschau:** bleibt, nur für Zimmer 301 (eigener Demo-Aufenthalt `source=DEMO`, läuft nie ab, Nachtlöschung und Aufräumen lassen ihn aus).
+3. **Production:** nicht angefasst. Die Aufräum-Variable steht nur am Preview-Dienst.
+4. **Knopf „Tagesplan aufs Board übernehmen“** auf `/import` und die Route `/api/dayplan/apply` entfernt (läuft automatisch im Merge).
+
+**Tests:** 73 Dateien, 604 Tests grün; Build ok. Lokal mit den 5 Beispiel-PDFs: 14 Zimmer schmutzig = genau die 14 belegten/abreisenden, 125 sauber.
+
+**Offen:** Den Preview-Deploy mit diesem Stand konnte ich nicht prüfen (Railway-Zugriff war in dieser Sitzung zeitweise getrennt). Der frühere Build bei 3e05e3f scheiterte einmal an Google-Fonts im Builder, ein zweiter lief. Bitte in Railway den neuesten Deploy von `feat/listen-einlesen-loeschen` ansehen: Im Boot-Log sollte kein `DROP COLUMN` stehen und einmal „reset-day-data: Demo-Tagesdaten entfernt“.

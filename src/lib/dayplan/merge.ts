@@ -9,6 +9,7 @@ import { createRoomTask } from "@/lib/rooms/createRoomTask";
 import { notifyListUpdate, type NewTrace, type RoomChange } from "@/lib/rooms/notifyListUpdate";
 import { compareWithForecast, deriveDayPlan, type DayCleaningType, type DayFiguresDerived } from "./derive";
 import { berlinToUtc } from "./time";
+import { planBoardStatus, type StatusMarker } from "./boardStatus";
 import { legacyTraceKey, traceKey } from "./traceKey";
 import { getTraceDeptMap, TRACE_DEPT_DEFAULTS } from "./traceDept";
 
@@ -194,10 +195,35 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   };
 }
 
+/** Morgendlicher Zimmerstatus (siehe boardStatus.ts): alle sauber, nur nachweislich belegte/belegt gewesene schmutzig. */
+async function initRoomStatus(date: string, plan: { roomId: string; cleaningType: string }[], inHouseRooms: Set<string>, userId: string) {
+  const rooms = await prisma.room.findMany({ select: { id: true, number: true, status: true, statusSince: true } });
+  const needs = new Set(plan.filter((p) => p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN" || p.cleaningType === "STAYOVER").map((p) => p.roomId));
+  for (const r of rooms) if (inHouseRooms.has(r.number)) needs.add(r.id);
+  const key = `boardInit:${date}`;
+  const stored = await prisma.setting.findUnique({ where: { key } });
+  const old: StatusMarker = stored ? JSON.parse(stored.value) : {};
+  const { updates, marker } = planBoardStatus({ rooms, needsCleaning: needs, marker: old, dayStart: berlinToUtc(date, "00:00") });
+  const now = new Date();
+  for (const u of updates) {
+    const room = await prisma.room.update({ where: { id: u.id }, data: { status: u.status, statusSince: now, blockReason: null, blockedSince: null, reworkNote: null } });
+    marker[u.id] = [room.status, room.statusSince.toISOString()];
+    broadcast("room:update", { room });
+  }
+  const value = JSON.stringify(marker);
+  await prisma.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  await prisma.setting.deleteMany({ where: { key: { startsWith: "boardInit:", not: key } } });
+  if (updates.length) {
+    const dirty = updates.filter((u) => u.status === "DIRTY").length;
+    await audit({ action: "BOARD_STATUS_INIT", userId, meta: { date, dirty, inspected: updates.length - dirty } });
+  }
+}
+
 /**
  * Tagesplan auf das Board übernehmen: setzt die Felder, die Planungshub,
  * Grundriss und Wäschelogik schon lesen (isCheckoutToday, occupancy, Arrival,
- * lastLinenChangeAt). Zuteilungen und Statusfelder bleiben unberührt.
+ * lastLinenChangeAt) und setzt den morgendlichen Zimmerstatus (alle sauber, nur nachweislich belegte schmutzig).
+ * Zuteilungen bleiben unberührt; was heute schon bearbeitet wurde, behält seinen Status.
  */
 export async function applyDayPlanToBoard(date: string, userId: string) {
   const plan = await prisma.dayRoomPlan.findMany({ where: { date }, include: { room: true } });
@@ -234,6 +260,8 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
     broadcast("room:update", { room });
     changed++;
   }
+
+  await initRoomStatus(date, plan, inHouseRooms, userId);
 
   // Erwartete Anreisen (Arrival) aus der Liste; manuell angelegte bleiben, frühere Import-Anreisen werden ersetzt.
   await prisma.arrival.deleteMany({ where: { source: "IMPORT", status: "EXPECTED" } });

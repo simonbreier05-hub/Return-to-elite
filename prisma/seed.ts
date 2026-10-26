@@ -2,6 +2,7 @@ import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { FLOOR_PLAN, HOTEL, FLOOR_FACILITIES } from "../src/lib/floorplan/hotelDeRome";
 import { DEMO_PASSWORD, demoUsers } from "./demoUsers";
+import { ensureDemoStay } from "./demoStay";
 
 /**
  * Seed: one user per role, ten room attendants, every room of the real
@@ -10,7 +11,7 @@ import { DEMO_PASSWORD, demoUsers } from "./demoUsers";
  * plus the floor facilities (HSK offices, lifts, fire escapes) and settings.
  *
  * Bewusst KEINE Tagesdaten (Zimmerstatus-Fortschritt, Belegung, Abreisen,
- * Zuteilungen, Anreisen, Aufenthalte, Defekte, Aufgaben, Notizen): Die App
+ * Zuteilungen, Anreisen, Defekte, Aufgaben, Notizen): Die App
  * arbeitet ausschließlich mit dem, was im Planungshub für den Betriebstag
  * eingelesen wird (siehe src/lib/dayplan/hubDay.ts). Bis dahin zeigen Board
  * und Listen den Hinweis „Listen im Planungshub einlesen".
@@ -105,6 +106,8 @@ async function main() {
           floor,
           section: entry.section,
           type: "UNVERIFIED",
+          status: "INSPECTED", // Grundzustand „sauber"; schmutzig wird ein Zimmer erst durch den Planungshub (Tagesplan)
+          statusSince: new Date("2000-01-01T00:00:00Z"), // „lange her": heute noch nicht bearbeitet, der Hub darf den Status setzen
           interconnectingGroup: entry.interconnectingGroup?.join(","),
           hasDisabledAccess: entry.hasDisabledAccess ?? false,
           isAntiAllergic: entry.isAntiAllergic ?? false,
@@ -120,6 +123,11 @@ async function main() {
     await prisma.floorFacility.create({ data: facility });
   }
   console.log(`Created ${FLOOR_FACILITIES.length} floor facilities.`);
+
+  // --- Gast-Vorschau (Login-Kachel): einziger Demo-Aufenthalt, nur zur Ansicht ----------------------
+  // Zimmer 301 bleibt für die Gast-Vorschau belegt (source DEMO, läuft nie ab, Nachtlöschung und Aufräumen lassen ihn aus).
+  // Das ist keine Tagesdatenquelle der Hub-Ansichten.
+  await ensureDemoStay(prisma);
 
   // --- Settings (escalation thresholds) ------------------------------------
   const settings: Record<string, string> = {
