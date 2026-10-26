@@ -33,6 +33,7 @@ export default function DayNumberTiles({ numbers, onShowOpen, className = "" }: 
           <div className={`mt-1 font-serif text-2xl leading-tight sm:text-3xl ${n.open > 0 ? "text-gold-soft" : "text-status-clean"}`}>{n.open}</div>
           {n.open > 0 && onShowOpen && <button type="button" onClick={onShowOpen} className="min-h-11 text-sm font-medium text-gold-soft underline underline-offset-2">{t("dayNumbers.showOpen")}</button>}
         </div>
+        {n.doneUnassigned > 0 && tile(t("dayNumbers.doneUnassigned"), String(n.doneUnassigned))}
         {n.laundryDue && tile(t("dayNumbers.laundry"), String(n.laundryDue.count), "text-status-in-progress")}
       </div>
       {n.notCleaned.total > 0 && <p className="mt-2 text-sm text-graphite/75">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</p>}

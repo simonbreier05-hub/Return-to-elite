@@ -112,6 +112,8 @@ export default function PlanningFloorPlanPanel({
   const [dayRows, setDayRows] = useState<DayNumberRow[]>([]);
   const [inventory, setInventory] = useState(145);
   const [notice, setNotice] = useState<string | null>(null);
+  const [multiMode, setMultiMode] = useState(false);
+  const [multiPick, setMultiPick] = useState<Set<string>>(new Set());
   const [addPick, setAddPick] = useState<Set<string>>(new Set());
   const [bulkPrompt, setBulkPrompt] = useState<{ ids: string[]; attendantId: string | null; rooms: string[] } | null>(null);
 
@@ -302,6 +304,11 @@ export default function PlanningFloorPlanPanel({
   };
 
   const handleRoomClick = (room: RoomFlags) => {
+    if (multiMode) {
+      if (!liveByNumber.has(room.number)) return;
+      setMultiPick((prev) => { const n = new Set(prev); if (n.has(room.number)) n.delete(room.number); else n.add(room.number); return n; });
+      return;
+    }
     if (mode === "room-first") {
       setPickingRoom(room);
       return;
@@ -395,6 +402,28 @@ export default function PlanningFloorPlanPanel({
           </button>
         ))}
       </div>
+      {view === "plan" && (
+        <div className="mb-3">
+          <button type="button" aria-pressed={multiMode} onClick={() => { setMultiMode((m) => !m); setMultiPick(new Set()); setPickingRoom(null); }}
+            className={`h-11 rounded-lg border px-4 text-sm font-medium transition ${multiMode ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white"}`}>
+            {t("planning.floorPlanMultiSelect")}
+          </button>
+          {multiMode && (
+            <div className="mt-2 rounded-xl border border-gold-line bg-parchment p-3" role="group" aria-label={t("planning.floorPlanMultiSelect")}>
+              <p className="mb-2 text-sm">{multiPick.size === 0 ? t("planning.floorPlanMultiHint") : t("planning.floorPlanMultiCount", { n: multiPick.size })}</p>
+              <div className="flex flex-wrap gap-2">
+                {onShiftAttendants.map((a) => (
+                  <button key={a.id} type="button" disabled={multiPick.size === 0} className="h-11 rounded-lg border border-charcoal/15 bg-white px-4 text-sm font-medium disabled:opacity-40"
+                    onClick={() => { const ids = [...multiPick].map((n) => liveByNumber.get(n)?.id).filter((x): x is string => !!x); setMultiPick(new Set()); void assignMany(ids, a.id); }}>{a.name}</button>
+                ))}
+                <button type="button" disabled={multiPick.size === 0} className="h-11 rounded-lg border border-charcoal/15 bg-white px-4 text-sm disabled:opacity-40"
+                  onClick={() => { const ids = [...multiPick].map((n) => liveByNumber.get(n)?.id).filter((x): x is string => !!x); setMultiPick(new Set()); void assignMany(ids, null); }}>{t("planning.floorPlanMultiRemove")}</button>
+                <button type="button" disabled={multiPick.size === 0} className="h-11 rounded-lg px-3 text-sm text-graphite/70 underline disabled:opacity-40" onClick={() => setMultiPick(new Set())}>{t("planning.floorPlanMultiClear")}</button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {mode === "room-first" ? (
         <p className="mb-3 text-sm text-graphite/60">{t("planning.floorPlanModeRoomFirstHint")}</p>
@@ -466,7 +495,7 @@ export default function PlanningFloorPlanPanel({
             isCheckoutToday: live?.isCheckoutToday ?? false,
             laundryDue: facts?.laundryDue ?? false,
             guestDndActive: facts?.guestDndActive ?? false,
-            selected: mode === "housekeeper-first" && activeAttendantId != null && live?.assignedToId === activeAttendantId,
+            selected: multiMode ? multiPick.has(r.number) : mode === "housekeeper-first" && activeAttendantId != null && live?.assignedToId === activeAttendantId,
             unassignedActionable: unassignedNumbers.has(r.number),
             badge: live?.assignedTo?.name.split(" ")[0],
             title:

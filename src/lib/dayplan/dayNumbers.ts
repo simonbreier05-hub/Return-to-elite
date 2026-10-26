@@ -48,6 +48,8 @@ export interface DayNumbers {
   laundryDue: { count: number; ids: string[] } | null;
   /** Zuteilungen an Kräfte außerhalb der gewählten Mannschaft (nur wenn `team` übergeben wurde). */
   outsideTeam: number;
+  /** Schon fertig, aber heute keiner Kraft zugeteilt (z. B. von jemand anderem erledigt) — Teilmenge von `assigned`. */
+  doneUnassigned: number;
 }
 
 export function computeDayNumbers(input: { rows: DayNumberRow[]; inventory: number; team?: string[] | null }): DayNumbers {
@@ -78,6 +80,7 @@ export function computeDayNumbers(input: { rows: DayNumberRow[]; inventory: numb
       STAYOVER: toCleanRows.filter((r) => r.kind === "STAYOVER").length,
     },
     laundryDue: withData.length ? { count: withData.filter((r) => r.laundryDue).length, ids: withData.filter((r) => r.laundryDue).map((r) => r.id) } : null,
+    doneUnassigned: assignedRows.filter((r) => DONE.has(r.status) && !(r.assignedToId && r.assignedToday)).length,
     outsideTeam: team ? assignedRows.filter((r) => r.assignedToId && !DONE.has(r.status) && !team.has(r.assignedToId)).length : 0,
   };
 }

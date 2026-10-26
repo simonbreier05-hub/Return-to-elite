@@ -7,6 +7,7 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import RedistributionCards from "@/components/RedistributionCards";
+import LiveListBoards from "@/components/LiveListBoards";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[]; hub?: HubState }
@@ -50,6 +51,7 @@ export default function AssignmentFloorPlan() {
         {error && <p role="alert" className="mt-2 text-sm text-status-out-of-order">{error}</p>}
       </section>
       <RedistributionCards />
+      {day.hub?.ready !== false && <LiveListBoards date={day.today} />}
       <PlanningFloorPlanPanel reloadToken={version} onShiftAttendants={day.attendants} actionableRoomIds={day.actionableRoomIds} />
     </div>
   );
