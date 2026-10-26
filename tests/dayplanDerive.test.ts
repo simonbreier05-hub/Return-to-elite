@@ -58,7 +58,12 @@ describe("Wäschewechsel", () => {
   it("Abhaken setzt den Zähler zurück; ein Wechsel vor der Anreise zählt nicht", () => {
     expect(run([dep("201", "2026-10-01", "2026-10-12")], [], { lastLinenChange: { "201": "2026-10-05" } }).rooms[0].laundryDue).toBe(false);
     expect(run([dep("201", "2026-10-04", "2026-10-12")], [], { lastLinenChange: { "201": "2026-10-01" } }).rooms[0].laundryDue).toBe(false);
-    expect(run([dep("201", "2026-10-02", "2026-10-12")], [], { lastLinenChange: { "201": "2026-10-01" } }).rooms[0].laundryDue).toBe(true);
+    // erfasster Wechsel nach der Anreise: fällig, wenn seitdem das Intervall (3 Tage) vergangen ist
+    expect(run([dep("201", "2026-10-01", "2026-10-12")], [], { lastLinenChange: { "201": "2026-10-02" } }).rooms[0].laundryDue).toBe(true);
+  });
+  it("ohne erfassten Wechsel: Rhythmus ab Anreise (jede 3. Nacht) — nie „alles seit 3 Tagen“ (sonst wäre fast jedes Zimmer dauerhaft fällig)", () => {
+    const due = (arrivalDate: string) => run([dep("201", arrivalDate, "2026-10-12")], [], {}).rooms[0].laundryDue;
+    expect([due("2026-10-03"), due("2026-10-02"), due("2026-10-01"), due("2026-09-30")]).toEqual([true, false, false, true]); // Nächte 3, 4, 5, 6
   });
   it("Abreise/Turn: nie 'fällig' (Vollreinigung ohnehin)", () => {
     expect(run([dep("101", "2026-10-01", DATE)], []).rooms[0].laundryDue).toBe(false);

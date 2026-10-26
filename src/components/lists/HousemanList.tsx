@@ -31,7 +31,7 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
   }, [onLinkedTasks]);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1000);
-  useSocket({ "trace:update": () => soon(), "roomtask:update": () => soon(), "dayplan:updated": () => soon() });
+  useSocket({ "assignments:applied": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "dayplan:updated": () => soon() });
 
   if (!data) return null;
   const shown = floor ? data.items.filter((i) => i.floor === floor) : data.items;

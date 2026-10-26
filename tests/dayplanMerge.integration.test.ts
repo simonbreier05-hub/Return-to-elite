@@ -103,7 +103,7 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
     const rooms = Object.fromEntries((await prisma.room.findMany()).map((x) => [x.number, x]));
     expect(rooms["101"]).toMatchObject({ isCheckoutToday: true, occupancy: "OCCUPIED" });
     expect(rooms["130"]).toMatchObject({ isCheckoutToday: false, occupancy: "VACANT" });
-    expect(rooms["106"].lastLinenChangeAt).not.toBeNull(); // Bleiber: Zähler ab Anreise
+    expect(rooms["106"].lastLinenChangeAt).toBeNull(); // Wechseldatum wird nie aus der Anreise erfunden (nur erfasste Wechsel)
     expect(await prisma.arrival.count({ where: { source: "IMPORT", status: "EXPECTED" } })).toBe(7);
     await applyDayPlanToBoard(TODAY, userId);
     expect(await prisma.arrival.count({ where: { source: "IMPORT", status: "EXPECTED" } })).toBe(7); // ersetzt statt verdoppelt

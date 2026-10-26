@@ -8,7 +8,8 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import WindowPanel from "@/components/WindowPanel";
 import LiveListsPanel from "@/components/lists/LiveListsPanel";
 import RoomTaskModal from "@/components/RoomTaskModal";
-import OccupancyCleanCounter from "@/components/OccupancyCleanCounter";
+import DayNumberTiles from "@/components/DayNumberTiles";
+import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -63,14 +64,17 @@ export default function DutyManagerView() {
   const [supervisors, setSupervisors] = useState<Supervisor[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [hub, setHub] = useState<HubState | null>(null);
+  const [numbers, setNumbers] = useState<DayNumbers | null>(null);
 
   const load = useCallback(async () => {
-    const [roomsData, workOrdersData, roomTasksData, supervisorsData] = await Promise.all([
+    const [roomsData, workOrdersData, roomTasksData, supervisorsData, numbersData] = await Promise.all([
       api<{ rooms: Room[]; hub?: HubState }>("/api/rooms"),
       api<{ workOrders: WorkOrder[] }>("/api/workorders"),
       api<{ roomTasks: RoomTask[] }>("/api/roomtasks"),
       api<{ supervisors: Supervisor[] }>("/api/users/supervisors"),
+      api<{ numbers: DayNumbers | null }>("/api/day-numbers"),
     ]);
+    setNumbers(numbersData.numbers);
     setRooms(roomsData.rooms);
     setHub(roomsData.hub ?? null);
     setWorkOrders(workOrdersData.workOrders);
@@ -207,10 +211,8 @@ export default function DutyManagerView() {
       )}
 
       <h3 className="mb-2 font-serif text-xl">{t("dutyManager.dashboardTitle")}</h3>
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-7">
-        <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-          <OccupancyCleanCounter rooms={rooms} />
-        </div>
+      {numbers && <DayNumberTiles className="mb-3" numbers={numbers} />}
+      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <Kpi label={t("dutyManager.arrivalsToday")} value={String(arrivalsToday)} />
         <Kpi label={t("dutyManager.departuresToday")} value={String(departuresToday)} />
         <Kpi label={t("dutyManager.dndRooms")} value={String(dndRooms)} accent={dndRooms > 0} />

@@ -338,7 +338,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         <PlanEditorWindow draft={plan.draft} initialTab={editor.tab} initialView={editor.view} floorSel={team.floorSel}
           supOptions={team.chosenSups.map((x) => ({ id: x.id, name: x.name }))} onPickFloor={team.pickFloor}
           housemen={(team.state?.members.hm ?? []).filter((m) => team.sel.hm.includes(m.id)).map((m) => ({ id: m.id, name: m.name }))}
-          hmEdits={hmEdits} onHmEdit={(id, uid) => setHmEdits((e) => ({ ...e, [id]: uid }))} onAssign={plan.assign} onClose={() => setEditor(null)} />
+          hmEdits={hmEdits} onHmEdit={(id, uid) => setHmEdits((e) => ({ ...e, [id]: uid }))} onAssign={plan.assign} onAssignMany={plan.assignMany} onClose={() => setEditor(null)} />
       )}
       {skipAsk && (
         <Modal title={t("planungTool.skipAskTitle", { name: skipAsk.name })} onClose={() => setSkipAsk(null)}>

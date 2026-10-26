@@ -1,17 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/components/api";
 import { isStartedStatus } from "@/lib/rooms/startedStatus";
 import type { Assignment, PlanRoom } from "@/lib/autoplan/types";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
 import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse, type RoomFlags } from "@/components/FloorPlanGrid";
-import OccupancyCleanCounter from "@/components/OccupancyCleanCounter";
+import DayNumberTiles from "@/components/DayNumberTiles";
+import DragDropBoard, { type BoardColumn } from "@/components/DragDropBoard";
+import { computeDayNumbers, type DayNumberRow } from "@/lib/dayplan/dayNumbers";
 import { roomDayCategory, type RoomDayCategory } from "@/lib/rooms/roomDayCategory";
-import { isLaundryDue } from "@/lib/rooms/laundryDue";
 import { computeRoomCredit } from "@/lib/rooms/roomCredit";
-import { unassignedActionableRooms } from "@/lib/assignment/actionableRooms";
 import type { RoomType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -50,6 +50,8 @@ export interface DraftBinding {
   assignment: Assignment;
   /** Die Kraft wechselt; `confirmStarted` ist gesetzt, wenn für ein begonnenes/fertiges Zimmer ausdrücklich bestätigt wurde. */
   onAssign: (roomId: string, attendantId: string | null, confirmStarted: boolean) => void;
+  /** Mehrere Zimmer in einem Schritt (gebündelt zuteilen); fehlt sie, wird je Zimmer `onAssign` aufgerufen. */
+  onAssignMany?: (roomIds: string[], attendantId: string | null, confirmStarted: boolean) => void;
 }
 
 const DAY_CATEGORY_KEY: Record<RoomDayCategory, TKey | null> = {
@@ -82,6 +84,7 @@ export default function PlanningFloorPlanPanel({
   draft,
   initialView = "plan",
   bands,
+  reloadToken = 0,
 }: {
   onShiftAttendants: OnShiftAttendant[];
   actionableRoomIds: string[];
@@ -91,6 +94,8 @@ export default function PlanningFloorPlanPanel({
   initialView?: PanelView;
   /** Zielband der Credits je Kraft (nur Anzeige, nie eine Sperre). */
   bands?: Record<string, { lo: number; hi: number }>;
+  /** Ändert sich der Wert, werden die Daten im Hintergrund neu geladen — ohne Neuaufbau (Auswahl, Scroll-Stand, Ansicht bleiben). */
+  reloadToken?: number;
 }) {
   const { t } = useLocale();
   const [plan, setPlan] = useState<FloorPlanResponse | null>(null);
@@ -104,26 +109,43 @@ export default function PlanningFloorPlanPanel({
   const [activeAttendantId, setActiveAttendantId] = useState<string | null>(null);
   const [sessionRoomNumbers, setSessionRoomNumbers] = useState<string[]>([]);
   const [pickingRoom, setPickingRoom] = useState<RoomFlags | null>(null);
+  const [dayRows, setDayRows] = useState<DayNumberRow[]>([]);
+  const [inventory, setInventory] = useState(145);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [addPick, setAddPick] = useState<Set<string>>(new Set());
+  const [bulkPrompt, setBulkPrompt] = useState<{ ids: string[]; attendantId: string | null; rooms: string[] } | null>(null);
 
+  /** Hintergrund-Aktualisierung: ersetzt nur die Daten, nie den Bildschirm. Fehler sind ein Hinweis, kein Abbruch. */
   const loadLive = () => {
-    api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1")
-      .then((d) => setLiveRooms(d.rooms))
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    Promise.all([api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1"), api<{ rows: DayNumberRow[] }>("/api/day-numbers")])
+      .then(([d, n]) => { setLiveRooms(d.rooms); setDayRows(n.rows); })
+      .catch((e) => setNotice(e instanceof Error ? e.message : String(e)));
   };
 
   useEffect(() => {
     Promise.all([
       api<FloorPlanResponse>("/api/floor-plan"),
       api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1"),
-      api<SettingsResponse>("/api/settings"),
+      api<SettingsResponse & { settings?: { roomInventory?: number } }>("/api/settings"),
+      api<{ rows: DayNumberRow[] }>("/api/day-numbers"),
     ])
-      .then(([planData, roomsData, settingsData]) => {
+      .then(([planData, roomsData, settingsData, numbersData]) => {
         setPlan(planData);
         setLiveRooms(roomsData.rooms);
         setSettings(settingsData);
+        setDayRows(numbersData.rows);
+        if (settingsData.settings?.roomInventory) setInventory(settingsData.settings.roomInventory);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, []);
+
+  // Neue Daten vom Server (z. B. nach einer Zuteilung): im Hintergrund nachladen, nichts neu aufbauen
+  const firstLoad = useRef(true);
+  useEffect(() => {
+    if (firstLoad.current) { firstLoad.current = false; return; }
+    loadLive();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reloadToken]);
 
   // A running click-round belongs to one attendant at a time — switching (or
   // deselecting) starts a fresh round without touching anything already
@@ -154,28 +176,28 @@ export default function PlanningFloorPlanPanel({
   const liveByNumber = useMemo(() => new Map(liveRooms.map((r) => [r.number, r])), [liveRooms]);
   const liveById = useMemo(() => new Map(liveRooms.map((r) => [r.id, r])), [liveRooms]);
 
-  const occupiedNow = useMemo(() => liveRooms.filter((r) => r.occupancy === "OCCUPIED").length, [liveRooms]);
-
-  // Zimmer, die einer heute nicht arbeitenden Kraft gehören, zählen als offen (sie müssen neu zugeteilt werden).
+  // Zahlen: eine Quelle (computeDayNumbers). Zuteilung und Status kommen live aus dem Brett (inkl. optimistischer Änderungen/Entwurf);
+  // Zuteilungen an Kräfte außerhalb der Auswahl zählen als offen (sie müssen neu zugeteilt werden).
   const onShiftIds = useMemo(() => new Set(onShiftAttendants.map((a) => a.id)), [onShiftAttendants]);
-  const assignedToIdByRoomId = useMemo(
-    () => Object.fromEntries(liveRooms.map((r) => [r.id, r.assignedToId && onShiftIds.has(r.assignedToId) ? r.assignedToId : null])),
-    [liveRooms, onShiftIds]
-  );
-  const { totalActionable, unassignedRoomIds } = useMemo(
-    () => unassignedActionableRooms({ actionableRoomIds, deferredRoomIds, assignedToIdByRoomId }),
-    [actionableRoomIds, deferredRoomIds, assignedToIdByRoomId]
-  );
+  const numbers = useMemo(() => {
+    const rows = dayRows.map((r) => {
+      const live = liveById.get(r.id);
+      const to = live?.assignedToId ?? null;
+      return { ...r, status: live?.status ?? r.status, occupied: live ? live.occupancy === "OCCUPIED" : r.occupied, assignedToId: to && onShiftIds.has(to) ? to : null, assignedToday: !!to };
+    });
+    return computeDayNumbers({ rows, inventory, team: onShiftAttendants.map((a) => a.id) });
+  }, [dayRows, liveById, onShiftIds, inventory, onShiftAttendants]);
+  const unassignedRoomIds = numbers.openIds;
   const unassignedNumbers = useMemo(
     () => new Set(unassignedRoomIds.map((id) => liveById.get(id)?.number).filter((n): n is string => Boolean(n))),
     [unassignedRoomIds, liveById]
   );
+  const laundryIds = useMemo(() => new Set(numbers.laundryDue?.ids ?? []), [numbers]);
 
   // Category + laundry-due + credit, computed once per live room per render
   // so the grid, the credits rail and the linen list all agree.
   const now = useMemo(() => new Date(), [liveRooms]);
   const roomFacts = useMemo(() => {
-    const linenCycleDays = settings?.planningCredits.linenCycleDays ?? 3;
     const credits = settings?.roomTypeCredits ?? {};
     const draftCredit = new Map((draft?.rooms ?? []).map((r) => [r.id, r.credits]));
     const tidyCredit = settings?.planningCredits.tidyCredit ?? 0.5;
@@ -190,17 +212,12 @@ export default function PlanningFloorPlanPanel({
         blockReason: r.blockReason,
         hasExpectedArrival: r.arrivals.length > 0,
       });
-      const laundryDue = isLaundryDue({
-        category,
-        lastLinenChangeAt: r.lastLinenChangeAt ? new Date(r.lastLinenChangeAt) : null,
-        now,
-        linenCycleDays,
-      });
+      const laundryDue = laundryIds.has(r.id); // nur aus dem Tagesplan (echte Daten), nie geschätzt
       const credit = computeRoomCredit({ type: r.type as RoomType, category, laundryDue, credits: credits as Record<RoomType, number>, tidyCredit });
       map.set(r.id, { category, laundryDue, credit: draftCredit.get(r.id) ?? credit, guestDndActive: r.guestDndActive ?? false });
     }
     return map;
-  }, [liveRooms, settings, now, draft?.rooms]);
+  }, [liveRooms, settings, now, draft?.rooms, laundryIds]);
 
   const creditsByAttendant = useMemo(() => {
     const totals = new Map<string, number>();
@@ -212,10 +229,7 @@ export default function PlanningFloorPlanPanel({
     return totals;
   }, [liveRooms, roomFacts]);
 
-  const roomsDueForLinen = useMemo(
-    () => liveRooms.filter((r) => roomFacts.get(r.id)?.laundryDue),
-    [liveRooms, roomFacts]
-  );
+  const roomsDueForLinen = useMemo(() => liveRooms.filter((r) => laundryIds.has(r.id)), [liveRooms, laundryIds]);
 
   const targetCredits = settings?.planningCredits.targetCreditsPerAttendant ?? 14;
 
@@ -246,8 +260,8 @@ export default function PlanningFloorPlanPanel({
       await api(`/api/rooms/${live.id}/assign`, { body: { attendantId, confirmStarted } });
     } catch (e) {
       if (e instanceof ApiError && e.code === "STARTED_ROOM") setStartedPrompt({ room, number: room.number, attendantId });
-      else setError(e instanceof Error ? e.message : String(e));
-      loadLive();
+      else setNotice(t("board.saveFailed") + (e instanceof Error && e.message ? ` (${e.message})` : ""));
+      loadLive(); // zurückrollen: Serverstand wiederherstellen
     }
   };
 
@@ -256,7 +270,33 @@ export default function PlanningFloorPlanPanel({
     try {
       await api(`/api/rooms/${roomId}/linen`, { body: {} });
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setNotice(t("board.saveFailed") + (e instanceof Error && e.message ? ` (${e.message})` : ""));
+      loadLive();
+    }
+  };
+
+  /**
+   * Mehrere Zimmer in einem Schritt zuteilen/verschieben/freigeben (Mehrfachauswahl, Ziehen). Optimistisch: sofort sichtbar,
+   * ein Server-Aufruf, bei Fehler Meldung und Zurückrollen. Begonnene/fertige Zimmer fragen einmal gebündelt nach.
+   */
+  const assignMany = async (roomIds: string[], attendantId: string | null, confirmStarted = false) => {
+    const rooms = roomIds.map((id) => liveById.get(id)).filter((r): r is LiveRoom => !!r && r.assignedToId !== attendantId);
+    if (!rooms.length) return;
+    const started = rooms.filter((r) => isStartedStatus(r.status) && r.assignedToId);
+    if (!confirmStarted && started.length) { setBulkPrompt({ ids: roomIds, attendantId, rooms: started.map((r) => r.number) }); return; }
+    if (draft) {
+      if (draft.onAssignMany) draft.onAssignMany(rooms.map((r) => r.id), attendantId, confirmStarted);
+      else for (const r of rooms) draft.onAssign(r.id, attendantId, confirmStarted);
+      return;
+    }
+    const name = attendantId ? onShiftAttendants.find((a) => a.id === attendantId)?.name ?? "" : null;
+    const ids = new Set(rooms.map((r) => r.id));
+    setLiveRooms((prev) => prev.map((r) => (ids.has(r.id) ? { ...r, assignedToId: attendantId, assignedTo: attendantId ? { id: attendantId, name: name ?? "" } : null } : r)));
+    try {
+      await api("/api/rooms/bulk-assign", { body: { roomIds: rooms.map((r) => r.id), attendantId, confirmStarted } });
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "STARTED_ROOMS") setBulkPrompt({ ids: roomIds, attendantId, rooms: (e.data?.rooms as string[] | undefined) ?? [] });
+      else setNotice(t("board.saveFailed") + (e instanceof Error && e.message ? ` (${e.message})` : ""));
       loadLive();
     }
   };
@@ -277,9 +317,23 @@ export default function PlanningFloorPlanPanel({
     if (room) assignRoom(room, null);
   };
 
+  const dayRowIds = useMemo(() => new Set(dayRows.map((r) => r.id)), [dayRows]);
+  const roomItem = (r: LiveRoom) => ({
+    id: r.id, label: r.number, mark: isStartedStatus(r.status) ? "▶" : "",
+    sub: `E${r.number.slice(0, 1)} · ${Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}${laundryIds.has(r.id) ? " · 🧺" : ""}`,
+    title: [r.type.replace("_", " ").toLowerCase(), laundryIds.has(r.id) ? t("board.dueLinen") : ""].filter(Boolean).join(" · "),
+  });
+  // Schnellauswahl im Feld „Offen": alle offenen, je Etage
+  const openQuick = useMemo(() => {
+    const open = liveRooms.filter((r) => unassignedRoomIds.includes(r.id));
+    const floors = [...new Set(open.map((r) => r.number.slice(0, 1)))].sort();
+    return [{ label: t("board.allOpen"), ids: open.map((r) => r.id) }, ...floors.map((f) => ({ label: t("board.floor", { n: f }), ids: open.filter((r) => r.number.startsWith(f)).map((r) => r.id) }))];
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveRooms, unassignedRoomIds]);
+
   const activeAttendant = onShiftAttendants.find((a) => a.id === activeAttendantId) ?? null;
 
-  if (error) {
+  if (error && !plan) {
     return <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>;
   }
   if (!plan) {
@@ -288,24 +342,13 @@ export default function PlanningFloorPlanPanel({
 
   return (
     <div className="animate-rise pb-24">
-      <div className="mb-3 flex flex-wrap items-baseline gap-x-6 gap-y-2 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
-        <div>
-          <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{t("planning.floorPlanOccupiedNow")}</div>
-          <div className="mt-1 font-serif text-3xl">
-            {t("planning.floorPlanOccupiedOfTotal", { occupied: occupiedNow, total: liveRooms.length })}
-          </div>
+      <DayNumberTiles className="mb-3" numbers={numbers} onShowOpen={() => { setView("list"); document.getElementById("board-open")?.scrollIntoView({ behavior: "smooth", block: "center" }); }} />
+      {notice && (
+        <div role="alert" className="mb-3 flex items-center justify-between gap-3 rounded-lg border border-status-in-progress/40 bg-status-in-progress/10 px-3 py-2 text-sm">
+          <span>{notice}</span>
+          <button type="button" onClick={() => setNotice(null)} className="min-h-11 rounded-lg border border-charcoal/15 px-3 text-xs font-medium">{t("common.close")}</button>
         </div>
-        <div>
-          <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{t("planning.floorPlanAssignmentLabel")}</div>
-          <div className={`mt-1 font-serif text-3xl ${unassignedRoomIds.length > 0 ? "text-gold-soft" : "text-status-clean"}`}>
-            {t("planning.floorPlanAssignedOf", { assigned: totalActionable - unassignedRoomIds.length, total: totalActionable })}
-          </div>
-          {unassignedRoomIds.length > 0 && (
-            <div className="mt-0.5 text-sm font-medium text-gold-soft">{t("planning.floorPlanUnassignedOfActionable", { unassigned: unassignedRoomIds.length, total: totalActionable })}</div>
-          )}
-        </div>
-        <OccupancyCleanCounter rooms={liveRooms.map((r) => ({ occupancy: r.occupancy ?? "VACANT", status: r.status }))} />
-      </div>
+      )}
 
       <FloorPlanLegend
         className="mb-3"
@@ -386,39 +429,28 @@ export default function PlanningFloorPlanPanel({
       )}
 
       {view === "list" ? (
-        <div className="grid gap-3 lg:grid-cols-2">
-          {[...onShiftAttendants.map((a) => ({ id: a.id as string | null, name: a.name })), { id: null as string | null, name: t("planning.floorPlanOpenCard") }].map((col) => {
-            const rooms = liveRooms.filter((r) => (col.id === null ? unassignedRoomIds.includes(r.id) : r.assignedToId === col.id) && (col.id === null || totalActionable === 0 || actionableRoomIds.includes(r.id)));
-            const credits = col.id ? creditsByAttendant.get(col.id) ?? 0 : null;
-            return (
-              <section key={col.id ?? "open"} className={`rounded-2xl border p-3 ${col.id === null && rooms.length ? "border-status-in-progress/40 bg-white" : "border-charcoal/10 bg-white"}`}>
-                <div className="mb-2 flex items-baseline justify-between gap-2">
-                  <h4 className="font-serif text-lg">{col.name} <span className="text-sm text-graphite/60">· {rooms.length}</span></h4>
-                  {credits !== null && (
-                    <span className={`text-sm ${(bands?.[col.id!] ? credits > bands[col.id!].hi + 0.25 || (rooms.length > 0 && credits < bands[col.id!].lo - 0.25) : credits > targetCredits) ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>
-                      {Math.round(credits * 10) / 10}{bands?.[col.id!] ? ` / ${bands[col.id!].lo}–${bands[col.id!].hi}` : ""} {t("planning.floorPlanCreditsShort")}
-                    </span>
-                  )}
-                </div>
-                {col.id && (
-                  <button type="button" onClick={() => setAddingTo(col.id)} className="mb-2 min-h-11 rounded-lg border border-dashed border-charcoal/25 px-3 text-xs font-medium hover:border-gold-line">+ {t("planning.floorPlanAddRoom")}</button>
-                )}
-                {rooms.length === 0 ? <p className="text-xs text-graphite/50">{t("planning.floorPlanNoRooms")}</p> : (
-                  <ul className="flex flex-wrap gap-1.5">
-                    {rooms.map((r) => (
-                      <li key={r.id}>
-                        <button type="button" onClick={() => { const f = plan.rooms.find((x) => x.number === r.number); if (f) setPickingRoom(f); }}
-                          className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium hover:border-gold-line">
-                          {r.number}{isStartedStatus(r.status) ? " ▶" : ""}
-                          <span className="ml-1 text-xs text-graphite/60">E{r.number.slice(0, 1)} · {r.type.replace("_", " ").toLowerCase()} · {Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            );
-          })}
+        <div id="board-open-anchor">
+          <DragDropBoard
+            hint={t("board.hint")}
+            onMove={(ids, to) => assignMany(ids, to)}
+            columns={[
+              ...onShiftAttendants.map((a): BoardColumn => {
+                const rooms = liveRooms.filter((r) => r.assignedToId === a.id && dayRowIds.has(r.id));
+                const credits = creditsByAttendant.get(a.id) ?? 0;
+                const band = bands?.[a.id];
+                const bad = band ? credits > band.hi + 0.25 || (rooms.length > 0 && credits < band.lo - 0.25) : credits > targetCredits;
+                return {
+                  id: a.id, title: a.name, items: rooms.map(roomItem),
+                  summary: <span className={`text-sm ${bad ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>{Math.round(credits * 10) / 10}{band ? ` / ${band.lo}–${band.hi}` : ""} {t("planning.floorPlanCreditsShort")}</span>,
+                };
+              }),
+              {
+                id: null, title: t("planning.floorPlanOpenCard"), tone: "open",
+                items: liveRooms.filter((r) => unassignedRoomIds.includes(r.id)).map(roomItem),
+                quick: openQuick,
+              },
+            ]}
+          />
         </div>
       ) : (
       <FloorPlanGrid
@@ -549,19 +581,38 @@ export default function PlanningFloorPlanPanel({
       )}
 
       {addingTo && (
-        <Modal title={t("planning.floorPlanAddRoomTitle", { name: onShiftAttendants.find((a) => a.id === addingTo)?.name ?? "" })} onClose={() => setAddingTo(null)}>
+        <Modal title={t("planning.floorPlanAddRoomTitle", { name: onShiftAttendants.find((a) => a.id === addingTo)?.name ?? "" })} onClose={() => { setAddingTo(null); setAddPick(new Set()); }}>
           {unassignedRoomIds.length === 0 ? <p className="text-sm text-graphite/70">{t("planning.floorPlanNoOpenRooms")}</p> : (
-            <ul className="flex flex-wrap gap-1.5">
-              {unassignedRoomIds.map((id) => liveById.get(id)).filter((r): r is LiveRoom => !!r).map((r) => (
-                <li key={r.id}>
-                  <button type="button" onClick={() => { const f = plan.rooms.find((x) => x.number === r.number); if (f) void assignRoom(f, addingTo); }}
-                    className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium hover:border-gold-line">
-                    {r.number} <span className="text-xs text-graphite/60">· {Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+            <>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {openQuick.map((q) => (
+                  <button key={q.label} type="button" onClick={() => setAddPick((p) => new Set([...p, ...q.ids]))} className="min-h-11 rounded-full border border-dashed border-charcoal/25 px-3 text-xs font-medium hover:border-gold-line">{q.label}</button>
+                ))}
+              </div>
+              <ul className="mb-3 flex flex-wrap gap-1.5">
+                {unassignedRoomIds.map((id) => liveById.get(id)).filter((r): r is LiveRoom => !!r).map((r) => (
+                  <li key={r.id}>
+                    <button type="button" aria-pressed={addPick.has(r.id)} onClick={() => setAddPick((p) => { const n = new Set(p); if (n.has(r.id)) n.delete(r.id); else n.add(r.id); return n; })}
+                      className={`min-h-11 rounded-lg border px-3 text-sm font-medium ${addPick.has(r.id) ? "border-gold-line bg-parchment ring-2 ring-gold-line" : "border-charcoal/15 bg-white hover:border-gold-line"}`}>
+                      {r.number} <span className="text-xs text-graphite/60">· {Math.round((roomFacts.get(r.id)?.credit ?? 0) * 10) / 10}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <button type="button" disabled={addPick.size === 0} onClick={() => { const ids = [...addPick]; const to = addingTo; setAddPick(new Set()); setAddingTo(null); void assignMany(ids, to); }}
+                className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line disabled:opacity-40">{t("board.nSelected", { n: addPick.size })} → {t("board.assignTo").replace(":", "")}</button>
+            </>
           )}
+        </Modal>
+      )}
+
+      {bulkPrompt && (
+        <Modal title={t("planning.floorPlanStartedTitle", { number: bulkPrompt.rooms.join(", ") })} onClose={() => setBulkPrompt(null)}>
+          <p className="mb-4 text-sm text-graphite/80">{t("planning.floorPlanStartedBody")}</p>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => { const p = bulkPrompt; setBulkPrompt(null); void assignMany(p.ids, p.attendantId, true); }} className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line">{t("planning.floorPlanStartedConfirm")}</button>
+            <button type="button" onClick={() => setBulkPrompt(null)} className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("common.cancel")}</button>
+          </div>
         </Modal>
       )}
 

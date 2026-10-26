@@ -11,6 +11,11 @@ export interface PlanNotifyInput {
   attendants: { id: string; rooms: number; credits: number; changed: boolean }[];
   totalRooms: number;
   openRooms: number;
+  /** Erste Bestätigung des Tages: jede gewählte Kraft mit Zimmern bekommt ihre fertige Liste gemeldet (auch wenn schon vorher Zimmer zugeteilt waren). */
+  first?: boolean;
+  /** Gewählte Supervisoren/Hausmänner (Planungshub). Nur sie werden gemeldet; fehlt die Angabe, alle der Rolle. */
+  supervisors?: string[];
+  houseman?: string[];
 }
 
 const fmt = (n: number) => (Math.round(n * 10) / 10).toString().replace(".", ",");
@@ -28,13 +33,14 @@ export async function notifyPlanConfirmed(input: PlanNotifyInput): Promise<numbe
     out.push({ type, level, targetRole, targetUserId, message, dedupeKey: `PLAN:${planId}:${targetUserId}` });
 
   for (const a of attendants) {
-    if (a.id === actorId || !a.changed) continue;
+    if (a.id === actorId || (!a.changed && !(input.first && a.rooms > 0))) continue;
     add("PLAN_CONFIRMED", "room_attendant", a.id, a.rooms > 0
       ? `Dein Plan für heute: ${a.rooms} Zimmer, ${fmt(a.credits)} Credits.`
       : "Dein Plan für heute wurde geändert: Du hast keine Zimmer mehr auf der Liste.");
   }
 
-  const staff = await prisma.user.findMany({ where: { role: { in: ["houseman", "supervisor", "duty_manager"] }, id: { not: actorId } }, select: { id: true, role: true } });
+  const staff = (await prisma.user.findMany({ where: { role: { in: ["houseman", "supervisor", "duty_manager"] }, id: { not: actorId } }, select: { id: true, role: true } }))
+    .filter((u) => (u.role === "supervisor" && input.supervisors ? input.supervisors.includes(u.id) : u.role === "houseman" && input.houseman ? input.houseman.includes(u.id) : true));
   const working = attendants.filter((a) => a.rooms > 0).length;
   for (const u of staff) {
     if (u.role === "houseman") {
