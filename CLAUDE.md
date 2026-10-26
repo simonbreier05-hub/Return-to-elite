@@ -49,3 +49,7 @@
 - `ImportBatch.type`/`ImportRow.kind` sind Strings: ein neuer Listentyp braucht keine Schema-Änderung/Migration.
 - INHOUSE-Layout ist angenommen (Departures-Zeilenform), nicht an einem echten Opera-Export geprüft; Parser nutzt als Kopfmarker die Zeile „Room …".
 - Gate ist bewusst nicht in `mergeDay()` selbst (Tests/Skripte rufen es mit Teildaten); es sitzt in den API-Routen.
+- Listen übernehmen im Browser immer nacheinander (`inOrder` in `useImportSession`), nie `Promise.all` — parallele `applyBatch`-Transaktionen sperrten sich (Timeout, 4 von 5 Listen scheiterten beim ersten Mal). Nach dem Übernehmen/Löschen `await loadStatus()`, dann erst Merge; Fehler sichtbar mit „Erneut versuchen", nie `.catch(() => null)`.
+- Gate und „Stand der Daten" gelten pro Betriebstag: `dataStatus(date)`/`missingAppliedLists(date)` (Berlin-Tag) — Listen anderer Tage zählen nicht.
+- Liste löschen nur über `deleteAppliedList` (`src/lib/import/deleteList.ts`, `DELETE /api/import/lists/[type]`): entfernt nur Gastdaten/Traces, die allein aus dieser Liste stammen; bestätigter Plan bleibt (409 bis `keepPlan=1`, danach Hinweis `plan.listsChanged`). Logbuch `IMPORT_LIST_DELETED`/`IMPORT_REPLACED` ohne Gastdaten.
+- Datenbankfehler gehen nie roh in die Oberfläche (Apply-Route → 503 mit verständlicher Meldung).

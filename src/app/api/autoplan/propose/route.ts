@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
 import { missingAppliedLists } from "@/lib/import/store";
 import { latestPlanDate } from "@/lib/dayplan/latest";
+import { berlinDate } from "@/lib/dayplan/time";
 import { proposeForDate } from "@/lib/autoplan/service";
 
 const Body = z.object({
@@ -16,9 +17,9 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
-  const missing = await missingAppliedLists();
-  if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, missing }, { status: 409 });
   const date = parsed.data.date ?? (await latestPlanDate());
+  const missing = await missingAppliedLists(date ?? berlinDate(new Date())); // Gate: alle fünf Listen dieses Betriebstags
+  if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, missing }, { status: 409 });
   if (!date) return NextResponse.json({ error: "Noch kein Tagesplan. Bitte zuerst importieren und den Tagesplan berechnen." }, { status: 409 });
   try {
     const r = await proposeForDate(date, auth.session.userId, parsed.data.attendantIds);

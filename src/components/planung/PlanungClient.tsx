@@ -10,9 +10,10 @@ import DayPlanPanel from "@/app/import/DayPlanPanel";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { buildPreview } from "@/lib/import/preview";
+import { missingLists } from "@/lib/import/readiness";
 import type { DateFormatId, ParseResult } from "@/lib/import/types";
 import LiveClock from "@/components/LiveClock";
-import { dateLabel, fileStatus, listsReady, type HouseData, type StepId } from "@/lib/planung/model";
+import { appliedSlots, dateLabel, fileStatus, listsReady, type HouseData, type StepId } from "@/lib/planung/model";
 import FileDropCard from "./FileDropCard";
 import FloorStep from "./FloorStep";
 import HouseMap from "./HouseMap";
@@ -24,7 +25,7 @@ import StepSegments from "./StepSegments";
 import TeamStep from "./TeamStep";
 import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
 import Stepper from "./Stepper";
-import { useImportSession, type ImportItem } from "./useImportSession";
+import { errorText, useImportSession, type ImportItem } from "./useImportSession";
 
 const SLOTS: ImportType[] = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES", "INHOUSE"];
 const READ_MS = 850;
@@ -40,6 +41,10 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const [changedNote, setChangedNote] = useState<number>(0);
   const [over, setOver] = useState(false);
   const [merging, setMerging] = useState(false);
+  const [mergeError, setMergeError] = useState<string | null>(null);
+  const [confirmDel, setConfirmDel] = useState<ImportType | null>(null);
+  const [deleting, setDeleting] = useState<ImportType | null>(null);
+  const [delError, setDelError] = useState<{ type: ImportType; text: string } | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   const hadData = useRef(initialHouse.hasData);
@@ -57,17 +62,33 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     }
   }, []);
 
-  // Nach dem Übernehmen: Tagesplan berechnen (idempotent) und das Haus füllen — Kachel-Welle, dann Etagenbalken
-  const session = useImportSession(async () => {
-    setMerging(true);
+  // Nach dem Übernehmen: sobald alle fünf Listen des Betriebstags da sind, Tagesplan berechnen (idempotent)
+  // und das Haus füllen — Kachel-Welle, dann Etagenbalken. Ein Fehler bleibt sichtbar (mit „Erneut versuchen").
+  const mergeNow = useCallback(async (day: string) => {
+    setMerging(true); setMergeError(null);
     try {
-      const st = await api<{ status: Record<string, { businessDate: string } | null> }>("/api/import/status");
-      const date = st.status.DEPARTURES?.businessDate;
-      if (date) await api("/api/dayplan/merge", { body: { date } }).catch(() => null);
+      const st = await api<{ status: Record<string, unknown> }>(`/api/import/status?date=${day}`);
+      if (missingLists(st.status).length === 0) await api("/api/dayplan/merge", { body: { date: day } });
       await refreshHouse({ wave: true });
+    } catch (e) {
+      setMergeError(errorText(e));
     } finally { setMerging(false); }
-  }, { minReadMs: READ_MS });
-  const { items, status, addFiles, reparse, discard, applyAll, issuesOf, isCritical, ready } = session;
+  }, [refreshHouse]);
+  const dayRef = useRef("");
+  const session = useImportSession(() => mergeNow(dayRef.current), { minReadMs: READ_MS });
+  dayRef.current = session.day;
+  const { items, status, plan: planHint, addFiles, reparse, discard, applyAll, retry, removeList, issuesOf, isCritical, ready } = session;
+
+  /** Zwei-Tap-Löschen: erster Tap fragt „Liste löschen?", zweiter löscht die Liste des Betriebstags. */
+  const deleteList = async (ty: ImportType) => {
+    setDeleting(ty); setDelError(null);
+    const err = await removeList(ty, !!planHint?.confirmed);
+    setDeleting(null);
+    if (err === "planConfirmed") { await session.loadStatus(); return; } // Plan wurde inzwischen bestätigt → Hinweis zeigen, erneut fragen
+    if (err) { setDelError({ type: ty, text: err }); return; }
+    setConfirmDel(null);
+    await refreshHouse();
+  };
   const router = useRouter();
   const team = usePlanungTeam(house.date);
   const plan = usePlanRun(house.date);
@@ -75,16 +96,21 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
     "dayplan:updated": (p: { changedRooms?: string[] }) => { void refreshHouse({ changed: p?.changedRooms }); },
-    "import:applied": () => { session.loadStatus(); },
+    "import:applied": () => { void session.loadStatus(); },
+    "import:deleted": () => { void session.loadStatus(); void refreshHouse(); },
   });
   useEffect(() => { void refreshHouse(); }, [refreshHouse]);
 
-  const appliedMap: Record<string, boolean> = {};
-  for (const ty of IMPORT_TYPES) appliedMap[ty] = !!status?.[ty] || items.some((i) => i.type === ty && i.phase === "applied");
+  const appliedMap = appliedSlots(IMPORT_TYPES, status, items);
   const reading = items.some((i) => i.phase === "reading" || i.phase === "waiting");
+  const busyStep1 = reading || merging || !!deleting || items.some((i) => i.busy);
   const itemFor = (ty: ImportType): ImportItem | undefined => [...items].reverse().find((i) => i.type === ty && i.phase !== "discarded");
   const unknown = items.filter((i) => i.phase === "read" && !i.type);
   const failed = items.filter((i) => i.phase === "error" && !i.type);
+  const btn = "min-h-11 rounded-full px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light";
+  const retryButton = (it: ImportItem) => (it.result || it.file) && (
+    <button type="button" onClick={() => void retry(it)} className={`mt-1.5 border border-line-2 font-medium text-pl-text hover:border-brass-light ${btn}`}>{t("planungTool.retry")}</button>
+  );
 
   const canNext = listsReady(appliedMap) && ready.length === 0 && !reading && !merging;
   const mode: "read" | "apply" | "next" = ready.length > 0 ? "apply" : canNext ? "next" : "read";
@@ -164,9 +190,25 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
                         </div>
                       </div>
                     )}
+                    {it?.phase === "error" && retryButton(it)}
                     {it && (it.phase === "read" || it.phase === "error") && (
                       <button type="button" onClick={() => discard(it)} className="mt-1.5 min-h-11 rounded-full px-1 text-xs text-pl-muted underline-offset-2 hover:text-pl-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.discard")}</button>
                     )}
+                    {status?.[ty] && (!it || it.phase === "applied") && (confirmDel === ty ? (
+                      <div className="mt-2 rounded-xl border border-line-2 bg-night-800 p-2 text-xs" role="group" aria-label={t("planungTool.deleteConfirm")}>
+                        <div className="mb-1 font-medium text-pl-text">{t("planungTool.deleteConfirm")}</div>
+                        {planHint?.confirmed && <p className="mb-1.5 text-brass-ink">{t("planungTool.deletePlanNote")}</p>}
+                        {delError?.type === ty && <p role="alert" className="mb-1.5 text-brass-ink">{delError.text}</p>}
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" disabled={!!deleting} onClick={() => void deleteList(ty)} className={`border border-badge-3 font-medium text-pl-text hover:border-brass-light disabled:opacity-50 ${btn}`}>
+                            {deleting === ty ? t("planungTool.deleting") : t("planungTool.deleteYes")}
+                          </button>
+                          <button type="button" disabled={!!deleting} onClick={() => { setConfirmDel(null); setDelError(null); }} className={`border border-line-2 text-pl-muted hover:text-pl-text disabled:opacity-50 ${btn}`}>{t("planungTool.deleteCancel")}</button>
+                        </div>
+                      </div>
+                    ) : (
+                      <button type="button" disabled={busyStep1} onClick={() => { setConfirmDel(ty); setDelError(null); }} className={`mt-1.5 px-1 text-pl-muted underline-offset-2 hover:text-pl-text hover:underline disabled:opacity-50 ${btn}`}>{t("planungTool.deleteList")}</button>
+                    ))}
                   </FileDropCard>
                 );
               })}
@@ -182,7 +224,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
                 </FileDropCard>
               ))}
               {failed.map((it) => (
-                <FileDropCard key={it.id} title={it.name} subtitle="" status="error" statusLabel={t("planungTool.stError")} resultText={it.error} />
+                <FileDropCard key={it.id} title={it.name} subtitle="" status="error" statusLabel={t("planungTool.stError")} resultText={it.error}>{retryButton(it)}</FileDropCard>
               ))}
             </div>
 
@@ -195,6 +237,17 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
             </div>
             {items.some((i) => i.phase === "applied") && <p className="mt-3 text-xs text-pl-muted">{t("planungTool.deleteFiles")}</p>}
             {changedNote > 0 && <p role="status" className="mt-2 text-xs text-brass-ink">{t("planungTool.changedRooms", { n: changedNote })}</p>}
+            {mergeError && (
+              <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-xs text-brass-ink">
+                <span>{t("planungTool.mergeFailed")} {mergeError}</span>
+                <button type="button" onClick={() => void mergeNow(session.day)} className={`border border-line-2 font-medium text-pl-text hover:border-brass-light ${btn}`}>{t("planungTool.retry")}</button>
+              </div>
+            )}
+            {planHint?.listsChanged && (
+              <p role="status" className="mt-2 text-xs text-brass-ink">
+                {t("planungTool.planChanged")} <Link href="/supervisor/planning" className="inline-flex min-h-11 items-center underline underline-offset-2">{t("planungTool.planChangedLink")}</Link>
+              </p>
+            )}
             {!listsReady(appliedMap) && items.length > 0 && !reading && <p className="mt-2 text-xs text-pl-muted">{t("planungTool.needDepartures")}</p>}
           </>
         ) : step === 2 ? (
@@ -213,7 +266,6 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     </>
   );
 
-  const busyStep1 = reading || merging;
   const mainLabel = step === 1
     ? (merging || items.some((i) => i.busy) ? t("planungTool.applying") : mode === "apply" ? t("planungTool.applyLists") : mode === "next" ? t("planungTool.nextTeam") : t("planungTool.readLists"))
     : step === 2 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextFloors"))

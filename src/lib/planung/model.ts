@@ -103,6 +103,14 @@ export function fileStatus(i: FileStatusInput): FileStatus {
 }
 
 /** Darf es mit dem Hauptbutton weitergehen? Erst wenn alle fünf Listen übernommen sind — nicht früher. */
+/**
+ * Welche Listen gelten im Hub als übernommen: der frisch geladene Stand des Betriebstags oder eine in
+ * dieser Sitzung gerade übernommene Liste. Gelöschte Listen sind in beiden nicht mehr enthalten.
+ */
+export function appliedSlots(types: readonly string[], status: Record<string, unknown> | null, items: { type: string | null; phase: string }[]): Record<string, boolean> {
+  return Object.fromEntries(types.map((ty) => [ty, !!status?.[ty] || items.some((i) => i.type === ty && i.phase === "applied")]));
+}
+
 export function listsReady(applied: Record<string, boolean>): boolean {
   return listsComplete(applied);
 }
