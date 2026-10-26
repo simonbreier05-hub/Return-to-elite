@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
-import { DEFAULT_SETTINGS } from "@/lib/domain";
+import { DEFAULT_LINEN_CYCLE_DAYS, DEFAULT_SETTINGS } from "@/lib/domain";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Hk { id: string; name: string; hkType: string; hkLevel: number; homeFloors: string; dailyTarget: number | null; hkActive: boolean }
@@ -18,11 +18,12 @@ export default function HousekeeperSettingsPanel() {
   const [hks, setHks] = useState<Hk[]>([]);
   const [settings, setSettings] = useState<Record<string, number>>({ ...DEFAULT_SETTINGS });
   const [weights, setWeights] = useState<Record<string, number>>({ ...AUTOPLAN_WEIGHTS });
+  const [linenCycleDays, setLinenCycleDays] = useState<number>(DEFAULT_LINEN_CYCLE_DAYS);
   const [saved, setSaved] = useState(false);
 
   const load = useCallback(() => {
     api<{ housekeepers: Hk[] }>("/api/housekeepers").then((d) => setHks(d.housekeepers)).catch(() => {});
-    api<{ settings: Record<string, number>; autoplanWeights: Record<string, number> }>("/api/settings").then((d) => { setSettings(d.settings); setWeights(d.autoplanWeights); }).catch(() => {});
+    api<{ settings: Record<string, number>; autoplanWeights: Record<string, number>; planningCredits?: { linenCycleDays: number } }>("/api/settings").then((d) => { setSettings(d.settings); setWeights(d.autoplanWeights); if (d.planningCredits) setLinenCycleDays(d.planningCredits.linenCycleDays); }).catch(() => {});
   }, []);
   useEffect(load, [load]);
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
@@ -81,6 +82,12 @@ export default function HousekeeperSettingsPanel() {
               onChange={(e) => setSettings((s) => ({ ...s, [k]: Number(e.target.value) }))} onBlur={() => patchSetting({ [k]: settings[k] })} />
           </label>
         ))}
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
+          <span>{t("hk.setting.linenCycleDays")}</span>
+          <input className={`${input} w-24 text-right`} type="number" step="1" min={1} max={30} value={linenCycleDays}
+            onChange={(e) => setLinenCycleDays(Number(e.target.value))}
+            onBlur={() => { if (Number.isInteger(linenCycleDays) && linenCycleDays >= 1 && linenCycleDays <= 30) void patchSetting({ linenCycleDays }); }} />
+        </label>
       </div>
 
       <h4 className="mb-1 mt-6 font-serif text-xl">{t("hk.weightsTitle")}</h4>

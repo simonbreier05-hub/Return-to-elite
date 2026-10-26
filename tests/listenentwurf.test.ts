@@ -56,6 +56,13 @@ describe("Zahlen: eine Quelle, ein Modell", () => {
     expect(n.outsideTeam).toBe(1);
   });
 
+  it("fertig ohne Zuteilung ist eine eigene Zahl und bleibt Teilmenge von zugeteilt", () => {
+    const rows = [row(1, { status: "CLEAN" }), row(2, { status: "CLEAN", assignedToId: "a", assignedToday: true }), row(3, { status: "INSPECTED", assignedToId: "a", assignedToday: false }), row(4)];
+    const n = computeDayNumbers({ rows, inventory: 145 });
+    expect(n).toMatchObject({ assigned: 3, cleaned: 3, open: 1, doneUnassigned: 2 });
+    expect(n.doneUnassigned).toBeLessThanOrEqual(n.assigned);
+  });
+
   it("Wäschewechsel: nur mit Datengrundlage (Anreisedatum bekannt); sonst keine Kachel — nie geschätzt", () => {
     expect(computeDayNumbers({ rows: [row(1, { nightsKnown: false, laundryDue: true }), row(2, { kind: "DEPARTURE" })], inventory: 145 }).laundryDue).toBeNull();
     const n = computeDayNumbers({ rows: [row(1, { laundryDue: true }), row(2), row(3, { laundryDue: true, kind: "DEPARTURE" })], inventory: 145 });
