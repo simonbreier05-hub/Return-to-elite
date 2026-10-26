@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse } from "@/components/FloorPlanGrid";
+import AssignmentFloorPlan from "@/components/AssignmentFloorPlan";
 import { roomDayCategory } from "@/lib/rooms/roomDayCategory";
 
 interface LiveRoom {
@@ -11,17 +12,9 @@ interface LiveRoom {
   occupancy?: string | null;
   isCheckoutToday: boolean;
   blockReason?: string | null;
-  assignedTo?: { id: string; name: string } | null;
   arrivals: { guestName: string }[];
   guestDndActive?: boolean;
 }
-
-interface Attendant {
-  id: string;
-  name: string;
-}
-
-type AssignMode = "room-first" | "housekeeper-first";
 
 /**
  * Floor plan (v1) extended for v4 Aufgabe D: a live status-colour overlay
@@ -37,29 +30,21 @@ type AssignMode = "room-first" | "housekeeper-first";
  * Rather than duplicate the room query there, live status is fetched from
  * the existing /api/rooms and merged in here by room number.
  */
-export default function FloorPlanView() {
+function ReferenceFloorPlan() {
   const [plan, setPlan] = useState<FloorPlanResponse | null>(null);
   const [liveRooms, setLiveRooms] = useState<LiveRoom[]>([]);
-  const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [error, setError] = useState<string | null>(null);
-
-  const [mode, setMode] = useState<AssignMode>("room-first");
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [targetAttendantId, setTargetAttendantId] = useState<string>("");
-  const [assigning, setAssigning] = useState(false);
-  const [assignResult, setAssignResult] = useState<string | null>(null);
 
   const load = () => {
     Promise.all([
       api<FloorPlanResponse>("/api/floor-plan"),
       // allFloors=1: this is a hotel-wide wayfinding reference, not "my work
       // area" — a floor-scoped supervisor still needs the whole floor plan.
-      api<{ rooms: LiveRoom[]; attendants: Attendant[] }>("/api/rooms?allFloors=1"),
+      api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1"),
     ])
       .then(([planData, roomsData]) => {
         setPlan(planData);
         setLiveRooms(roomsData.rooms);
-        setAttendants(roomsData.attendants);
       })
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
   };
@@ -70,51 +55,6 @@ export default function FloorPlanView() {
 
   if (error) return <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>;
   if (!plan) return <p className="text-sm text-graphite/60">Loading floor plan…</p>;
-
-  const toggleRoom = (number: string) => {
-    setAssignResult(null);
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(number)) next.delete(number);
-      else next.add(number);
-      return next;
-    });
-  };
-
-  /**
-   * The one assignment action both modes share (see module doc) — a loop
-   * over the existing single-room assign endpoint, which already enforces
-   * "one attendant per room" server-side, so the two entry points can never
-   * produce a contradictory assignment.
-   */
-  const assignSelected = async (attendantId: string) => {
-    if (selected.size === 0 || !attendantId) return;
-    setAssigning(true);
-    setAssignResult(null);
-    setError(null);
-    const numbers = [...selected];
-    let ok = 0;
-    for (const number of numbers) {
-      const live = liveByNumber.get(number);
-      if (!live) continue;
-      try {
-        await api(`/api/rooms/${live.id}/assign`, { body: { attendantId } });
-        ok++;
-      } catch {
-        // continue with the rest; report the shortfall below
-      }
-    }
-    setAssigning(false);
-    const attendantName = attendants.find((a) => a.id === attendantId)?.name ?? "";
-    setAssignResult(
-      ok === numbers.length
-        ? `✓ ${ok} room${ok === 1 ? "" : "s"} assigned to ${attendantName}.`
-        : `${ok} of ${numbers.length} rooms assigned to ${attendantName}; the rest failed.`
-    );
-    setSelected(new Set());
-    setTargetAttendantId("");
-    load();
-  };
 
   return (
     <div className="animate-rise">
@@ -139,27 +79,8 @@ export default function FloorPlanView() {
           wrapper), so this never needs to be pinned in place itself. */}
       <FloorPlanLegend className="mb-4" occupiedLabel="Occupied" guestDndLabel="Guest: Do Not Disturb" />
 
-      <AssignmentPanel
-        mode={mode}
-        onModeChange={(m) => {
-          setMode(m);
-          setSelected(new Set());
-          setTargetAttendantId("");
-          setAssignResult(null);
-        }}
-        attendants={attendants}
-        selectedCount={selected.size}
-        targetAttendantId={targetAttendantId}
-        onTargetAttendantChange={setTargetAttendantId}
-        assigning={assigning}
-        onAssign={() => assignSelected(mode === "housekeeper-first" ? targetAttendantId : targetAttendantId)}
-        onClearSelection={() => setSelected(new Set())}
-        result={assignResult}
-      />
-
       <FloorPlanGrid
         plan={plan}
-        onRoomClick={(r) => toggleRoom(r.number)}
         getRoomMeta={(r) => {
           const live = liveByNumber.get(r.number);
           const category = live
@@ -175,11 +96,8 @@ export default function FloorPlanView() {
             occupancy: live?.occupancy,
             isCheckoutToday: live?.isCheckoutToday ?? false,
             guestDndActive: live?.guestDndActive ?? false,
-            selected: selected.has(r.number),
-            badge: live?.assignedTo?.name.split(" ")[0],
             title:
               [
-                live?.assignedTo && `Assigned to ${live.assignedTo.name}`,
                 live?.guestDndActive && "Guest: Do Not Disturb",
                 r.interconnectingGroup && `Interconnecting with ${r.interconnectingGroup}`,
                 r.hasDisabledAccess && "Room for disabled",
@@ -195,100 +113,7 @@ export default function FloorPlanView() {
   );
 }
 
-/**
- * The two assignment modes (v4 Aufgabe D): "room-first" picks rooms on the
- * grid below, then an attendant here; "housekeeper-first" picks the
- * attendant first, framing every room tap below as "assign to them". Both
- * write through the same `onAssign`, so there is exactly one way a room
- * actually gets reassigned from this screen.
- */
-function AssignmentPanel({
-  mode,
-  onModeChange,
-  attendants,
-  selectedCount,
-  targetAttendantId,
-  onTargetAttendantChange,
-  assigning,
-  onAssign,
-  onClearSelection,
-  result,
-}: {
-  mode: AssignMode;
-  onModeChange: (mode: AssignMode) => void;
-  attendants: Attendant[];
-  selectedCount: number;
-  targetAttendantId: string;
-  onTargetAttendantChange: (id: string) => void;
-  assigning: boolean;
-  onAssign: () => void;
-  onClearSelection: () => void;
-  result: string | null;
-}) {
-  return (
-    <div className="mb-4 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-card">
-      <div className="mb-3 flex flex-wrap gap-2">
-        <button
-          onClick={() => onModeChange("room-first")}
-          className={`h-11 rounded-lg border px-3 text-sm font-medium ${
-            mode === "room-first" ? "border-gold bg-parchment" : "border-charcoal/15 bg-white"
-          }`}
-        >
-          Rooms → housekeeper
-        </button>
-        <button
-          onClick={() => onModeChange("housekeeper-first")}
-          className={`h-11 rounded-lg border px-3 text-sm font-medium ${
-            mode === "housekeeper-first" ? "border-gold bg-parchment" : "border-charcoal/15 bg-white"
-          }`}
-        >
-          Housekeeper → rooms
-        </button>
-      </div>
-
-      {mode === "room-first" ? (
-        <p className="mb-2 text-xs text-graphite/60">
-          Tap rooms below to select them, then choose who they go to. {selectedCount} room{selectedCount === 1 ? "" : "s"} selected.
-        </p>
-      ) : (
-        <p className="mb-2 text-xs text-graphite/60">
-          Pick a housekeeper, then tap the rooms they should take. {selectedCount} room{selectedCount === 1 ? "" : "s"} selected.
-        </p>
-      )}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <select
-          value={targetAttendantId}
-          onChange={(e) => onTargetAttendantChange(e.target.value)}
-          aria-label="Select housekeeper to assign selected rooms to"
-          className="h-11 rounded-lg border border-charcoal/20 bg-white px-3 text-sm"
-        >
-          <option value="">— select housekeeper —</option>
-          {attendants.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.name}
-            </option>
-          ))}
-        </select>
-        <button
-          onClick={onAssign}
-          disabled={assigning || selectedCount === 0 || !targetAttendantId}
-          className="h-11 rounded-lg bg-navy px-4 text-sm font-semibold text-ivory transition hover:bg-navy-line disabled:opacity-40"
-        >
-          {assigning ? "Assigning…" : `Assign ${selectedCount || ""} room${selectedCount === 1 ? "" : "s"}`}
-        </button>
-        {selectedCount > 0 && (
-          <button onClick={onClearSelection} className="h-11 rounded-lg border border-charcoal/15 px-4 text-sm">
-            Clear selection
-          </button>
-        )}
-      </div>
-
-      {result && (
-        <p className="mt-2 rounded-lg border border-status-clean/30 bg-status-clean/10 px-3 py-2 text-sm text-status-clean">
-          {result}
-        </p>
-      )}
-    </div>
-  );
+/** Supervisor/Duty Manager: die einzige Zuteilungsansicht. Alle anderen Rollen: nur der Grundriss als Orientierung — ohne Zuteilungen. */
+export default function FloorPlanView({ canAssign }: { canAssign: boolean }) {
+  return canAssign ? <AssignmentFloorPlan /> : <ReferenceFloorPlan />;
 }

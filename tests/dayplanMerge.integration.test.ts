@@ -115,7 +115,11 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
     const r = await mergeDay(TODAY, userId);
     expect((await prisma.room.findUniqueOrThrow({ where: { number: "101" } })).assignedToId).toBe(attendant.id);
     expect(r.counts.changedAssigned).toBe(1);
-    expect(await prisma.notification.count({ where: { type: "DAY_PLAN_CHANGED", targetRole: "supervisor" } })).toBe(1);
+    // Jede betroffene Person bekommt genau eine Meldung zu ihrer Liste (Zimmermädchen mit dem Zimmer, Duty Manager nicht vorhanden → keine)
+    const mine = await prisma.notification.findMany({ where: { type: "LIST_UPDATED", targetUserId: attendant.id } });
+    expect(mine).toHaveLength(1);
+    expect(mine[0].message).toMatch(/^Nachimport: Deine Liste hat sich geändert — Zimmer 101: .* → entfällt\.$/);
+    expect(await prisma.notification.count({ where: { type: "DAY_PLAN_CHANGED" } })).toBe(0); // keine rollenweiten Sammelmeldungen mehr
     expect(r.issues.map((i) => i.code)).toContain("STAY_MISSING");
     expect(await prisma.stay.count()).toBe(stays); // nichts gelöscht
     expect(await prisma.stay.count({ where: { needsReview: true } })).toBe(1);

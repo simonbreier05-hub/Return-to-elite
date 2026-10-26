@@ -120,6 +120,8 @@ export interface ParseOptions {
   confirmedDateFormat?: DateFormatId;
   /** Heute (YYYY-MM-DD); Standard: Druckdatum der Liste. */
   today?: string;
+  /** Gespeichertes Datumsformat-Layout (nur Vorbelegung; mehrdeutige Werte werden nie geraten). */
+  layoutDateFormat?: DateFormatId;
   /** Der Tag, für den der Nutzer die Listen importiert (heute). Löst ein mehrdeutiges Datum nur auf, wenn das Druckdatum im Kopf genau in einer Lesart auf diesen Tag fällt. */
   expectedDate?: string;
   /** Zimmeranzahl für die Forecast-Plausibilitätsprüfung (Occ.% ≈ belegt ÷ (Anzahl − OOO)). */

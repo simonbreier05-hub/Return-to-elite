@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { NetworkError } from "@/components/api";
 import { IMPORT_TYPES } from "@/lib/domain";
-import { appliedSlots, listsReady } from "@/lib/planung/model";
+import { planningAllowed } from "@/lib/import/readiness";
 import { errorText, inOrder } from "@/components/planung/useImportSession";
 
-const full = Object.fromEntries(IMPORT_TYPES.map((t) => [t, { businessDate: "2026-09-22", appliedAt: "x", rows: 1 }]));
+const D = "2026-09-22";
+const full = Object.fromEntries(IMPORT_TYPES.map((t) => [t, { businessDate: D }]));
 
 describe("Einlesen aktualisiert den Hub ohne Reload", () => {
   it("übernimmt nacheinander — nie zwei Listen gleichzeitig (parallele Übernahmen liefen in DB-Timeouts)", async () => {
@@ -20,21 +21,14 @@ describe("Einlesen aktualisiert den Hub ohne Reload", () => {
   });
 
   it("frisch geladener Stand öffnet das Gate in derselben Sitzung (kein Verlassen/Wiedereintreten nötig)", () => {
-    const before = appliedSlots(IMPORT_TYPES, {}, []);
-    expect(listsReady(before)).toBe(false);
-    // nach dem Übernehmen: Stand neu geladen, Karten „applied"
-    const items = IMPORT_TYPES.map((t) => ({ type: t, phase: "applied" }));
-    expect(listsReady(appliedSlots(IMPORT_TYPES, full, items))).toBe(true);
-    // auch wenn der Stand-Abruf noch aussteht, zählen die gerade übernommenen Karten
-    expect(listsReady(appliedSlots(IMPORT_TYPES, null, items))).toBe(true);
+    // vorher: nichts übernommen; nach dem Übernehmen wird der Stand neu geladen (await loadStatus) → Gate offen
+    expect(planningAllowed({}, D)).toBe(false);
+    expect(planningAllowed(full, D)).toBe(true);
   });
 
   it("nach dem Löschen gilt die Liste sofort wieder als fehlend", () => {
     const { TRACES: _gone, ...rest } = full;
-    const items = IMPORT_TYPES.map((t) => ({ type: t, phase: t === "TRACES" ? "discarded" : "applied" }));
-    const slots = appliedSlots(IMPORT_TYPES, rest, items);
-    expect(slots.TRACES).toBe(false);
-    expect(listsReady(slots)).toBe(false);
+    expect(planningAllowed(rest, D)).toBe(false);
   });
 
   it("Fehler werden verständlich gemeldet, nie leer", () => {

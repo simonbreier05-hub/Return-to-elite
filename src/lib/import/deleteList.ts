@@ -23,8 +23,8 @@ export async function planStatus(date: string): Promise<{ confirmed: boolean; li
   const plan = await confirmedPlan(date);
   if (!plan?.confirmedAt) return { confirmed: !!plan, listsChanged: false };
   const after = { gt: plan.confirmedAt };
-  const applied = await prisma.importBatch.count({ where: { businessDate: date, status: "APPLIED", appliedAt: after } });
-  const deleted = await prisma.auditLog.count({ where: { action: "IMPORT_LIST_DELETED", createdAt: after, meta: { contains: `"businessDate":"${date}"` } } });
+  const applied = await prisma.importBatch.count({ where: { status: "APPLIED", appliedAt: after } });
+  const deleted = await prisma.auditLog.count({ where: { action: "IMPORT_LIST_DELETED", createdAt: after, meta: { contains: `"today":"${date}"` } } });
   return { confirmed: true, listsChanged: applied + deleted > 0 };
 }
 
@@ -45,22 +45,24 @@ const traceKeys = (p: Parsed | null): string[] => {
 };
 
 /**
- * Löscht die übernommene Liste `type` des Betriebstags `date`: Batch samt Zeilen/Befunden, und die
- * Gastdaten, die *nur* aus dieser Liste stammen (Import-Aufenthalte, offene Traces ohne Hausmann-Aufgabe,
- * erwartete Import-Anreisen, Forecast-Tage). Was auch in der jeweils anderen Liste steht, bleibt.
- * Ein bestätigter Plan bleibt immer bestehen; ohne `keepPlan` wird bei bestätigtem Plan abgebrochen.
+ * Löscht die übernommene Liste `type` — alle übernommenen Stände dieses Typs, damit das Gate sie wieder als
+ * fehlend zählt (sonst rückte ein älterer Stand nach und gälte als „veraltet"). Mit entfernt werden die Gastdaten,
+ * die *nur* aus dieser Liste stammen (Import-Aufenthalte, offene Traces ohne Hausmann-Aufgabe, erwartete
+ * Import-Anreisen, Forecast-Tage). Was auch in der jeweils anderen Liste steht, bleibt.
+ * Ein bestätigter Plan (Betriebstag `today`) bleibt immer bestehen; ohne `keepPlan` wird dann abgebrochen.
  */
-export async function deleteAppliedList(type: ImportType, date: string, userId: string, opts: { keepPlan?: boolean } = {}) {
-  const batches = await prisma.importBatch.findMany({ where: { type, businessDate: date, status: "APPLIED" }, include: { rows: true } });
-  if (!batches.length) throw new ListNotFoundError("Für diesen Betriebstag ist diese Liste nicht eingelesen.");
-  const plan = await confirmedPlan(date);
+export async function deleteAppliedList(type: ImportType, today: string, userId: string, opts: { keepPlan?: boolean } = {}) {
+  const batches = await prisma.importBatch.findMany({ where: { type, status: "APPLIED" }, include: { rows: true }, orderBy: { appliedAt: "desc" } });
+  if (!batches.length) throw new ListNotFoundError("Diese Liste ist nicht eingelesen.");
+  const plan = await confirmedPlan(today);
   if (plan && !opts.keepPlan) throw new PlanConfirmedError("Für diesen Tag ist bereits ein Plan bestätigt.");
+  const businessDate = batches[0].businessDate;
 
   const own: Parsed = { type, rows: batches.flatMap((b) => b.rows.map((r) => JSON.parse(r.payload) as unknown)) };
   const ids = batches.map((b) => b.id);
   const removed = { stays: 0, traces: 0, arrivals: 0, forecastDays: 0 };
-  // Die jeweils andere Liste so, wie mergeDay sie liest (Departures des Tages, Arrivals/Traces zuletzt übernommen) — vor der Transaktion lesen.
-  const keepStays = type === "DEPARTURES" ? stayKeys(await rowsOf("ARRIVALS", {})) : type === "ARRIVALS" ? stayKeys(await rowsOf("DEPARTURES", { businessDate: date })) : new Set<string>();
+  // Die jeweils andere Liste so, wie mergeDay sie liest (zuletzt übernommen) — vor der Transaktion lesen.
+  const keepStays = type === "DEPARTURES" ? stayKeys(await rowsOf("ARRIVALS", {})) : type === "ARRIVALS" ? stayKeys(await rowsOf("DEPARTURES", {})) : new Set<string>();
   const keepTraces = new Set(type === "ARRIVALS" ? traceKeys(await rowsOf("TRACES", {})) : type === "TRACES" ? traceKeys(await rowsOf("ARRIVALS", {})) : []);
 
   await prisma.$transaction(async (tx) => {
@@ -98,6 +100,6 @@ export async function deleteAppliedList(type: ImportType, date: string, userId: 
 
   // Logbuch: nur Liste, Betriebstag, Zähler — keine Gastdaten.
   const rows = batches.reduce((n, b) => n + b.rowCount, 0);
-  await audit({ action: "IMPORT_LIST_DELETED", userId, meta: { type, businessDate: date, batches: ids.length, rows, removed, planConfirmed: !!plan } });
-  return { type, businessDate: date, rows, removed, planConfirmed: !!plan };
+  await audit({ action: "IMPORT_LIST_DELETED", userId, meta: { type, businessDate, today, batches: ids.length, rows, removed, planConfirmed: !!plan } });
+  return { type, businessDate, rows, removed, planConfirmed: !!plan };
 }

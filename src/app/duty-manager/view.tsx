@@ -6,6 +6,7 @@ import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import WindowPanel from "@/components/WindowPanel";
+import LiveListsPanel from "@/components/lists/LiveListsPanel";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import OccupancyCleanCounter from "@/components/OccupancyCleanCounter";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
@@ -212,6 +213,10 @@ export default function DutyManagerView() {
         <Kpi label={t("dutyManager.openHouseTasks")} value={String(openHouseTasks)} accent={openHouseTasks > 0} />
         <Kpi label={t("dutyManager.unassignedFloorsKpi")} value={String(unassignedFloors.length)} accent={unassignedFloors.length > 0} />
       </div>
+
+      <WindowPanel title={t("dutyManager.liveListsTitle")}>
+        <LiveListsPanel />
+      </WindowPanel>
 
       <WindowPanel title={t("dutyManager.floorAssignmentTitle")}>
         <p className="mb-4 text-sm text-graphite/70">{t("dutyManager.floorAssignmentHint")}</p>

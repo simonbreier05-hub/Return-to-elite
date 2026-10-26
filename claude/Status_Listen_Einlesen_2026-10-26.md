@@ -1,9 +1,9 @@
 # Status: Listen einlesen stabilisieren + Listen löschen (v1) — 2026-10-26
 
-Branch: `feat/listen-einlesen-loeschen` (von `main`). Kein Commit auf `main`, kein Force-Push.
+Branch: `feat/listen-einlesen-loeschen` — enthält `feat/plan-grundriss` (per Merge-Commit, kein Force-Push). PR gegen `feat/plan-grundriss`, nicht gegen `main`.
 
 ## Ist-Stand vorher (Schritt 0)
-- **Prompt 1 (Betriebstag) war nicht umgesetzt**: Im Code gab es keinen Betriebstag. „Stand der Daten" und das Fünf-Listen-Gate nahmen den *zuletzt* übernommenen Stand jedes Typs, egal von welchem Tag (offene Frage 5 aus dem Bericht vom 20.10.).
+- **Prompt 1 (Betriebstag) ist umgesetzt — aber nur auf `feat/plan-grundriss`, nicht in `main`** (Commit c60b20d: `berlinToday()`, Gate `listBlockers`/`planningAllowed`, „Trotzdem verwenden" für veraltete Listen, Datumslayout). Das habe ich zuerst übersehen (nur `main` geprüft) und kurz einen eigenen Betriebstag-Filter gebaut; der ist wieder entfernt. Jetzt gilt allein das Modell aus Prompt 1, nichts doppelt.
 - Einlesen: `useImportSession` (Hook, genutzt von `/planung` und `/import`). Kein SWR/React Query, keine Server Actions — einfacher React-State + `fetch`. `/planung` ist `force-dynamic`, der Router-Cache spielt keine Rolle.
 - Gate: `listsReady()` → `missingLists()` (`src/lib/import/readiness.ts`), serverseitig `missingAppliedLists()` in Merge/Vorschlag.
 - Löschen von übernommenen Listen gab es nicht.
@@ -18,9 +18,9 @@ Branch: `feat/listen-einlesen-loeschen` (von `main`). Kein Commit auf `main`, ke
 - **Übernehmen nacheinander** (`inOrder` in `useImportSession.ts`); danach wird der Stand **abgewartet und neu geladen**, erst dann der Merge. Hub (Karten, Ring, Gate, Haus) aktualisiert sich sofort.
 - `applyBatch` (`src/lib/import/store.ts`): Forecast als `deleteMany` + `createMany`, Transaktions-Timeout 20 s; Ersetzen wird als `IMPORT_REPLACED` protokolliert.
 - **Fehler sichtbar** mit „Erneut versuchen" (pro Karte: Lesen oder Übernehmen wiederholen; Tagesplan-Berechnung wiederholen). Datenbankfehler kommen nie roh an die Oberfläche (Apply-Route → 503 mit verständlicher Meldung).
-- **Betriebstag** = Kalendertag Berlin: `GET /api/import/status?date=`, `dataStatus(date)`, `missingAppliedLists(date)` in Merge und Vorschlag.
+- Betriebstag/Gate: unverändert aus Prompt 1 (`listBlockersNow`). `GET /api/import/status` liefert zusätzlich `plan` (bestätigt / Listen geändert).
 - **Liste löschen** je Kachel (zwei Taps: „Liste löschen" → „Liste löschen?" → „Ja, löschen"/„Abbrechen"): `DELETE /api/import/lists/[type]`, Logik `src/lib/import/deleteList.ts`.
-  - Löscht die Liste des Betriebstags; danach fehlt sie im Gate, ein neuer Import ersetzt sie.
+  - Löscht die eingelesene Liste — alle übernommenen Stände des Typs, sonst würde ein älterer Stand als „veraltet" nachrücken. Danach fehlt sie im Gate, ein neuer Import ersetzt sie.
   - Entfernt Gastdaten/Traces nur, wenn sie allein aus dieser Liste stammen: Import-Aufenthalte (nicht in der anderen Liste Departures↔Arrivals), erwartete Import-Anreisen, offene Traces (nicht auch in Arrivals↔Traces), Forecast-Tage. **Bleiben**: erledigte Traces und Traces mit Hausmann-Aufgabe (Arbeitsnachweis), manuelle Anreisen, der Tagesplan (Zimmerarten).
   - Logbuch `IMPORT_LIST_DELETED`: Liste, Betriebstag, Nutzer, Zähler — keine Namen/Texte.
   - **Bestätigter Plan**: Die Rückfrage zeigt „Plan bleibt bestehen …"; der Server verlangt diese Bestätigung (409 ohne `keepPlan=1`). Danach zeigt der Hub „Listen geändert, Plan neu berechnen?" mit Link zum Plan.
@@ -30,17 +30,19 @@ Branch: `feat/listen-einlesen-loeschen` (von `main`). Kein Commit auf `main`, ke
 - **Datenbank: keine Schema-Änderung, keine Migration** (nur vorhandene Tabellen). Deshalb kein Backup nötig; lokal nur eine frische SQLite-Test-DB.
 
 ## Tests
-- `npx vitest run`: **67 Dateien, 541 Tests grün** (vorher 529).
-  - Neu `tests/importDeleteList.integration.test.ts`: Löschen setzt Gate zurück, Nachimport ersetzt, anderer Tag zählt nicht, Logbuch ohne Gastdaten, Rollen (Housekeeper/Front Office 403, ohne Login 401, Duty Manager ok), Gastdaten/Traces nur aus dieser Liste, Forecast, bestätigter Plan (409 → keepPlan → Hinweis).
+- `npx vitest run` (nach dem Merge mit `feat/plan-grundriss`): **72 Dateien, 594 Tests grün**.
+  - Neu `tests/importDeleteList.integration.test.ts`: Löschen setzt Gate zurück (auch ältere Stände weg, kein „veraltet"-Nachrücken), Nachimport ersetzt, Logbuch ohne Gastdaten, Rollen (Housekeeper/Front Office 403, ohne Login 401, Duty Manager ok), Gastdaten/Traces nur aus dieser Liste, Forecast, bestätigter Plan (409 → keepPlan → Hinweis).
   - Neu `tests/planung/importRefresh.test.ts`: Übernahme nacheinander, Gate öffnet sich in derselben Sitzung, nach Löschen sofort fehlend, verständliche Fehlermeldungen.
 - `npx tsc --noEmit` sauber, `npm run build` erfolgreich.
 - **Browser (Playwright, Produktions-Build, Beispiel-PDFs mit erfundenen Namen)** auf Desktop 1280 px, **Mobil 390 px** und **iPad 820 px**: 5 Listen einlesen → übernehmen → alle „übernommen", „Weiter: Team" aktiv, keine API-Fehler; Liste löschen (zwei Taps) → Kachel „wartet", Gate zu; neu einlesen → wieder komplett. Kein seitliches Scrollen. Screenshots nur lokal, nicht im Repo.
 
 ## Deploy-Status
-Siehe Abschnitt am Ende (wird nach dem Push ergänzt).
+- Railway-Projekt „StayClean", Dienst `StayClean-preview` (eigene DB `postgres-preview`, URL stayclean-preview-production.up.railway.app). Production (`StayClean`) **nicht angefasst**.
+- **Zwischenfall (abgefangen):** Ich hatte die Preview zuerst auf den `main`-basierten Stand umgestellt. Dabei fiel auf, dass die Preview vorher `feat/plan-grundriss` lief, mit 3 Spalten, die `main` nicht hat (`ImportBatch.staleAcceptedAt/staleAcceptedById`, `Trace.assignedToId`). Das Startskript hätte sie auf der Preview-DB gelöscht. Ich habe sofort zurückgestellt; der Build des alten Stands blieb in „BUILDING" hängen und wurde nicht ausgerollt (keine Deploy-Logs). Die Preview lief durchgehend mit dem letzten erfolgreichen Stand.
+- Jetzt: Preview auf `feat/listen-einlesen-loeschen` (= `feat/plan-grundriss` + diese Änderungen, **gleiches Schema**, kein Löschen von Spalten). Status siehe PR.
 
 ## Offene Fragen
-1. **Betriebstag = Kalendertag Berlin.** Werden Listen manchmal vor Mitternacht für den Folgetag gedruckt (Night Audit)? Dann bräuchten wir eine Tageswahl im Hub.
+1. `feat/plan-grundriss` ist noch nicht in `main`. Reihenfolge: erst diesen Branch (PR) nach `feat/plan-grundriss`, dann `feat/plan-grundriss` nach `main`?
 2. Löschen von **Departures/Arrivals** entfernt Import-Aufenthalte, auch eingecheckte (`IN_HOUSE`) — deren Gast-Link (`/g/s/…`) funktioniert dann nicht mehr, bis neu importiert wird. Ist das so gewollt, oder sollen eingecheckte Aufenthalte bleiben?
 3. Der **Tagesplan** (Zimmerarten im Haus-Bild) bleibt nach dem Löschen stehen, bis neu importiert wird. Soll er beim Löschen von Departures sofort geleert werden?
 4. Löschen gibt es im Planungstool; auf der Seite `/import` noch nicht. Gewünscht?

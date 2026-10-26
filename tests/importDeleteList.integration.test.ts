@@ -22,17 +22,19 @@ vi.mock("@/lib/realtime", () => ({ broadcast: (...a: unknown[]) => broadcastMock
 import { prisma } from "@/lib/db";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { traceKey } from "@/lib/dayplan/traceKey";
-import { applyBatch, missingAppliedLists } from "@/lib/import/store";
+import { applyBatch, listBlockersNow } from "@/lib/import/store";
+import { berlinToday } from "@/lib/import/businessDay";
 import { planStatus } from "@/lib/import/deleteList";
 import { DELETE as deleteList } from "@/app/api/import/lists/[type]/route";
 import { GET as statusGet } from "@/app/api/import/status/route";
 
 // Erfundene Testdaten, kein echter Gast.
-const D = "2026-09-22";
+const D = berlinToday(); // Betriebstag = heute (Berlin), wie im Gate
+const missing = async () => (await listBlockersNow()).missing;
 const ids: Record<string, string> = {};
 const as = (key: string | null, role = "supervisor") => { getSessionMock.mockReset(); getSessionMock.mockResolvedValue(key ? { userId: ids[key], name: key, role } : null); };
-const del = (type: string, q = "") => deleteList(new NextRequest(`http://x/api/import/lists/${type}?date=${D}${q}`, { method: "DELETE" }), { params: Promise.resolve({ type }) });
-const status = async () => (await statusGet(new NextRequest(`http://x/api/import/status?date=${D}`))).json();
+const del = (type: string, q = "") => deleteList(new NextRequest(`http://x/api/import/lists/${type}${q}`, { method: "DELETE" }), { params: Promise.resolve({ type }) });
+const status = async () => (await statusGet(new NextRequest(`http://x/api/import/status`))).json();
 
 const ROWS: Record<string, unknown[]> = {
   DEPARTURES: [{ room: "201", arrDate: "2026-09-20" }, { room: "202", arrDate: D }],
@@ -53,7 +55,7 @@ async function applied(type: ImportType, date = D) {
   if (type === "FORECAST") await prisma.forecastDay.create({ data: { date, occupiedRooms: 1, arrivals: 1, departures: 1, occupancyPct: 1, outOfOrder: 0, dayUse: 0, noShow: 0, persons: 1, batchId: b.id } });
   return b;
 }
-const stay = (roomId: string, arr: string, name: string) => prisma.stay.create({ data: { roomId, guestName: name, source: "IMPORT", checkIn: new Date(`${arr}T00:00:00Z`), checkOut: new Date("2026-09-25T10:00:00Z"), stayToken: `t-${roomId}-${arr}` } });
+const stay = (roomId: string, arr: string, name: string) => prisma.stay.create({ data: { roomId, guestName: name, source: "IMPORT", checkIn: new Date(`${arr}T00:00:00Z`), checkOut: new Date(Date.now() + 5 * 86_400_000), stayToken: `t-${roomId}-${arr}` } });
 const trace = (roomId: string, room: string, code: string, text: string, source: string, extra: object = {}) =>
   prisma.trace.create({ data: { roomId, code, date: D, text, dept: "HOUSEKEEPING", dedupeKey: traceKey(room, code, D, text), source, ...extra } });
 
@@ -70,12 +72,12 @@ describe("Liste löschen: Gate", () => {
   it("nach dem Löschen fehlt die Liste wieder im Gate; ein neuer Import ersetzt sie", async () => {
     as("sup");
     for (const ty of IMPORT_TYPES) await applied(ty);
-    expect(await missingAppliedLists(D)).toEqual([]);
+    expect(await missing()).toEqual([]);
     expect(Object.values((await status()).status).every(Boolean)).toBe(true);
 
     const res = await del("TRACES");
     expect(res.status).toBe(200);
-    expect(await missingAppliedLists(D)).toEqual(["TRACES"]);
+    expect(await missing()).toEqual(["TRACES"]);
     expect((await status()).status.TRACES).toBeNull();
     expect(broadcastMock).toHaveBeenCalledWith("import:deleted", { type: "TRACES", businessDate: D });
 
@@ -86,19 +88,24 @@ describe("Liste löschen: Gate", () => {
     const mk = () => prisma.importBatch.create({ data: { type: "TRACES", businessDate: D, fileHash: `n${Math.random()}`, uploadedById: ids.sup, rowCount: 1,
       rows: { create: ROWS.TRACES.map((r) => ({ kind: "TRACE", room: "202", payload: JSON.stringify(r) })) } } });
     await applyBatch((await mk()).id, ids.sup);
-    expect(await missingAppliedLists(D)).toEqual([]);
+    expect(await missing()).toEqual([]);
     await applyBatch((await mk()).id, ids.sup);
     expect(await prisma.importBatch.count({ where: { type: "TRACES", businessDate: D, status: "APPLIED" } })).toBe(1);
     const rep = await prisma.auditLog.findFirst({ where: { action: "IMPORT_REPLACED" } });
     expect(JSON.parse(rep!.meta!)).toMatchObject({ type: "TRACES", businessDate: D, replaced: 1 });
   });
 
-  it("Listen eines anderen Betriebstags zählen nicht", async () => {
-    expect(await missingAppliedLists("2026-09-23")).toEqual([...IMPORT_TYPES]);
+  it("löscht auch ältere Stände desselben Typs — die Liste fehlt danach, statt als „veraltet“ nachzurücken", async () => {
+    as("sup");
+    await applied("INHOUSE", "2020-01-01");
+    expect((await del("INHOUSE")).status).toBe(200);
+    expect(await missing()).toEqual(["INHOUSE"]);
+    expect((await listBlockersNow()).stale).toEqual([]);
+    await applied("INHOUSE");
   });
 
   it("Logbuch: Liste, Betriebstag, Nutzer — ohne Gastdaten", async () => {
-    const log = await prisma.auditLog.findFirst({ where: { action: "IMPORT_LIST_DELETED" } });
+    const log = await prisma.auditLog.findFirst({ where: { action: "IMPORT_LIST_DELETED" }, orderBy: { createdAt: "asc" } });
     expect(log?.userId).toBe(ids.sup);
     expect(JSON.parse(log!.meta!)).toMatchObject({ type: "TRACES", businessDate: D });
     expect(log!.meta).not.toMatch(/Zusatzbett|guestName|"name"|"text"/);
@@ -110,18 +117,18 @@ describe("Liste löschen: Rollen", () => {
     for (const k of ["hk", "fo"]) {
       as(k, k === "hk" ? "room_attendant" : "front_office");
       expect((await del("INHOUSE")).status).toBe(403);
-      expect((await statusGet(new NextRequest(`http://x/api/import/status?date=${D}`))).status).toBe(403);
+      expect((await statusGet(new NextRequest(`http://x/api/import/status`))).status).toBe(403);
     }
     as(null);
     expect((await del("INHOUSE")).status).toBe(401);
-    expect(await missingAppliedLists(D)).toEqual([]); // nichts gelöscht
+    expect(await missing()).toEqual([]); // nichts gelöscht
   });
 
   it("Duty Manager darf löschen; unbekannte Liste → 400", async () => {
     as("dm", "duty_manager");
     expect((await del("NOPE")).status).toBe(400);
     expect((await del("INHOUSE")).status).toBe(200);
-    expect(await missingAppliedLists(D)).toEqual(["INHOUSE"]);
+    expect(await missing()).toEqual(["INHOUSE"]);
     await applied("INHOUSE");
   });
 });
@@ -169,9 +176,9 @@ describe("Liste löschen bei bestätigtem Plan", () => {
     const first = await del("INHOUSE");
     expect(first.status).toBe(409);
     expect((await first.json()).planConfirmed).toBe(true);
-    expect(await missingAppliedLists(D)).toEqual([]);
+    expect(await missing()).toEqual([]);
 
-    expect((await del("INHOUSE", "&keepPlan=1")).status).toBe(200);
+    expect((await del("INHOUSE", "?keepPlan=1")).status).toBe(200);
     expect((await prisma.autoPlanProposal.findUnique({ where: { id: p.id } }))?.status).toBe("CONFIRMED");
     expect(await planStatus(D)).toEqual({ confirmed: true, listsChanged: true });
     expect((await status()).plan).toEqual({ confirmed: true, listsChanged: true });

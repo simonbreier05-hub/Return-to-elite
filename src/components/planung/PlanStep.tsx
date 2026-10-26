@@ -12,13 +12,25 @@ const PH_LABEL: Record<PlanPhase, "planungTool.phMerge" | "planungTool.phPropose
  * danach drei gefächerte Karten (Entwurf), Warnungen aus dem Vorschlag und der Hinweis „Nichts ist live".
  */
 export default function PlanStep({
-  states, counts, warnings, error, started,
-}: { states: Record<PlanPhase, PhaseState>; counts: PlanCounts | null; warnings: { severity: "WARNING" | "INFO"; message: string }[]; error: string | null; started: boolean }) {
+  states, counts, warnings, error, started, summary, hkRows, onEdit, onToggleHk, onOpen, confirmed,
+}: {
+  states: Record<PlanPhase, PhaseState>; counts: PlanCounts | null; warnings: { severity: "WARNING" | "INFO"; message: string }[]; error: string | null; started: boolean;
+  /** Entwurf: zugeteilt/offen/gesamt. */
+  summary: { assigned: number; total: number; open: number } | null;
+  /** Je Kraft: Zimmer/Credits/Zielband und ob sie bewusst nicht eingeplant ist. */
+  hkRows: { id: string; name: string; rooms: number; credits: number; lo: number; hi: number; excluded: boolean }[];
+  onEdit: () => void;
+  onToggleHk: (id: string) => void;
+  /** Karte, Kraft-Zeile oder „offen“ angetippt: öffnet die Detailansicht (Tab, Ansicht). */
+  onOpen: (tab: "rooms" | "supervisors" | "houseman" | "overview", view?: "plan" | "list") => void;
+  confirmed: { assigned: number; open: number } | null;
+}) {
   const { t } = useLocale();
+  const fmt = (n: number) => (Math.round(n * 10) / 10).toString().replace(".", ",");
   const cards = counts ? [
-    { text: counts.roomLists === 1 ? t("planungTool.cardRoomsOne") : t("planungTool.cardRooms", { n: counts.roomLists }), rot: -4 },
-    { text: counts.supervisorLists === 1 ? t("planungTool.cardSupervisorsOne") : t("planungTool.cardSupervisors", { n: counts.supervisorLists }), rot: 0 },
-    { text: counts.hausmannLists === 1 ? t("planungTool.cardHousemanOne") : t("planungTool.cardHouseman", { n: counts.hausmannLists }), rot: 4 },
+    { text: counts.roomLists === 1 ? t("planungTool.cardRoomsOne") : t("planungTool.cardRooms", { n: counts.roomLists }), rot: -4, tab: "rooms" as const },
+    { text: counts.supervisorLists === 1 ? t("planungTool.cardSupervisorsOne") : t("planungTool.cardSupervisors", { n: counts.supervisorLists }), rot: 0, tab: "supervisors" as const },
+    { text: counts.hausmannLists === 1 ? t("planungTool.cardHousemanOne") : t("planungTool.cardHouseman", { n: counts.hausmannLists }), rot: 4, tab: "houseman" as const },
   ] : [];
   return (
     <div className="mt-3">
@@ -47,20 +59,55 @@ export default function PlanStep({
         <>
           <div className="relative mx-auto mt-6 h-32 max-w-md" role="list" aria-label={t("planungTool.draft")}>
             {cards.map((c, i) => (
-              <div key={i} role="listitem" className="pl-fan absolute bottom-0 left-[34%] w-[32%] rounded-[18px] border border-line-2 bg-night-600 p-3 shadow-lg"
+              <div key={i} role="listitem" className="pl-fan absolute bottom-0 left-[34%] w-[32%]"
                 style={{ ["--i" as string]: i, transform: `translateX(${(i - 1) * 104}%) translateY(${i === 1 ? 0 : 8}px) rotate(${c.rot}deg)`, zIndex: i === 1 ? 2 : 1 }}>
-                <div className="font-serif text-base font-semibold leading-tight">{c.text}</div>
-                <div className="mt-1.5 inline-block rounded-full border border-line-2 px-2 text-[11px] text-pl-muted">{t("planungTool.draft")}</div>
+                <button type="button" onClick={() => onOpen(c.tab)} aria-label={`${c.text} — ${t("planungTool.openDetails")}`}
+                  className="block min-h-11 w-full rounded-[18px] border border-line-2 bg-night-600 p-3 text-left shadow-lg hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                  <div className="font-serif text-base font-semibold leading-tight">{c.text}</div>
+                  <div className="mt-1.5 inline-block rounded-full border border-line-2 px-2 text-[11px] text-pl-muted">{t("planungTool.draft")} ›</div>
+                </button>
               </div>
             ))}
           </div>
+          {summary && (
+            <section className="mt-5" aria-label={t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })}>
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="font-serif text-xl font-semibold">{t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })}</div>
+                {summary.open > 0 && <button type="button" onClick={() => onOpen("rooms", "plan")} className="min-h-11 rounded-full border border-line-2 bg-night-600 px-3 text-xs font-semibold text-brass-ink hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">⚠ {t("planungTool.openBadge", { n: summary.open })} ›</button>}
+                {confirmed && <span className="rounded-full border border-line-2 px-2.5 py-0.5 text-xs font-semibold">✓ {t("planungTool.confirmedTitle")}</span>}
+              </div>
+              <ul className="mt-2 space-y-1.5">
+                {hkRows.map((h) => (
+                  <li key={h.id} className="flex min-h-11 items-center gap-2 rounded-full border border-line-1 bg-night-600 px-4 text-sm">
+                    {h.excluded ? <span className="text-pl-muted line-through">{h.name}</span> : (
+                      <button type="button" onClick={() => onOpen("rooms", "list")} className="min-h-11 text-left font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{h.name} ›</button>
+                    )}
+                    <span className="ml-auto text-xs text-pl-muted">
+                      {h.excluded ? t("planungTool.skippedNote") : `${h.rooms} ${t("planungTool.roomsShort")} · ${fmt(h.credits)} / ${fmt(h.lo)}–${fmt(h.hi)}`}
+                    </span>
+                    <button type="button" onClick={() => onToggleHk(h.id)} className="min-h-11 rounded-full px-2 text-xs underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                      {h.excluded ? t("planungTool.unskipHk") : t("planungTool.skipHk")}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                  {summary.open > 0 ? t("planungTool.openAssign") : t("planungTool.editDraft")}
+                </button>
+                <button type="button" onClick={() => onOpen("overview")} className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                  {t("service.title")}
+                </button>
+              </div>
+            </section>
+          )}
           <section className="mt-5" aria-labelledby="plan-warn">
             <h2 id="plan-warn" className="mb-1.5 text-xs font-medium uppercase tracking-[2px] text-pl-muted">{t("planungTool.warningsTitle")}</h2>
             {warnings.length === 0 ? <p className="text-sm text-pl-muted">{t("planungTool.noWarnings")}</p> : (
               <ul className="space-y-1 text-sm">{warnings.map((w, i) => <li key={i} className={w.severity === "INFO" ? "text-pl-muted" : "text-brass-ink"}><span aria-hidden>{w.severity === "INFO" ? "ℹ" : "⚠"}</span> {w.message}</li>)}</ul>
             )}
           </section>
-          <p className="mt-4 rounded-[14px] border border-line-2 bg-night-600 p-3 text-sm font-medium">{t("planungTool.notLive")}</p>
+          {!confirmed && <p className="mt-4 rounded-[14px] border border-line-2 bg-night-600 p-3 text-sm font-medium">{t("planungTool.notLive")}</p>}
         </>
       )}
     </div>

@@ -86,6 +86,31 @@ describe("Schritt Etagen", () => {
 describe("Schritt Plan", () => {
   const plan = (counts: { roomLists: number; supervisorLists: number; hausmannLists: number } | null, extra = {}) =>
     html(h(PlanStep, { states: phaseStates(counts ? 5 : 1, !counts, null), counts, warnings: [], error: null, started: true, ...extra }));
+  it("Entwurf: „X von Y zugeteilt“, Zähler offener Zimmer, Kräfte mit Credits und „Nicht einplanen“ (je Tippfläche ≥ 44 px)", () => {
+    const counts = { roomLists: 3, supervisorLists: 1, hausmannLists: 1 };
+    const out = plan(counts, {
+      summary: { assigned: 28, total: 30, open: 2 }, onEdit: () => {}, onToggleHk: () => {}, confirmed: null,
+      hkRows: [{ id: "a", name: "Anna Test", rooms: 10, credits: 14.5, lo: 12.5, hi: 15.5, excluded: false }, { id: "b", name: "Bea Test", rooms: 0, credits: 0, lo: 12.5, hi: 15.5, excluded: true }],
+    });
+    expect(out).toContain("28 von 30 Zimmern zugeteilt");
+    expect(out).toContain("2 offen");
+    expect(out).toContain("Offene Zimmer zuteilen");
+    expect(out).toContain("14,5 / 12,5–15,5");
+    expect(out).toContain("Nicht einplanen");
+    expect(out).toContain("Einplanen");
+    expect(out).toContain("Nicht eingeplant");
+    expect((out.match(/min-h-11/g) ?? []).length).toBeGreaterThanOrEqual(3);
+  });
+  it("Karten, Kraft-Zeilen und „offen“ sind anklickbare Knöpfe (≥ 44 px) mit Hinweis auf die Details", () => {
+    const out = plan({ roomLists: 4, supervisorLists: 2, hausmannLists: 1 }, {
+      summary: { assigned: 34, total: 57, open: 23 }, onEdit: () => {}, onOpen: () => {}, onToggleHk: () => {}, confirmed: null,
+      hkRows: [{ id: "a", name: "Anna Test", rooms: 10, credits: 8.5, lo: 12.5, hi: 15.5, excluded: false }],
+    });
+    expect((out.match(/<button[^>]*aria-label="[^"]*Details öffnen"/g) ?? []).length).toBe(3); // drei Karten
+    expect(out).toContain("23 offen ›");
+    expect(out).toContain("Anna Test ›");
+    expect(out).toContain("8,5 / 12,5–15,5");
+  });
   it("Statuszeilen folgen dem Fortschritt", () => {
     const out = plan(null);
     expect(out).toContain('data-state="done"');

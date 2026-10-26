@@ -80,7 +80,7 @@ async function main() {
   console.log(`   DEPARTURES-Stände in der DB: ${await prisma.importBatch.count({ where: { type: "DEPARTURES", status: "APPLIED" } })} (ein Stand je Tag)`);
 
   h("6. Stand der Daten (Planungshub)");
-  const st = await dataStatus(dep.reportDate!);
+  const st = await dataStatus();
   for (const [k, v] of Object.entries(st)) console.log(`   ${k.padEnd(11)} ${v ? `Stand ${v.businessDate}, ${v.rows} Zeilen` : "— nicht importiert"}`);
   console.log(`   ForecastDay-Zeilen: ${await prisma.forecastDay.count()}`);
 

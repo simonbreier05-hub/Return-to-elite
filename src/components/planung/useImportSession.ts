@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, NetworkError } from "@/components/api";
 import type { ImportType } from "@/lib/domain";
+import { berlinToday } from "@/lib/import/businessDay";
 import { crossCheckArrivals } from "@/lib/import/parsers";
 import { sha256Hex } from "@/lib/import/preview";
 import { loadList, parseList, type AnyResult, type LoadedList } from "@/lib/import/readFile";
@@ -26,11 +27,11 @@ export interface ImportItem {
   file?: File;
 }
 
-export type ImportStatus = Record<string, { businessDate: string; appliedAt: string; rows: number } | null>;
+export type ImportStatus = Record<string, { businessDate: string; appliedAt: string; rows: number; staleAccepted?: boolean } | null>;
 export interface PlanHint { confirmed: boolean; listsChanged: boolean }
 
-/** Betriebstag (YYYY-MM-DD) — Kalendertag in Berlin, wie auf dem Server (`berlinDate`). */
-export const todayIso = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+/** Betriebstag = App-Uhr in Berlin (YYYY-MM-DD), nicht die Zeitzone des Geräts. */
+export const todayIso = () => berlinToday();
 
 /** Verständliche Meldung statt roher Fehlertexte; Server-Meldungen sind schon bereinigt. */
 export const errorText = (e: unknown) => e instanceof NetworkError ? "Keine Verbindung zum Server. Bitte erneut versuchen."
@@ -53,6 +54,10 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
   const [inventory, setInventory] = useState<number | undefined>();
   const [status, setStatus] = useState<ImportStatus | null>(null);
   const [plan, setPlan] = useState<PlanHint | null>(null);
+  const [today, setToday] = useState(todayIso());
+  const [layout, setLayout] = useState<Partial<Record<ImportType, DateFormatId>>>({});
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const dayRef = useRef(day);
   dayRef.current = day;
   const itemsRef = useRef(items);
@@ -61,12 +66,13 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
   cb.current = onApplied;
 
   const patch = useCallback((id: string, p: Partial<ImportItem>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x))), []);
-  /** Stand der Daten des Betriebstags neu laden. Gibt den frischen Stand zurück (null bei Fehler). */
-  const loadStatus = useCallback(() => api<{ status: ImportStatus; plan?: PlanHint }>(`/api/import/status?date=${dayRef.current}`)
-    .then((d) => { setStatus(d.status); setPlan(d.plan ?? null); return d.status; }).catch(() => null), []);
+  /** Stand der Daten neu laden. Gibt den frischen Stand zurück (null bei Fehler). */
+  const loadStatus = useCallback(() => api<{ status: ImportStatus; today?: string; plan?: PlanHint }>("/api/import/status")
+    .then((d) => { setStatus(d.status); setPlan(d.plan ?? null); if (d.today) setToday(d.today); return d.status; }).catch(() => null), []);
 
-  useEffect(() => { void loadStatus(); }, [loadStatus, day]);
+  useEffect(() => { void loadStatus(); }, [loadStatus]);
   useEffect(() => {
+    api<{ layout: Partial<Record<ImportType, DateFormatId>> }>("/api/import/layout").then((d) => setLayout(d.layout)).catch(() => {});
     api<{ settings: { roomInventory: number } }>("/api/settings").then((d) => setInventory(d.settings.roomInventory)).catch(() => {});
   }, []);
 
@@ -83,7 +89,7 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
       const hash = await sha256Hex(bytes);
       const type = list.type;
       if (!type) { patch(id, { phase: "read", list, hash, type: null }); return; }
-      patch(id, { phase: "read", list, hash, type, result: parseList(type, list, { today: dayRef.current, roomInventory: inventory }) });
+      patch(id, { phase: "read", list, hash, type, result: parseList(type, list, { today: dayRef.current, roomInventory: inventory, layoutDateFormat: layoutRef.current[type] }) });
     } catch (e) {
       patch(id, { phase: "error", error: errorText(e) });
     }
@@ -100,7 +106,7 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
 
   const reparse = useCallback((it: ImportItem, type: ImportType, confirmed?: DateFormatId) => {
     if (!it.list) return;
-    patch(it.id, { type, confirmed, serverIssues: undefined, result: parseList(type, it.list, { today: dayRef.current, roomInventory: inventory, confirmedDateFormat: confirmed }) });
+    patch(it.id, { type, confirmed, serverIssues: undefined, result: parseList(type, it.list, { today: dayRef.current, roomInventory: inventory, confirmedDateFormat: confirmed, layoutDateFormat: layoutRef.current[type] }) });
   }, [patch, inventory]);
 
   const discard = useCallback((it: ImportItem) => patch(it.id, { phase: "discarded", list: undefined, result: undefined, file: undefined }), [patch]);
@@ -131,6 +137,12 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
         return null;
       }
       await api(`/api/import/batches/${sub.batchId}/apply`, { method: "POST", body: {} });
+      // Erkanntes Datumsformat nach der Bestätigung (Übernehmen) als Layout merken, damit es nicht jedes Mal abweicht.
+      const fmt = r.dates?.format;
+      if (fmt && layoutRef.current[it.type] !== fmt) {
+        const type = it.type;
+        void api("/api/import/layout", { method: "PUT", body: { type, dateFormat: fmt } }).then(() => setLayout((l) => ({ ...l, [type]: fmt }))).catch(() => {});
+      }
       patch(it.id, { busy: false, phase: "applied", list: undefined, result: undefined, file: undefined, error: undefined });
       return it.type;
     } catch (e) {
@@ -139,6 +151,13 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
       return null;
     }
   }, [patch]);
+
+  /** „Trotzdem verwenden“: veraltete Liste für die Planung bestätigen (wird im Logbuch protokolliert). */
+  const acceptStale = useCallback(async (type: ImportType) => {
+    await api("/api/import/stale", { body: { type } });
+    await loadStatus();
+    cb.current?.([type]);
+  }, [loadStatus]);
 
   const ready = items.filter((x) => x.phase === "read" && x.result && !isCritical(x));
 
@@ -160,12 +179,12 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
   }, [patch, applyAndRefresh, read]);
 
   /**
-   * Eingelesene Liste des Betriebstags löschen. `keepPlan` bestätigt, dass ein bestätigter Plan bestehen bleibt.
+   * Eingelesene Liste löschen. `keepPlan` bestätigt, dass ein bestätigter Plan bestehen bleibt.
    * Gibt `null` bei Erfolg zurück, sonst die Fehlermeldung (bzw. "planConfirmed").
    */
   const removeList = useCallback(async (type: ImportType, keepPlan = false): Promise<string | null> => {
     try {
-      await api(`/api/import/lists/${type}?date=${dayRef.current}${keepPlan ? "&keepPlan=1" : ""}`, { method: "DELETE" });
+      await api(`/api/import/lists/${type}${keepPlan ? "?keepPlan=1" : ""}`, { method: "DELETE" });
     } catch (e) {
       return e instanceof ApiError && e.status === 409 ? "planConfirmed" : errorText(e); // 409 = Plan bestätigt, keepPlan fehlt
     }
@@ -174,5 +193,5 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
     return null;
   }, [loadStatus]);
 
-  return { items, day, setDay, status, plan, loadStatus, addFiles, reparse, discard, applyOne, applyAll, retry, removeList, issuesOf, isCritical, ready };
+  return { items, day, setDay, status, plan, today, acceptStale, loadStatus, addFiles, reparse, discard, applyOne, applyAll, retry, removeList, issuesOf, isCritical, ready };
 }

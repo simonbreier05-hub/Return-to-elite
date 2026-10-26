@@ -22,18 +22,22 @@ Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`);
 - **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je belegtes Zimmer (Zimmer, Name, Anreise, Abreise, Erw., Kinder, Nächte). Geschäftsdatum = Druckdatum. **Layout angenommen** (wie die Departures-Zeilen) — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
 - **Traces** — PDF oder CSV; Twin-/Zusatzbett-Texte werden zu Hausmann-Aufgaben (`traceClassifier.ts`).
 
+## Betriebstag und veraltete Listen
+
+Betriebstag ist immer der heutige Tag der App-Uhr (Berlin). Das Datum in der Datei dient nur dem Abgleich: Liste vom anderen Tag = „veraltet (Datum)“ (Warnung `LIST_NOT_TODAY`, übernehmbar). Das Gate zählt eine veraltete Liste erst nach „Trotzdem verwenden“ (Supervisor/Duty Manager, wird im Logbuch protokolliert). Ohne lesbares Druckdatum: Hinweis `NO_PRINT_DATE`, die Liste gilt für den Betriebstag. Das Datumsformat je Listentyp wird nach dem Übernehmen als Layout gespeichert (`ImportMapping`).
+
 ## Einreichungs-Gate (fünf Listen)
 
-Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `missingAppliedLists(date)` → HTTP 409 mit der Liste der fehlenden Typen. Es zählen nur Listen des **Betriebstags** (`businessDate` = Kalendertag Berlin, `berlinDate`); Stände von gestern öffnen das Gate nicht.
+Zusätzlich muss der Stand jeder Liste dem Betriebstag entsprechen (oder bestätigt sein). Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `listBlockersNow()` → HTTP 409 mit den fehlenden bzw. unbestätigt veralteten Typen.
 
 ## Liste löschen / ersetzen
 
-`DELETE /api/import/lists/[type]?date=YYYY-MM-DD[&keepPlan=1]` (Supervisor, Duty Manager) löscht die übernommene Liste des Betriebstags (`src/lib/import/deleteList.ts`): Batch samt Zeilen, dazu Import-Aufenthalte, erwartete Import-Anreisen, offene Traces ohne Hausmann-Aufgabe und Forecast-Tage — nur was **nicht** auch in der jeweils anderen Liste steht (Departures↔Arrivals, Arrivals↔Traces). Ist für den Tag ein Plan bestätigt: 409 `planConfirmed`, bis `keepPlan=1` kommt; der Plan bleibt, `GET /api/import/status` meldet dann `plan.listsChanged` („Listen geändert, Plan neu berechnen?“). Logbuch: `IMPORT_LIST_DELETED` und `IMPORT_REPLACED` (Typ, Betriebstag, Zähler — keine Gastdaten). Broadcast `import:deleted`.
+`DELETE /api/import/lists/[type][?keepPlan=1]` (Supervisor, Duty Manager) löscht die übernommene Liste — alle übernommenen Stände des Typs, damit das Gate sie wieder als *fehlend* zählt (sonst rückte ein älterer Stand als „veraltet“ nach) (`src/lib/import/deleteList.ts`): Batch samt Zeilen, dazu Import-Aufenthalte, erwartete Import-Anreisen, offene Traces ohne Hausmann-Aufgabe und Forecast-Tage — nur was **nicht** auch in der jeweils anderen Liste steht (Departures↔Arrivals, Arrivals↔Traces). Ist für den Tag ein Plan bestätigt: 409 `planConfirmed`, bis `keepPlan=1` kommt; der Plan bleibt, `GET /api/import/status` meldet dann `plan.listsChanged` („Listen geändert, Plan neu berechnen?“). Logbuch: `IMPORT_LIST_DELETED` und `IMPORT_REPLACED` (Typ, Betriebstag, Zähler — keine Gastdaten). Broadcast `import:deleted`.
 
 ## Oberfläche und API
 
 `/import` (Supervisor, Duty Manager; Link im Planungshub): mehrere Dateien per Drag-and-drop oder „Dateien wählen", Typ automatisch erkannt (sonst Auswahl), Vorschau mit maskierten Namen, Befunde, Datumsbestätigung, „Übernehmen"/„Verwerfen"/„Alle übernehmen", „Stand der Daten".
-`POST /api/import/batches` (Vorschau ablegen) → `POST /api/import/batches/[id]/apply|reject`; `GET /api/import/status?date=` (Stand des Betriebstags + Plan-Hinweis). Der Browser übernimmt mehrere Listen **nacheinander** (parallele Übernahmen liefen in DB-Transaktions-Timeouts).
+`POST /api/import/batches` (Vorschau ablegen) → `POST /api/import/batches/[id]/apply|reject`; `GET /api/import/status` (Stand je Liste, `today`, Plan-Hinweis `plan`). Der Browser übernimmt mehrere Listen **nacheinander** (parallele Übernahmen liefen in DB-Transaktions-Timeouts).
 Excel/CSV: jede Zeile = Zellen in Druckreihenfolge (gleiche Parser wie PDF); Tabellen haben kein Druckdatum, das Formularfeld „Geschäftsdatum" springt ein. Zimmernummern, die Excel als Zahl gespeichert hat (4), werden zu „004" aufgefüllt. Bei PDFs gilt immer das Druckdatum; weicht es vom gewählten Tag ab, gibt es die Warnung `LIST_NOT_TODAY`.
 Zimmeranzahl für die Forecast-Prüfung: Einstellung `roomInventory` (Standard 145, in /settings änderbar) — nicht die 139 Zimmer der Grundriss-Digitalisierung.
 

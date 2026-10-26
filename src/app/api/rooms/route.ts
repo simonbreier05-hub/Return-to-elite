@@ -83,8 +83,11 @@ export async function GET(req: NextRequest) {
 
   // Housekeeper sehen Gäste nur als „Anrede Titel Nachname" — von Hand erfasste Namen werden hier gekürzt (nie Vornamen).
   const attendantView = auth.session.role === "room_attendant";
+  const me = auth.session.userId;
   const roomsWithCounts = rooms.map(({ _count, guestRequests, ...room }) => ({
     ...room,
+    // Housekeeper sehen fremde Zuteilungen nicht (nur ihre eigenen Zimmer tragen einen Namen).
+    ...(attendantView && room.assignedToId !== me ? { assignedToId: null, assignedTo: null, routeOrder: null } : {}),
     ...(attendantView ? { arrivals: room.arrivals.map((a) => ({ ...a, guestName: shortGuestName(a.guestName, a.source) ?? "—" })) } : {}),
     openNotesCount: _count.notes,
     guestRequests,
