@@ -78,9 +78,14 @@ describe("28.10.2026: fünf Listen → ein Tagesplan, gleiche Zahlen überall", 
     await applyDayPlanToBoard(DAY, userId);
     expect(r.figures).toEqual({ departures: 26, arrivals: 38, stayovers: 75, eveningOccupancy: 113, cleaningCount: 101 });
     expect(r.issues.map((i) => i.code)).not.toContain("FORECAST_MISMATCH");
-    // Anreise-Zimmer (RESV) werden nicht schmutzig gesetzt und gelten morgens nicht als belegt
-    const resvRoom = await prisma.room.findFirst({ where: { dayPlans: { some: { date: DAY, cleaningType: "ARRIVAL" } } } });
-    expect(resvRoom).toMatchObject({ status: "INSPECTED", occupancy: "VACANT" });
+    // Anreise-Zimmer (RESV) werden nicht schmutzig, gelten morgens nicht als belegt und warten auf Prüfung/Freigabe (CLEAN)
+    const arrivalRooms = await prisma.room.findMany({ where: { dayPlans: { some: { date: DAY, cleaningType: "ARRIVAL" } } } });
+    expect(arrivalRooms).toHaveLength(26);
+    expect(arrivalRooms.every((r) => r.status === "CLEAN" && r.occupancy === "VACANT")).toBe(true);
+    expect((await getDayNumbers(DAY)).numbers.arrivalChecks).toMatchObject({ total: 26, released: 0 });
+    // Supervisor gibt eines frei → zählt als geprüft
+    await prisma.room.update({ where: { id: arrivalRooms[0].id }, data: { status: "INSPECTED" } });
+    expect((await getDayNumbers(DAY)).numbers.arrivalChecks).toMatchObject({ total: 26, released: 1 });
     await expectFullDay();
   });
 

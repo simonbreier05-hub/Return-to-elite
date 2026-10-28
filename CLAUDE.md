@@ -87,3 +87,5 @@
 - Plausibilitätsprüfung (`src/lib/import/plausibility.ts`, `/api/import/plausibility`, `PlausibilityBanner` im Planungstool): nie blockierend; Bestätigung gilt nur für genau diesen Befund-Stand (`plausibilitySignature`).
 - „Liste löschen“ entfernt im Frontend alle Einträge des Typs (`afterListDeleted`) und setzt den Schritt-Stand zurück; danach lädt `loadStatus` das Gate neu.
 - Testdaten 28.10.: `tests/fixtures/opera/2026-10-28/` (reportlab-Nachbau, `make_fixtures.py`, Soll-Zahlen in `expected.json`). Diagnose echter Dateien: `npx tsx scripts/diagnose-import.ts <PDFs> --day=…` (ohne Namen).
+- Anreise in ein sauberes Zimmer: morgens CLEAN („sauber, Prüfung offen“, `planBoardStatus` `needsCheck`), Supervisor prüft und gibt frei (→ INSPECTED). Zähler `DayNumbers.arrivalChecks`, Kennzeichen in der Supervisor-Liste (`RoomRowView` `precheck`). Nie direkt INSPECTED setzen.
+- Zahlenspalten (Erw./Kinder/Zimmer/Nächte) in der Reihenfolge der Kopfzeile lesen (`countOrder`) — Opera-Listen unterscheiden sich (In House „Nts Adl. Chl. Rms“).

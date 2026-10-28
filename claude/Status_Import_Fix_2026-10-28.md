@@ -58,3 +58,26 @@ Nicht deployt: Laut Vorgabe nicht pushen ohne Rückfrage — Preview-Deploy brau
 2. 6 Zimmer des Hauses fehlen im Zimmerstamm (z. B. 430). Liegen belegte Zimmer darunter, fehlen sie im Plan; die Warnung nennt sie jetzt. Welche Nummern sind es?
 3. „Belegt“ heißt jetzt „heute Nacht belegt“ (wie Forecast). Abreise-Zimmer zählen nicht mehr als belegt. So gewollt?
 4. Echte Opera-In-House-Exporte führen meist abreisende Gäste (DUOT) mit; das wird korrekt als Abreise gelesen, ist aber nur am Nachbau getestet.
+
+---
+
+# Nachtrag 28.10. (Original-PDFs + Anreise-Prüfung)
+
+## Original-PDFs (`tests/fixtures/opera/2026-10-28/original/`, Test `tests/import2810.original.test.ts`)
+| Liste | erkannt | Soll |
+|---|---|---|
+| In-House | 113 (38 RESV + 75 CKIN) | 113 |
+| Departures | 71 (26 / 24 / 21) | 71 |
+| Arrivals | 38 | 38 |
+| Traces | 44 gelesen, 30 offen | 44 / 30 |
+| Forecast 28.10. | 113 / 38 / 26 / 155 Pers. / 3 OOO / 79,58 % | ✓ |
+
+- **Zusätzlicher Parserfehler gefunden:** In deiner In-House-Liste steht „Nts“ vor „Adl. Chl. Rms“ (Departures: dahinter). Der Parser nahm eine feste Reihenfolge an → Personen 836 statt 155 (Belegung selbst war richtig). Jetzt Reihenfolge aus der Kopfzeile (`countOrder`, `src/lib/import/parsers.ts`).
+- **Vorher in der App** (nur Departures + Arrivals, ohne 6 unbekannte Zimmer): 27 Bleiber, 14 Abreisen, 11 Turns, 24 Anreisen → 52 zu reinigen (deine Preview: 49 mit 25 Bleibern, 14 Abreisen, 10 Turns).
+- **Nachher:** 75 Bleiber, 26 Abreisen (12 Turns), 38 Anreisen, 113 belegt, 101 zu reinigen — sofern alle Zimmer im Zimmerstamm sind.
+- **Offen:** 302, 426, 427, 525, 531, 532 stehen in den Listen, aber nicht im Zimmerstamm (139 digitalisierte Zimmer). Auf der Preview fehlen sie deshalb: 107 belegt / 97 zu reinigen / 24 Anreisen zu prüfen; die Warnung nennt sie.
+
+## Anreise-Prüfung (neu)
+113 belegt − 101 zu reinigen: 113 = 75 Bleiber + 12 Turns + 26 Anreisen in freie Zimmer; 101 = 75 Bleiber + 12 Turns + 14 Abreisen. Die 26 Anreisen in schon saubere Zimmer werden morgens „sauber, Prüfung offen“ (CLEAN) statt „freigegeben“; der Supervisor prüft und gibt frei (CLEAN → INSPECTED, bestehender Ablauf im Zimmer-Fenster). Kachel „Anreisen geprüft x von n“ (Duty Manager, Zimmer und Service, Grundriss), Kennzeichen in der Supervisor-Liste „Anreise heute: prüfen und freigeben“ bzw. „geprüft und freigegeben“. Keine Schema-Änderung.
+
+Tests: 81 Dateien, 672 Tests grün; Build ok; Browser 390 px mit Original-PDFs ok.

@@ -35,6 +35,8 @@ export default function DayNumberTiles({ numbers, onShowOpen, className = "" }: 
         </div>
         {n.doneUnassigned > 0 && tile(t("dayNumbers.doneUnassigned"), String(n.doneUnassigned))}
         {n.laundryDue && tile(t("dayNumbers.laundry"), String(n.laundryDue.count), "text-status-in-progress")}
+        {n.arrivalChecks.total > 0 && tile(t("dayNumbers.arrivalChecks"), t("dayNumbers.xOfN", { x: n.arrivalChecks.released, n: n.arrivalChecks.total }),
+          n.arrivalChecks.released < n.arrivalChecks.total ? "text-gold-soft" : "text-status-clean")}
       </div>
       {n.notCleaned.total > 0 && <p className="mt-2 text-sm text-graphite/75">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</p>}
       {n.outsideTeam > 0 && <p role="status" className="mt-1 text-sm text-status-in-progress">{t("dayNumbers.outsideTeam", { n: n.outsideTeam })}</p>}

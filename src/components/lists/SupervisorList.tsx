@@ -63,7 +63,7 @@ export default function SupervisorList() {
   );
   const roomItem = (room: SupRoom, fromId: string | null) => (
     <div key={room.id}>
-      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept onOpen={(r) => setRoomRef(r.id)} /></ol>
+      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept precheck onOpen={(r) => setRoomRef(r.id)} /></ol>
       {mover(room, fromId)}
     </div>
   );

@@ -210,10 +210,12 @@ async function initRoomStatus(date: string, plan: { roomId: string; cleaningType
   const rooms = await prisma.room.findMany({ select: { id: true, number: true, status: true, statusSince: true } });
   const needs = new Set(plan.filter((p) => p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN" || p.cleaningType === "STAYOVER").map((p) => p.roomId));
   for (const r of rooms) if (inHouseRooms.has(r.number)) needs.add(r.id);
+  // Anreise in ein (laut Board) sauberes Zimmer: vor der Anreise vom Supervisor prüfen und freigeben lassen
+  const check = new Set(plan.filter((p) => p.cleaningType === "ARRIVAL" && !needs.has(p.roomId)).map((p) => p.roomId));
   const key = `boardInit:${date}`;
   const stored = await prisma.setting.findUnique({ where: { key } });
   const old: StatusMarker = stored ? JSON.parse(stored.value) : {};
-  const { updates, marker } = planBoardStatus({ rooms, needsCleaning: needs, marker: old, dayStart: berlinToUtc(date, "00:00") });
+  const { updates, marker } = planBoardStatus({ rooms, needsCleaning: needs, needsCheck: check, marker: old, dayStart: berlinToUtc(date, "00:00") });
   const now = new Date();
   for (const u of updates) {
     const room = await prisma.room.update({ where: { id: u.id }, data: { status: u.status, statusSince: now, blockReason: null, blockedSince: null, reworkNote: null } });
@@ -225,7 +227,8 @@ async function initRoomStatus(date: string, plan: { roomId: string; cleaningType
   await prisma.setting.deleteMany({ where: { key: { startsWith: "boardInit:", not: key } } });
   if (updates.length) {
     const dirty = updates.filter((u) => u.status === "DIRTY").length;
-    await audit({ action: "BOARD_STATUS_INIT", userId, meta: { date, dirty, inspected: updates.length - dirty } });
+    const toCheck = updates.filter((u) => u.status === "CLEAN").length;
+    await audit({ action: "BOARD_STATUS_INIT", userId, meta: { date, dirty, toCheck, inspected: updates.length - dirty - toCheck } });
   }
 }
 

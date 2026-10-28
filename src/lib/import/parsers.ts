@@ -34,11 +34,31 @@ function tokens(segs: string[]): string[] {
   return out;
 }
 
+type CountCol = "adl" | "chl" | "rms" | "nts";
+/** Standardreihenfolge der Zahlenspalten nach dem Abreisedatum (Opera-Departures-Layout). */
+const DEFAULT_COUNT_ORDER: CountCol[] = ["adl", "chl", "rms", "nts"];
+
 /**
- * Personen nach dem Abreisedatum: führende ganze Zahlen (Erwachsene, Kinder, ggf. Zimmer, Nächte). Die letzte Zahl darf
- * mit der Zimmerart verklebt sein („4LFAMIL“). Mindestens Erwachsene müssen lesbar sein; fehlen Kinder, sind es 0.
+ * Reihenfolge der Zahlenspalten (Erw., Kinder, Zimmer, Nächte) aus der Kopfzeile lesen — Opera-Listen unterscheiden sich
+ * (In House: „Nts Adl. Chl. Rms“, Departures: „Adl. Chl. Rms Nts“). Ohne erkennbare Kopfzeile gilt die Standardreihenfolge.
  */
-function readCounts(t: string[]): { adults: number; children: number; used: number; glued: string | null } | null {
+export function countOrder(header: PdfLine[]): CountCol[] {
+  for (const l of header) {
+    const segs = l.segments.flatMap((x) => x.split(/\s+/));
+    if (!segs.some((x) => /^Adl/i.test(x))) continue;
+    const dep = segs.findIndex((x) => /^Dep/i.test(x));
+    const cols = segs.slice(dep + 1).map((x) => (/^Adl/i.test(x) ? "adl" : /^Chl/i.test(x) ? "chl" : /^Rms/i.test(x) ? "rms" : /^Nts/i.test(x) ? "nts" : null))
+      .filter((x): x is CountCol => !!x);
+    if (cols.includes("adl")) return cols;
+  }
+  return DEFAULT_COUNT_ORDER;
+}
+
+/**
+ * Personen nach dem Abreisedatum: führende ganze Zahlen in der Reihenfolge der Kopfzeile (`countOrder`). Die letzte Zahl darf
+ * mit der Zimmerart verklebt sein („4LFAMIL“). Erwachsene müssen lesbar sein; fehlt die Kinderspalte, sind es 0.
+ */
+function readCounts(t: string[], order: CountCol[] = DEFAULT_COUNT_ORDER): { adults: number; children: number; used: number; glued: string | null } | null {
   const ints: number[] = [];
   let glued: string | null = null, i = 0;
   for (; i < t.length; i++) {
@@ -47,8 +67,10 @@ function readCounts(t: string[]): { adults: number; children: number; used: numb
     ints.push(Number(m[1]));
     if (m[2]) { glued = m[2]; i++; break; }
   }
-  if (!ints.length) return null;
-  return { adults: ints[0], children: ints[1] ?? 0, used: i, glued };
+  const at = (c: CountCol) => { const k = order.indexOf(c); return k >= 0 ? ints[k] : undefined; };
+  const adults = at("adl");
+  if (adults === undefined) return null;
+  return { adults, children: at("chl") ?? 0, used: i, glued };
 }
 
 /** Zeilen mit zwei Datumswerten, die nicht mit einer Zimmernummer beginnen: nie still verwerfen, sondern melden (nur Seite, kein Text). */
@@ -179,6 +201,7 @@ export function parseInHouse(
   const { body, header } = bodyLines(lines, /^(Room|Rm)\b/i);
   const { seen, total } = pageIssues(lines, issues);
   const vipRe = new RegExp(cfg.vipPattern, "i");
+  const order = countOrder(lines.filter((l) => l.page === (lines[0]?.page ?? 1)).slice(0, 15));
 
   type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; vip: boolean; line: PdfLine; extra: string[]; roomType: string | null; status: string | null };
   const raws: Raw[] = [];
@@ -189,7 +212,7 @@ export function parseInHouse(
     if (!ROOM_RE.test(s[0] ?? "")) { if (di.length >= 2) skipped.push(l); continue; }
     if (di.length < 2) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Zeile ohne zwei Datumswerte.", { room: s[0], page: l.page })); continue; }
     const t = tokens(s.slice(di[1] + 1));
-    const c = readCounts(t);
+    const c = readCounts(t, order);
     if (!c) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen nicht lesbar.", { room: s[0], page: l.page })); continue; }
     raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: c.adults, chl: c.children,
       vip: s.slice(2, di[0]).some((x) => vipRe.test(x)), line: l, extra: s.slice(2, di[0]),

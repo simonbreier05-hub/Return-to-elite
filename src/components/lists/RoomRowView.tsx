@@ -48,7 +48,9 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             {room.laundry && <span className={`${chip} border-gold-line/60 bg-gold-soft/30 text-charcoal`}><IconLaundry className="h-3.5 w-3.5" />{t("lists.laundry")}</span>}
             {room.vip && <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><span aria-hidden>★</span>{t("lists.vip")}</span>}
             {room.dnd && <span className={`${chip} border-status-blocked/40 bg-status-blocked/10 text-status-blocked`}><IconBan className="h-3.5 w-3.5" />{t("lists.dnd")}</span>}
-            {precheck && room.kind === "ARRIVAL" && <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><span aria-hidden>🔎</span>{t("lists.precheckArrival")}</span>}
+            {precheck && room.kind === "ARRIVAL" && (room.status === "INSPECTED"
+              ? <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-charcoal`}><span aria-hidden>✓</span>{t("lists.arrivalReleased")}</span>
+              : <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><span aria-hidden>🔎</span>{t("lists.precheckArrival")}</span>)}
             {precheck && room.kind === "DEPARTURE" && <span className={`${chip} border-gold-line/60 bg-parchment text-charcoal`}><span aria-hidden>📌</span>{t("lists.precheckNoted")}</span>}
             {room.type && <span className={`${chip} border-charcoal/15 bg-white text-graphite`}>{t(`roomType.${room.type}` as TKey)}</span>}
             {room.traces.length > 0 && <span className={`${chip} border-charcoal/15 bg-white text-graphite`}><span aria-hidden>▸</span>{t("lists.rowTraces", { n: room.traces.length })}</span>}

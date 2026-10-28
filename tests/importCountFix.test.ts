@@ -4,6 +4,8 @@ import { checkPlausibility, plausibilitySignature } from "@/lib/import/plausibil
 import { computeDayNumbers, isToClean, type DayNumberRow } from "@/lib/dayplan/dayNumbers";
 import { needsCleaning } from "@/lib/lists/serviceOverview";
 import { afterListDeleted, type ImportItem } from "@/components/planung/useImportSession";
+import { countOrder } from "@/lib/import/parsers";
+import { planBoardStatus } from "@/lib/dayplan/boardStatus";
 import type { InHouseRow, PdfLine } from "@/lib/import/types";
 
 const line = (page: number, ...segments: string[]): PdfLine => ({ page, y: 0, segments, text: segments.join(" ") });
@@ -114,5 +116,30 @@ describe("Liste löschen und neu einlesen ohne Verlassen der Seite", () => {
     // eine neu gewählte Datei desselben Typs ist dann der einzige Eintrag für die Kachel
     const next = [...left, { id: "4", name: "inhouse.pdf", phase: "read" as const, type: "INHOUSE" as const }];
     expect([...next].reverse().find((x) => x.type === "INHOUSE")?.id).toBe("4");
+  });
+});
+
+describe("Spaltenreihenfolge aus der Kopfzeile (Original-In-House: „Nts Adl. Chl. Rms“)", () => {
+  it("liest Erwachsene/Kinder nach der Kopfzeile, nicht nach fester Position", () => {
+    expect(countOrder([line(1, "Room", "Name", "Company /", "VIP", "Arr.", "Dep.", "Nts", "Adl.", "Chl.", "Rms", "Room", "Rate")])).toEqual(["nts", "adl", "chl", "rms"]);
+    expect(countOrder([line(1, "Room No.", "Name", "Arr. Date", "Dep. Date", "Adl.", "Chl.", "Rms Nts")])).toEqual(["adl", "chl", "rms", "nts"]);
+    expect(countOrder([])).toEqual(["adl", "chl", "rms", "nts"]);
+    const r = parseInHouse([line(1, "In House Guests"), line(1, "Room", "Name", "VIP", "Arr.", "Dep.", "Nts", "Adl.", "Chl.", "Rms", "Room"),
+      line(1, "101", "Probe, Anna", "24/10/26", "29/10/26", "5", "2", "1", "1", "DLK", "CKIN")], { expectedDate: "2026-10-28" });
+    expect(r.rows[0]).toMatchObject({ adults: 2, children: 1, nights: 5, roomType: "DLK" });
+  });
+});
+
+describe("Anreise in ein sauberes Zimmer: Supervisor prüft und gibt frei", () => {
+  it("morgens: Abreise/Bleiber schmutzig, reine Anreise „sauber, Prüfung offen“ (CLEAN), sonst freigegeben", () => {
+    const old = new Date("2026-10-27T08:00:00Z");
+    const rooms = ["dep", "arr", "free", "ooo"].map((id) => ({ id, status: id === "ooo" ? "OUT_OF_ORDER" : "INSPECTED", statusSince: old }));
+    const { updates } = planBoardStatus({ rooms, needsCleaning: new Set(["dep"]), needsCheck: new Set(["arr", "ooo"]), marker: {}, dayStart: new Date("2026-10-27T23:00:00Z") });
+    expect(updates).toEqual([{ id: "dep", status: "DIRTY" }, { id: "arr", status: "CLEAN" }]);
+  });
+
+  it("Zähler „Anreisen geprüft“: freigegeben = INSPECTED; außer Betrieb zählt nicht", () => {
+    const rows = [row(1, { kind: "ARRIVAL", status: "CLEAN" }), row(2, { kind: "ARRIVAL", status: "INSPECTED" }), row(3, { kind: "ARRIVAL", status: "DIRTY" }), row(4, { kind: "ARRIVAL", status: "OUT_OF_ORDER" })];
+    expect(computeDayNumbers({ rows, inventory: 145 }).arrivalChecks).toEqual({ total: 3, released: 1, openIds: ["r1", "r3"] });
   });
 });

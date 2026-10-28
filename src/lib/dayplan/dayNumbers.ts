@@ -11,6 +11,8 @@
  *  - offen:       zu reinigen − zugeteilt
  *  - belegt:      heute Nacht belegt = Bleiber + Anreisen (inkl. Turns) + laut Board belegte Zimmer ohne Tagesplan —
  *                 dieselbe Zahl wie „Total Occ.“ im Opera-Forecast (Abreise-Zimmer sind heute Nacht frei)
+ *  - Anreisen prüfen: Anreise-Zimmer ohne Abreise; freigegeben = INSPECTED (Supervisor hat geprüft). Sie werden nicht
+ *                 gereinigt, wenn sie sauber sind, aber vor der Anreise geprüft — darum ist belegt − zu reinigen ≠ 0 möglich.
  * Es gilt gereinigt ≤ zugeteilt ≤ zu reinigen; „belegt“ ist eine eigene Zahl (≤ Inventar).
  * Rein, ohne Datenbank — client-sicher.
  */
@@ -62,6 +64,8 @@ export interface DayNumbers {
   byKind: { DEPARTURE: number; TURN: number; STAYOVER: number; ARRIVAL: number };
   /** `null` = keine Datengrundlage → Kachel entfällt. */
   laundryDue: { count: number; ids: string[] } | null;
+  /** Anreise-Zimmer zur Prüfung durch den Supervisor (ohne außer Betrieb); freigegeben = INSPECTED. */
+  arrivalChecks: { total: number; released: number; openIds: string[] };
   /** Zuteilungen an Kräfte außerhalb der gewählten Mannschaft (nur wenn `team` übergeben wurde). */
   outsideTeam: number;
   /** Schon fertig, aber heute keiner Kraft zugeteilt (z. B. von jemand anderem erledigt) — Teilmenge von `assigned`. */
@@ -83,6 +87,7 @@ export function computeDayNumbers(input: { rows: DayNumberRow[]; inventory: numb
   const toClean = toCleanRows.length, assigned = assignedRows.length;
   const cleaned = assignedRows.filter((r) => DONE.has(r.status)).length;
   const kindCount = (k: DayKind) => toCleanRows.filter((r) => r.kind === k).length;
+  const arrivalRows = input.rows.filter((r) => r.kind === "ARRIVAL" && !(r.status in NOT_CLEANED_REASONS));
   return {
     inventory: input.inventory,
     occupied: occupiedIds.size,
@@ -90,6 +95,7 @@ export function computeDayNumbers(input: { rows: DayNumberRow[]; inventory: numb
     notCleaned: { total: notCleanedRows.length, byReason, ids: notCleanedRows.map((r) => r.id) },
     byKind: { DEPARTURE: kindCount("DEPARTURE"), TURN: kindCount("TURN"), STAYOVER: kindCount("STAYOVER"), ARRIVAL: kindCount("ARRIVAL") },
     laundryDue: withData.length ? { count: withData.filter((r) => r.laundryDue).length, ids: withData.filter((r) => r.laundryDue).map((r) => r.id) } : null,
+    arrivalChecks: { total: arrivalRows.length, released: arrivalRows.filter((r) => r.status === "INSPECTED").length, openIds: arrivalRows.filter((r) => r.status !== "INSPECTED").map((r) => r.id) },
     doneUnassigned: assignedRows.filter((r) => DONE.has(r.status) && !(r.assignedToId && r.assignedToday)).length,
     outsideTeam: team ? assignedRows.filter((r) => r.assignedToId && !DONE.has(r.status) && !team.has(r.assignedToId)).length : 0,
   };
