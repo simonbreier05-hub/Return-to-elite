@@ -1,5 +1,5 @@
 import { diffDays } from "@/lib/import/dates";
-import type { ArrivalRow, DepartureRow, ParseIssue } from "@/lib/import/types";
+import type { ArrivalRow, DepartureRow, InHouseRow, ParseIssue } from "@/lib/import/types";
 import { isLaundryDue } from "@/lib/rooms/laundryDue";
 
 /**
@@ -16,6 +16,10 @@ import { isLaundryDue } from "@/lib/rooms/laundryDue";
  *
  * Aufenthalte sind über (Zimmer, Anreisedatum) identisch, nie über die
  * Reservierungsnummer (die wird nicht gespeichert).
+ *
+ * Quellen: Departures (Zeitraum, oft nur wenige Tage), Arrivals (heute) und die In-House-Liste
+ * (alle heute Nacht belegten Zimmer). Ohne In-House fehlen Bleiber, deren Abreise hinter dem
+ * Departures-Zeitraum liegt — deshalb ist die In-House-Liste die Quelle der Bleiber.
  */
 export type DayCleaningType = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL";
 
@@ -28,9 +32,10 @@ export interface DerivedStay {
   arrTime: string | null;
   adults: number;
   children: number;
-  /** Aus welcher Liste: Departures (Zeitraum) und/oder Arrivals. */
+  /** Aus welcher Liste: Departures (Zeitraum), Arrivals und/oder In-House. */
   inDepartures: boolean;
   inArrivals: boolean;
+  inInHouse?: boolean;
 }
 
 export interface DerivedRoom {
@@ -58,6 +63,8 @@ export interface DeriveInput {
   date: string; // YYYY-MM-DD
   departures: DepartureRow[];
   arrivals: ArrivalRow[];
+  /** In-House-Liste (Tagesbelegung) — Quelle aller Bleiber. */
+  inHouse?: InHouseRow[];
   /** Letzte bestätigte Wäschewechsel je Zimmer (YYYY-MM-DD), falls bekannt. */
   lastLinenChange?: Record<string, string | null | undefined>;
   linenCycleDays: number;
@@ -66,7 +73,7 @@ export interface DeriveInput {
 const issue = (severity: ParseIssue["severity"], code: string, message: string, room?: string): ParseIssue => ({ severity, code, message, room });
 
 /** Aufenthalte aus beiden Listen zusammenführen; Widersprüche melden, nicht raten. */
-export function mergeStays(departures: DepartureRow[], arrivals: ArrivalRow[]): { stays: DerivedStay[]; issues: ParseIssue[] } {
+export function mergeStays(departures: DepartureRow[], arrivals: ArrivalRow[], inHouse: InHouseRow[] = []): { stays: DerivedStay[]; issues: ParseIssue[] } {
   const issues: ParseIssue[] = [];
   const map = new Map<string, DerivedStay>();
   for (const d of departures) {
@@ -93,6 +100,24 @@ export function mergeStays(departures: DepartureRow[], arrivals: ArrivalRow[]): 
     have.arrTime = a.arrTime ?? have.arrTime;
     have.vip = have.vip || a.vip;
   }
+  for (const h of inHouse) {
+    const key = `${h.room}|${h.arrDate}`;
+    const have = map.get(key);
+    if (!have) {
+      map.set(key, {
+        room: h.room, arrDate: h.arrDate, depDate: h.depDate, status: h.status ?? null, vip: h.vip, arrTime: null,
+        adults: h.adults, children: h.children, inDepartures: false, inArrivals: false, inInHouse: true,
+      });
+      continue;
+    }
+    if (have.depDate !== h.depDate) {
+      issues.push(issue("WARNING", "STAY_DATE_CONFLICT",
+        `Zimmer ${h.room}: Abreise laut ${have.inDepartures ? "Departures" : "Arrivals"} ${have.depDate}, laut In-House ${h.depDate}. Es gilt die ${have.inDepartures ? "Departures" : "Arrivals"}-Liste — bitte prüfen.`, h.room));
+    }
+    have.inInHouse = true;
+    have.vip = have.vip || h.vip;
+    if (!have.status && h.status) have.status = h.status;
+  }
   return { stays: [...map.values()], issues };
 }
 
@@ -100,7 +125,7 @@ export function deriveDayPlan(input: DeriveInput): {
   rooms: DerivedRoom[]; stays: DerivedStay[]; figures: DayFiguresDerived; issues: ParseIssue[];
 } {
   const { date } = input;
-  const { stays, issues } = mergeStays(input.departures, input.arrivals);
+  const { stays, issues } = mergeStays(input.departures, input.arrivals, input.inHouse);
   const byRoom = new Map<string, DerivedStay[]>();
   for (const s of stays) byRoom.set(s.room, [...(byRoom.get(s.room) ?? []), s]);
 

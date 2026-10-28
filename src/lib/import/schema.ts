@@ -23,7 +23,7 @@ export const DepartureRowSchema = z.object({
 
 export const InHouseRowSchema = z.object({
   room, guest: Guest, arrDate: iso, depDate: iso, adults: z.number().int().min(0).max(50), children: z.number().int().min(0).max(50),
-  nights: z.number().int().min(0).max(999), vip: z.boolean(), roomType: short(10).nullable().optional(),
+  nights: z.number().int().min(0).max(999), vip: z.boolean(), roomType: short(10).nullable().optional(), status: short(10).nullable().optional(),
 }).strict();
 
 export const ArrivalRowSchema = z.object({

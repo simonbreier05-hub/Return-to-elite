@@ -49,7 +49,7 @@ describe("Haus-Daten (gemeinsame Abfrage)", () => {
     expect(h).toMatchObject({ hasData: true, date: "2026-09-22" });
     const f1 = floorStats(h.floors.find((f) => f.floor === 1)!);
     expect(f1.total).toBe(12);
-    expect(f1.occupied).toBe(10); // 12 Zimmer, 2 davon Anreise (i=4,9) zählen nicht als belegt
+    expect(f1.occupied).toBe(9); // 12 Zimmer, 3 reine Abreisen (i=0,5,10) sind heute Nacht frei
     expect(h.floors.find((f) => f.floor === 1)!.tiles.find((t) => t.number === "104")).toMatchObject({ kind: "STAYOVER", vip: true });
     const turn = h.floors.flatMap((f) => f.tiles).find((t) => t.kind === "TURN")!;
     expect(turn.eta).toBe("14:00");

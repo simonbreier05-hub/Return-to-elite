@@ -64,7 +64,7 @@ afterAll(async () => { await prisma.$disconnect(); rmSync(dir, { recursive: true
 describe("Zahlen aus der Datenbank", () => {
   it("alle belegten Zimmer sind in der Planmenge; Invariante gilt; Nicht-Gereinigtes steht mit Grund da", async () => {
     const { numbers } = await getDayNumbers(DATE);
-    expect(numbers.occupied).toBe(40);
+    expect(numbers.occupied).toBe(33); // heute Nacht belegt: 40 − 7 reine Abreisen (Abreise-Zimmer sind abends frei)
     expect(numbers.toClean).toBe(39); // 1 außer Betrieb
     expect(numbers.notCleaned).toMatchObject({ total: 1, byReason: { outOfOrder: 1 } });
     expect(numbers.cleaned).toBe(2); // zwei schon fertig

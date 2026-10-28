@@ -82,6 +82,8 @@ export interface InHouseRow {
   nights: number;
   vip: boolean;
   roomType?: string | null;
+  /** Opera-Reservierungsstatus (CKIN = im Haus, RESV = Anreise heute) — älterer Stand ohne Feld = unbekannt. */
+  status?: string | null;
 }
 
 export interface ForecastDayRow {

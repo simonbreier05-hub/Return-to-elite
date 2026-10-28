@@ -1,9 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { isStartedStatus } from "@/lib/rooms/startedStatus";
-import { computeDayNumbers, type DayKind, type DayNumberRow } from "./dayNumbers";
-
-const KIND: Record<string, DayKind> = { DEPARTURE: "DEPARTURE", SAME_DAY_TURN: "TURN", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
+import { computeDayNumbers, PLAN_KIND as KIND, type DayNumberRow } from "./dayNumbers";
 
 /** Zeilen für `computeDayNumbers` aus Tagesplan + Board (eine Abfrage; alle Ansichten nutzen sie). */
 export async function loadDayNumberRows(date: string): Promise<DayNumberRow[]> {
@@ -16,7 +14,7 @@ export async function loadDayNumberRows(date: string): Promise<DayNumberRow[]> {
   }));
   // Laut Board belegte Zimmer ohne Tagesplan-Eintrag zählen als belegt (nicht als zu reinigen)
   const extra = await prisma.room.findMany({ where: { occupancy: "OCCUPIED", id: { notIn: [...planned] } } });
-  for (const r of extra) rows.push({ id: r.id, number: r.number, kind: "ARRIVAL", laundryDue: false, nightsKnown: false, status: r.status, occupied: true, assignedToId: r.assignedToId, assignedToday: false });
+  for (const r of extra) rows.push({ id: r.id, number: r.number, kind: "OCCUPIED", laundryDue: false, nightsKnown: false, status: r.status, occupied: true, assignedToId: r.assignedToId, assignedToday: false });
   return rows;
 }
 

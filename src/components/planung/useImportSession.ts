@@ -45,6 +45,13 @@ export async function inOrder<T, R>(xs: T[], fn: (x: T) => Promise<R>): Promise<
 }
 
 /**
+ * Nach „Liste löschen“: alle Einträge dieses Typs vollständig entfernen (Datei, Vorschau, Fehler, Server-Befunde,
+ * „übernommen“) — damit eine neu gewählte Datei desselben Typs ohne Verlassen der Seite wie beim ersten Mal läuft.
+ * Andere Listen bleiben unberührt.
+ */
+export const afterListDeleted = (items: ImportItem[], type: ImportType): ImportItem[] => items.filter((x) => x.type !== type);
+
+/**
  * Die Import-Logik aus M1 (Auslesen im Browser, Vorschau, Befunde, Übernehmen) als Hook — genutzt von
  * `/import` und vom Planungstool `/planung`. Schnittstellen zum Server unverändert.
  */
@@ -188,8 +195,8 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
     } catch (e) {
       return e instanceof ApiError && e.status === 409 ? "planConfirmed" : errorText(e); // 409 = Plan bestätigt, keepPlan fehlt
     }
-    setItems((xs) => xs.map((x) => (x.type === type && x.phase !== "discarded" ? { ...x, phase: "discarded", list: undefined, result: undefined, file: undefined } : x)));
-    await loadStatus();
+    setItems((xs) => afterListDeleted(xs, type));
+    await loadStatus(); // Gate (fünf Pflichtlisten) neu auswerten
     return null;
   }, [loadStatus]);
 

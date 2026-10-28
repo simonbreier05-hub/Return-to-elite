@@ -8,20 +8,19 @@ const row = (i: number, o: Partial<DayNumberRow> = {}): DayNumberRow => ({
 });
 
 describe("Zahlen: eine Quelle, ein Modell", () => {
-  it("Invariante gereinigt ≤ zugeteilt ≤ zu reinigen ≤ belegt ≤ Inventar — auch bei zufälligen Tagen", () => {
+  it("Invariante gereinigt ≤ zugeteilt ≤ zu reinigen, belegt ≤ Inventar — auch bei zufälligen Tagen", () => {
     let seed = 7;
     const rnd = (n: number) => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return seed % n; };
-    const kinds: DayKind[] = ["DEPARTURE", "TURN", "STAYOVER", "ARRIVAL"];
+    const kinds: DayKind[] = ["DEPARTURE", "TURN", "STAYOVER", "ARRIVAL", "OCCUPIED"];
     const statuses = ["DIRTY", "IN_PROGRESS", "CLEAN", "INSPECTED", "BLOCKED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT", "PICKUP"];
     for (let round = 0; round < 200; round++) {
       const rows = Array.from({ length: 145 }, (_, i) => row(i, {
-        kind: kinds[rnd(4)], status: statuses[rnd(statuses.length)], occupied: rnd(3) > 0,
+        kind: kinds[rnd(5)], status: statuses[rnd(statuses.length)], occupied: rnd(3) > 0,
         assignedToId: rnd(2) ? `hk${rnd(6)}` : null, assignedToday: rnd(4) > 0, laundryDue: rnd(3) === 0,
       }));
       const n = computeDayNumbers({ rows, inventory: 145 });
       expect(n.cleaned).toBeLessThanOrEqual(n.assigned);
       expect(n.assigned).toBeLessThanOrEqual(n.toClean);
-      expect(n.toClean).toBeLessThanOrEqual(n.occupied);
       expect(n.occupied).toBeLessThanOrEqual(145);
       expect(n.open).toBe(n.toClean - n.assigned);
       expect(numbersConsistent(n)).toBe(true);
@@ -35,7 +34,7 @@ describe("Zahlen: eine Quelle, ein Modell", () => {
       ...Array.from({ length: 35 }, (_, i) => row(100 + i, { kind: i % 5 === 0 ? "DEPARTURE" : "STAYOVER", assignedToId: "hk1", assignedToday: true })),
     ];
     const n = computeDayNumbers({ rows, inventory: 145 });
-    expect(n.occupied).toBe(113);
+    expect(n.occupied).toBe(106); // heute Nacht belegt: 7 reine Abreisen sind abends frei
     expect(n.toClean).toBe(113); // nichts wird still weggelassen
     expect(n.assigned).toBe(113); // fertig zählt als zugeteilt
     expect(n.cleaned).toBe(78);

@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PurgeBanner from "@/components/PurgeBanner";
+import PlausibilityBanner from "./PlausibilityBanner";
 import DayPlanPanel from "@/app/import/DayPlanPanel";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -93,6 +94,8 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     if (err === "planConfirmed") { await session.loadStatus(); return; } // Plan wurde inzwischen bestätigt → Hinweis zeigen, erneut fragen
     if (err) { setDelError({ type: ty, text: err }); return; }
     setConfirmDel(null);
+    // Schritt-Zustand zurücksetzen: ohne die Liste gilt der bisherige Plan-Lauf nicht mehr (Gate wertet neu aus)
+    setReached(1); setMergeError(null); setChangedNote(0); setHighlight(new Set()); setHmEdits({});
     await refreshHouse();
   };
   const router = useRouter();
@@ -184,6 +187,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         </div>
       </div>
 
+      <PlausibilityBanner refreshKey={`${JSON.stringify(status ?? {})}|${merging}`} />
       <div key={step} className="flex flex-1 flex-col" onDragOver={(e) => { if (step === 1) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)}
         onDrop={(e) => { if (step === 1) { e.preventDefault(); setOver(false); addFiles(e.dataTransfer.files); } }}>
         <h1 className="pl-rise font-serif text-4xl font-semibold leading-tight sm:text-[2.6rem]" style={{ ["--i" as string]: 0 }}>

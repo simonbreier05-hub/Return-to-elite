@@ -11,8 +11,10 @@ import type { RoomDayCategory } from "@/lib/rooms/roomDayCategory";
 import { SERVICE_ORDER, needsCleaning, type ServiceKey, type ServiceOverview } from "@/lib/lists/serviceOverview";
 import LiveRoomModal from "./LiveRoomModal";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import DayNumberTiles from "@/components/DayNumberTiles";
+import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
 
-type Data = ServiceOverview & { hub?: HubState };
+type Data = ServiceOverview & { hub?: HubState; numbers?: DayNumbers | null };
 
 const CATEGORY: Record<ServiceKey, RoomDayCategory> = { TURN: "SAME_DAY_TURN", DEPARTURE: "DEPARTURE", STAYOVER_LINEN: "STAYOVER", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
 const NAME: Record<ServiceKey, TKey> = { TURN: "service.TURN", DEPARTURE: "service.DEPARTURE", STAYOVER_LINEN: "service.STAYOVER_LINEN", STAYOVER: "service.STAYOVER", ARRIVAL: "service.ARRIVAL" };
@@ -40,13 +42,18 @@ export default function ServiceOverview() {
     return data.rooms.filter((r) => {
       if (filter === "SPECIAL") return r.vip || r.allergy || r.extras.length > 0;
       if (filter) return r.service === filter;
-      return showArrivals || needsCleaning(r.service);
+      return showArrivals || needsCleaning(r.service, r.status);
     });
   }, [data, filter, showArrivals]);
   const floors = useMemo(() => [...new Set(rooms.map((r) => r.floor))].sort((a, b) => a - b), [rooms]);
 
   if (!data) return <p className="text-sm text-graphite/60">{t("common.loading")}</p>;
-  if (!data.date || data.floors.length === 0) return <p className="text-sm text-graphite/70">{data.floors.length === 0 && data.date ? t("service.noFloors") : t("service.noPlan")}</p>;
+  if (!data.date || data.floors.length === 0) return (
+    <div>
+      {data.numbers && <DayNumberTiles numbers={data.numbers} className="mb-3" />}
+      <p className="text-sm text-graphite/70">{data.floors.length === 0 && data.date ? t("service.noFloors") : t("service.noPlan")}</p>
+    </div>
+  );
 
   const tile = (key: Filter, big: string, label: string, sub?: string) => (
     <button key={String(key)} type="button" aria-pressed={filter === key} onClick={() => setFilter((f) => (f === key ? null : key))}
@@ -60,10 +67,11 @@ export default function ServiceOverview() {
   return (
     <div>
       <HubMissingNotice hub={data.hub} planner />
+      {data.numbers && <DayNumberTiles numbers={data.numbers} className="mb-3" />}
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <div className="col-span-2 rounded-xl border border-charcoal/15 bg-parchment/50 p-3 sm:col-span-3 lg:col-span-6">
           <span className="font-serif text-4xl">{data.counts.clean}</span>
-          <span className="ml-2 text-base font-medium">{t("service.toClean")}</span>
+          <span className="ml-2 text-base font-medium">{data.numbers && data.numbers.toClean !== data.counts.clean ? t("service.toCleanFloors") : t("service.toClean")}</span>
           <span className="ml-2 text-xs text-graphite/60">{t("service.legendHint")}</span>
         </div>
         {SERVICE_ORDER.map((k) => tile(k, String(data.counts[k]), t(NAME[k]), t(HINT[k])))}
@@ -82,7 +90,7 @@ export default function ServiceOverview() {
         return (
           <section key={f} className="mb-4" aria-label={t("planungTool.floorLabel", { n: f })}>
             <h4 className="mb-1.5 flex items-baseline gap-2 border-b border-charcoal/10 pb-1 font-serif text-xl">
-              {t("planungTool.floorLabel", { n: f })} <span className="font-sans text-xs text-graphite/60">· {rs.filter((r) => needsCleaning(r.service)).length} {t("service.toCleanShort")}</span>
+              {t("planungTool.floorLabel", { n: f })} <span className="font-sans text-xs text-graphite/60">· {rs.filter((r) => needsCleaning(r.service, r.status)).length} {t("service.toCleanShort")}</span>
             </h4>
             <ul className="space-y-1.5">
               {rs.map((r) => {
@@ -103,7 +111,7 @@ export default function ServiceOverview() {
                       </ul>
                     )}
                     <span className="ml-auto text-xs text-graphite/70">
-                      {needsCleaning(r.service) ? (r.assignedToName ? `→ ${r.assignedToName}` : <span className="font-medium text-gold-soft">{t("service.unassigned")}</span>) : ""}
+                      {needsCleaning(r.service, r.status) ? (r.assignedToName ? `→ ${r.assignedToName}` : <span className="font-medium text-gold-soft">{t("service.unassigned")}</span>) : ""}
                       {r.credits > 0 && <span className="ml-2 text-graphite/50">{r.credits} Cr.</span>}
                       {r.done && <span className="ml-2 text-status-clean">✓</span>}
                     </span>

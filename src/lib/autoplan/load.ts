@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/db";
+import { isToClean, PLAN_KIND } from "@/lib/dayplan/dayNumbers";
 import { getAutoplanWeights, getPlanningCreditSettings, getRoomTypeCredits, getSettings } from "@/lib/settings";
 import { berlinToUtc } from "@/lib/dayplan/time";
 import { creditFactor } from "@/lib/rooms/stayoverCredit";
@@ -60,7 +61,9 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
   const [settings, planning, typeCredits, weights] = await Promise.all([getSettings(), getPlanningCreditSettings(), getRoomTypeCredits(), getAutoplanWeights()]);
   const fullTimeTarget = planning.targetCreditsPerAttendant;
 
-  const plan = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER"] } }, include: { room: true } });
+  // Dieselbe Regel wie die Tageszahlen (isToClean): Abreisen, Turns, alle Bleiber und Anreisen in noch nicht gereinigte Zimmer.
+  const plan = (await prisma.dayRoomPlan.findMany({ where: { date }, include: { room: true } }))
+    .filter((p) => isToClean(PLAN_KIND[p.cleaningType], p.room.status));
   const traces = await prisma.trace.groupBy({ by: ["roomId"], where: { status: "OPEN" }, _count: true });
   const traceCount = new Map(traces.map((t) => [t.roomId, t._count]));
   const idByNumber = new Map(plan.map((p) => [p.room.number, p.roomId]));
@@ -75,7 +78,8 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     const today = r.assignedOn === date;
     const assignee = r.assignedToId && (today || state !== "TODO") ? r.assignedToId : null;
     if (state !== "TODO" && !assignee) continue; // schon erledigt/begonnen, niemandem zugeordnet: nichts zu planen
-    const kind = p.cleaningType === "SAME_DAY_TURN" ? "TURN" : p.cleaningType === "DEPARTURE" ? "DEPARTURE" : "STAYOVER";
+    // Anreise in ein nicht gereinigtes Zimmer = volle Reinigung wie eine Abreise
+    const kind = p.cleaningType === "SAME_DAY_TURN" ? "TURN" : p.cleaningType === "STAYOVER" ? "STAYOVER" : "DEPARTURE";
     const factor = creditFactor(kind, p.laundryDue, settings); // Bleiber normal 0,5, mit Wäschewechsel voll (siehe stayoverCredit.ts)
     const credits = Math.round((typeCredits[r.type as keyof typeof typeCredits] ?? 1) * factor * 100) / 100;
     const traceN = traceCount.get(r.id) ?? 0;

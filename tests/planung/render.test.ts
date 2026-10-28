@@ -39,7 +39,7 @@ describe("Haus-Ansicht (Rendering)", () => {
   });
   it("mit Daten: Etagentext 'N von M belegt', Kacheln mit Zimmernummer und Art, Supervisor-Badge mit Buchstabe", () => {
     const m = map(house(true), { animateKey: 1 });
-    expect(m).toContain("2 von 3 belegt");
+    expect(m).toContain("1 von 3 belegt"); // Abreise 101 ist heute Nacht frei, Bleiber 102 belegt
     expect(m).toContain("1 von 1 belegt");
     expect(m).toContain('aria-label="101, Abreise"');
     expect(m).toContain('aria-label="513, Same-Day-Turn"');

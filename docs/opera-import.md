@@ -17,9 +17,9 @@ Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`);
 ## Layouts
 
 - **Arrivals: Detailed** — Block je Reservierung (Zeile 1: Zimmer/Name/Daten/Personen/Status; Zeile 2: Conf-Nr., VIP, Anreisezeit; danach `Fixed Charges:`, `Traces:`, `Inventory Items:`). Geschäftsdatum = Anreisetag der Liste (Fuß: „Stay From Date"), nicht das Druckdatum.
-- **Departures** — Gruppen „Departure <Datum>" mit `Total`-Zeilen (werden gegen die Zeilen geprüft). Über einen Zeitraum ersetzt sie die fehlende In-House-Liste: Bleiber = Abreise nach heute, Anreise bis heute. Empfohlen: heute bis +30 Tage.
+- **Departures** — Gruppen „Departure <Datum>" mit `Total`-Zeilen (werden gegen die Zeilen geprüft). Deckt oft nur wenige Tage ab (z. B. heute bis +2) — Bleiber mit späterer Abreise stehen dann nur in der In-House-Liste, die deshalb Quelle der Bleiber ist.
 - **History and Forecast** — nur heutiger und spätere Tage; Umsatz/Durchschnittspreis werden verworfen; Occ.% wird gegen belegt ÷ (Zimmer − OOO) geprüft.
-- **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je belegtes Zimmer (Zimmer, Name, Anreise, Abreise, Erw., Kinder, Nächte). Geschäftsdatum = Druckdatum. **Layout angenommen** (wie die Departures-Zeilen) — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
+- **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je heute Nacht belegtes Zimmer (Zimmer, Name, [Firma], [VIP], Anreise, Abreise, Erw., Kinder, [Zimmer], [Nächte+Typ], Status `CKIN`/`RESV`, [T]). Optionale Spalten in Klammern; Nächte werden aus den Daten berechnet. Etagenüberschriften, Kopf/Fuß je Seite und Summenzeilen sind keine Zimmerzeilen; Zeilen mit Datumswerten ohne Zimmernummer → Warnung `ROW_SKIPPED` (nie still verworfen). Geschäftsdatum = Druckdatum. Getestet am Nachbau `tests/fixtures/opera/2026-10-28/` — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
 - **Traces** — PDF oder CSV; Twin-/Zusatzbett-Texte werden zu Hausmann-Aufgaben (`traceClassifier.ts`).
 
 ## Betriebstag und veraltete Listen
@@ -59,6 +59,13 @@ Zimmeranzahl für die Forecast-Prüfung: Einstellung `roomInventory` (Standard 1
 - `POST /api/dayplan/apply` überträgt auf die Felder, die Planungshub und Grundriss schon lesen (`isCheckoutToday`, `occupancy`, `Arrival`, `lastLinenChangeAt`). Zimmer ohne Eintrag werden nur auf „leer" gesetzt, wenn die Departures ≥ 30 Tage abdecken. Zuteilungen (`assignedToId`) und Status bleiben immer unberührt; ändert ein Nachimport die Art eines zugeteilten Zimmers, gibt es einen Hinweis an Supervisor und Room Attendants.
 - Reinigungsart ändern: `POST /api/dayplan/override` (Audit `CLEANING_TYPE_CHANGED`, Listenwert bleibt in `derivedType`).
 - Den Vorschlag „Plan auf das Team anwenden" liefert weiter der bestehende Planungshub (`/api/assignments/plan` + `apply`), er liest das Board. Der intelligente Vorschlag (Fairness, Stufen, 2-Etagen-Regel) ist M2b.
+
+## Tagesplan-Quellen und Plausibilität
+
+- `mergeDay` nimmt Aufenthalte aus Departures, Arrivals **und In-House** (`mergeStays`, Schlüssel Zimmer + Anreise). Bleiber = Anreise vor heute, Abreise nach heute — aus welcher Liste auch immer. `RESV`-Zeilen der In-House-Liste machen ein Zimmer weder belegt noch schmutzig (Gast ist noch nicht da).
+- Zählregeln (eine Quelle, `src/lib/dayplan/dayNumbers.ts`): **zu reinigen** = Abreisen + Turns + alle Bleiber + Anreisen in noch nicht gereinigte Zimmer, außer außer Betrieb/Service/Opt-out (`isToClean`); **belegt** = heute Nacht belegt = Bleiber + Turns + Anreisen (`isOccupiedTonight`) = Forecast „Total Occ.“. Duty-Manager-Board, Grundriss, „Zimmer und Service heute“, Etagenbalken und Entwurf/Autoplan nutzen diese Regeln.
+- Plausibilitätsprüfung (`src/lib/import/plausibility.ts`, `GET/POST /api/import/plausibility`): In-House, Arrivals, Departures und Tagesplan gegen die Forecast-Zeile des Tages (belegt, Anreisen, Abreisen, Personen, Auslastung) und Zimmer außerhalb des Zimmerstamms. Warnung oben im Planungstool mit konkreten Zahlen; blockiert nichts. „Gesehen, trotzdem planen“ bestätigt genau diesen Stand (Setting `plausibilityAck`, Logbuch `IMPORT_PLAUSIBILITY_ACK` nur mit Befund-Schlüsseln).
+- Diagnose ohne App: `npx tsx scripts/diagnose-import.ts <PDFs…> --day=JJJJ-MM-TT` (nur Zahlen, Zimmernummern, Befunde — keine Namen).
 
 ## Datumsformat
 
