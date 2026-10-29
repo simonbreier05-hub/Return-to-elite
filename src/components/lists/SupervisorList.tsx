@@ -7,7 +7,10 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import { usePersistedSet } from "@/components/usePersistedSet";
+import LiveRoomModal from "./LiveRoomModal";
 import RoomRowView, { type ListRoom } from "./RoomRowView";
+import RowLegend from "./RowLegend";
 
 type Group = "PROGRESS" | "DONE" | "OPEN" | "DND" | "ARRIVAL";
 const GROUPS: Group[] = ["PROGRESS", "OPEN", "DND", "ARRIVAL", "DONE"];
@@ -31,7 +34,8 @@ const num = (n: number) => n.toString().replace(".", ",");
 export default function SupervisorList() {
   const { t } = useLocale();
   const [data, setData] = useState<Data | null>(null);
-  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [open, toggle] = usePersistedSet("stayclean.supList.open");
+  const [roomRef, setRoomRef] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<Set<string>>(new Set());
@@ -43,6 +47,9 @@ export default function SupervisorList() {
   useSocket({
     "room:update": () => soon(),
     "assignments:applied": () => soon(),
+    "trace:update": () => soon(),
+    "note:new": () => soon(),
+    "note:update": () => soon(),
     "dayplan:updated": (p: { changedRooms?: string[] }) => {
       soon();
       if (p?.changedRooms?.length) { setFlash(new Set(p.changedRooms)); if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => setFlash(new Set()), 3500); }
@@ -51,13 +58,12 @@ export default function SupervisorList() {
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   if (!data) return null;
-  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const mover = (_room: SupRoom, _fromId: string | null) => (
     <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
   );
   const roomItem = (room: SupRoom, fromId: string | null) => (
     <div key={room.id}>
-      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept /></ol>
+      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept onOpen={(r) => setRoomRef(r.id)} /></ol>
       {mover(room, fromId)}
     </div>
   );
@@ -70,6 +76,7 @@ export default function SupervisorList() {
         {!data.noFloors && <>{t("lists.supFloors", { list: data.floors.join(", ") })}</>}
         {stand && <> · {t("lists.stand", { time: stand })}</>} · {t("lists.live")}
       </p>
+      <div className="mt-3"><RowLegend /></div>
       {data.noFloors ? (
         <p className="mt-3 rounded-lg border border-gold-line/50 bg-parchment p-3 text-sm">{t("lists.supNoFloors")}</p>
       ) : (
@@ -114,6 +121,7 @@ export default function SupervisorList() {
           )}
         </div>
       )}
+      {roomRef && <LiveRoomModal roomRef={roomRef} onClose={() => setRoomRef(null)} onChanged={() => { void load(); }} />}
     </section>
   );
 }

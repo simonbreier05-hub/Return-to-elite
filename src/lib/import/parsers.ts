@@ -13,6 +13,8 @@ import type {
 const NO_TEXT_MSG = "Foto/Scan wird nicht unterstützt. Bitte PDF- oder Excel-Export aus Opera hochladen.";
 const num = (s: string) => (/^-?[\d.,]+$/.test(s) ? Number(s.replace(/,/g, "")) : NaN);
 const isInt = (s: string | undefined): s is string => !!s && /^\d+$/.test(s);
+/** Opera-Zimmerart-Code: nur ein kurzer Großbuchstaben-Code, der kein Reservierungsstatus ist. Bedeutung gibt erst die Zuordnung in den Einstellungen. */
+const roomTypeCode = (x: string | undefined, cfg: ImportMappingConfig): string | null => (x && /^[A-Z][A-Z0-9]{1,5}$/.test(x) && !cfg.statusCodes.includes(x) ? x : null);
 
 function empty<T>(type: ParseResult<T>["type"], issues: ParseIssue[]): ParseResult<T> {
   return {
@@ -67,7 +69,7 @@ export function parseDepartures(
   const { seen, total } = pageIssues(lines, issues);
 
   type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; nts: number;
-    status: string | null; time: string | null; vip: boolean; group: string | null; line: PdfLine; extra: string[] };
+    status: string | null; time: string | null; vip: boolean; group: string | null; line: PdfLine; extra: string[]; roomType: string | null };
   const raws: Raw[] = [];
   let group: string | null = null;
   let sums = { adl: 0, chl: 0, rms: 0, nts: 0 };
@@ -97,7 +99,7 @@ export function parseDepartures(
     const adl = Number(t[0]), chl = Number(t[1]), rms = Number(t[2]);
     sums = { adl: sums.adl + adl, chl: sums.chl + chl, rms: sums.rms + rms, nts: sums.nts + Number(ntsM[1]) };
     raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl, chl, nts: Number(ntsM[1]),
-      status, time, vip, group, line: l, extra: s.slice(2, di[0]) });
+      status, time, vip, group, line: l, extra: s.slice(2, di[0]), roomType: roomTypeCode(ntsM[2] ?? t[4], cfg) });
   }
 
   const fromRaw = footerRaw(footer, /From Departure Date\s+(\S+)/i);
@@ -116,7 +118,7 @@ export function parseDepartures(
         issues.push(issue("WARNING", "GROUP_DATE_MISMATCH", "Abreisedatum weicht von der Gruppenzeile ab.", { room: r.room, page: r.line.page }));
       }
       rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, adults: r.adl, children: r.chl,
-        nights: r.nts, status: r.status, depTime: r.time, vip: r.vip });
+        nights: r.nts, status: r.status, depTime: r.time, vip: r.vip, roomType: r.roomType });
     }
   }
   const dup = rows.length - new Set(rows.map((r) => `${r.room}|${r.arrDate}`)).size;
@@ -150,7 +152,7 @@ export function parseInHouse(
   const { seen, total } = pageIssues(lines, issues);
   const vipRe = new RegExp(cfg.vipPattern, "i");
 
-  type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; nts: number; vip: boolean; line: PdfLine; extra: string[] };
+  type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; nts: number; vip: boolean; line: PdfLine; extra: string[]; roomType: string | null };
   const raws: Raw[] = [];
   for (const l of body) {
     const s = l.segments;
@@ -163,7 +165,7 @@ export function parseInHouse(
       issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen/Nächte nicht lesbar.", { room: s[0], page: l.page })); continue;
     }
     raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: Number(t[0]), chl: Number(t[1]), nts: Number(ntsM[1]),
-      vip: s.slice(2, di[0]).some((x) => vipRe.test(x)), line: l, extra: s.slice(2, di[0]) });
+      vip: s.slice(2, di[0]).some((x) => vipRe.test(x)), line: l, extra: s.slice(2, di[0]), roomType: roomTypeCode(ntsM[2] ?? t[4], cfg) });
   }
 
   const hdrRaw = findHeaderDateRaw(header, lines);
@@ -175,7 +177,7 @@ export function parseInHouse(
     for (const r of raws) {
       const arrDate = ctx.iso(r.arr), depDate = ctx.iso(r.dep);
       if (!arrDate || !depDate) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Datum nicht lesbar.", { room: r.room, page: r.line.page })); continue; }
-      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, adults: r.adl, children: r.chl, nights: r.nts, vip: r.vip });
+      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, adults: r.adl, children: r.chl, nights: r.nts, vip: r.vip, roomType: r.roomType });
     }
   }
   const dup = rows.length - new Set(rows.map((r) => r.room)).size;
@@ -200,7 +202,7 @@ export function parseArrivals(
   const traceRe = /^Traces:\s*(\S+)\s+(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\s+(.*)$/;
 
   type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; status: string | null;
-    time: string | null; vip: boolean; traces: { code: string; date: string; text: string }[]; page: number; extra: string[] };
+    time: string | null; vip: boolean; traces: { code: string; date: string; text: string }[]; page: number; extra: string[]; roomType: string | null };
   const raws: Raw[] = [];
   let cur: Raw | null = null;
 
@@ -213,7 +215,7 @@ export function parseArrivals(
         issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen nicht lesbar.", { room: s[0], page: l.page })); cur = null; continue;
       }
       cur = { room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: Number(t[1]), chl: Number(t[2]),
-        status: t.slice(4).find((x) => cfg.statusCodes.includes(x)) ?? null, time: null, vip: false, traces: [], page: l.page, extra: s.slice(2, di[0]) };
+        status: t.slice(4).find((x) => cfg.statusCodes.includes(x)) ?? null, time: null, vip: false, traces: [], page: l.page, extra: s.slice(2, di[0]), roomType: roomTypeCode(t[0], cfg) };
       raws.push(cur);
       continue;
     }
@@ -243,7 +245,7 @@ export function parseArrivals(
       const traces: TraceEntry[] = r.traces.map((t) => ({ code: t.code, date: ctx.iso(t.date) ?? arrDate, text: t.text }));
       if (!r.time) issues.push(issue("INFO", "NO_ARRIVAL_TIME", "Keine Anreisezeit gelesen.", { room: r.room, page: r.page }));
       rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, arrTime: r.time,
-        adults: r.adl, children: r.chl, status: r.status, vip: r.vip, traces });
+        adults: r.adl, children: r.chl, status: r.status, vip: r.vip, roomType: r.roomType, traces });
     }
   }
   issues.push(...salutationIssues(rows));

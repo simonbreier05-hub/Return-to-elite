@@ -62,7 +62,7 @@ export async function getSupervisorList(session: { userId: string; role: string 
   if (!date || floors.length === 0) return { ...base, housekeepers: [], unassigned: [] };
 
   const changed = await changedByReimport(date);
-  const rows = (await loadRoomRows(date, { floors }, null))
+  const rows = (await loadRoomRows(date, { floors }, null, { extra: true }))
     .filter((r) => r.kind !== null || (r.assignedToId && r.assignedOn === date))
     .map((r): SupRoom => ({ ...r, group: groupOf(r), changed: changed.has(r.number) }));
   rows.sort((a, b) => (a.routeOrder ?? Infinity) - (b.routeOrder ?? Infinity) || a.number.localeCompare(b.number));

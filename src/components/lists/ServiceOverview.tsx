@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import type { RoomDayCategory } from "@/lib/rooms/roomDayCategory";
 import { SERVICE_ORDER, needsCleaning, type ServiceKey, type ServiceOverview } from "@/lib/lists/serviceOverview";
+import LiveRoomModal from "./LiveRoomModal";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 type Data = ServiceOverview & { hub?: HubState };
@@ -28,6 +29,7 @@ export default function ServiceOverview() {
   const [data, setData] = useState<Data | null>(null);
   const [filter, setFilter] = useState<Filter>(null);
   const [showArrivals, setShowArrivals] = useState(false);
+  const [roomRef, setRoomRef] = useState<string | null>(null);
   const load = useCallback(() => api<Data>("/api/lists/service").then(setData).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
@@ -87,7 +89,7 @@ export default function ServiceOverview() {
                 const style = DAY_CATEGORY_STYLES[CATEGORY[r.service]];
                 return (
                   <li key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border bg-white p-2.5 ${r.done ? "border-status-clean/30 opacity-70" : "border-charcoal/10"}`}>
-                    <span className="w-14 font-serif text-2xl leading-none">{r.number}</span>
+                    <button type="button" onClick={() => setRoomRef(r.id)} title={t("lists.hmOpenRoom", { n: r.number })} className="min-h-11 w-14 text-left font-serif text-2xl leading-none underline decoration-charcoal/20 underline-offset-4">{r.number}</button>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${style.chip}`}>{t(NAME[r.service])}</span>
                     <span className="flex flex-wrap items-center gap-1 text-[0.7rem] font-semibold">
                       {r.vip && <span className="rounded-full bg-gold/20 px-2 py-0.5 text-gold-soft">★ VIP</span>}
@@ -112,6 +114,7 @@ export default function ServiceOverview() {
           </section>
         );
       })}
+      {roomRef && <LiveRoomModal roomRef={roomRef} onClose={() => setRoomRef(null)} onChanged={() => { void load(); }} />}
     </div>
   );
 }
