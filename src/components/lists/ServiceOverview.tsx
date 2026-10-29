@@ -107,7 +107,7 @@ export default function ServiceOverview() {
                     </span>
                     {r.extras.length > 0 && (
                       <ul className="flex min-w-0 flex-1 flex-wrap gap-1 text-xs">
-                        {r.extras.map((x, i) => <li key={i} className={`rounded-md border px-2 py-0.5 ${x.done ? "border-status-clean/30 text-graphite/50 line-through" : "border-charcoal/15"}`}>{x.dept === "HOUSEMAN" ? `${t("service.houseman")}: ` : ""}{x.label}</li>)}
+                        {r.extras.map((x, i) => <li key={i} className={`rounded-md border px-2 py-0.5 ${x.done ? "border-status-clean/30 text-graphite/50 line-through" : "border-charcoal/15"}`}>{x.label}</li>)}
                       </ul>
                     )}
                     <span className="ml-auto text-xs text-graphite/70">

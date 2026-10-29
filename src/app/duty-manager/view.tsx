@@ -8,7 +8,8 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import WindowPanel from "@/components/WindowPanel";
 import LiveListsPanel from "@/components/lists/LiveListsPanel";
 import RoomTaskModal from "@/components/RoomTaskModal";
-import DayNumberTiles from "@/components/DayNumberTiles";
+import TodayAtAGlance from "@/components/TodayAtAGlance";
+import { glanceKpis } from "@/lib/dayplan/glance";
 import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -29,6 +30,7 @@ interface Room {
 interface WorkOrder {
   id: string;
   status: string;
+  defect?: { room?: { floor?: number } };
 }
 
 interface RoomTask {
@@ -44,17 +46,15 @@ interface RoomTask {
 interface Supervisor {
   id: string;
   name: string;
-  email: string;
   assignedFloors: number[];
 }
 
 /**
  * Duty-manager screen: a "watching over the house" role — today's key
- * numbers at a glance, which supervisor covers which floor(s), one-click
- * access to the existing morning-planning page, and the ability to hand the
- * houseman a task directly. Deliberately does not duplicate the
- * supervisor's live room board or the planning logic itself — see the
- * duty-manager-screen prompt for why those stay separate screens.
+ * numbers at a glance, one-click access to the planning tool, the live
+ * lists, and the ability to hand the houseman a task directly. Floors are
+ * assigned to supervisors and housekeepers in the Tagesplanung (/planung),
+ * not here; the "floors without a supervisor" number stays as a warning.
  */
 export default function DutyManagerView() {
   const { t } = useLocale();
@@ -102,67 +102,15 @@ export default function DutyManagerView() {
     "user:floors": () => refetchSoon(),
   });
 
-  // --- Aufgabe C: today's key numbers, all derived from the same three
+  // --- Aufgabe C: today's key numbers, all derived from the same
   // endpoints the rest of the app already uses — no new server aggregation.
-  const arrivalsToday = useMemo(() => rooms.reduce((n, r) => n + r.arrivals.length, 0), [rooms]);
-  const departuresToday = useMemo(() => rooms.filter((r) => r.isCheckoutToday).length, [rooms]);
-  const dndRooms = useMemo(() => rooms.filter((r) => r.status === "BLOCKED" && r.blockReason === "DND").length, [rooms]);
-  const openDefects = useMemo(() => workOrders.filter((wo) => wo.status !== "RESOLVED").length, [workOrders]);
-  const openHouseTasks = useMemo(() => roomTasks.filter((rt) => rt.status === "OPEN").length, [roomTasks]);
+  const kpis = useMemo(() => glanceKpis({
+    rooms,
+    workOrders: workOrders.map((w) => ({ status: w.status, floor: w.defect?.room?.floor })),
+    roomTasks: roomTasks.map((rt) => ({ status: rt.status, floor: rt.room?.floor })),
+  }), [rooms, workOrders, roomTasks]);
   const assignedFloorSet = useMemo(() => new Set(supervisors.flatMap((s) => s.assignedFloors)), [supervisors]);
   const unassignedFloors = useMemo(() => FLOORS.filter((f) => !assignedFloorSet.has(f)), [assignedFloorSet]);
-
-  // --- Aufgabe A: floor assignment — per-supervisor draft state, saved
-  // individually so a duty manager can adjust one supervisor's floors
-  // without touching the others' unsaved edits.
-  const [drafts, setDrafts] = useState<Record<string, number[]>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
-  const [savedId, setSavedId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setDrafts((prev) => {
-      const next = { ...prev };
-      for (const s of supervisors) if (!(s.id in next)) next[s.id] = s.assignedFloors;
-      return next;
-    });
-  }, [supervisors]);
-
-  const toggleFloor = (supervisorId: string, floor: number) => {
-    setDrafts((prev) => {
-      const current = prev[supervisorId] ?? [];
-      const next = current.includes(floor) ? current.filter((f) => f !== floor) : [...current, floor];
-      return { ...prev, [supervisorId]: next };
-    });
-  };
-
-  const saveFloors = async (supervisorId: string) => {
-    setSavingId(supervisorId);
-    setError(null);
-    try {
-      const res = await api<{ user: Supervisor }>(`/api/users/${supervisorId}/floors`, {
-        method: "PATCH",
-        body: { floors: drafts[supervisorId] ?? [] },
-      });
-      setSupervisors((prev) => prev.map((s) => (s.id === supervisorId ? { ...s, assignedFloors: res.user.assignedFloors } : s)));
-      setSavedId(supervisorId);
-      setTimeout(() => setSavedId((id) => (id === supervisorId ? null : id)), 2500);
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setSavingId(null);
-    }
-  };
-
-  // Committed (persisted) coverage — the "who has which floor" list reflects
-  // what is actually saved, not an unsaved draft still being edited.
-  const coverageByFloor = useMemo(() => {
-    const map = new Map<number, Supervisor[]>();
-    for (const f of FLOORS) map.set(f, []);
-    for (const s of supervisors) {
-      for (const f of s.assignedFloors) map.get(f)?.push(s);
-    }
-    return map;
-  }, [supervisors]);
 
   // --- Aufgabe D: hand the houseman a task directly, via the same shared
   // RoomTaskModal the supervisor board uses.
@@ -210,85 +158,10 @@ export default function DutyManagerView() {
         </div>
       )}
 
-      <h3 className="mb-2 font-serif text-xl">{t("dutyManager.dashboardTitle")}</h3>
-      {numbers && <DayNumberTiles className="mb-3" numbers={numbers} />}
-      <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
-        <Kpi label={t("dutyManager.arrivalsToday")} value={String(arrivalsToday)} />
-        <Kpi label={t("dutyManager.departuresToday")} value={String(departuresToday)} />
-        <Kpi label={t("dutyManager.dndRooms")} value={String(dndRooms)} accent={dndRooms > 0} />
-        <Kpi label={t("dutyManager.openDefects")} value={String(openDefects)} accent={openDefects > 0} />
-        <Kpi label={t("dutyManager.openHouseTasks")} value={String(openHouseTasks)} accent={openHouseTasks > 0} />
-        <Kpi label={t("dutyManager.unassignedFloorsKpi")} value={String(unassignedFloors.length)} accent={unassignedFloors.length > 0} />
-      </div>
+      <TodayAtAGlance numbers={numbers} kpis={kpis} extraKpi={{ label: t("dutyManager.unassignedFloorsKpi"), value: unassignedFloors.length }} />
 
       <WindowPanel title={t("dutyManager.liveListsTitle")}>
         <LiveListsPanel />
-      </WindowPanel>
-
-      <WindowPanel title={t("dutyManager.floorAssignmentTitle")}>
-        <p className="mb-4 text-sm text-graphite/70">{t("dutyManager.floorAssignmentHint")}</p>
-
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
-          {t("dutyManager.coverageTitle")}
-        </h4>
-        <div className="mb-5 flex flex-wrap gap-2">
-          {FLOORS.map((floor) => {
-            const covering = coverageByFloor.get(floor) ?? [];
-            return (
-              <span
-                key={floor}
-                className={`rounded-full border px-3 py-1.5 text-xs ${
-                  covering.length === 0 ? "border-status-out-of-order/40 bg-status-out-of-order/10 text-status-out-of-order" : "border-charcoal/10 bg-white"
-                }`}
-              >
-                {t("dutyManager.floorShort", { floor })}:{" "}
-                {covering.length > 0 ? covering.map((s) => s.name).join(", ") : t("dutyManager.floorUnassigned")}
-              </span>
-            );
-          })}
-        </div>
-
-        {supervisors.length === 0 ? (
-          <p className="text-sm text-graphite/60">{t("dutyManager.noSupervisors")}</p>
-        ) : (
-          <div className="space-y-3">
-            {supervisors.map((s) => {
-              const draft = drafts[s.id] ?? [];
-              const dirty = JSON.stringify([...draft].sort()) !== JSON.stringify([...s.assignedFloors].sort());
-              return (
-                <div key={s.id} className="rounded-xl border border-charcoal/10 bg-white p-3">
-                  <div className="mb-2 flex items-center justify-between gap-2">
-                    <div>
-                      <p className="font-medium">{s.name}</p>
-                      <p className="text-xs text-graphite/60">{s.email}</p>
-                    </div>
-                    {savedId === s.id && <span className="text-xs text-status-inspected">{t("dutyManager.floorsSaved")}</span>}
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {FLOORS.map((floor) => (
-                      <button
-                        key={floor}
-                        onClick={() => toggleFloor(s.id, floor)}
-                        className={`h-11 min-w-11 rounded-lg border px-3 text-sm font-medium ${
-                          draft.includes(floor) ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
-                        }`}
-                      >
-                        {floor}
-                      </button>
-                    ))}
-                    <button
-                      onClick={() => saveFloors(s.id)}
-                      disabled={savingId === s.id || !dirty}
-                      className="ml-2 h-11 rounded-lg bg-navy px-4 text-sm font-semibold text-ivory disabled:opacity-40"
-                    >
-                      {savingId === s.id ? t("common.saving") : t("dutyManager.saveFloors")}
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </WindowPanel>
 
       <WindowPanel title={t("dutyManager.houseTasksTitle")} right={<span className="text-xs text-graphite/60">{openTasks.length}</span>}>
@@ -375,15 +248,6 @@ export default function DutyManagerView() {
           }}
         />
       )}
-    </div>
-  );
-}
-
-function Kpi({ label, value, accent }: { label: string; value: string; accent?: boolean }) {
-  return (
-    <div className={`rounded-2xl border p-4 shadow-sm ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
-      <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
-      <div className="mt-1 font-serif text-3xl">{value}</div>
     </div>
   );
 }

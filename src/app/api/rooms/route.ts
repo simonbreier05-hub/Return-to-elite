@@ -13,7 +13,7 @@ import { canSeeMessages } from "@/lib/work/access";
  * ?q=<partial number> for the global quick search — mutually exclusive with
  * ?mine).
  *
- * A supervisor with floors assigned (see PATCH /api/users/[id]/floors) only
+ * A supervisor with floors assigned (Tagesplanung /planung, PUT /api/planung/floors) only
  * gets back rooms on those floors — this is what makes the duty manager's
  * floor assignment actually mean something on the Live Board, rather than
  * being purely informational. A supervisor with no floors assigned yet

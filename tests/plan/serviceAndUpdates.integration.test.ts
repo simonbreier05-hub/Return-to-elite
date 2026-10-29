@@ -58,14 +58,14 @@ describe("Zimmer und Service heute", () => {
     expect(needsCleaning(serviceOf("ARRIVAL", false))).toBe(false);
   });
 
-  it("Duty Manager: alles — Zahlen, Besonderheiten (VIP, Allergiker, Twin), zugeteilte Kraft; keine Gastnamen", async () => {
+  it("Duty Manager: alles — Zahlen, Besonderheiten (VIP, Allergiker), zugeteilte Kraft; keine Gastnamen, keine Hausmann-Aufgaben", async () => {
     as("dm", "duty_manager");
     const d = await (await serviceGet()).json();
     expect(d.rooms.map((r: { number: string }) => r.number)).toEqual(["101", "102", "103", "104", "105", "201"]);
-    expect(d.counts).toMatchObject({ clean: 6, TURN: 1, DEPARTURE: 1, STAYOVER_LINEN: 1, STAYOVER: 2, ARRIVAL: 1, special: 3 }); // VIP 101, Twin 102, Allergiker 104; Anreise 105 in ein nicht gereinigtes Zimmer (DIRTY) wird mitgereinigt
+    expect(d.counts).toMatchObject({ clean: 6, TURN: 1, DEPARTURE: 1, STAYOVER_LINEN: 1, STAYOVER: 2, ARRIVAL: 1, special: 2 }); // VIP 101, Allergiker 104 (Twin 102 ist Hausmann-Aufgabe → nur Hausmann-Liste); Anreise 105 in ein nicht gereinigtes Zimmer (DIRTY) wird mitgereinigt
     const by = (n: string) => d.rooms.find((r: { number: string }) => r.number === n);
     expect(by("101")).toMatchObject({ service: "TURN", vip: true, eta: "14:00", assignedToName: "hkA Test" });
-    expect(by("102").extras).toEqual([{ dept: "HOUSEMAN", label: "Twin-Aufbau", done: false }]);
+    expect(by("102").extras).toEqual([]);
     expect(by("104")).toMatchObject({ allergy: true, assignedToName: null });
     expect(JSON.stringify(d)).not.toMatch(/guest/i);
   });

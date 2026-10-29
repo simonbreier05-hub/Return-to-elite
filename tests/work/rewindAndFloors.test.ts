@@ -64,3 +64,13 @@ describe("Meldung an das Zimmermädchen", () => {
     expect(roomChangeMessage({ number: "305", floor: 3 }, "DND")).toBe("Zimmer 305 (Etage 3): Gast: Bitte nicht stören.");
   });
 });
+
+describe("Tagesplanung: ganze Etage wählen", () => {
+  const r = (id: string, floor: number, kind: DayNumberRow["kind"], status = "DIRTY"): DayNumberRow => ({ id, number: id, floor, kind, laundryDue: false, nightsKnown: false, status, occupied: true, assignedToId: null, assignedToday: false });
+  it("nur die heute zu reinigenden Zimmer der Etage, mit Live-Status", async () => {
+    const { toCleanOnFloor } = await import("@/lib/dayplan/dayNumbers");
+    const rows = [r("301", 3, "DEPARTURE"), r("302", 3, "ARRIVAL", "INSPECTED"), r("303", 3, "OCCUPIED"), r("304", 3, "STAYOVER", "OUT_OF_ORDER"), r("401", 4, "DEPARTURE")];
+    expect(toCleanOnFloor(rows, 3).map((x) => x.id)).toEqual(["301"]);
+    expect(toCleanOnFloor(rows, 3, (id) => (id === "302" ? "DIRTY" : undefined)).map((x) => x.id)).toEqual(["301", "302"]);
+  });
+});

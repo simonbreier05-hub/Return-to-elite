@@ -3,7 +3,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 /**
  * requireRole() is what every RBAC-gated route (including the
  * duty-manager-screen additions: POST /api/roomtasks now accepting
- * duty_manager, PATCH /api/users/[id]/floors requiring it) relies on for its
+ * duty_manager) relies on for its
  * "duty_manager is the admin role and passes every check" behavior — see the
  * doc comment on requireRole itself. Verified directly here rather than
  * per-route, since every route defers to this one function.

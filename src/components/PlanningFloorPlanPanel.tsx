@@ -9,7 +9,7 @@ import Collapsible from "@/components/Collapsible";
 import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse, type RoomFlags } from "@/components/FloorPlanGrid";
 import DayNumberTiles from "@/components/DayNumberTiles";
 import DragDropBoard, { type BoardColumn } from "@/components/DragDropBoard";
-import { computeDayNumbers, type DayNumberRow } from "@/lib/dayplan/dayNumbers";
+import { computeDayNumbers, toCleanOnFloor, type DayNumberRow } from "@/lib/dayplan/dayNumbers";
 import { roomDayCategory, type RoomDayCategory } from "@/lib/rooms/roomDayCategory";
 import { computeRoomCredit } from "@/lib/rooms/roomCredit";
 import type { RoomType } from "@/lib/domain";
@@ -411,6 +411,16 @@ export default function PlanningFloorPlanPanel({
           {multiMode && (
             <div className="mt-2 rounded-xl border border-gold-line bg-parchment p-3" role="group" aria-label={t("planning.floorPlanMultiSelect")}>
               <p className="mb-2 text-sm">{multiPick.size === 0 ? t("planning.floorPlanMultiHint") : t("planning.floorPlanMultiCount", { n: multiPick.size })}</p>
+              {/* Ganze Etage einer Kraft zuteilen: wählt die heute zu reinigenden Zimmer der Etage, dann wie jede Auswahl zuteilen */}
+              <div className="mb-2 flex flex-wrap items-center gap-2" role="group" aria-label={t("planning.floorPlanMultiFloors")}>
+                <span className="text-xs font-medium text-graphite/70">{t("planning.floorPlanMultiFloors")}</span>
+                {[...new Set(dayRows.map((r) => r.floor ?? Number(r.number.slice(0, 1))))].sort((a, b) => a - b).map((f) => (
+                  <button key={f} type="button" className="h-11 min-w-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium"
+                    onClick={() => setMultiPick((prev) => { const n = new Set(prev); for (const r of toCleanOnFloor(dayRows, f, (id) => liveById.get(id)?.status)) if (liveByNumber.has(r.number)) n.add(r.number); return n; })}>
+                    {t("board.floor", { n: f })}
+                  </button>
+                ))}
+              </div>
               <div className="flex flex-wrap gap-2">
                 {onShiftAttendants.map((a) => (
                   <button key={a.id} type="button" disabled={multiPick.size === 0} className="h-11 rounded-lg border border-charcoal/15 bg-white px-4 text-sm font-medium disabled:opacity-40"

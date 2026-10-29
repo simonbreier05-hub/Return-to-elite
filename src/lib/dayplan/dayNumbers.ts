@@ -112,6 +112,14 @@ export function rowsOnFloors(rows: DayNumberRow[], floors: number[]): DayNumberR
   return rows.filter((r) => r.floor != null && set.has(r.floor));
 }
 
+/**
+ * Tagesplanung „ganze Etage einer Kraft zuteilen“: die heute zu reinigenden Zimmer einer Etage (dieselbe Regel `isToClean`),
+ * mit dem aktuellen Status aus dem Live-Board (`statusOf`). Zugeteilt wird danach wie jede Mehrfachauswahl (bulk-assign).
+ */
+export function toCleanOnFloor(rows: DayNumberRow[], floor: number, statusOf: (id: string) => string | undefined = () => undefined): DayNumberRow[] {
+  return rows.filter((r) => (r.floor ?? Number(r.number.slice(0, 1))) === floor && isToClean(r.kind, statusOf(r.id) ?? r.status));
+}
+
 /** Zusicherung der Kachelregel (auch für Tests und Laufzeit-Prüfung in der Entwicklung). */
 export function numbersConsistent(n: DayNumbers): boolean {
   return n.cleaned <= n.assigned && n.assigned <= n.toClean && n.occupied <= n.inventory && n.open === n.toClean - n.assigned;
