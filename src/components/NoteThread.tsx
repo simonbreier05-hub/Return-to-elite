@@ -3,16 +3,24 @@
 import { useEffect, useState } from "react";
 import { api } from "./api";
 import { NOTE_STATUS_STYLES } from "./status";
-import type { NoteStatus } from "@/lib/domain";
+import type { NoteStatus, PauseTarget } from "@/lib/domain";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 
 export interface ThreadNote {
   id: string;
   body: string;
   status: NoteStatus;
+  /** NOTE (Notiz) oder MESSAGE (Nachricht an Zimmer/Aufgabe, nur für Beteiligte). Ältere Antworten ohne Feld = NOTE. */
+  kind?: string;
   author: { name: string; role: string };
   createdAt: string;
   roomId?: string;
 }
+
+const ROLE: Record<string, string> = {
+  room_attendant: "Housekeeping", supervisor: "Supervisor", duty_manager: "Duty Manager", houseman: "Hausmann",
+  engineering: "Technik", front_office: "Front Office", concierge: "Concierge", guest: "Gast",
+};
 
 /**
  * The room-note thread: full history, per-note OPEN/DONE toggle, and a
@@ -22,6 +30,10 @@ export interface ThreadNote {
  * / status changes back via callbacks so each parent can patch its own
  * board state however it already does. It fetches the full thread itself
  * (the board list API only ever sends the latest 3 notes per room).
+ *
+ * Mit `task` (Arbeits-Bildschirme: Housekeeper, Hausmann, Technik, Supervisor-Modal) schreibt der Verlauf standardmäßig
+ * Nachrichten an alle Beteiligten — sofern der Server sagt, dass diese Person beteiligt ist (`canMessage`). Nachrichten stehen
+ * im selben Verlauf, klar gekennzeichnet mit Autor, Rolle und Zeit.
  */
 export default function NoteThread({
   roomId,
@@ -29,32 +41,41 @@ export default function NoteThread({
   onNoteAdded,
   onNoteUpdated,
   compact = false,
+  task,
 }: {
   roomId: string;
   initialNotes: ThreadNote[];
   onNoteAdded?: (note: ThreadNote) => void;
   onNoteUpdated?: (note: ThreadNote) => void;
   compact?: boolean;
+  task?: { type: PauseTarget; id: string };
 }) {
-  const [notes, setNotes] = useState<ThreadNote[]>(initialNotes);
+  const { t } = useLocale();
+  const [notes, setNotes] = useState<ThreadNote[]>(Array.isArray(initialNotes) ? initialNotes : []);
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [canMessage, setCanMessage] = useState(false);
+  const [asMessage, setAsMessage] = useState(true);
 
   useEffect(() => {
-    api<{ notes: ThreadNote[] }>(`/api/rooms/${roomId}/notes`)
-      .then((d) => setNotes(d.notes))
+    if (!roomId) return;
+    api<{ notes: ThreadNote[]; canMessage?: boolean }>(`/api/rooms/${roomId}/notes`)
+      .then((d) => { setNotes(Array.isArray(d.notes) ? d.notes : []); setCanMessage(!!d.canMessage); })
       .catch(() => {});
     // Only the initial full-thread fetch — subsequent updates come through
     // the composer/toggle below or the parent's own realtime patching.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [roomId]);
 
+  const messageMode = !!task && canMessage && asMessage;
+
   const addNote = async () => {
     if (!noteBody.trim() || savingNote) return;
     setSavingNote(true);
     try {
-      const res = await api<{ note: ThreadNote }>(`/api/rooms/${roomId}/notes`, { body: { body: noteBody } });
+      const body = messageMode ? { body: noteBody, kind: "MESSAGE", task } : { body: noteBody };
+      const res = await api<{ note: ThreadNote }>(`/api/rooms/${roomId}/notes`, { body });
       const note = { ...res.note, roomId };
       setNotes((prev) => [note, ...prev]);
       setNoteBody("");
@@ -86,40 +107,55 @@ export default function NoteThread({
 
   return (
     <div>
-      {notes.length === 0 && <p className={`${textSize} text-graphite/50`}>No notes yet.</p>}
-      {notes.map((n) => (
-        <div key={n.id} className={`mb-1 rounded-lg bg-ivory ${pad} ${textSize}`}>
-          <div className="flex items-start justify-between gap-2">
-            <span className="text-xs text-graphite/60">
-              {n.author.name} ({n.author.role.replace(/_/g, " ")}) ·{" "}
-              {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <button
-              onClick={() => toggleStatus(n)}
-              disabled={togglingId === n.id}
-              className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium disabled:opacity-50 ${NOTE_STATUS_STYLES[n.status].badge}`}
-              title={n.status === "OPEN" ? "Mark done" : "Reopen"}
-            >
-              {togglingId === n.id ? "…" : n.status === "OPEN" ? "Mark done" : "Reopen"}
-            </button>
+      {notes.length === 0 && <p className={`${textSize} text-graphite/50`}>{t("work.noNotes")}</p>}
+      {notes.map((n) => {
+        const isMessage = n.kind === "MESSAGE";
+        return (
+          <div key={n.id} className={`mb-1 rounded-lg ${isMessage ? "border-l-4 border-gold bg-parchment" : "bg-ivory"} ${pad} ${textSize}`}>
+            <div className="flex items-start justify-between gap-2">
+              <span className="text-xs text-graphite/60">
+                {isMessage && <span className="mr-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
+                <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({ROLE[n.author?.role ?? ""] ?? (n.author?.role ?? "").replace(/_/g, " ")}) ·{" "}
+                {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <button
+                onClick={() => toggleStatus(n)}
+                disabled={togglingId === n.id}
+                className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] font-medium disabled:opacity-50 ${NOTE_STATUS_STYLES[n.status]?.badge ?? ""}`}
+                title={n.status === "OPEN" ? t("work.markDone") : t("work.reopen")}
+              >
+                {togglingId === n.id ? "…" : n.status === "OPEN" ? t("work.markDone") : t("work.reopen")}
+              </button>
+            </div>
+            <p className="mt-0.5 break-words">{n.body}</p>
           </div>
-          <p className="mt-0.5">{n.body}</p>
+        );
+      })}
+      {task && canMessage && (
+        <div role="radiogroup" aria-label={t("work.message")} className="mt-2 flex flex-wrap gap-2 text-xs">
+          {([true, false] as const).map((m) => (
+            <button key={String(m)} type="button" role="radio" aria-checked={asMessage === m} onClick={() => setAsMessage(m)}
+              className={`min-h-11 rounded-full border px-3 font-medium ${asMessage === m ? "border-gold-line bg-parchment" : "border-charcoal/15 bg-white"}`}>
+              {m ? `💬 ${t("work.asMessage")}` : t("work.asNote")}
+            </button>
+          ))}
         </div>
-      ))}
+      )}
       <div className="mt-2 flex gap-2">
         <input
           value={noteBody}
           onChange={(e) => setNoteBody(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && addNote()}
-          placeholder="Add a note…"
-          className={`${compact ? "h-11" : "h-12"} flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold`}
+          placeholder={messageMode ? t("work.messagePlaceholder") : t("work.notePlaceholder")}
+          maxLength={2000}
+          className={`${compact ? "h-11" : "h-12"} min-w-0 flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold`}
         />
         <button
           onClick={addNote}
           disabled={savingNote || !noteBody.trim()}
           className={`${compact ? "h-11" : "h-12"} rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40`}
         >
-          {savingNote ? "…" : "Add"}
+          {savingNote ? "…" : t("work.send")}
         </button>
       </div>
     </div>

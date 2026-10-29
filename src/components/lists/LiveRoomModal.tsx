@@ -8,8 +8,9 @@ import RoomEditPanel from "@/components/RoomEditPanel";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import type { TKey } from "@/lib/i18n/translations";
 import type { RoomDetail } from "@/lib/rooms/roomDetail";
+import PauseControl from "@/components/PauseControl";
+import RoomDayInfo from "./RoomDayInfo";
 
 /**
  * Das gemeinsame Zimmer-Detail-Modal (RoomDetailModal) für die Live-Listen, mit Bearbeiten-Bereich. Lädt das Zimmer selbst
@@ -42,6 +43,7 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
     "note:new": (p: Payload) => { if (mine(p)) soon(); },
     "note:update": (p: Payload) => { if (mine(p)) soon(); },
     "assignments:applied": () => soon(),
+    "work:pause": (p: { roomId?: string } | undefined) => { if (!p || !room || p.roomId === room.id) soon(); },
   });
 
   if (!room) {
@@ -54,19 +56,17 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
     occupancy: room.occupancy, blockReason: room.blockReason, reworkNote: room.reworkNote, oooUntil: room.oooUntil,
     isCheckoutToday: room.isCheckoutToday, openNotesCount: room.notes.filter((n) => n.status === "OPEN").length,
     assignedTo: room.assignedTo, arrivals: [], notes: room.notes, defects: room.defects, guestDndActive: room.guestDndActive, guestRequests: room.guestRequests,
+    pause: room.pause,
   };
-  const d = room.day;
-  const today = d && (
-    <div className="mt-3 rounded-lg bg-white p-2 text-sm" data-testid="room-today">
-      <span className="font-medium">{t("roomEdit.today")}:</span>{" "}
-      {d.kind ? t(`lists.kind${d.kind}` as TKey) : t("lists.kindNone")}
-      {d.laundry && ` · ${t("lists.laundry")}`}{d.vip && " · ★ VIP"}
-      {d.guest && ` · ${d.guest}`}{d.pax != null && ` · ${d.pax === 1 ? t("lists.paxOne") : t("lists.pax", { n: d.pax })}`}
-      {d.eta && ` · ${t("lists.guestArrives")} ${d.eta}`}
-    </div>
+  // Supervisor/Duty Manager sehen die Pause mit Grund und können fortsetzen (oder ein begonnenes Zimmer pausieren).
+  const pauseCtl = (room.pause || room.status === "IN_PROGRESS") && (
+    <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} onChanged={() => { void load(); onChanged?.(); }} />
   );
   return (
     <RoomDetailModal room={searched} onClose={onClose}
-      editor={<>{today}<RoomEditPanel room={room} onChanged={async () => { await load(); onChanged?.(); }} /></>} />
+      summary={<RoomDayInfo day={room.day} />}
+      actions={pauseCtl ? { extra: pauseCtl } : undefined}
+      task={room.canMessage ? { type: "ROOM", id: room.id } : undefined}
+      editor={<RoomEditPanel room={room} onChanged={async () => { await load(); onChanged?.(); }} />} />
   );
 }

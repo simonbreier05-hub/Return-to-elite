@@ -12,6 +12,7 @@ import { SERVICE_ORDER, needsCleaning, type ServiceKey, type ServiceOverview } f
 import LiveRoomModal from "./LiveRoomModal";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import DayNumberTiles from "@/components/DayNumberTiles";
+import { PauseBadge } from "@/components/PauseControl";
 import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
 
 type Data = ServiceOverview & { hub?: HubState; numbers?: DayNumbers | null };
@@ -35,7 +36,7 @@ export default function ServiceOverview() {
   const load = useCallback(() => api<Data>("/api/lists/service").then(setData).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
-  useSocket({ "room:update": () => soon(), "assignments:applied": () => soon(), "dayplan:updated": () => soon(), "trace:update": () => soon() });
+  useSocket({ "room:update": () => soon(), "assignments:applied": () => soon(), "dayplan:updated": () => soon(), "trace:update": () => soon(), "work:pause": () => soon() });
 
   const rooms = useMemo(() => {
     if (!data) return [];
@@ -104,6 +105,7 @@ export default function ServiceOverview() {
                       {r.eta && <span className="rounded-full bg-parchment px-2 py-0.5">{t("service.eta", { time: r.eta })}</span>}
                       {r.allergy && <span className="rounded-full bg-parchment px-2 py-0.5">{t("service.allergy")}</span>}
                       {r.dnd && <span className="rounded-full bg-status-blocked/10 px-2 py-0.5 text-status-blocked">DND</span>}
+                      <PauseBadge pause={r.pause} showBy />
                     </span>
                     {r.extras.length > 0 && (
                       <ul className="flex min-w-0 flex-1 flex-wrap gap-1 text-xs">

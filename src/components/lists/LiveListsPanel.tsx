@@ -12,6 +12,7 @@ import RoomRowView from "./RoomRowView";
 import RowLegend from "./RowLegend";
 import ServiceOverview from "./ServiceOverview";
 import SupervisorList from "./SupervisorList";
+import { PauseBadge } from "@/components/PauseControl";
 
 type Tab = "overview" | "hk" | "sup" | "hm";
 
@@ -29,7 +30,7 @@ export default function LiveListsPanel() {
   const load = useCallback(() => api<LiveOverview>("/api/lists/overview").then(setData).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
-  useSocket({ "note:new": () => soon(), "note:update": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon() });
+  useSocket({ "note:new": () => soon(), "note:update": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
 
   const tabs: [Tab, string][] = [["overview", t("service.title")], ["hk", t("dutyManager.liveHk")], ["sup", t("dutyManager.liveSup")], ["hm", t("dutyManager.liveHm")]];
   return (
@@ -89,6 +90,7 @@ export default function LiveListsPanel() {
                   <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 bg-white p-3 text-sm">
                     <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-left font-medium underline decoration-charcoal/20 underline-offset-4">{it.roomNumber}</button>
                     <span className="min-w-0 flex-1 text-graphite/70">{it.text}</span>
+                    {it.status === "OPEN" && <PauseBadge pause={it.pause} showBy />}
                     <span className="text-xs text-graphite/60">{it.assignedToName ?? t("planungTool.housemanAll")}</span>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${it.status === "DONE" ? "bg-status-clean/15 text-status-clean" : "bg-parchment"}`}>
                       {it.status === "DONE" ? `✓ ${t("dutyManager.liveDone")}${it.doneByName ? ` · ${it.doneByName}` : ""}${it.doneAt ? ` · ${new Date(it.doneAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}` : ""}` : t("dutyManager.liveOpen")}

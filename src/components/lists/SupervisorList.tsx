@@ -46,6 +46,7 @@ export default function SupervisorList() {
   const soon = useCoalescedRefetch(load, 1500);
   useSocket({
     "room:update": () => soon(),
+    "work:pause": () => soon(),
     "assignments:applied": () => soon(),
     "trace:update": () => soon(),
     "note:new": () => soon(),

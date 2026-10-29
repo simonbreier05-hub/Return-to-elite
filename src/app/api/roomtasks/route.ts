@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
 import { RoomTaskTypeSchema } from "@/lib/domain";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
+import { activePauses } from "@/lib/work/pauseData";
 
 /** GET /api/roomtasks — the houseman queue (visible to all authenticated roles, like /api/workorders). */
 export async function GET() {
@@ -17,7 +18,8 @@ export async function GET() {
       assignedTo: { select: { id: true, name: true } },
     },
   });
-  return NextResponse.json({ roomTasks });
+  const pauses = await activePauses("ROOMTASK", roomTasks.filter((t) => t.status === "OPEN").map((t) => t.id));
+  return NextResponse.json({ roomTasks: roomTasks.map((t) => ({ ...t, pause: pauses.get(t.id) ?? null })) });
 }
 
 /**

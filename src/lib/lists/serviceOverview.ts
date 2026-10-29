@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
-import { isDone, listDay, loadRoomRows, type Kind } from "./dayRows";
+import { isDone, listDay, loadRoomRows, type Kind, type RoomRow } from "./dayRows";
 import { floorsFor } from "./supervisorList";
 import { isToClean, type DayKind } from "@/lib/dayplan/dayNumbers";
 
@@ -26,6 +26,8 @@ export interface ServiceRoom {
   id: string; number: string; floor: number; type: string;
   service: ServiceKey; vip: boolean; eta: string | null; allergy: boolean; dnd: boolean;
   credits: number; status: string; done: boolean; assignedToName: string | null; extras: ServiceExtra[];
+  /** Aktive Pause (Grund, seit, von wem). */
+  pause: RoomRow["pause"];
 }
 export interface ServiceOverview {
   date: string | null;
@@ -61,7 +63,7 @@ export async function getServiceOverview(session: { userId: string; role: string
     return {
       id: r.id, number: r.number, floor: r.floor, type: f?.type ?? "STANDARD", service: serviceOf(r.kind!, r.laundry), vip: r.vip, eta: r.eta,
       allergy: !!f?.isAntiAllergic, dnd: r.dnd, credits: r.credits, status: r.status, done: isDone(r.status),
-      assignedToName: r.assignedToId && r.assignedOn === date ? hk.get(r.assignedToId) ?? null : null, extras,
+      assignedToName: r.assignedToId && r.assignedOn === date ? hk.get(r.assignedToId) ?? null : null, extras, pause: r.pause,
     };
   }).sort((a, b) => a.floor - b.floor || a.number.localeCompare(b.number));
 

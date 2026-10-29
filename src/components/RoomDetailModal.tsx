@@ -7,7 +7,8 @@ import NoteThread, { type ThreadNote } from "./NoteThread";
 import { RoomFlagIcons } from "./RoomFlags";
 import { StatusIcon, IconBellSlash } from "./icons";
 import { STATUS_STYLES } from "./status";
-import type { BlockReason, RoomStatus } from "@/lib/domain";
+import type { BlockReason, PauseTarget, RoomStatus } from "@/lib/domain";
+import { PauseBadge, type PauseInfo } from "./PauseControl";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 
@@ -39,6 +40,8 @@ export interface SearchedRoom {
   guestDndActive?: boolean;
   /** This room's still-open guest requests (Prompt G2 Teil 4's "Zimmer-Logbuch" view). */
   guestRequests?: { id: string; kind: string; detail: string | null; status: string; createdAt: string }[];
+  /** Aktive Pause (WorkPause) — Status bleibt, die Arbeit ruht. */
+  pause?: PauseInfo | null;
 }
 
 /**
@@ -58,6 +61,8 @@ export interface RoomDetailActions {
   defectLabel?: string;
   onNoteAdded?: (note: ThreadNote) => void;
   onNoteUpdated?: (note: ThreadNote) => void;
+  /** Unter den Hauptknöpfen: Pausieren/Fortsetzen, Zurückspulen (Housekeeper-Hub). */
+  extra?: ReactNode;
 }
 
 export default function RoomDetailModal({
@@ -65,15 +70,25 @@ export default function RoomDetailModal({
   onClose,
   actions,
   editor,
+  summary,
+  task,
 }: {
   room: SearchedRoom;
   onClose: () => void;
   actions?: RoomDetailActions;
   /** Bearbeiten-Bereich (nur Duty Manager/Supervisor, siehe RoomEditPanel) — ohne ihn bleibt das Modal reine Ansicht. */
   editor?: ReactNode;
+  /** Tagesinfos direkt unter dem Status (Art, Wäsche, VIP, Gast-Kurzname, Traces — RoomDayInfo). */
+  summary?: ReactNode;
+  /** Aufgabe, an die der Verlauf Nachrichten schreibt (Arbeits-Bildschirme); ohne bleibt er ein reiner Notiz-Verlauf. */
+  task?: { type: PauseTarget; id: string };
 }) {
   const { t } = useLocale();
-  const style = STATUS_STYLES[room.status];
+  // Absturzsicher: unvollständige Antworten (fehlende Listen, unbekannter Status) dürfen das Modal nicht sprengen.
+  const style = STATUS_STYLES[room.status] ?? STATUS_STYLES.DIRTY;
+  const notes = Array.isArray(room.notes) ? room.notes : [];
+  const arrivals = Array.isArray(room.arrivals) ? room.arrivals : [];
+  const defects = Array.isArray(room.defects) ? room.defects : [];
 
   return (
     <Modal
@@ -89,6 +104,8 @@ export default function RoomDetailModal({
         </span>
         <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
       </div>
+      {room.pause && <div className="mt-2"><PauseBadge pause={room.pause} showBy /></div>}
+      {summary}
       {room.guestDndActive && (
         <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-status-out-of-order/10 p-2 text-sm font-medium text-status-out-of-order">
           <IconBellSlash className="h-4 w-4 shrink-0" />
@@ -151,6 +168,7 @@ export default function RoomDetailModal({
           )}
         </div>
       )}
+      {actions?.extra && <div className="mt-2 space-y-2">{actions.extra}</div>}
 
       <div className="mt-4">
         <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.assignedAttendant")}</h4>
@@ -163,10 +181,10 @@ export default function RoomDetailModal({
         </p>
       </div>
 
-      {room.arrivals.length > 0 && (
+      {arrivals.length > 0 && (
         <div className="mt-4">
           <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.expectedArrivals")}</h4>
-          {room.arrivals.map((a, i) => (
+          {arrivals.map((a, i) => (
             <p key={i} className="text-sm">
               {a.vip && "★ "}
               {a.guestName}
@@ -177,10 +195,10 @@ export default function RoomDetailModal({
         </div>
       )}
 
-      {room.defects.length > 0 && (
+      {defects.length > 0 && (
         <div className="mt-4">
           <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.defectsTitle")}</h4>
-          {room.defects.map((d) => (
+          {defects.map((d) => (
             <p key={d.id} className="text-sm">
               🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
               {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
@@ -212,9 +230,9 @@ export default function RoomDetailModal({
       <div className="mt-4">
         <div className="mb-1 flex items-center gap-2">
           <h4 className="text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
-          <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
+          <NoteCountBadge openCount={room.openNotesCount ?? 0} totalCount={notes.length} />
         </div>
-        <NoteThread key={room.notes.map((n) => `${n.id}${n.status}`).join()} roomId={room.id} initialNotes={room.notes} onNoteAdded={actions?.onNoteAdded} onNoteUpdated={actions?.onNoteUpdated} />
+        <NoteThread key={notes.map((n) => `${n.id}${n.status}`).join()} roomId={room.id} initialNotes={notes} onNoteAdded={actions?.onNoteAdded} onNoteUpdated={actions?.onNoteUpdated} task={task} />
       </div>
     </Modal>
   );

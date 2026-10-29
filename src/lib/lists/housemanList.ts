@@ -6,6 +6,7 @@ import { activePauses, endPauseOnChange, type PauseView } from "@/lib/work/pause
 
 export interface HousemanItem {
   id: string;
+  roomId: string;
   roomNumber: string;
   floor: number;
   text: string;
@@ -56,7 +57,7 @@ export async function getHousemanList(floor?: number | null, forUserId?: string 
     const stay = p ? stays.get(p.arrivingStayId ?? p.stayId ?? "") : undefined;
     const task = classifyTraceText(t.text);
     return {
-      id: t.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text, times: timesInText(t.text),
+      id: t.id, roomId: t.room.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text, times: timesInText(t.text),
       status: t.status === "DONE" ? "DONE" : "OPEN", doneAt: t.doneAt?.toISOString() ?? null, roomTaskId: t.roomTaskId, assignedToId: t.assignedToId, assignedToName: t.assignedToId ? people.get(t.assignedToId) ?? null : null, doneByName: doneBy.get(t.id) ?? null,
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
       waitsForDeparture: task?.type === "TWIN_REVERT" && kind !== "DEPARTURE" && kind !== "SAME_DAY_TURN",
