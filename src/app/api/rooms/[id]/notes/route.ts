@@ -3,8 +3,15 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { addRoomNote } from "@/lib/rooms/addRoomNote";
+import { PauseTargetSchema } from "@/lib/domain";
+import { sessionSeesMessages } from "@/lib/work/messages";
 
-/** Cross-department per-room notes: every authenticated role may read & add. */
+/**
+ * Cross-department per-room notes: every authenticated role may read & add.
+ * Nachrichten (`kind: "MESSAGE"`, an Zimmer/Aufgabe während der Arbeit) sehen und schreiben nur Beteiligte
+ * (src/lib/work/access.ts `canSeeMessages`): zuständiges Zimmermädchen, Supervisor der Etage, beteiligter Hausmann/Techniker,
+ * Duty Manager. Für alle anderen fehlen sie in der Liste.
+ */
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth();
@@ -15,10 +22,15 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     orderBy: { createdAt: "desc" },
     include: { author: { select: { name: true, role: true } } },
   });
-  return NextResponse.json({ notes });
+  const canMessage = await sessionSeesMessages(auth.session, id);
+  return NextResponse.json({ notes: canMessage ? notes : notes.filter((n) => n.kind !== "MESSAGE"), canMessage });
 }
 
-const NoteSchema = z.object({ body: z.string().trim().min(1).max(2000) });
+const NoteSchema = z.object({
+  body: z.string().trim().min(1).max(2000),
+  kind: z.enum(["NOTE", "MESSAGE"]).optional(),
+  task: z.object({ type: PauseTargetSchema, id: z.string().min(1) }).optional(),
+});
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth();
@@ -31,6 +43,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const room = await prisma.room.findUnique({ where: { id } });
   if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
 
-  const note = await addRoomNote({ room, authorId: auth.session.userId, body: parsed.data.body });
+  const kind = parsed.data.kind ?? (parsed.data.task ? "MESSAGE" : "NOTE");
+  if (kind === "MESSAGE" && !(await sessionSeesMessages(auth.session, room.id))) {
+    return NextResponse.json({ error: "Nachrichten an dieses Zimmer können nur Beteiligte schreiben." }, { status: 403 });
+  }
+  const note = await addRoomNote({ room, authorId: auth.session.userId, body: parsed.data.body, kind, task: parsed.data.task ?? null });
   return NextResponse.json({ note }, { status: 201 });
 }

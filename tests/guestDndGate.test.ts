@@ -20,6 +20,8 @@ vi.mock("@/lib/db", () => ({
     room: { findUnique: (...args: unknown[]) => roomFindUnique(...args), update: (...args: unknown[]) => roomUpdate(...args) },
     guestRequest: { findFirst: (...args: unknown[]) => guestRequestFindFirst(...args) },
     user: { update: (...args: unknown[]) => userUpdate(...args) },
+    // Statusänderung beendet eine aktive Pause (src/lib/work/pauseData.ts) — hier gibt es keine.
+    workPause: { updateMany: async () => ({ count: 0 }) },
   },
 }));
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));

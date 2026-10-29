@@ -759,6 +759,7 @@ const en = {
       minutesPerCredit: "Minutes per credit (start estimate)",
       earlyFinishMinutes: "\"Done early\" below (minutes left)",
       redistributionMaxMoves: "Max. rooms per reassignment",
+      statusRewindMinutes: "Undo own status step within (minutes, 0 = off)",
       linenCycleDays: "Linen change every N nights (stayovers)",
     },
     weight: {
@@ -1926,6 +1927,7 @@ const de = {
       minutesPerCredit: "Minuten je Credit (Start-Schätzung)",
       earlyFinishMinutes: "Früher fertig: unter (Minuten Restzeit)",
       redistributionMaxMoves: "Höchstens Zimmer je Umverteilung",
+      statusRewindMinutes: "Eigenen Statusschritt zurückspulen bis (Minuten, 0 = aus)",
       linenCycleDays: "Wäschewechsel alle N Nächte (Bleiber)",
     },
     weight: {

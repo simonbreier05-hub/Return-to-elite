@@ -4,6 +4,7 @@ import { getRoomTypeCredits, getSettings } from "@/lib/settings";
 import type { RoomType } from "@/lib/domain";
 import { creditFactor } from "@/lib/rooms/stayoverCredit";
 import { shortGuestName, timesInText } from "./guestName";
+import { activePauses, type PauseView } from "@/lib/work/pauseData";
 
 /** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
@@ -40,6 +41,8 @@ export interface RoomRow {
   defects: number;
   /** Offener Gästewunsch (CLEAN_REQUEST | CONTACT) — nur mit `extra`, sonst null. */
   wish: string | null;
+  /** Aktive Pause des Zimmers (Grund-Code, seit, von wem) — Supervisor/Duty Manager sehen sie in den Listen. */
+  pause: PauseView | null;
 }
 
 /** Welcher Aufenthalt zählt für die Anzeige: Anreise/Turn → der anreisende Gast, sonst der bleibende bzw. abreisende. */
@@ -78,6 +81,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
     for (const g of await prisma.guestRequest.findMany({ where: { kind: { in: ["CLEAN_REQUEST", "CONTACT"] }, status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true, kind: true }, orderBy: { createdAt: "asc" } })) wishBy.set(g.roomId, g.kind);
   }
 
+  const pauses = await activePauses("ROOM", rooms.filter((r) => r.status === "IN_PROGRESS").map((r) => r.id));
+
   return rooms.map((r) => {
     const p = planBy.get(r.id);
     const stay = p ? stayBy.get(stayIdFor(p) ?? "") : undefined;
@@ -92,6 +97,7 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       credits: kind === "ARRIVAL" || !kind ? 0 : Math.round(((typeCredits[r.type as RoomType] ?? 1) * factor) * 100) / 100,
       traces: traceBy.get(r.id) ?? [],
       type: r.type, defects: defectCount.get(r.id) ?? 0, wish: wishBy.get(r.id) ?? null,
+      pause: r.status === "IN_PROGRESS" ? pauses.get(r.id) ?? null : null,
     };
   });
 }

@@ -25,6 +25,8 @@ export const PLAN_KIND: Record<string, DayKind> = { DEPARTURE: "DEPARTURE", SAME
 export interface DayNumberRow {
   id: string;
   number: string;
+  /** Etage des Zimmers (für die Etagen-Zahlen eines Supervisors, `rowsOnFloors`). */
+  floor?: number;
   kind: DayKind;
   /** Wäschewechsel laut Tagesplan (nur Bleiber; aus Anreisedatum/Wechseldatum, siehe derive.ts). */
   laundryDue: boolean;
@@ -99,6 +101,15 @@ export function computeDayNumbers(input: { rows: DayNumberRow[]; inventory: numb
     doneUnassigned: assignedRows.filter((r) => DONE.has(r.status) && !(r.assignedToId && r.assignedToday)).length,
     outsideTeam: team ? assignedRows.filter((r) => r.assignedToId && !DONE.has(r.status) && !team.has(r.assignedToId)).length : 0,
   };
+}
+
+/**
+ * Dieselben Zahlen, nur für bestimmte Etagen (Supervisor-Startansicht): dieselben Zeilen, dieselbe Zählung, nur gefiltert.
+ * `inventory` ist dann die Zimmerzahl dieser Etagen. Zeilen ohne Etage zählen nie zu einer Etage.
+ */
+export function rowsOnFloors(rows: DayNumberRow[], floors: number[]): DayNumberRow[] {
+  const set = new Set(floors);
+  return rows.filter((r) => r.floor != null && set.has(r.floor));
 }
 
 /** Zusicherung der Kachelregel (auch für Tests und Laufzeit-Prüfung in der Entwicklung). */
