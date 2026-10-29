@@ -60,7 +60,7 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
   };
   // Supervisor/Duty Manager sehen die Pause mit Grund und können fortsetzen (oder ein begonnenes Zimmer pausieren).
   const pauseCtl = (room.pause || room.status === "IN_PROGRESS") && (
-    <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} onChanged={() => { void load(); onChanged?.(); }} />
+    <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} showBadge={false} onChanged={() => { void load(); onChanged?.(); }} />
   );
   return (
     <RoomDetailModal room={searched} onClose={onClose}

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ApiError, NetworkError, api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
@@ -306,7 +307,7 @@ export default function AttendantView() {
       extra: (
         <>
           {action === "DND" && <p className="rounded-xl border border-status-out-of-order/40 bg-status-out-of-order/10 px-3 py-3 text-center text-sm font-medium text-status-out-of-order">{t("attendant.guestDndActive")}</p>}
-          <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} size="lg"
+          <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} size="lg" showBadge={false}
             onChanged={(p) => { setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, pause: p } : r))); refreshRoomsSoon(); }} />
           {room.rewind && (
             <button type="button" onClick={() => rewind(room)} disabled={busyRoomId === room.id}
@@ -469,7 +470,8 @@ export default function AttendantView() {
         )}
       </ErrorBoundary>
 
-      {detailRoom && (
+      {/* Portal an body: die Seite liegt in einem animierten (transformierten) Container — ein fixed-Fenster darin landet sonst versetzt. */}
+      {detailRoom && createPortal(
         <ErrorBoundary>
           <RoomDetailModal
             room={detailRoom}
@@ -478,7 +480,8 @@ export default function AttendantView() {
             summary={<RoomDayInfo day={dayById.get(detailRoom.id) ? { ...asListRoom(detailRoom) } : null} traces={dayById.get(detailRoom.id)?.traces} />}
             task={{ type: "ROOM", id: detailRoom.id }}
           />
-        </ErrorBoundary>
+        </ErrorBoundary>,
+        document.body,
       )}
 
       {modal?.kind === "block" && (

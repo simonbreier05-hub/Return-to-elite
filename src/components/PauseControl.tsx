@@ -29,13 +29,15 @@ export function PauseBadge({ pause, showBy = false }: { pause: PauseInfo | null 
  * Pausieren/Fortsetzen — derselbe Knopf für jede Abteilung (POST /api/work/pause). Pausieren fragt optional nach einem
  * festen Grund; Fortsetzen ist ein Tap. `canPause` sagt nur, ob der Knopf „Pausieren“ angeboten wird — entscheiden tut der Server.
  */
-export default function PauseControl({ targetType, targetId, pause, canPause, onChanged, size = "md" }: {
+export default function PauseControl({ targetType, targetId, pause, canPause, onChanged, size = "md", showBadge = true }: {
   targetType: PauseTarget;
   targetId: string;
   pause: PauseInfo | null | undefined;
   canPause: boolean;
   onChanged?: (pause: PauseInfo | null) => void;
   size?: "md" | "lg";
+  /** Im Zimmer-Modal steht die Pause schon oben am Status — dort ohne zweites Kennzeichen. */
+  showBadge?: boolean;
 }) {
   const { t } = useLocale();
   const [asking, setAsking] = useState(false);
@@ -60,7 +62,7 @@ export default function PauseControl({ targetType, targetId, pause, canPause, on
   if (pause) {
     return (
       <div className="space-y-2" data-testid="pause-control">
-        <PauseBadge pause={pause} showBy />
+        {showBadge && <PauseBadge pause={pause} showBy />}
         <button type="button" onClick={() => send("resume")} disabled={busy}
           className={`w-full rounded-xl bg-status-in-progress font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50 ${h}`}>
           {busy ? "…" : `▶ ${t("work.resume")}`}
