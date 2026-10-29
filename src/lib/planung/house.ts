@@ -11,7 +11,7 @@ const KIND: Record<string, TileKind> = { DEPARTURE: "DEPARTURE", SAME_DAY_TURN: 
  */
 export async function getHouseData(date?: string | null): Promise<HouseData> {
   // Tag der letzten übernommenen Departures; ohne Batch (z. B. Tagesplan von Hand) der jüngste vorhandene Tagesplan
-  const day = date ?? (await latestPlanDate()) ?? (await prisma.dayRoomPlan.findFirst({ orderBy: { date: "desc" }, select: { date: true } }))?.date ?? null;
+  const day = date ?? (await latestPlanDate());
   const rooms = await prisma.room.findMany({ select: { id: true, number: true, floor: true }, orderBy: { number: "asc" } });
   const plan = day ? await prisma.dayRoomPlan.findMany({ where: { date: day } }) : [];
   const byRoom = new Map(plan.map((p) => [p.roomId, p]));

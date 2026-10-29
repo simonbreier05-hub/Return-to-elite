@@ -27,6 +27,10 @@ import { loadList, parseList } from "@/lib/import/readFile";
 import { applyBatch, sha256, storeBatch } from "@/lib/import/store";
 import { getHousemanList, setHousemanTraceStatus } from "@/lib/lists/housemanList";
 
+// Die App arbeitet nur mit dem Betriebstag (Planungshub, src/lib/dayplan/hubDay.ts): Uhr auf den Testtag stellen.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-10-06T10:00:00Z"));
+
 const TODAY = "2026-10-06";
 const ROOMS = Array.from({ length: 20 }, (_, i) => String(101 + i));
 const sc = todayScenario(TODAY, ROOMS, 145);

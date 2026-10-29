@@ -3,14 +3,13 @@ import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { generateOpaqueToken } from "@/lib/guestToken";
 import { getPlanningCreditSettings } from "@/lib/settings";
-import { diffDays } from "@/lib/import/dates";
-import { DEPARTURES_MIN_HORIZON_DAYS } from "@/lib/import/mapping";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import type { ArrivalRow, DepartureRow, GuestName, ParseIssue, TraceRow } from "@/lib/import/types";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
 import { notifyListUpdate, type NewTrace, type RoomChange } from "@/lib/rooms/notifyListUpdate";
 import { compareWithForecast, deriveDayPlan, type DayCleaningType, type DayFiguresDerived } from "./derive";
 import { berlinToUtc } from "./time";
+import { planBoardStatus, type StatusMarker } from "./boardStatus";
 import { legacyTraceKey, traceKey } from "./traceKey";
 import { getTraceDeptMap, TRACE_DEPT_DEFAULTS } from "./traceDept";
 
@@ -19,9 +18,9 @@ const utcDay = (iso: string) => new Date(`${iso}T00:00:00Z`);
 /** "Mrs. Testfrau" — Anrede, Titel, Nachname; nie der volle Name in Stay/Arrival. */
 const shortName = (g: GuestName) => [g.salutation, g.title, g.lastName].filter(Boolean).join(" ");
 
-async function appliedRows<T>(type: "DEPARTURES" | "ARRIVALS" | "TRACES", date: string, exact: boolean) {
+async function appliedRows<T>(type: "DEPARTURES" | "ARRIVALS" | "TRACES", date: string, exact: boolean, acceptedOnly = false) {
   const batch = await prisma.importBatch.findFirst({
-    where: { type, status: "APPLIED", ...(exact ? { businessDate: date } : {}) },
+    where: { type, status: "APPLIED", ...(exact ? { businessDate: date } : {}), ...(acceptedOnly ? { staleAcceptedAt: { not: null } } : {}) },
     orderBy: { appliedAt: "desc" },
     include: { rows: true },
   });
@@ -46,7 +45,8 @@ export interface MergeResult {
  * Zuteilungen (Room.assignedToId) — betroffene Zimmer bekommen nur einen Hinweis.
  */
 export async function mergeDay(date: string, userId: string): Promise<MergeResult> {
-  const dep = await appliedRows<DepartureRow>("DEPARTURES", date, true);
+  // Departures des Tages; sonst eine im Planungshub als veraltet bestätigte („Trotzdem verwenden") — nie eine unbestätigte ältere.
+  const dep = (await appliedRows<DepartureRow>("DEPARTURES", date, true)) ?? (await appliedRows<DepartureRow>("DEPARTURES", date, false, true));
   if (!dep) throw new Error(`Für den ${date} sind keine Departures übernommen. Bitte zuerst importieren.`);
   if (dep.purged) throw new Error("Die Gastdaten wurden gelöscht (Nachtlöschung). Bitte die Listen neu importieren.");
   const arr = await appliedRows<ArrivalRow>("ARRIVALS", date, false);
@@ -195,17 +195,45 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   };
 }
 
+/** Morgendlicher Zimmerstatus (siehe boardStatus.ts): alle sauber, nur nachweislich belegte/belegt gewesene schmutzig. */
+async function initRoomStatus(date: string, plan: { roomId: string; cleaningType: string }[], inHouseRooms: Set<string>, userId: string) {
+  const rooms = await prisma.room.findMany({ select: { id: true, number: true, status: true, statusSince: true } });
+  const needs = new Set(plan.filter((p) => p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN" || p.cleaningType === "STAYOVER").map((p) => p.roomId));
+  for (const r of rooms) if (inHouseRooms.has(r.number)) needs.add(r.id);
+  const key = `boardInit:${date}`;
+  const stored = await prisma.setting.findUnique({ where: { key } });
+  const old: StatusMarker = stored ? JSON.parse(stored.value) : {};
+  const { updates, marker } = planBoardStatus({ rooms, needsCleaning: needs, marker: old, dayStart: berlinToUtc(date, "00:00") });
+  const now = new Date();
+  for (const u of updates) {
+    const room = await prisma.room.update({ where: { id: u.id }, data: { status: u.status, statusSince: now, blockReason: null, blockedSince: null, reworkNote: null } });
+    marker[u.id] = [room.status, room.statusSince.toISOString()];
+    broadcast("room:update", { room });
+  }
+  const value = JSON.stringify(marker);
+  await prisma.setting.upsert({ where: { key }, create: { key, value }, update: { value } });
+  await prisma.setting.deleteMany({ where: { key: { startsWith: "boardInit:", not: key } } });
+  if (updates.length) {
+    const dirty = updates.filter((u) => u.status === "DIRTY").length;
+    await audit({ action: "BOARD_STATUS_INIT", userId, meta: { date, dirty, inspected: updates.length - dirty } });
+  }
+}
+
 /**
  * Tagesplan auf das Board übernehmen: setzt die Felder, die Planungshub,
  * Grundriss und Wäschelogik schon lesen (isCheckoutToday, occupancy, Arrival,
- * lastLinenChangeAt). Zuteilungen und Statusfelder bleiben unberührt.
+ * lastLinenChangeAt) und setzt den morgendlichen Zimmerstatus (alle sauber, nur nachweislich belegte schmutzig).
+ * Zuteilungen bleiben unberührt; was heute schon bearbeitet wurde, behält seinen Status.
  */
 export async function applyDayPlanToBoard(date: string, userId: string) {
   const plan = await prisma.dayRoomPlan.findMany({ where: { date }, include: { room: true } });
   if (!plan.length) throw new Error(`Für den ${date} gibt es keinen Tagesplan. Bitte zuerst berechnen.`);
-  const dep = await prisma.importBatch.findFirst({ where: { type: "DEPARTURES", status: "APPLIED", businessDate: date }, orderBy: { appliedAt: "desc" } });
-  const complete = !!dep?.periodTo && diffDays(date, dep.periodTo) >= DEPARTURES_MIN_HORIZON_DAYS;
+  // Belegung der Zimmer ohne Reinigung heute: aus der In-House-Liste (Tagesbelegung) des Planungshubs — nie ein alter Board-Stand.
+  const inhouse = await prisma.importBatch.findFirst({ where: { type: "INHOUSE", status: "APPLIED" }, orderBy: { appliedAt: "desc" }, include: { rows: true } });
+  const inHouseRooms = new Set((inhouse?.rows ?? []).map((r) => r.room).filter((n): n is string => !!n));
   const notes: string[] = [];
+  if (!inhouse) notes.push("Keine In-House-Liste: Zimmer ohne Eintrag im Tagesplan gelten als frei.");
+  else if (inhouse.rowCount > 0 && !inhouse.rows.length) notes.push("In-House-Liste nachts gelöscht: Zimmer ohne Eintrag im Tagesplan gelten als frei — bitte neu einlesen.");
   const planned = new Set(plan.map((p) => p.roomId));
   let changed = 0;
 
@@ -224,16 +252,16 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
       changed++;
     }
   }
-  if (complete) {
-    const others = await prisma.room.findMany({ where: { id: { notIn: [...planned] }, OR: [{ isCheckoutToday: true }, { occupancy: "OCCUPIED" }] } });
-    for (const r of others) {
-      const room = await prisma.room.update({ where: { id: r.id }, data: { isCheckoutToday: false, occupancy: "VACANT" } });
-      broadcast("room:update", { room });
-      changed++;
-    }
-  } else {
-    notes.push("Departures-Zeitraum kürzer als 30 Tage: Zimmer ohne Eintrag bleiben unverändert (könnten Langzeitgäste sein).");
+  // Alle anderen Zimmer: keine Abreise heute (sonst stünden sie in den Departures), belegt nur laut In-House-Liste.
+  for (const r of await prisma.room.findMany({ where: { id: { notIn: [...planned] } } })) {
+    const occupancy = inHouseRooms.has(r.number) ? "OCCUPIED" : "VACANT";
+    if (!r.isCheckoutToday && r.occupancy === occupancy) continue;
+    const room = await prisma.room.update({ where: { id: r.id }, data: { isCheckoutToday: false, occupancy } });
+    broadcast("room:update", { room });
+    changed++;
   }
+
+  await initRoomStatus(date, plan, inHouseRooms, userId);
 
   // Erwartete Anreisen (Arrival) aus der Liste; manuell angelegte bleiben, frühere Import-Anreisen werden ersetzt.
   await prisma.arrival.deleteMany({ where: { source: "IMPORT", status: "EXPECTED" } });

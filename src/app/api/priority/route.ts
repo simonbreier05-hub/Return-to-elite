@@ -4,6 +4,7 @@ import { requireAuth } from "@/lib/rbac";
 import { getPriorityWeights, getSettings } from "@/lib/settings";
 import { computePriority, parseGuestCleanRequestTiming } from "@/lib/priority/computePriority";
 import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
+import { hubDay } from "@/lib/dayplan/hubDay";
 
 /**
  * GET /api/priority — dynamic, explainable cleaning priority for every
@@ -13,6 +14,10 @@ import { predictCleaningMinutes } from "@/lib/priority/predictCleaningMinutes";
 export async function GET(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
+
+  // Ohne heutigen Tagesplan aus dem Planungshub gibt es keine Arbeit zu priorisieren (keine alten Board-Werte).
+  const hub = await hubDay();
+  if (!hub.ready) return NextResponse.json({ priorities: [], computedAt: new Date().toISOString(), hub });
 
   const attendantId =
     req.nextUrl.searchParams.get("attendantId") ??

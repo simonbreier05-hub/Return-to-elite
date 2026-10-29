@@ -79,7 +79,7 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
   const guestSystemUserId = await getGuestSystemUserId().catch(() => null);
   const counts: PurgeCounts = {};
 
-  counts.stayNames = (await prisma.stay.updateMany({ where: { guestName: { not: "" } }, data: { guestName: "" } })).count;
+  counts.stayNames = (await prisma.stay.updateMany({ where: { guestName: { not: "" }, source: { not: "DEMO" } }, data: { guestName: "" } })).count; // DEMO = Gast-Vorschau (301), erfundener Name
   counts.arrivalNames = (await prisma.arrival.updateMany({ where: { guestName: { not: "" } }, data: { guestName: "" } })).count;
   counts.excursions = (await prisma.excursion.updateMany({
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },

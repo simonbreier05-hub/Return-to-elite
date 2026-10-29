@@ -71,31 +71,32 @@ export async function storeBatch(input: {
 }
 
 /** Übernehmen: ersetzt den vorherigen Stand (gleicher Typ + Tag). Kritische Befunde blockieren. */
+/** Großzügiger als Prismas 5 s: ein langer Forecast über eine langsame Verbindung darf nicht abbrechen. */
+const APPLY_TIMEOUT_MS = 20_000;
+
 export async function applyBatch(batchId: string, userId: string) {
   const batch = await prisma.importBatch.findUnique({ where: { id: batchId }, include: { issues: true } });
   if (!batch) throw new Error("Import nicht gefunden.");
   if (batch.status !== "PREVIEW") throw new Error("Import ist nicht mehr in der Vorschau.");
   if (batch.issues.some((i) => i.severity === "CRITICAL")) throw new Error("Kritische Befunde: nichts wird übernommen.");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.importBatch.deleteMany({
+  const replaced = await prisma.$transaction(async (tx) => {
+    const old = await tx.importBatch.deleteMany({
       where: { type: batch.type, businessDate: batch.businessDate, status: "APPLIED", id: { not: batch.id } },
     });
     if (batch.type === "FORECAST") {
-      const rows = await tx.importRow.findMany({ where: { batchId: batch.id, kind: "FORECAST" } });
-      for (const r of rows) {
-        const d = JSON.parse(r.payload) as ForecastDayRow;
-        await tx.forecastDay.upsert({
-          where: { date: d.date },
-          create: { ...d, batchId: batch.id }, update: { ...d, batchId: batch.id },
-        });
-      }
+      const rows = (await tx.importRow.findMany({ where: { batchId: batch.id, kind: "FORECAST" } })).map((r) => JSON.parse(r.payload) as ForecastDayRow);
+      // Ein deleteMany + createMany statt eines upsert je Tag: wenige Abfragen, die Transaktion bleibt kurz.
+      await tx.forecastDay.deleteMany({ where: { date: { in: rows.map((d) => d.date) } } });
+      if (rows.length) await tx.forecastDay.createMany({ data: rows.map((d) => ({ ...d, batchId: batch.id })) });
       await tx.importRow.deleteMany({ where: { batchId: batch.id, kind: "FORECAST" } }); // Zählwerte liegen jetzt in ForecastDay
     }
     await tx.importBatch.update({ where: { id: batch.id }, data: { status: "APPLIED", appliedAt: new Date() } });
-  });
+    return old.count;
+  }, { timeout: APPLY_TIMEOUT_MS, maxWait: APPLY_TIMEOUT_MS });
   // Protokoll ohne Gastnamen: nur Typ, Tag, Anzahl.
   await audit({ action: "IMPORT_APPLIED", userId, meta: { batchId, type: batch.type, businessDate: batch.businessDate, rows: batch.rowCount } });
+  if (replaced) await audit({ action: "IMPORT_REPLACED", userId, meta: { batchId, type: batch.type, businessDate: batch.businessDate, replaced } });
 }
 
 export async function rejectBatch(batchId: string, userId: string) {

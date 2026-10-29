@@ -5,12 +5,13 @@ import { api } from "@/components/api";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface Item {
   id: string; roomNumber: string; floor: number; text: string; times: string[]; status: "OPEN" | "DONE";
   doneAt: string | null; roomTaskId: string | null; guest: string | null; waitsForDeparture: boolean;
 }
-interface Data { date: string | null; floors: number[]; items: Item[] }
+interface Data { date: string | null; floors: number[]; items: Item[]; hub?: HubState }
 
 /**
  * Hausmann-Liste: Traces der Abteilung Hausmann für den Tag. Abhaken per Tap (Zeitstempel + Nutzer im Logbuch),
@@ -55,6 +56,7 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
         <h3 id="hm-list-title" className="font-serif text-3xl">{t("lists.hmTitle")}</h3>
         <p className="text-sm text-graphite/70" aria-live="polite">{t("lists.hmOpen", { n: open })} · {t("lists.hmDone", { n: done })}</p>
       </div>
+      <HubMissingNotice hub={data.hub} planner={false} />
       {data.floors.length > 1 && (
         <div role="group" aria-label={t("lists.floorN", { n: "" }).trim()} className="mt-3 flex flex-wrap gap-2">
           {[null, ...data.floors].map((f) => (

@@ -23,6 +23,7 @@ import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } fr
 import { chunkByFloor, defaultRouteOrder, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 /**
  * The single next status in the attendant's restricted linear chain for the
@@ -90,9 +91,11 @@ export default function AttendantView() {
   const [detailRoomId, setDetailRoomId] = useState<string | null>(null);
   const offline = useOfflineQueue();
 
+  const [hub, setHub] = useState<HubState | null>(null);
   const loadRooms = useCallback(async () => {
-    const data = await api<{ rooms: Room[] }>("/api/rooms?mine=1");
+    const data = await api<{ rooms: Room[]; hub?: HubState }>("/api/rooms?mine=1");
     setRooms(data.rooms);
+    setHub(data.hub ?? null);
   }, []);
 
   /** Priority is computed server-side, so it cannot be patched from an event. */
@@ -110,6 +113,7 @@ export default function AttendantView() {
   const refreshRoomsSoon = useCoalescedRefetch(loadRooms, 2000);
 
   useSocket({
+    "dayplan:updated": () => { refreshRoomsSoon(); refreshPrioritiesSoon(); },
     "room:update": (p: { room: Room }) => {
       setRooms((prev) => {
         if (!prev.some((r) => r.id === p.room.id)) {
@@ -314,6 +318,7 @@ export default function AttendantView() {
           {t("attendant.mostUrgentFirst")}
         </p>
       </div>
+      <HubMissingNotice hub={hub} planner={false} />
 
       <PriorityBanner
         items={[
