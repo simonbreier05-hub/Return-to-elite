@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "@/components/api";
 import type { ImportType } from "@/lib/domain";
+import { berlinToday } from "@/lib/import/businessDay";
 import { crossCheckArrivals } from "@/lib/import/parsers";
 import { sha256Hex } from "@/lib/import/preview";
 import { loadList, parseList, type AnyResult, type LoadedList } from "@/lib/import/readFile";
@@ -24,9 +25,10 @@ export interface ImportItem {
   busy?: boolean;
 }
 
-export type ImportStatus = Record<string, { businessDate: string; appliedAt: string; rows: number } | null>;
+export type ImportStatus = Record<string, { businessDate: string; appliedAt: string; rows: number; staleAccepted?: boolean } | null>;
 
-export const todayIso = () => new Date().toLocaleDateString("sv-SE"); // YYYY-MM-DD, Ortszeit
+/** Betriebstag = App-Uhr in Berlin (YYYY-MM-DD), nicht die Zeitzone des Geräts. */
+export const todayIso = () => berlinToday();
 
 /**
  * Die Import-Logik aus M1 (Auslesen im Browser, Vorschau, Befunde, Übernehmen) als Hook — genutzt von
@@ -37,6 +39,10 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
   const [day, setDay] = useState(todayIso());
   const [inventory, setInventory] = useState<number | undefined>();
   const [status, setStatus] = useState<ImportStatus | null>(null);
+  const [today, setToday] = useState(todayIso());
+  const [layout, setLayout] = useState<Partial<Record<ImportType, DateFormatId>>>({});
+  const layoutRef = useRef(layout);
+  layoutRef.current = layout;
   const dayRef = useRef(day);
   dayRef.current = day;
   const itemsRef = useRef(items);
@@ -45,10 +51,11 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
   cb.current = onApplied;
 
   const patch = useCallback((id: string, p: Partial<ImportItem>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x))), []);
-  const loadStatus = useCallback(() => api<{ status: ImportStatus }>("/api/import/status").then((d) => setStatus(d.status)).catch(() => {}), []);
+  const loadStatus = useCallback(() => api<{ status: ImportStatus; today?: string }>("/api/import/status").then((d) => { setStatus(d.status); if (d.today) setToday(d.today); }).catch(() => {}), []);
 
   useEffect(() => {
     loadStatus();
+    api<{ layout: Partial<Record<ImportType, DateFormatId>> }>("/api/import/layout").then((d) => setLayout(d.layout)).catch(() => {});
     api<{ settings: { roomInventory: number } }>("/api/settings").then((d) => setInventory(d.settings.roomInventory)).catch(() => {});
   }, [loadStatus]);
 
@@ -65,7 +72,7 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
       const hash = await sha256Hex(bytes);
       const type = list.type;
       if (!type) { patch(id, { phase: "read", list, hash, type: null }); return; }
-      patch(id, { phase: "read", list, hash, type, result: parseList(type, list, { today: dayRef.current, roomInventory: inventory }) });
+      patch(id, { phase: "read", list, hash, type, result: parseList(type, list, { today: dayRef.current, roomInventory: inventory, layoutDateFormat: layoutRef.current[type] }) });
     } catch (e) {
       patch(id, { phase: "error", error: e instanceof Error ? e.message : "?" });
     }
@@ -82,7 +89,7 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
 
   const reparse = useCallback((it: ImportItem, type: ImportType, confirmed?: DateFormatId) => {
     if (!it.list) return;
-    patch(it.id, { type, confirmed, serverIssues: undefined, result: parseList(type, it.list, { today: dayRef.current, roomInventory: inventory, confirmedDateFormat: confirmed }) });
+    patch(it.id, { type, confirmed, serverIssues: undefined, result: parseList(type, it.list, { today: dayRef.current, roomInventory: inventory, confirmedDateFormat: confirmed, layoutDateFormat: layoutRef.current[type] }) });
   }, [patch, inventory]);
 
   const discard = useCallback((it: ImportItem) => patch(it.id, { phase: "discarded", list: undefined, result: undefined }), [patch]);
@@ -113,6 +120,12 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
         return null;
       }
       await api(`/api/import/batches/${sub.batchId}/apply`, { method: "POST", body: {} });
+      // Erkanntes Datumsformat nach der Bestätigung (Übernehmen) als Layout merken, damit es nicht jedes Mal abweicht.
+      const fmt = r.dates?.format;
+      if (fmt && layoutRef.current[it.type] !== fmt) {
+        const type = it.type;
+        void api("/api/import/layout", { method: "PUT", body: { type, dateFormat: fmt } }).then(() => setLayout((l) => ({ ...l, [type]: fmt }))).catch(() => {});
+      }
       patch(it.id, { busy: false, phase: "applied", list: undefined, result: undefined });
       loadStatus();
       return it.type;
@@ -121,6 +134,13 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
       return null;
     }
   }, [patch, loadStatus]);
+
+  /** „Trotzdem verwenden“: veraltete Liste für die Planung bestätigen (wird im Logbuch protokolliert). */
+  const acceptStale = useCallback(async (type: ImportType) => {
+    await api("/api/import/stale", { body: { type } });
+    await loadStatus();
+    cb.current?.([type]);
+  }, [loadStatus]);
 
   const ready = items.filter((x) => x.phase === "read" && x.result && !isCritical(x));
 
@@ -132,5 +152,5 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void, opts
     return applied;
   }, [applyOne]);
 
-  return { items, day, setDay, status, loadStatus, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready };
+  return { items, day, setDay, status, today, acceptStale, loadStatus, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready };
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
-import { missingAppliedLists } from "@/lib/import/store";
+import { listBlockersNow } from "@/lib/import/store";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 import { proposeForDate } from "@/lib/autoplan/service";
 
@@ -16,8 +16,9 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
-  const missing = await missingAppliedLists();
+  const { missing, stale } = await listBlockersNow();
   if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, missing }, { status: 409 });
+  if (stale.length) return NextResponse.json({ error: `Veraltete Listen ohne Bestätigung: ${stale.map((s) => `${s.type} (${s.businessDate})`).join(", ")}.`, stale }, { status: 409 });
   const date = parsed.data.date ?? (await latestPlanDate());
   if (!date) return NextResponse.json({ error: "Noch kein Tagesplan. Bitte zuerst importieren und den Tagesplan berechnen." }, { status: 409 });
   try {

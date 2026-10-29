@@ -39,11 +39,11 @@ describe("Excel/CSV", () => {
 });
 
 describe("parseList bei PDFs", () => {
-  it("das Formular-Datum ersetzt nie das Druckdatum, warnt aber bei veralteter Liste", async () => {
+  it("Betriebstag (Formular/App-Uhr) schneidet die History ab; weicht das Druckdatum ab, ist die Liste veraltet", async () => {
     const { buildForecastPdf } = await import("./fixtures/opera/build");
     const list = await loadList("forecast.pdf", await buildForecastPdf());
     const stale = parseList("FORECAST", list, { today: "2026-10-06" });
-    expect(stale.rows).toHaveLength(23); // ab Druckdatum 22.09., nicht ab 06.10.
+    expect(stale.rows).toHaveLength(9); // ab Betriebstag 06.10., nicht ab Druckdatum 22.09.
     expect(stale.issues.map((i) => i.code)).toContain("LIST_NOT_TODAY");
     const fresh = parseList("FORECAST", list, { today: "2026-09-22" });
     expect(fresh.issues.map((i) => i.code)).not.toContain("LIST_NOT_TODAY");
