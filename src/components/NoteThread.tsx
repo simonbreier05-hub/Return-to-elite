@@ -57,11 +57,12 @@ export default function NoteThread({
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [canMessage, setCanMessage] = useState(false);
   const [asMessage, setAsMessage] = useState(true);
+  const [outOfScope, setOutOfScope] = useState(false);
 
   useEffect(() => {
     if (!roomId) return;
-    api<{ notes: ThreadNote[]; canMessage?: boolean }>(`/api/rooms/${roomId}/notes`)
-      .then((d) => { setNotes(Array.isArray(d.notes) ? d.notes : []); setCanMessage(!!d.canMessage); })
+    api<{ notes: ThreadNote[]; canMessage?: boolean; outOfScope?: boolean }>(`/api/rooms/${roomId}/notes`)
+      .then((d) => { setNotes(Array.isArray(d.notes) ? d.notes : []); setCanMessage(!!d.canMessage); setOutOfScope(!!d.outOfScope); })
       .catch(() => {});
     // Only the initial full-thread fetch — subsequent updates come through
     // the composer/toggle below or the parent's own realtime patching.
@@ -107,6 +108,9 @@ export default function NoteThread({
 
   return (
     <div>
+      {outOfScope && notes.some((n) => n.kind === "MESSAGE") && (
+        <p role="note" className="mb-2 rounded-lg border border-gold-line/60 bg-parchment p-2 text-xs">⚠ {t("work.outOfScopeHint")}</p>
+      )}
       {notes.length === 0 && <p className={`${textSize} text-graphite/50`}>{t("work.noNotes")}</p>}
       {notes.map((n) => {
         const isMessage = n.kind === "MESSAGE";
@@ -115,6 +119,7 @@ export default function NoteThread({
             <div className="flex items-start justify-between gap-2">
               <span className="text-xs text-graphite/60">
                 {isMessage && <span className="mr-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
+                {isMessage && outOfScope && <span className="mr-1 rounded-full border border-gold-line/60 bg-white px-1.5 py-0.5 font-semibold text-gold-soft">{t("work.outOfScope")}</span>}
                 <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({ROLE[n.author?.role ?? ""] ?? (n.author?.role ?? "").replace(/_/g, " ")}) ·{" "}
                 {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </span>

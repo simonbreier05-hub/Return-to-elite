@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { addRoomNote } from "@/lib/rooms/addRoomNote";
 import { PauseTargetSchema } from "@/lib/domain";
-import { sessionSeesMessages } from "@/lib/work/messages";
+import { messageAccess, sessionSeesMessages } from "@/lib/work/messages";
 
 /**
  * Cross-department per-room notes: every authenticated role may read & add.
@@ -22,8 +22,8 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
     orderBy: { createdAt: "desc" },
     include: { author: { select: { name: true, role: true } } },
   });
-  const canMessage = await sessionSeesMessages(auth.session, id);
-  return NextResponse.json({ notes: canMessage ? notes : notes.filter((n) => n.kind !== "MESSAGE"), canMessage });
+  const { canMessage, outOfScope } = await messageAccess(auth.session, id);
+  return NextResponse.json({ notes: canMessage ? notes : notes.filter((n) => n.kind !== "MESSAGE"), canMessage, outOfScope });
 }
 
 const NoteSchema = z.object({

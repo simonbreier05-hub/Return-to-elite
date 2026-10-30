@@ -129,6 +129,13 @@ describe("Nachrichten an Zimmer/Aufgabe", () => {
     expect(await bodies("hk2", "room_attendant")).not.toContain("Bett klemmt, brauche Hilfe");
     expect(await bodies("sup4", "supervisor")).not.toContain("Bett klemmt, brauche Hilfe");
     expect(await bodies("fo", "front_office")).not.toContain("Bett klemmt, brauche Hilfe");
+    // Supervisor ohne Etagen: sieht sie (wie das Live-Board das ganze Haus), gekennzeichnet als außerhalb der Zuständigkeit
+    as("supNone", "supervisor");
+    const none = await (await notesGet(new NextRequest("http://x"), params(ids.r301))).json();
+    expect(none.notes.map((x: { body: string }) => x.body)).toContain("Bett klemmt, brauche Hilfe");
+    expect(none.outOfScope).toBe(true);
+    as("sup3", "supervisor");
+    expect((await (await notesGet(new NextRequest("http://x"), params(ids.r301))).json()).outOfScope).toBe(false);
     as("hk2", "room_attendant");
     expect((await notesPost(json("http://x", { body: "x", kind: "MESSAGE" }), params(ids.r301))).status).toBe(403);
   });

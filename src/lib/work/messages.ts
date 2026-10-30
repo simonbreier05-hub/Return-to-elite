@@ -2,7 +2,7 @@ import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
 import { parseAssignedFloors } from "@/lib/floors";
-import { canSeeMessages, messageRecipients, type RoomInvolvement } from "./access";
+import { canSeeMessages, messageRecipients, messagesOutOfScope, type RoomInvolvement } from "./access";
 import { viewerFor } from "./pauseData";
 
 /**
@@ -70,4 +70,12 @@ export async function sessionSeesMessages(session: { role: string; userId: strin
   if (session.role === "duty_manager") return true;
   const [viewer, involvement] = await Promise.all([viewerFor(session), involvementFor(roomId)]);
   return !!involvement && canSeeMessages(viewer, involvement);
+}
+
+/** Wie `sessionSeesMessages`, plus ob die Nachrichten außerhalb der Zuständigkeit liegen (Supervisor ohne Etagen). */
+export async function messageAccess(session: { role: string; userId: string }, roomId: string): Promise<{ canMessage: boolean; outOfScope: boolean }> {
+  if (session.role === "duty_manager") return { canMessage: true, outOfScope: false };
+  const [viewer, involvement] = await Promise.all([viewerFor(session), involvementFor(roomId)]);
+  if (!involvement) return { canMessage: false, outOfScope: false };
+  return { canMessage: canSeeMessages(viewer, involvement), outOfScope: messagesOutOfScope(viewer, involvement) };
 }

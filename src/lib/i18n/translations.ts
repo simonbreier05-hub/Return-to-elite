@@ -909,6 +909,8 @@ const en = {
     messageTitle: "Messages · room {{n}}",
     asMessage: "Message to everyone involved",
     asNote: "Note (all departments)",
+    outOfScope: "Outside your responsibility",
+    outOfScopeHint: "No floors are assigned to you, so you see messages for the whole house. They are outside your responsibility — the supervisor of the floor is in charge.",
     messagePlaceholder: "Short message, e.g. a complication…",
     notePlaceholder: "Add a note…",
     send: "Send",
@@ -1214,6 +1216,7 @@ const en = {
     doneTasksLabel: "Done",
     noOpenTasks: "Nothing open.",
     noDoneTasks: "Nothing done yet today.",
+    taskCreated: "Task for room {{n}} created — it shows in the live lists under “Houseman list”.",
   },
 } as const;
 
@@ -2115,6 +2118,8 @@ const de = {
     messageTitle: "Nachrichten · Zimmer {{n}}",
     asMessage: "Nachricht an alle Beteiligten",
     asNote: "Notiz (alle Abteilungen)",
+    outOfScope: "Außerhalb der Zuständigkeit",
+    outOfScopeHint: "Dir sind keine Etagen zugewiesen, darum siehst du Nachrichten im ganzen Haus. Sie liegen außerhalb deiner Zuständigkeit — zuständig ist der Supervisor der Etage.",
     messagePlaceholder: "Kurze Nachricht, z. B. eine Komplikation …",
     notePlaceholder: "Notiz hinzufügen …",
     send: "Senden",
@@ -2420,6 +2425,7 @@ const de = {
     doneTasksLabel: "Erledigt",
     noOpenTasks: "Nichts offen.",
     noDoneTasks: "Heute noch nichts erledigt.",
+    taskCreated: "Aufgabe für Zimmer {{n}} angelegt — sie steht in den Live-Listen unter „Hausmann-Liste“.",
   },
 } satisfies Dict;
 

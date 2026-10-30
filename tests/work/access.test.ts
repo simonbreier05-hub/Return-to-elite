@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canSeeMessages, canWorkOn, checkPause, messageRecipients, type RoomInvolvement, type Viewer, type WorkTarget } from "@/lib/work/access";
+import { canSeeMessages, canWorkOn, checkPause, messageRecipients, messagesOutOfScope, type RoomInvolvement, type Viewer, type WorkTarget } from "@/lib/work/access";
 
 const hk: Viewer = { role: "room_attendant", userId: "hk1", floors: null };
 const otherHk: Viewer = { role: "room_attendant", userId: "hk2", floors: null };
@@ -63,6 +63,13 @@ describe("Nachrichten — Sichtbarkeit nach Rolle", () => {
     expect(canSeeMessages({ ...hm, userId: "hm2" }, inv)).toBe(false);
     expect(canSeeMessages(eng, inv)).toBe(true);
     expect(canSeeMessages(eng, { ...inv, engineerIds: [] })).toBe(false);
+  });
+  it("Supervisor ohne Etagen sieht alles, aber als „außerhalb der Zuständigkeit“", () => {
+    expect(canSeeMessages(supAll, inv)).toBe(true);
+    expect(messagesOutOfScope(supAll, inv)).toBe(true);
+    expect(messagesOutOfScope(sup3, inv)).toBe(false);
+    expect(messagesOutOfScope(dm, inv)).toBe(false);
+    expect(messagesOutOfScope(hk, inv)).toBe(false);
   });
   it("Front Office/Concierge sehen keine Nachrichten", () => {
     expect(canSeeMessages(fo, inv)).toBe(false);

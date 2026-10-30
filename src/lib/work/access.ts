@@ -81,6 +81,14 @@ export function canSeeMessages(v: Viewer, r: RoomInvolvement): boolean {
 }
 
 /**
+ * Sieht diese Person die Nachrichten nur, weil ihr (noch) keine Etagen zugewiesen sind? Dann gilt sie wie auf dem Live-Board
+ * fürs ganze Haus, die Nachrichten werden aber als „außerhalb der Zuständigkeit“ gekennzeichnet (und sie wird nicht gemeldet).
+ */
+export function messagesOutOfScope(v: Viewer, r: RoomInvolvement): boolean {
+  return v.role === "supervisor" && !v.floors && canSeeMessages(v, r);
+}
+
+/**
  * Wer bekommt eine Meldung bei einer neuen Nachricht: das zuständige Zimmermädchen, die Supervisoren der Etage, beteiligte
  * Hausmänner/Techniker. Der Autor nie. Der Duty Manager sieht ohnehin alle Meldungen; eine eigene bekommt er nur, wenn sonst
  * niemand zuständig ist (sonst stünde dieselbe Nachricht doppelt in seiner Liste).

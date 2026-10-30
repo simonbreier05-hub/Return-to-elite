@@ -13,7 +13,6 @@ import { glanceKpis } from "@/lib/dayplan/glance";
 import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface Room {
@@ -116,9 +115,9 @@ export default function DutyManagerView() {
   // RoomTaskModal the supervisor board uses.
   const [pickedNumber, setPickedNumber] = useState("");
   const [taskRoom, setTaskRoom] = useState<Room | null>(null);
+  const [created, setCreated] = useState<string | null>(null);
 
   const openTasks = useMemo(() => roomTasks.filter((rt) => rt.status === "OPEN"), [roomTasks]);
-  const doneTasks = useMemo(() => roomTasks.filter((rt) => rt.status === "DONE").slice(0, 10), [roomTasks]);
 
   const pickRoom = () => {
     const match = rooms.find((r) => r.number === pickedNumber.trim());
@@ -129,11 +128,6 @@ export default function DutyManagerView() {
     setError(null);
     setTaskRoom(match);
   };
-
-  const roomTaskLabel = (task: RoomTask) =>
-    task.type === "SONSTIGES"
-      ? `${task.room.number} — ${task.note ?? t("roomTaskType.SONSTIGES")}`
-      : `${task.room.number} — ${t(`roomTaskType.${task.type}` as TKey)}`;
 
   return (
     <div className="animate-rise">
@@ -194,43 +188,8 @@ export default function DutyManagerView() {
           <p className="text-xs text-graphite/60">{t("dutyManager.pickRoomHint")}</p>
         </div>
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
-              {t("dutyManager.openTasksLabel")}
-            </h4>
-            {openTasks.length === 0 ? (
-              <p className="text-sm text-graphite/60">{t("dutyManager.noOpenTasks")}</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {openTasks.map((task) => (
-                  <li key={task.id} className="rounded-lg border border-charcoal/10 bg-ivory px-3 py-2 text-sm">
-                    {roomTaskLabel(task)}
-                    <span className="ml-1 text-xs text-graphite/50">
-                      · {new Date(task.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-          <div>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
-              {t("dutyManager.doneTasksLabel")}
-            </h4>
-            {doneTasks.length === 0 ? (
-              <p className="text-sm text-graphite/60">{t("dutyManager.noDoneTasks")}</p>
-            ) : (
-              <ul className="space-y-1.5">
-                {doneTasks.map((task) => (
-                  <li key={task.id} className="rounded-lg border border-charcoal/10 bg-linen/60 px-3 py-2 text-sm text-graphite/70 line-through decoration-charcoal/30">
-                    {roomTaskLabel(task)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-        </div>
+        {/* Offene/erledigte Aufgaben stehen nur noch in den Live-Listen → „Hausmann-Liste“ (keine zweite Liste hier). */}
+        {created && <p role="status" className="text-sm text-status-clean">{t("dutyManager.taskCreated", { n: created })}</p>}
       </WindowPanel>
 
       {taskRoom && (
@@ -240,6 +199,7 @@ export default function DutyManagerView() {
           onSubmit={async (payload) => {
             try {
               await api("/api/roomtasks", { body: { roomId: taskRoom.id, ...payload } });
+              setCreated(taskRoom.number);
               setTaskRoom(null);
               setPickedNumber("");
             } catch (e) {
