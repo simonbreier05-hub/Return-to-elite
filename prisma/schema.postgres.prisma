@@ -245,7 +245,32 @@ model RoomNote {
   author    User     @relation(fields: [authorId], references: [id])
   body      String
   status    String   @default("OPEN") // OPEN | DONE — see NoteStatus in src/lib/domain.ts
+  // Rollen-Bildschirme v1 (additiv): NOTE = Notiz wie bisher; MESSAGE = Nachricht an Zimmer/Aufgabe während der Arbeit —
+  // nur für Beteiligte sichtbar (src/lib/work/messages.ts) und löst Meldungen aus. taskType/taskId verknüpfen optional die
+  // Aufgabe (ROOM | ROOMTASK | TRACE | WORKORDER, wie WorkPause.targetType).
+  kind      String   @default("NOTE")
+  taskType  String?
+  taskId    String?
   createdAt DateTime @default(now())
+}
+
+/**
+ * Pausieren — ein gemeinsamer Mechanismus für jede Abteilung (Zimmer, Hausmann-Aufgabe/-Trace, Arbeitsauftrag).
+ * Eigenes Signal wie Gast-DND: ändert nie Room.status/RoomTask.status/WorkOrder.status — pausierte Arbeit zählt darum nie
+ * als erledigt. Aktiv = resumedAt null. Grund ist ein fester Code (PAUSE_REASONS), kein Freitext (Details per Nachricht).
+ */
+model WorkPause {
+  id          String    @id @default(cuid())
+  targetType  String // ROOM | ROOMTASK | TRACE | WORKORDER — see PAUSE_TARGETS in src/lib/domain.ts
+  targetId    String
+  roomId      String? // Zimmer der Aufgabe (für Logbuch/Anzeige)
+  reason      String? // GUEST_IN_ROOM | MATERIAL_MISSING | WAITING_ENGINEERING | BREAK | OTHER
+  pausedById  String
+  pausedAt    DateTime  @default(now())
+  resumedAt   DateTime?
+  resumedById String?
+
+  @@index([targetType, targetId])
 }
 
 model Defect {
@@ -349,6 +374,9 @@ model ImportBatch {
   fileHash     String // SHA-256 der Datei; die Datei selbst wird nie gespeichert
   createdAt    DateTime  @default(now())
   appliedAt    DateTime?
+  // Veraltete Liste (Dateidatum ≠ Betriebstag) trotzdem verwenden — wer und wann; null = nicht bestätigt.
+  staleAcceptedAt   DateTime?
+  staleAcceptedById String?
 
   rows   ImportRow[]
   issues ImportIssue[]
@@ -427,6 +455,7 @@ model Trace {
   status     String    @default("OPEN") // OPEN | DONE — erledigte bleiben erledigt
   dedupeKey  String    @unique // Zimmer|Code|Datum|Text
   roomTaskId String? // Hausmann-Aufgabe, die aus diesem Trace entstanden ist (Twin/Zusatzbett)
+  assignedToId String? // Hausmann, dem der Supervisor die Aufgabe zugeteilt hat (null = für alle Hausmänner sichtbar)
   source     String // ARRIVALS | TRACES
   createdAt  DateTime  @default(now())
   doneAt     DateTime?

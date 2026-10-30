@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
 const PatchSchema = z.object({
   eta: z.coerce.date().nullable().optional(),
@@ -32,5 +33,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
   await audit({ action: "ARRIVAL_UPDATED", userId: auth.session.userId, roomId: arrival.roomId, meta: parsed.data });
   broadcast("arrival:update", { arrival });
+  // VIP/„wird jetzt gebraucht“/ETA ändern die Priorität des Zimmers — das zuständige Zimmermädchen erfährt es live.
+  const prioChanged = (["vip", "neededNow"] as const).some((k) => parsed.data[k] !== undefined && parsed.data[k] !== existing[k])
+    || (parsed.data.eta !== undefined && (parsed.data.eta?.getTime() ?? null) !== (existing.eta?.getTime() ?? null));
+  if (prioChanged) await notifyHousekeeperOfRoomChange({ roomId: arrival.roomId, kind: "PRIORITY", actorId: auth.session.userId });
   return NextResponse.json({ arrival });
 }

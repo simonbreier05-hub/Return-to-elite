@@ -111,14 +111,31 @@ describe("moveRoomBetweenAttendants", () => {
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
-  it("rejects moving a room that has no attendant yet", async () => {
-    roomFindUnique.mockResolvedValue({ id: "room-1", assignedToId: null });
+  it("a room that has no attendant yet can be assigned the same way (no lock)", async () => {
+    roomFindUnique.mockResolvedValue({ id: "room-1", number: "101", floor: 1, status: "DIRTY", assignedToId: null });
+    userFindUnique.mockResolvedValue({ id: "att-b", role: "room_attendant" });
+    roomFindMany.mockResolvedValue([]);
 
     const result = await moveRoomBetweenAttendants(session, "room-1", "att-b");
 
-    expect(result.ok).toBe(false);
-    if (result.ok) throw new Error("expected failure");
-    expect(result.status).toBe(409);
+    expect(result.ok).toBe(true);
+    expect(transactionMock).toHaveBeenCalled();
+  });
+
+  it("a started room needs an explicit confirmation; progress (status) is never touched", async () => {
+    roomFindUnique.mockResolvedValue({ id: "room-1", number: "101", floor: 1, status: "IN_PROGRESS", assignedToId: "att-a" });
+    userFindUnique.mockResolvedValue({ id: "att-b", role: "room_attendant" });
+    roomFindMany.mockResolvedValue([]);
+
+    const refused = await moveRoomBetweenAttendants(session, "room-1", "att-b");
+    expect(refused).toMatchObject({ ok: false, status: 409, code: "STARTED_ROOM" });
+    expect(transactionMock).not.toHaveBeenCalled();
+
+    const moved = await moveRoomBetweenAttendants(session, "room-1", "att-b", { confirmStarted: true });
+    expect(moved.ok).toBe(true);
+    const data = roomUpdate.mock.calls.find((c) => c[0].where.id === "room-1")![0].data;
+    expect(data).not.toHaveProperty("status");
+    expect(auditMock).toHaveBeenCalledWith(expect.objectContaining({ action: "ROOM_MOVED_STARTED" }));
   });
 
   it("rejects a target that is not a room attendant", async () => {

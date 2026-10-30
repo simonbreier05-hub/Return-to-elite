@@ -5,6 +5,10 @@ import { broadcast } from "@/lib/realtime";
 import type { Session } from "@/lib/auth";
 import { assignDailyNumbers } from "@/lib/assignment/dailyNumbers";
 import { moveRoomBetweenAttendants } from "@/lib/rooms/moveRoomBetweenAttendants";
+import { isStartedStatus } from "@/lib/rooms/startedStatus";
+import { notifyPlanConfirmed } from "@/lib/rooms/notifyPlan";
+import { distributeHouseman } from "@/lib/planung/housemanAssign";
+import { savedTeamFor } from "@/lib/planung/savedTeam";
 import { berlinDate } from "@/lib/dayplan/time";
 import { loadDay, loadLive, morningInput, type DayData } from "./load";
 import { proposePlan } from "./propose";
@@ -34,35 +38,81 @@ export async function latestProposal(date: string) {
   return row ? { id: row.id, status: row.status, payload: JSON.parse(row.payload) as ProposalPayload } : null;
 }
 
-/** Bestätigen (zwei Taps in der Oberfläche): schreibt die Zuteilung, Reihenfolge, Tagesnummern; protokolliert die Abweichung vom Vorschlag. */
-export async function confirmProposal(proposalId: string, final: Assignment, session: Session) {
+/** Fehler beim Bestätigen mit Code, damit die Oberfläche nachfragen kann (offene Zimmer, begonnene Zimmer). */
+export class PlanConfirmError extends Error {
+  constructor(public code: "OPEN_ROOMS" | "STARTED_ROOMS" | "INVALID", message: string, public data: Record<string, unknown> = {}) { super(message); }
+}
+
+export interface ConfirmOptions {
+  /** Der Supervisor hat ausdrücklich bestätigt, dass noch Zimmer offen sind. */
+  acceptOpen?: boolean;
+  /** Der Supervisor hat ausdrücklich bestätigt, dass begonnene/fertige Zimmer die Kraft wechseln (Fortschritt bleibt erhalten). */
+  confirmStarted?: boolean;
+  /** Hausmann-Aufgaben (Traces) → Hausmann (null = für alle); wird in derselben Transaktion gespeichert. */
+  housemanAssignments?: { traceId: string; userId: string | null }[];
+}
+
+const isStarted = isStartedStatus;
+
+/**
+ * Bestätigen: schreibt die Zuteilung, Reihenfolge, Tagesnummern in einer Transaktion live. Der Bestätigungs-Datensatz
+ * (Betriebstag, Zeitstempel, Nutzer, Abweichungen) bleibt am Entwurf. Es gibt keine Sperren: auch fest/heute zugeteilte Zimmer
+ * dürfen geändert werden; begonnene oder fertige Zimmer nur mit `confirmStarted` (Status/Fortschritt bleiben unverändert).
+ * Offene Zimmer verhindern die Bestätigung nicht, brauchen aber `acceptOpen`. Danach bekommen die Betroffenen eine Meldung.
+ */
+export async function confirmProposal(proposalId: string, final: Assignment, session: Session, opts: ConfirmOptions = {}) {
   const row = await prisma.autoPlanProposal.findUnique({ where: { id: proposalId } });
-  if (!row) throw new Error("Vorschlag nicht gefunden.");
-  if (row.status !== "DRAFT") throw new Error("Dieser Vorschlag ist nicht mehr offen.");
+  if (!row) throw new PlanConfirmError("INVALID", "Vorschlag nicht gefunden.");
+  if (row.status !== "DRAFT") throw new PlanConfirmError("INVALID", "Dieser Vorschlag ist nicht mehr offen.");
   const { input, result: proposed } = JSON.parse(row.payload) as ProposalPayload;
   const hkIds = new Set(input.housekeepers.map((h) => h.id));
-  const roomById = new Map(input.rooms.map((r) => [r.id, r]));
 
   const finalClean: Assignment = {};
   for (const r of input.rooms) {
     const to = final[r.id] ?? null;
-    if (to && !hkIds.has(to)) throw new Error("Unbekannter Housekeeper in der Zuteilung.");
-    if (r.fixedTo && hkIds.has(r.fixedTo) && to !== r.fixedTo) throw new Error(`Zimmer ${r.number} ist fest zugeteilt und kann hier nicht geändert werden.`);
+    if (to && !hkIds.has(to)) throw new PlanConfirmError("INVALID", "Unbekannter Housekeeper in der Zuteilung.");
     finalClean[r.id] = to;
   }
-  // Inzwischen begonnene Zimmer dürfen nicht mehr verschoben werden.
-  const db = await prisma.room.findMany({ where: { id: { in: input.rooms.map((r) => r.id) } }, select: { id: true, number: true, status: true, assignedToId: true } });
-  for (const r of db) {
-    const started = r.status === "IN_PROGRESS" || r.status === "CLEAN" || r.status === "INSPECTED";
-    if (started && r.assignedToId && finalClean[r.id] !== r.assignedToId) throw new Error(`Zimmer ${r.number} wurde inzwischen begonnen und bleibt bei der aktuellen Kraft.`);
+  const db = await prisma.room.findMany({ where: { id: { in: input.rooms.map((r) => r.id) } }, select: { id: true, number: true, status: true, assignedToId: true, assignedOn: true } });
+  const dbById = new Map(db.map((r) => [r.id, r]));
+  // Begonnene/fertige Zimmer, die die Kraft wechseln würden: nur nach ausdrücklicher Bestätigung.
+  const startedMoves = db.filter((r) => isStarted(r.status) && r.assignedToId && finalClean[r.id] !== r.assignedToId);
+  if (startedMoves.length && !opts.confirmStarted) {
+    throw new PlanConfirmError("STARTED_ROOMS", `${startedMoves.length} Zimmer sind schon begonnen oder fertig und würden die Kraft wechseln.`, { rooms: startedMoves.map((r) => r.number) });
   }
 
   const result = buildResult(input, finalClean);
-  const todo = new Set(db.filter((r) => !(r.status === "IN_PROGRESS" || r.status === "CLEAN" || r.status === "INSPECTED")).map((r) => r.id));
+  if (result.unassigned.length && !opts.acceptOpen) {
+    throw new PlanConfirmError("OPEN_ROOMS", `${result.unassigned.length} Zimmer sind noch offen.`, { open: result.unassigned.length });
+  }
+  // Vorher-Stand (nur Zuteilungen von heute oder begonnene) für die Meldungen
+  const before = new Map<string, Set<string>>();
+  for (const r of db) if (r.assignedToId && (r.assignedOn === row.date || isStarted(r.status))) (before.get(r.assignedToId) ?? before.set(r.assignedToId, new Set()).get(r.assignedToId)!).add(r.id);
+
+  // Hausmann-Zuteilungen prüfen (nur Hausmann-Traces, nur Hausmänner)
+  const hmAssign = opts.housemanAssignments ?? [];
+  if (hmAssign.length) {
+    const hms = new Set((await prisma.user.findMany({ where: { role: "houseman" }, select: { id: true } })).map((u) => u.id));
+    const traces = new Map((await prisma.trace.findMany({ where: { id: { in: hmAssign.map((a) => a.traceId) }, dept: "HOUSEMAN" }, select: { id: true } })).map((t) => [t.id, true]));
+    for (const a of hmAssign) if (!traces.has(a.traceId) || (a.userId && !hms.has(a.userId))) throw new PlanConfirmError("INVALID", "Ungültige Hausmann-Zuteilung.");
+  }
+  // Hausmann-Aufgaben: nur die gewählten Hausmänner; ein Hausmann bekommt alle, mehrere nach Etage (Handwahl bleibt)
+  const team = await savedTeamFor(row.date);
+  let hmFinal = hmAssign;
+  if (team?.hm.length) {
+    const traces = await prisma.trace.findMany({ where: { date: row.date, dept: "HOUSEMAN", status: "OPEN" }, include: { room: { select: { floor: true } } } });
+    const manual = Object.fromEntries(hmAssign.map((a) => [a.traceId, a.userId]));
+    const dist = distributeHouseman(traces.map((t) => ({ id: t.id, floor: t.room.floor, assignedToId: t.assignedToId })), team.hm, manual);
+    const merged = new Map(hmAssign.filter((a) => a.userId && team.hm.includes(a.userId)).map((a) => [a.traceId, a.userId as string | null]));
+    for (const t of traces) if (dist[t.id] && t.assignedToId !== dist[t.id]) merged.set(t.id, dist[t.id]);
+    hmFinal = [...merged].map(([traceId, userId]) => ({ traceId, userId }));
+  }
+  const movedStarted = new Set(startedMoves.map((r) => r.id));
+  const todo = new Set(db.filter((r) => !isStarted(r.status)).map((r) => r.id));
   const updates = [];
   for (const rt of result.routes) {
-    const base = rt.roomIds.filter((id) => !todo.has(id)).length; // Begonnenes behält seinen Platz vorn
-    rt.roomIds.filter((id) => todo.has(id)).forEach((id, i) => {
+    const base = rt.roomIds.filter((id) => !todo.has(id) && !movedStarted.has(id)).length; // Begonnenes behält seinen Platz vorn
+    rt.roomIds.filter((id) => todo.has(id) || movedStarted.has(id)).forEach((id, i) => {
       updates.push(prisma.room.update({ where: { id }, data: { assignedToId: rt.hkId, routeOrder: base + i, assignedOn: row.date, deferredSince: null } }));
     });
   }
@@ -73,18 +123,33 @@ export async function confirmProposal(proposalId: string, final: Assignment, ses
   const users = await prisma.user.findMany({ where: { id: { in: withRooms } }, select: { id: true, name: true } });
   const numbers = assignDailyNumbers(users);
 
-  const deviations = input.rooms.flatMap((r) => (r.fixedTo ? [] : [{ room: r.number, from: proposed.assignment[r.id] ?? null, to: finalClean[r.id] }]))
+  const deviations = input.rooms.map((r) => ({ room: r.number, from: proposed.assignment[r.id] ?? null, to: finalClean[r.id] }))
     .filter((d) => d.from !== d.to);
   await prisma.$transaction([
     ...updates,
     ...numbers.map((n) => prisma.user.update({ where: { id: n.id }, data: { dailyNumber: n.dailyNumber } })),
+    ...hmFinal.map((a) => prisma.trace.update({ where: { id: a.traceId }, data: { assignedToId: a.userId } })),
     prisma.autoPlanProposal.updateMany({ where: { date: row.date, status: "CONFIRMED" }, data: { status: "SUPERSEDED" } }),
     prisma.autoPlanProposal.update({ where: { id: row.id }, data: { status: "CONFIRMED", confirmedAt: new Date(), confirmedById: session.userId, deviations: JSON.stringify(deviations.map((d) => ({ ...d, at: new Date().toISOString() }))) } }),
   ]);
-  await audit({ action: "AUTOPLAN_CONFIRMED", userId: session.userId, meta: { date: row.date, rooms: input.rooms.length, changed: deviations.length, changedRooms: deviations.map((d) => d.room) } });
+  await audit({ action: "AUTOPLAN_CONFIRMED", userId: session.userId, meta: { date: row.date, rooms: input.rooms.length, open: result.unassigned.length, changed: deviations.length, changedRooms: deviations.map((d) => d.room) } });
+  for (const r of startedMoves) {
+    await audit({ action: "ROOM_MOVED_STARTED", userId: session.userId, roomId: r.id, meta: { date: row.date, status: r.status, fromAttendantId: r.assignedToId, toAttendantId: finalClean[r.id] } });
+  }
+  // Meldungen an die Betroffenen (neu/geändert), Zusammenfassung an Supervisor/Duty Manager/Hausmann
+  const attendants = input.housekeepers.map((h) => {
+    const m = result.metrics.find((x) => x.hkId === h.id)!;
+    const now = new Set(result.routes.find((x) => x.hkId === h.id)?.roomIds ?? []);
+    const was = before.get(h.id) ?? new Set<string>();
+    const changed = now.size !== was.size || [...now].some((id) => !was.has(id));
+    return { id: h.id, rooms: m.rooms, credits: m.credits, changed };
+  });
+  const firstConfirm = !(await prisma.autoPlanProposal.findFirst({ where: { date: row.date, status: "SUPERSEDED", confirmedAt: { not: null } }, select: { id: true } }));
+  await notifyPlanConfirmed({ planId: row.id, date: row.date, actorId: session.userId, attendants, totalRooms: input.rooms.length, openRooms: result.unassigned.length, first: firstConfirm, supervisors: team?.sup, houseman: team?.hm });
   broadcast("assignments:applied", { by: session.name, totalRooms: input.rooms.length, attendantIds: withRooms });
-  void roomById;
-  return { assigned: input.rooms.length - result.unassigned.length, open: result.unassigned.length, changed: deviations.length };
+  if (hmFinal.length) broadcast("trace:update", { assigned: hmFinal.length }); // keine Gastdaten
+  void dbById;
+  return { assigned: input.rooms.length - result.unassigned.length, open: result.unassigned.length, changed: deviations.length, date: row.date };
 }
 
 // ── Live-Umverteilung ────────────────────────────────────────────────────
@@ -97,6 +162,11 @@ const hashSig = (s: string) => createHash("sha256").update(s).digest("hex").slic
  * offene, die nicht mehr zur Lage passen, werden ersetzt.
  */
 export async function checkRedistribution(date: string): Promise<{ created: number }> {
+  // Umverteilung gibt es erst für einen bestätigten Plan — und nur mit dessen Kräften (loadDay → teamIdsFor).
+  if (!(await prisma.autoPlanProposal.findFirst({ where: { date, status: "CONFIRMED" }, select: { id: true } }))) {
+    await prisma.redistributionSuggestion.updateMany({ where: { date, status: "OPEN" }, data: { status: "SUPERSEDED" } }); // Altlast vor der Bestätigung
+    return { created: 0 };
+  }
   const d: DayData = await loadDay(date);
   if (!d.rooms.length) return { created: 0 };
   const live = await loadLive(d);
@@ -126,6 +196,8 @@ export async function checkRedistribution(date: string): Promise<{ created: numb
 }
 
 export async function listSuggestions(date: string) {
+  // Ohne bestätigten Plan gibt es keine Umverteilung (und keine Karten)
+  if (!(await prisma.autoPlanProposal.findFirst({ where: { date, status: "CONFIRMED" }, select: { id: true } }))) return { attendants: [], suggestions: [] };
   const rows = await prisma.redistributionSuggestion.findMany({ where: { date, status: "OPEN" }, orderBy: { createdAt: "asc" } });
   const roomIds = rows.flatMap((r) => (JSON.parse(r.moves) as Move[]).map((m) => m.roomId));
   const rooms = await prisma.room.findMany({ where: { id: { in: roomIds } }, select: { id: true, number: true, floor: true } });

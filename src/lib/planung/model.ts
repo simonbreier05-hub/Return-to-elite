@@ -3,6 +3,7 @@
  * Keine DB, kein React — dadurch testbar und von Server und Client gleich genutzt.
  */
 import { listsComplete } from "@/lib/import/readiness";
+import { isOccupiedTonight } from "@/lib/dayplan/dayNumbers";
 
 export type TileKind = "DEPARTURE" | "TURN" | "STAYOVER" | "ARRIVAL" | "EMPTY";
 
@@ -33,7 +34,7 @@ export const MAX_TILE_COLUMNS = 33;
 export interface FloorStats {
   floor: number;
   total: number;
-  /** Belegt = Abreise + Same-Day-Turn + Bleiber (laut DayRoomPlan). */
+  /** Belegt = heute Nacht belegt: Bleiber + Turns + Anreisen (dieselbe Regel wie `isOccupiedTonight` der Tageszahlen). */
   occupied: number;
   departures: number; // Abreisen inkl. Turns
   turns: number;
@@ -47,7 +48,7 @@ export function floorStats(f: HouseFloor): FloorStats {
   const count = (k: TileKind) => f.tiles.filter((t) => t.kind === k).length;
   const dep = count("DEPARTURE"), turn = count("TURN"), stay = count("STAYOVER"), arr = count("ARRIVAL");
   const total = f.tiles.length;
-  const occupied = dep + turn + stay;
+  const occupied = f.tiles.filter((t) => t.kind !== "EMPTY" && isOccupiedTonight(t.kind)).length;
   return { floor: f.floor, total, occupied, departures: dep + turn, turns: turn, stayovers: stay, arrivals: arr + turn, ratio: total ? occupied / total : 0 };
 }
 

@@ -115,7 +115,7 @@ describe("Nachtlöschung der Gastdaten (Wegwerf-DB)", () => {
   it("Planung läuft ohne Namen weiter: Plan, Zuteilungen, Zähler, Aufgaben bleiben", async () => {
     expect(await prisma.dayRoomPlan.count({ where: { date: TODAY } })).toBe(20);
     expect(await prisma.room.count({ where: { assignedToId: attendantId } })).toBe(3);
-    expect((await prisma.room.findUniqueOrThrow({ where: { number: "106" } })).lastLinenChangeAt).not.toBeNull();
+    expect((await prisma.room.findUniqueOrThrow({ where: { number: "106" } })).occupancy).toBe("OCCUPIED"); // Belegung bleibt
     expect(await prisma.roomTask.count()).toBe(4);
     const traces = await prisma.trace.findMany();
     expect(traces.length).toBeGreaterThan(0);

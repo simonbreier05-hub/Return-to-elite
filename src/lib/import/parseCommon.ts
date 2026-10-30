@@ -42,9 +42,35 @@ export function bodyLines(lines: PdfLine[], headerMarker: RegExp): { body: PdfLi
   return { body, header, footer };
 }
 
-/** Druckdatum aus dem Kopf: erste Zelle, die wie ein Datum aussieht. */
-export function findHeaderDateRaw(header: PdfLine[]): string | null {
-  for (const l of header) for (const s of l.segments) if (DATE_RE.test(s)) return s;
+const DATE_IN_TEXT = /(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4}|\d{4}-\d{2}-\d{2})/;
+/** Filterzeilen („From Date …“, „To Departure Date …“, „Stay From …“) sind keine Druckdaten. */
+const FILTER_LINE = /\b(From|To)\b[^\d]*(Date|Departure|Stay)|\b(Stay|Departure)\s+(From|To)\b/i;
+const PRINT_LABEL = /(?:printed(?:\s+on)?|print\s*date|run\s*date|report\s*date|druckdatum|gedruckt(?:\s+am)?|erstellt(?:\s+am)?)\s*:?\s*/i;
+
+/**
+ * Druckdatum aus dem Kopf. Reihenfolge: (1) Datum hinter einem Label (de/en), (2) erstes Datum
+ * (auch „06/10/26 07:06“ in einer Zelle) im Kopf, (3) wie (2) in den ersten Zeilen der ersten Seite,
+ * falls der Kopf nicht erkannt wurde. Filterzeilen werden übersprungen. Nichts gefunden → null.
+ */
+export function findHeaderDateRaw(header: PdfLine[], firstLines: PdfLine[] = []): string | null {
+  const pools = [header, firstLines.filter((l) => l.page === (firstLines[0]?.page ?? 1)).slice(0, 12)];
+  for (const pool of pools) {
+    for (const l of pool) {
+      if (FILTER_LINE.test(l.text)) continue;
+      const m = new RegExp(PRINT_LABEL.source + DATE_IN_TEXT.source, "i").exec(l.text);
+      if (m) return m[1];
+    }
+  }
+  for (const pool of pools) {
+    for (const l of pool) {
+      if (FILTER_LINE.test(l.text) || ROOM_RE.test(l.segments[0] ?? "")) continue; // Filterzeilen und Datenzeilen sind kein Druckdatum
+      for (const s of l.segments) {
+        if (DATE_RE.test(s)) return s;
+        const m = new RegExp("^" + DATE_IN_TEXT.source + "\\s+\\d{1,2}:\\d{2}").exec(s.trim());
+        if (m) return m[1];
+      }
+    }
+  }
   return null;
 }
 

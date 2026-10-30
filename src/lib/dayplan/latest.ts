@@ -1,7 +1,10 @@
-import { prisma } from "@/lib/db";
+import { berlinToday } from "@/lib/import/businessDay";
 
-/** Tag, für den zuletzt Departures übernommen wurden. */
-export async function latestPlanDate(): Promise<string | null> {
-  const b = await prisma.importBatch.findFirst({ where: { type: "DEPARTURES", status: "APPLIED" }, orderBy: { appliedAt: "desc" } });
-  return b?.businessDate ?? null;
+/**
+ * Tag, mit dem Board, Listen, Haus-Ansicht und Zuteilung arbeiten: immer der Betriebstag (Berlin heute).
+ * Früher „Tag der zuletzt übernommenen Departures" — das ließ Ansichten still mit dem Stand von gestern laufen.
+ * Ohne Tagesplan für heute bleiben die Ansichten leer (Hinweis „Listen im Planungshub einlesen"), siehe `hubDay`.
+ */
+export async function latestPlanDate(): Promise<string> {
+  return berlinToday();
 }

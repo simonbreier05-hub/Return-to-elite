@@ -38,11 +38,20 @@ describe("Zuteilungsvorschlag: harte Regeln", () => {
     for (const x of started.filter((y) => y.state === "STARTED")) expect(res.assignment[x.id]).toBe("c");
   });
 
-  it("nur Stufe 1 anwesend: anspruchsvolle Zimmer bleiben offen, mit Warnung, ohne Abbruch", () => {
+  it("nur Stufe 1 anwesend: trotzdem bleibt kein Zimmer offen — nur eine Warnung je anspruchsvollem Zimmer", () => {
     const res = proposePlan(makeInput(rooms, [hk("x", "VOLLZEIT", 1), hk("y", "VOLLZEIT", 1)]));
+    expect(res.unassigned).toEqual([]);
     const demanding = rooms.filter((x) => x.demanding.length).map((x) => x.id).sort();
-    expect([...res.unassigned].sort()).toEqual(demanding);
-    expect(res.warnings.find((w) => w.code === "UNASSIGNED")!.message).toMatch(/Stufe 2 oder 3/);
+    const warned = res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING").flatMap((w) => w.roomIds ?? []).sort();
+    expect(warned).toEqual(demanding);
+  });
+
+  it("jede Kraft darf jedes Zimmer bekommen: bei beliebigem Team bleibt nach dem Vorschlag nichts offen", () => {
+    for (const team of [[hk("a", "VOLLZEIT", 1)], [hk("a", "AZUBI", 1), hk("b", "TEILZEIT", 1)], TEAM(), [hk("a", "VOLLZEIT", 3)]]) {
+      const res = proposePlan(makeInput(rooms, team));
+      expect(res.unassigned, `Team ${team.length}`).toEqual([]);
+      expect(Object.values(res.assignment).every((v) => v !== null)).toBe(true);
+    }
   });
 });
 
@@ -101,7 +110,7 @@ describe("zu wenige Kräfte", () => {
     const res = proposePlan(makeInput(rooms, [hk("a", "VOLLZEIT", 3), hk("b", "VOLLZEIT", 2), hk("c", "VOLLZEIT", 2)]));
     expect(res.unassigned).toEqual([]);
     expect(res.needed).toMatchObject({ housekeepers: 6, targetCredits: 14, present: 3 });
-    expect(res.warnings.find((w) => w.code === "TOO_FEW_STAFF")!.message).toContain("benötigt werden 6 Housekeeper bei 14 Credits");
+    expect(res.warnings.find((w) => w.code === "TOO_FEW_STAFF")!.message).toContain("Personal reicht nicht: benötigt 6 Kräfte, ausgewählt 3");
     expect(res.warnings.map((w) => w.code)).toContain("TOO_MANY_FLOORS");
   });
 });

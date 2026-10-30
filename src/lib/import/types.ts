@@ -44,6 +44,8 @@ export interface DepartureRow {
   status: string | null;
   depTime: string | null; // HH:MM, 24 h
   vip: boolean;
+  /** Opera-Zimmerart-Code (z. B. „DLX“) — nur der Code, die Zuordnung zur Zimmerart steht in den Einstellungen (roomTypes.ts). */
+  roomType?: string | null;
 }
 
 export interface ArrivalRow {
@@ -56,6 +58,7 @@ export interface ArrivalRow {
   children: number;
   status: string | null;
   vip: boolean;
+  roomType?: string | null;
   traces: TraceEntry[];
 }
 
@@ -78,6 +81,9 @@ export interface InHouseRow {
   children: number;
   nights: number;
   vip: boolean;
+  roomType?: string | null;
+  /** Opera-Reservierungsstatus (CKIN = im Haus, RESV = Anreise heute) — älterer Stand ohne Feld = unbekannt. */
+  status?: string | null;
 }
 
 export interface ForecastDayRow {
@@ -120,6 +126,8 @@ export interface ParseOptions {
   confirmedDateFormat?: DateFormatId;
   /** Heute (YYYY-MM-DD); Standard: Druckdatum der Liste. */
   today?: string;
+  /** Gespeichertes Datumsformat-Layout (nur Vorbelegung; mehrdeutige Werte werden nie geraten). */
+  layoutDateFormat?: DateFormatId;
   /** Der Tag, für den der Nutzer die Listen importiert (heute). Löst ein mehrdeutiges Datum nur auf, wenn das Druckdatum im Kopf genau in einer Lesart auf diesen Tag fällt. */
   expectedDate?: string;
   /** Zimmeranzahl für die Forecast-Plausibilitätsprüfung (Occ.% ≈ belegt ÷ (Anzahl − OOO)). */

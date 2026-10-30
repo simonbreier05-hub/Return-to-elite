@@ -27,6 +27,10 @@ import { loadList, parseList } from "@/lib/import/readFile";
 import { applyBatch, sha256, storeBatch } from "@/lib/import/store";
 import { getHousemanList, setHousemanTraceStatus } from "@/lib/lists/housemanList";
 
+// Die App arbeitet nur mit dem Betriebstag (Planungshub, src/lib/dayplan/hubDay.ts): Uhr auf den Testtag stellen.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-10-06T10:00:00Z"));
+
 const TODAY = "2026-10-06";
 const ROOMS = Array.from({ length: 20 }, (_, i) => String(101 + i));
 const sc = todayScenario(TODAY, ROOMS, 145);
@@ -99,7 +103,7 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
     const rooms = Object.fromEntries((await prisma.room.findMany()).map((x) => [x.number, x]));
     expect(rooms["101"]).toMatchObject({ isCheckoutToday: true, occupancy: "OCCUPIED" });
     expect(rooms["130"]).toMatchObject({ isCheckoutToday: false, occupancy: "VACANT" });
-    expect(rooms["106"].lastLinenChangeAt).not.toBeNull(); // Bleiber: Zähler ab Anreise
+    expect(rooms["106"].lastLinenChangeAt).toBeNull(); // Wechseldatum wird nie aus der Anreise erfunden (nur erfasste Wechsel)
     expect(await prisma.arrival.count({ where: { source: "IMPORT", status: "EXPECTED" } })).toBe(7);
     await applyDayPlanToBoard(TODAY, userId);
     expect(await prisma.arrival.count({ where: { source: "IMPORT", status: "EXPECTED" } })).toBe(7); // ersetzt statt verdoppelt
@@ -115,7 +119,11 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
     const r = await mergeDay(TODAY, userId);
     expect((await prisma.room.findUniqueOrThrow({ where: { number: "101" } })).assignedToId).toBe(attendant.id);
     expect(r.counts.changedAssigned).toBe(1);
-    expect(await prisma.notification.count({ where: { type: "DAY_PLAN_CHANGED", targetRole: "supervisor" } })).toBe(1);
+    // Jede betroffene Person bekommt genau eine Meldung zu ihrer Liste (Zimmermädchen mit dem Zimmer, Duty Manager nicht vorhanden → keine)
+    const mine = await prisma.notification.findMany({ where: { type: "LIST_UPDATED", targetUserId: attendant.id } });
+    expect(mine).toHaveLength(1);
+    expect(mine[0].message).toMatch(/^Nachimport: Deine Liste hat sich geändert — Zimmer 101: .* → entfällt\.$/);
+    expect(await prisma.notification.count({ where: { type: "DAY_PLAN_CHANGED" } })).toBe(0); // keine rollenweiten Sammelmeldungen mehr
     expect(r.issues.map((i) => i.code)).toContain("STAY_MISSING");
     expect(await prisma.stay.count()).toBe(stays); // nichts gelöscht
     expect(await prisma.stay.count({ where: { needsReview: true } })).toBe(1);

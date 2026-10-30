@@ -24,6 +24,10 @@ import { GET as listGet } from "@/app/api/lists/houseman/route";
 import { PATCH as tracePatch } from "@/app/api/traces/[id]/route";
 import { PATCH as taskPatch } from "@/app/api/roomtasks/[id]/route";
 
+// Die App arbeitet nur mit dem Betriebstag (Planungshub, src/lib/dayplan/hubDay.ts): Uhr auf den Testtag stellen.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-09-22T10:00:00Z"));
+
 const D = "2026-09-22";
 const ids: Record<string, string> = {};
 const as = (key: string, role: string) => { getSessionMock.mockReset(); getSessionMock.mockResolvedValue(key ? { userId: ids[key], name: key, role } : null); };

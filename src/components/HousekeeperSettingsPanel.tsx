@@ -4,12 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
-import { DEFAULT_SETTINGS } from "@/lib/domain";
+import { DEFAULT_LINEN_CYCLE_DAYS, DEFAULT_SETTINGS, ROOM_TYPES } from "@/lib/domain";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Hk { id: string; name: string; hkType: string; hkLevel: number; homeFloors: string; dailyTarget: number | null; hkActive: boolean }
-type SettingKey = "autoplanTolerance" | "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "azubiCreditsMin" | "azubiCreditsMax" | "teilzeitCreditsMin" | "teilzeitCreditsMax" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves";
-const SETTING_KEYS: SettingKey[] = ["autoplanTolerance", "autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "azubiCreditsMin", "azubiCreditsMax", "teilzeitCreditsMin", "teilzeitCreditsMax", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves"];
+type SettingKey = "autoplanTolerance" | "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "azubiCreditsMin" | "azubiCreditsMax" | "teilzeitCreditsMin" | "teilzeitCreditsMax" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves" | "statusRewindMinutes";
+const SETTING_KEYS: SettingKey[] = ["autoplanTolerance", "autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "azubiCreditsMin", "azubiCreditsMax", "teilzeitCreditsMin", "teilzeitCreditsMax", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves", "statusRewindMinutes"];
 const WEIGHT_KEYS = Object.keys(AUTOPLAN_WEIGHTS) as (keyof typeof AUTOPLAN_WEIGHTS)[];
 
 /** Einstellungen: Stammdaten der Housekeeper (Typ, Stufe, Stammetagen, Tagesziel) und Regeln/Gewichte des Zuteilungsvorschlags. Nur Supervisor/Duty Manager. */
@@ -18,11 +18,14 @@ export default function HousekeeperSettingsPanel() {
   const [hks, setHks] = useState<Hk[]>([]);
   const [settings, setSettings] = useState<Record<string, number>>({ ...DEFAULT_SETTINGS });
   const [weights, setWeights] = useState<Record<string, number>>({ ...AUTOPLAN_WEIGHTS });
+  const [linenCycleDays, setLinenCycleDays] = useState<number>(DEFAULT_LINEN_CYCLE_DAYS);
+  const [typeMap, setTypeMap] = useState<Record<string, string>>({});
+  const [typeSeen, setTypeSeen] = useState<Record<string, number>>({});
   const [saved, setSaved] = useState(false);
 
   const load = useCallback(() => {
     api<{ housekeepers: Hk[] }>("/api/housekeepers").then((d) => setHks(d.housekeepers)).catch(() => {});
-    api<{ settings: Record<string, number>; autoplanWeights: Record<string, number> }>("/api/settings").then((d) => { setSettings(d.settings); setWeights(d.autoplanWeights); }).catch(() => {});
+    api<{ settings: Record<string, number>; autoplanWeights: Record<string, number>; planningCredits?: { linenCycleDays: number }; roomTypeMap?: Record<string, string>; roomTypeSeen?: Record<string, number> }>("/api/settings").then((d) => { setTypeMap(d.roomTypeMap ?? {}); setTypeSeen(d.roomTypeSeen ?? {}); setSettings(d.settings); setWeights(d.autoplanWeights); if (d.planningCredits) setLinenCycleDays(d.planningCredits.linenCycleDays); }).catch(() => {});
   }, []);
   useEffect(load, [load]);
   const flash = () => { setSaved(true); setTimeout(() => setSaved(false), 1500); };
@@ -81,7 +84,30 @@ export default function HousekeeperSettingsPanel() {
               onChange={(e) => setSettings((s) => ({ ...s, [k]: Number(e.target.value) }))} onBlur={() => patchSetting({ [k]: settings[k] })} />
           </label>
         ))}
+        <label className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
+          <span>{t("hk.setting.linenCycleDays")}</span>
+          <input className={`${input} w-24 text-right`} type="number" step="1" min={1} max={30} value={linenCycleDays}
+            onChange={(e) => setLinenCycleDays(Number(e.target.value))}
+            onBlur={() => { if (Number.isInteger(linenCycleDays) && linenCycleDays >= 1 && linenCycleDays <= 30) void patchSetting({ linenCycleDays }); }} />
+        </label>
       </div>
+
+      <h4 className="mb-1 mt-6 font-serif text-xl">{t("hk.roomTypesTitle")}</h4>
+      <p className="mb-2 max-w-2xl text-xs text-graphite/60">{t("hk.roomTypesHint")}</p>
+      {Object.keys({ ...typeSeen, ...typeMap }).length === 0 ? <p className="text-sm text-graphite/60">{t("hk.roomTypesNone")}</p> : (
+        <div className="grid gap-3 sm:grid-cols-2">
+          {Object.keys({ ...typeSeen, ...typeMap }).sort().map((code) => (
+            <label key={code} className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
+              <span><span className="font-medium">{code}</span>{typeSeen[code] ? <span className="ml-2 text-xs text-graphite/60">{t("hk.roomTypesRooms", { n: typeSeen[code] })}</span> : null}</span>
+              <select className={`${input} w-44`} value={typeMap[code] ?? ""}
+                onChange={async (e) => { const next = { ...typeMap, [code]: e.target.value }; if (!e.target.value) delete next[code]; setTypeMap(next); await patchSetting({ roomTypeMap: next }); load(); }}>
+                <option value="">{t("hk.roomTypesUnmapped")}</option>
+                {ROOM_TYPES.filter((x) => x !== "UNVERIFIED").map((x) => <option key={x} value={x}>{t(`roomType.${x}` as TKey)}</option>)}
+              </select>
+            </label>
+          ))}
+        </div>
+      )}
 
       <h4 className="mb-1 mt-6 font-serif text-xl">{t("hk.weightsTitle")}</h4>
       <p className="mb-2 max-w-2xl text-xs text-graphite/60">{t("hk.weightsHint")}</p>

@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db";
+import { isToClean, PLAN_KIND } from "@/lib/dayplan/dayNumbers";
 import { getAutoplanWeights, getPlanningCreditSettings, getRoomTypeCredits, getSettings } from "@/lib/settings";
 import { berlinToUtc } from "@/lib/dayplan/time";
 import { creditFactor } from "@/lib/rooms/stayoverCredit";
+import { savedTeamFor } from "@/lib/planung/savedTeam";
 import { estimateSpeeds } from "./speed";
 import type { LiveInput } from "./redistribute";
 import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, PlanRoom, RoomState } from "./types";
@@ -40,11 +42,28 @@ export function bandFor(u: { hkType: string; dailyTarget: number | null }, s: Se
 
 const floors = (csv: string) => csv.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n)).slice(0, 2);
 
+/**
+ * Die im Planungshub gewählte Mannschaft des Tages: bei bestätigtem Plan dessen Kräfte, sonst die gespeicherte Teamauswahl.
+ * `null` = noch keine Auswahl (dann zählen alle Anwesenden). Die Planung rechnet nie mit anderen Kräften — auch Bestätigen
+ * und Umverteilung erweitern die Auswahl nicht.
+ */
+export async function teamIdsFor(date: string): Promise<string[] | null> {
+  const conf = await prisma.autoPlanProposal.findFirst({ where: { date, status: "CONFIRMED" }, orderBy: { confirmedAt: "desc" } });
+  if (conf) {
+    try { return (JSON.parse(conf.payload) as { input: PlanInput }).input.housekeepers.map((h) => h.id); } catch { /* weiter mit Teamauswahl */ }
+  }
+  const saved = await savedTeamFor(date);
+  if (saved) return saved.hk;
+  return null;
+}
+
 export async function loadDay(date: string, opts: { attendantIds?: string[] } = {}): Promise<DayData> {
   const [settings, planning, typeCredits, weights] = await Promise.all([getSettings(), getPlanningCreditSettings(), getRoomTypeCredits(), getAutoplanWeights()]);
   const fullTimeTarget = planning.targetCreditsPerAttendant;
 
-  const plan = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER"] } }, include: { room: true } });
+  // Dieselbe Regel wie die Tageszahlen (isToClean): Abreisen, Turns, alle Bleiber und Anreisen in noch nicht gereinigte Zimmer.
+  const plan = (await prisma.dayRoomPlan.findMany({ where: { date }, include: { room: true } }))
+    .filter((p) => isToClean(PLAN_KIND[p.cleaningType], p.room.status));
   const traces = await prisma.trace.groupBy({ by: ["roomId"], where: { status: "OPEN" }, _count: true });
   const traceCount = new Map(traces.map((t) => [t.roomId, t._count]));
   const idByNumber = new Map(plan.map((p) => [p.room.number, p.roomId]));
@@ -59,7 +78,8 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     const today = r.assignedOn === date;
     const assignee = r.assignedToId && (today || state !== "TODO") ? r.assignedToId : null;
     if (state !== "TODO" && !assignee) continue; // schon erledigt/begonnen, niemandem zugeordnet: nichts zu planen
-    const kind = p.cleaningType === "SAME_DAY_TURN" ? "TURN" : p.cleaningType === "DEPARTURE" ? "DEPARTURE" : "STAYOVER";
+    // Anreise in ein nicht gereinigtes Zimmer = volle Reinigung wie eine Abreise
+    const kind = p.cleaningType === "SAME_DAY_TURN" ? "TURN" : p.cleaningType === "STAYOVER" ? "STAYOVER" : "DEPARTURE";
     const factor = creditFactor(kind, p.laundryDue, settings); // Bleiber normal 0,5, mit Wäschewechsel voll (siehe stayoverCredit.ts)
     const credits = Math.round((typeCredits[r.type as keyof typeof typeCredits] ?? 1) * factor * 100) / 100;
     const traceN = traceCount.get(r.id) ?? 0;
@@ -89,20 +109,27 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     }
   }
 
+  const team = opts.attendantIds ?? (await teamIdsFor(date));
   const users = await prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, orderBy: { name: "asc" } });
   const hks = users.map((u) => ({
     id: u.id, name: u.name, type: (u.hkType as HkType), level: Math.min(3, Math.max(1, u.hkLevel)) as 1 | 2 | 3,
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
     ...bandFor({ hkType: u.hkType, dailyTarget: u.dailyTarget }, settings, fullTimeTarget),
     absent: u.absentDate === date,
-    present: u.absentDate !== date && (!opts.attendantIds || opts.attendantIds.includes(u.id)),
+    present: u.absentDate !== date && (!team || team.includes(u.id)),
   }));
   return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState };
 }
 
 export function morningInput(d: DayData): PlanInput {
+  // Zimmer, die heute einer jetzt nicht eingeplanten Kraft gehören (und noch nicht begonnen sind), werden neu verteilt — nie offen gelassen.
+  const presentIds = new Set(d.hks.filter((h) => h.present).map((h) => h.id));
+  // Begonnene Zimmer einer nicht eingeplanten Kraft bleiben bei ihr und gehören nicht in den Entwurf.
+  const rooms = d.rooms
+    .filter((r) => !(r.fixedTo && !presentIds.has(r.fixedTo) && r.state !== "TODO"))
+    .map((r) => (r.fixedTo && !presentIds.has(r.fixedTo) ? { ...r, fixedTo: null } : r));
   return {
-    rooms: d.rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
+    rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
     weights: d.weights, maxFloors: d.settings.autoplanMaxFloors, fullTimeTarget: d.fullTimeTarget,
   };
 }

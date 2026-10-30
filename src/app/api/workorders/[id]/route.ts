@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { WorkOrderStatusSchema, type WorkOrderStatus } from "@/lib/domain";
+import { endPauseOnChange } from "@/lib/work/pauseData";
 
 /**
  * PATCH /api/workorders/[id] — engineering advances a work order:
@@ -65,6 +66,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
 
   if (to === "RESOLVED") {
+    await endPauseOnChange("WORKORDER", id, auth.session.userId, wo.defect.roomId, wo.defect.room.number);
     const notification = await prisma.notification.create({
       data: {
         type: "WORK_ORDER_RESOLVED",

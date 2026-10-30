@@ -6,7 +6,7 @@ Grundlage: Interview vom 06.10.2026. **Das System schlägt vor, der Supervisor e
 
 - Planungshub (`/supervisor/planning`) → „Intelligenter Zuteilungsvorschlag" → **Plan vorschlagen** → prüfen, einzelne Zimmer per Auswahl ändern → **Plan bestätigen** → **Jetzt bestätigen** (zwei Taps).
 - Einstellungen (`/settings`) → „Housekeeper (Zuteilungsvorschlag)": Typ, Stufe, Stammetagen, Tagesziel, aktiv; Regeln und Gewichte.
-- Umverteilungsvorschläge tagsüber als Karte oben im Live-Board und im Planungshub (Banner, Glocke per Socket.IO).
+- Umverteilungsvorschläge tagsüber als Karte oben im Live-Board und im Grundriss-Seite `/floor-plan` (Banner, Glocke per Socket.IO).
 - Der ältere Planer des Planungshubs („Plan auf das Team anwenden") bleibt unverändert daneben bestehen.
 
 ## Regeln
@@ -57,3 +57,7 @@ Typ und Stufe (`User.hkType`, `hkLevel`, `homeFloors`, `dailyTarget`) sehen nur 
 5. Typ/Stufe speichern ist Beschäftigtendatenschutz (siehe oben).
 6. Wie lange dauert ein Zimmer je Credit? Start 25 Minuten, wird später aus den Zeitstempeln berechnet.
 7. Neue Housekeeper haben vorerst Typ Vollzeit und **Stufe 2** — bitte Stufen pflegen (Azubis/Neue auf 1).
+
+## Keine Sperren, nichts bleibt offen
+
+Der Zuteilungsvorschlag teilt **immer alle** zu reinigenden Zimmer den anwesenden Kräften zu. Regeln (Stufe 1 ↔ anspruchsvolle Zimmer, Etagenlimit, Credit-Ziel) sind Kosten und Warnungen, nie Filter. Offen bleibt ein Zimmer nur, wenn niemand anwesend ist oder der Supervisor es bewusst offen lässt. Bei Personalüberhang sind alle Anwesenden gleichmäßig eingeplant; mit „Nicht einplanen“ (Schritt „Plan“) entscheidet der Supervisor, wer nicht arbeitet — es folgt ein neuer Vorschlag ohne diese Kraft.

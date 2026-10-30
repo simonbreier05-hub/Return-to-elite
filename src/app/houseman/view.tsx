@@ -6,6 +6,8 @@ import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import PauseControl, { type PauseInfo } from "@/components/PauseControl";
+import TaskMessageModal from "@/components/TaskMessageModal";
 
 interface RoomTask {
   id: string;
@@ -13,15 +15,17 @@ interface RoomTask {
   note?: string | null;
   status: "OPEN" | "DONE";
   createdAt: string;
-  room: { number: string; floor: number };
+  room: { id?: string; number: string; floor: number };
   createdBy: { name: string };
+  pause?: PauseInfo | null;
 }
 
 /**
  * The houseman's whole screen: a flat list of open furniture/bed-config
  * jobs, "Erledigt" to close one out. Deliberately minimal — no cleaning
- * status, no note threads, no room modal — see prompt Aufgabe B: the
- * houseman does a different job than housekeeping and doesn't need its UI.
+ * status, no room modal — see prompt Aufgabe B: the houseman does a
+ * different job than housekeeping and doesn't need its UI. Pausieren und
+ * „Nachricht“ (an alle Beteiligten) sind derselbe Mechanismus wie überall.
  */
 export default function HousemanView() {
   const { t } = useLocale();
@@ -30,6 +34,7 @@ export default function HousemanView() {
   const [busyId, setBusyId] = useState<string | null>(null);
   /** Aufgaben, die schon als Zeile der Hausmann-Liste (Trace) erscheinen — nicht doppelt zeigen. */
   const [linked, setLinked] = useState<Set<string>>(new Set());
+  const [messageFor, setMessageFor] = useState<RoomTask | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<{ roomTasks: RoomTask[] }>("/api/roomtasks");
@@ -45,8 +50,9 @@ export default function HousemanView() {
 
   useSocket({
     "roomtask:update": (p: { roomTask: RoomTask }) => {
-      if (p.roomTask?.id) upsert(p.roomTask);
+      if (p.roomTask?.id) setTasks((prev) => prev.some((x) => x.id === p.roomTask.id) ? prev.map((x) => (x.id === p.roomTask.id ? { ...x, ...p.roomTask, pause: p.roomTask.status === "DONE" ? null : x.pause } : x)) : [p.roomTask, ...prev]);
     },
+    "work:pause": (p: { targetType?: string } | undefined) => { if (!p || p.targetType === "ROOMTASK") void load(); },
   });
 
   const complete = async (task: RoomTask) => {
@@ -105,10 +111,15 @@ export default function HousemanView() {
               >
                 {busyId === task.id ? "…" : t("houseman.markDone")}
               </button>
+              <div className="mt-2 grid grid-cols-[1fr_auto] items-start gap-2">
+                <PauseControl targetType="ROOMTASK" targetId={task.id} pause={task.pause} canPause onChanged={(pz) => setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, pause: pz } : x)))} />
+                {task.room.id && <button type="button" onClick={() => setMessageFor(task)} className="h-12 rounded-xl border border-charcoal/20 bg-white px-4 text-sm font-medium">💬 {t("work.messageBtn")}</button>}
+              </div>
             </div>
           ))}
         </div>
       )}
+      {messageFor?.room.id && <TaskMessageModal roomId={messageFor.room.id} roomNumber={messageFor.room.number} task={{ type: "ROOMTASK", id: messageFor.id }} onClose={() => setMessageFor(null)} />}
     </div>
   );
 }

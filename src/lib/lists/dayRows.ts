@@ -4,10 +4,11 @@ import { getRoomTypeCredits, getSettings } from "@/lib/settings";
 import type { RoomType } from "@/lib/domain";
 import { creditFactor } from "@/lib/rooms/stayoverCredit";
 import { shortGuestName, timesInText } from "./guestName";
+import { activePauses, type PauseView } from "@/lib/work/pauseData";
 
-/** Tag der Listen: zuletzt übernommene Departures, sonst der jüngste vorhandene Tagesplan. */
+/** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
-  return (await latestPlanDate()) ?? (await prisma.dayRoomPlan.findFirst({ orderBy: { date: "desc" }, select: { date: true } }))?.date ?? null;
+  return latestPlanDate();
 }
 
 export type Kind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL";
@@ -34,6 +35,14 @@ export interface RoomRow {
   dnd: boolean;
   credits: number;
   traces: TraceView[];
+  /** Zimmertyp (STANDARD, JUNIOR_SUITE …). */
+  type: string;
+  /** Offene Mängel — nur mit `extra` (Supervisor/Duty Manager), sonst 0. */
+  defects: number;
+  /** Offener Gästewunsch (CLEAN_REQUEST | CONTACT) — nur mit `extra`, sonst null. */
+  wish: string | null;
+  /** Aktive Pause des Zimmers (Grund-Code, seit, von wem) — Supervisor/Duty Manager sehen sie in den Listen. */
+  pause: PauseView | null;
 }
 
 /** Welcher Aufenthalt zählt für die Anzeige: Anreise/Turn → der anreisende Gast, sonst der bleibende bzw. abreisende. */
@@ -44,7 +53,7 @@ const stayIdFor = (p: { cleaningType: string; stayId: string | null; arrivingSta
  * Zeilen der Arbeitslisten für einen Tag (gemeinsame Quelle für Zimmermädchen- und Supervisor-Liste).
  * `depts` begrenzt die Traces auf Abteilungen (Housekeeper: nur HOUSEKEEPING).
  */
-export async function loadRoomRows(date: string, where: { roomIds?: string[]; assignedToId?: string; floors?: number[] }, depts: string[] | null): Promise<RoomRow[]> {
+export async function loadRoomRows(date: string, where: { roomIds?: string[]; assignedToId?: string; floors?: number[] }, depts: string[] | null, opts: { extra?: boolean } = {}): Promise<RoomRow[]> {
   const [settings, typeCredits] = await Promise.all([getSettings(), getRoomTypeCredits()]);
   const rooms = await prisma.room.findMany({
     where: {
@@ -64,6 +73,15 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   const traceBy = new Map<string, TraceView[]>();
   for (const t of traces) traceBy.set(t.roomId, [...(traceBy.get(t.roomId) ?? []), { id: t.id, code: t.code, text: t.text, dept: t.dept, status: t.status }]);
   const dnd = new Set((await prisma.guestRequest.findMany({ where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true } })).map((g) => g.roomId));
+  // Mängel und Gästewünsche sehen nur Supervisor/Duty Manager (Housekeeper-Listen laden sie nicht)
+  const defectCount = new Map<string, number>();
+  const wishBy = new Map<string, string>();
+  if (opts.extra) {
+    for (const d of await prisma.defect.findMany({ where: { roomId: { in: ids }, NOT: { workOrder: { status: "RESOLVED" } } }, select: { roomId: true } })) defectCount.set(d.roomId, (defectCount.get(d.roomId) ?? 0) + 1);
+    for (const g of await prisma.guestRequest.findMany({ where: { kind: { in: ["CLEAN_REQUEST", "CONTACT"] }, status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true, kind: true }, orderBy: { createdAt: "asc" } })) wishBy.set(g.roomId, g.kind);
+  }
+
+  const pauses = await activePauses("ROOM", rooms.filter((r) => r.status === "IN_PROGRESS").map((r) => r.id));
 
   return rooms.map((r) => {
     const p = planBy.get(r.id);
@@ -78,6 +96,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       dnd: dnd.has(r.id) || r.blockReason === "DND",
       credits: kind === "ARRIVAL" || !kind ? 0 : Math.round(((typeCredits[r.type as RoomType] ?? 1) * factor) * 100) / 100,
       traces: traceBy.get(r.id) ?? [],
+      type: r.type, defects: defectCount.get(r.id) ?? 0, wish: wishBy.get(r.id) ?? null,
+      pause: r.status === "IN_PROGRESS" ? pauses.get(r.id) ?? null : null,
     };
   });
 }

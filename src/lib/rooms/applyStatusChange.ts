@@ -1,10 +1,12 @@
 import { prisma } from "@/lib/db";
+import { berlinDate } from "@/lib/dayplan/time";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domain";
 import { checkTransition } from "@/lib/stateMachine";
 import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
+import { endPauseOnChange } from "@/lib/work/pauseData";
 
 /**
  * The one place a room's status is allowed to change.
@@ -126,6 +128,18 @@ export async function applyStatusChange(
     toStatus: to,
     meta: { blockReason: input.blockReason, note: input.note, oooUntil: input.oooUntil, role: session.role },
   });
+
+  // Eine Pause gilt nur für den Zustand, in dem sie gesetzt wurde: jede Statusänderung beendet sie.
+  await endPauseOnChange("ROOM", room.id, session.userId, room.id, room.number);
+
+  // Fertig gemeldeter Bleiber mit fälligem Wäschewechsel laut Tagesplan: Wechsel ist erfasst (nur so entsteht ein echtes Wechseldatum).
+  if (to === "CLEAN") {
+    const due = await prisma.dayRoomPlan.findFirst({ where: { date: berlinDate(now), roomId: room.id, cleaningType: "STAYOVER", laundryDue: true }, select: { id: true } });
+    if (due) {
+      await prisma.room.update({ where: { id: room.id }, data: { lastLinenChangeAt: now } });
+      await audit({ action: "LINEN_CHANGED", userId: session.userId, roomId: room.id, meta: { auto: true } });
+    }
+  }
 
   // Starting a room records where the attendant is.
   if (to === "IN_PROGRESS" && session.role === "room_attendant") {

@@ -18,6 +18,7 @@ import SupervisorList from "@/components/lists/SupervisorList";
 import CloseButton from "@/components/CloseButton";
 import { useEscapeKey } from "@/components/useEscapeKey";
 import RoomTaskModal from "@/components/RoomTaskModal";
+import SupervisorGlance from "@/components/SupervisorGlance";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import {
@@ -30,6 +31,7 @@ import {
 } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { Locale, TKey } from "@/lib/i18n/translations";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface Note {
   id: string;
@@ -107,10 +109,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   // assigned floor(s) — see GET /api/rooms. Null for duty_manager (never
   // scoped) and for a supervisor with no floors assigned yet (fails open).
   const [floorScope, setFloorScope] = useState<number[] | null>(null);
+  const [hub, setHub] = useState<HubState | null>(null);
 
   const load = useCallback(async () => {
-    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null }>("/api/rooms");
+    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null; hub?: HubState }>("/api/rooms");
     setRooms(data.rooms);
+    setHub(data.hub ?? null);
     setAttendants(data.attendants);
     setFloorScope(data.floorScope);
   }, []);
@@ -124,6 +128,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const refetchSoon = useCoalescedRefetch(load, 2000);
 
   useSocket({
+    // Tagesplan im Planungshub berechnet/geändert → Board neu laden (auch der erste Plan des Tages).
+    "dayplan:updated": () => refetchSoon(),
     // Patch the changed room in place. The broadcast carries only scalar room
     // fields plus assignedTo, so spreading it preserves the nested arrivals,
     // notes and defects already held in state.
@@ -320,6 +326,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   return (
     <div className="animate-rise">
       <RedistributionCards />
+      <HubMissingNotice hub={hub} planner />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
@@ -348,6 +355,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             <span aria-hidden className={`transition-transform duration-150 ${moreOpen ? "rotate-180" : ""}`}>▾</span>
           </button>
           <Link
+            href="/supervisor/service"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            {t("service.title")}
+          </Link>
+          <Link
             href="/planung"
             className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
           >
@@ -374,6 +387,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           </div>
         )}
       </div>
+
+      <SupervisorGlance rooms={rooms} />
 
       <PriorityBanner
         items={[
@@ -1048,21 +1063,10 @@ function RoomDrawer({
 
         <div className="mt-4">
           <label className="mb-1 block text-sm font-medium">{t("supervisor.assignedAttendant")}</label>
-          <select
-            value={room.assignedTo?.id ?? ""}
-            onChange={async (e) => {
-              const res = await api<{ room: Room }>(`/api/rooms/${room.id}/assign`, {
-                body: { attendantId: e.target.value || null },
-              });
-              onAssigned(res.room);
-            }}
-            className="h-12 w-full rounded-lg border border-charcoal/20 bg-white px-3"
-          >
-            <option value="">{t("supervisor.unassignedOption")}</option>
-            {attendants.map((a) => (
-              <option key={a.id} value={a.id}>{attendantLabel(a)}</option>
-            ))}
-          </select>
+          <p className="flex min-h-12 items-center rounded-lg border border-charcoal/10 bg-parchment/40 px-3 text-sm">
+            {room.assignedTo ? attendantLabel(room.assignedTo as Attendant) : t("supervisor.unassignedOption")}
+          </p>
+          <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
         </div>
 
         <div className="mt-4">

@@ -1,4 +1,4 @@
-import { CENTER_PULL, NUMBER_JUMP_GAP, UNASSIGNED_PENALTY } from "./weights";
+import { CENTER_PULL, LEVEL1_DEMANDING_PENALTY, NUMBER_JUMP_GAP, UNASSIGNED_PENALTY } from "./weights";
 import type { PlanInput, PlanRoom } from "./types";
 
 /** Vorberechnete Struktur für schnelle Kostenberechnung (Zimmer/Housekeeper als Indizes). */
@@ -16,7 +16,7 @@ export interface Compiled {
   pref: Set<number>[];
 }
 
-export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned";
+export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "levelMismatch";
 export interface CostOptions {
   /** Nur die Regeln (Etagen, Interconnecting, Stammetage, Sprünge) — für Umverteilung nach Restzeit. */
   rulesOnly?: boolean;
@@ -42,8 +42,16 @@ export function compile(input: PlanInput): Compiled {
 
 const popcount = (m: number) => { let n = 0; while (m) { n += m & 1; m >>= 1; } return n; };
 
-/** Eignung: Stufe 1 bekommt nie anspruchsvolle Zimmer. */
-export function eligible(c: Compiled, roomI: number, hkI: number): boolean {
+/**
+ * Jedes Zimmer darf jeder anwesenden Kraft zugeteilt werden — Regeln sind nur Kosten, nie Sperren.
+ * "Stufe 1 bekommt keine anspruchsvollen Zimmer" ist ein Strafterm (`levelMismatch`) und eine Warnung, kein Filter.
+ */
+export function eligible(_c: Compiled, _roomI: number, _hkI: number): boolean {
+  return true;
+}
+
+/** Nur für Systemvorschläge zur Umverteilung: anspruchsvolle Zimmer nicht von sich aus auf Stufe 1 schieben. Von Hand ist alles erlaubt. */
+export function suitable(c: Compiled, roomI: number, hkI: number): boolean {
   return c.input.housekeepers[hkI].level >= 2 || c.rooms[roomI].demanding.length === 0;
 }
 
@@ -56,7 +64,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   const H = hks.length;
   const credits = new Float64Array(H), dep = new Int32Array(H), stay = new Int32Array(H), linen = new Int32Array(H), dem = new Int32Array(H);
   const mask = new Int32Array(H), last = new Int32Array(H).fill(-1);
-  let homeMis = 0, jumps = 0, unassigned = 0;
+  let homeMis = 0, jumps = 0, unassigned = 0, levelMis = 0;
 
   for (const i of c.order) {
     const a = assign[i];
@@ -64,7 +72,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     const r = c.rooms[i];
     credits[a] += r.credits;
     if (r.kind === "STAYOVER") { if (r.laundry) linen[a]++; else stay[a]++; } else dep[a]++;
-    if (r.demanding.length) dem[a]++;
+    if (r.demanding.length) { dem[a]++; if (hks[a].level < 2) levelMis++; }
     mask[a] |= 1 << r.floor;
     const pref = c.pref[a];
     if (pref.size && !pref.has(r.floor)) homeMis++;
@@ -76,7 +84,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     last[a] = i;
   }
 
-  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0 };
+  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, levelMismatch: 0 };
   for (let h = 0; h < H; h++) {
     const extra = popcount(mask[h]) - maxFloors;
     if (extra > 0) parts.extraFloor += extra * w.extraFloor;
@@ -85,6 +93,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   parts.homeFloor = homeMis * w.homeFloor;
   parts.jump = jumps * w.jump;
   parts.unassigned = unassigned * UNASSIGNED_PENALTY;
+  parts.levelMismatch = levelMis * LEVEL1_DEMANDING_PENALTY;
 
   if (!opts.rulesOnly) {
     for (let h = 0; h < H; h++) {
