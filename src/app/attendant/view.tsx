@@ -22,7 +22,7 @@ import RoomDayInfo from "@/components/lists/RoomDayInfo";
 import { IconBellSlash } from "@/components/icons";
 import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
-import { ACTION_TARGET, hkGroupOf, orderRoute, primaryActionFor, type HkAction, type HkGroup } from "@/lib/rooms/hkGroups";
+import { ACTION_TARGET, floorProgress, hkGroupOf, orderRoute, primaryActionFor, type HkAction, type HkGroup } from "@/lib/rooms/hkGroups";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
@@ -258,6 +258,7 @@ export default function AttendantView() {
 
   // Fortschritt wie in „Meine Liste“ (Zimmer + Credits aus der Tagesliste); ohne Liste aus den Zimmern selbst.
   const progress = list?.progress ?? { done: groups.DONE.length, total: rooms.length - groups.OTHER.length, creditsDone: 0, creditsTotal: 0 };
+  const perFloor = useMemo(() => floorProgress(rooms), [rooms]);
   const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
 
   /** „Was ist jetzt wichtig“: Gast/Front Office wartet (needed-now/VIP) bzw. lange gesperrt — Prioritätssprung zum dringendsten. */
@@ -373,6 +374,15 @@ export default function AttendantView() {
         <div className="mt-2 h-2 overflow-hidden rounded-full bg-charcoal/10" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={t("hkHub.progressRooms", { done: progress.done, total: progress.total })}>
           <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${pct}%` }} />
         </div>
+        {perFloor.length > 0 && (
+          <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t("hkHub.perFloor")}>
+            {perFloor.map((f) => (
+              <li key={f.floor} className={`rounded-full border px-2.5 py-1 text-xs ${f.released === f.total ? "border-status-clean/40 bg-status-clean/10" : "border-charcoal/15 bg-white"}`}>
+                <span className="font-semibold">{t("attendant.floor", { floor: f.floor })}</span> · {t("hkHub.floorReleased", { done: f.released, total: f.total })}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
       <HubMissingNotice hub={hub} planner={false} />
 

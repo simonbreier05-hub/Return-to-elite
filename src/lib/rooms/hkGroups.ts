@@ -46,3 +46,15 @@ export function orderRoute<T extends { id: string; number: string; floor: number
   const byId = new Map(rooms.map((r) => [r.id, r]));
   return [...ordered, ...rest.map((r) => byId.get(r.id)!)];
 }
+
+/** Zählung je Etage (wie früher in „Meine Zimmer“): freigegeben (INSPECTED) von allen eigenen Zimmern der Etage, Etagen aufsteigend. */
+export function floorProgress(rooms: { floor: number; status: string }[]): { floor: number; released: number; total: number }[] {
+  const by = new Map<number, { released: number; total: number }>();
+  for (const r of rooms) {
+    const f = by.get(r.floor) ?? { released: 0, total: 0 };
+    f.total++;
+    if (r.status === "INSPECTED") f.released++;
+    by.set(r.floor, f);
+  }
+  return [...by].sort((a, b) => a[0] - b[0]).map(([floor, v]) => ({ floor, ...v }));
+}

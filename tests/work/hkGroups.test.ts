@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { hkGroupOf, orderRoute, primaryActionFor } from "@/lib/rooms/hkGroups";
+import { floorProgress, hkGroupOf, orderRoute, primaryActionFor } from "@/lib/rooms/hkGroups";
 
 describe("Housekeeper-Hub: Gruppen, Ein-Tipp-Schritt, Route", () => {
   it("Gruppen nach Status — pausiert bleibt „Jetzt dran“ (Status IN_PROGRESS), zählt nie als fertig", () => {
@@ -22,6 +22,11 @@ describe("Housekeeper-Hub: Gruppen, Ein-Tipp-Schritt, Route", () => {
     expect(primaryActionFor("IN_PROGRESS", { paused: true })).toBe("RESUME");
     expect(primaryActionFor("CLEAN")).toBeNull();
     expect(primaryActionFor("INSPECTED")).toBeNull();
+  });
+  it("Zählung je Etage: freigegeben von allen eigenen Zimmern, Etagen aufsteigend", () => {
+    expect(floorProgress([{ floor: 4, status: "INSPECTED" }, { floor: 3, status: "CLEAN" }, { floor: 3, status: "INSPECTED" }, { floor: 3, status: "DIRTY" }]))
+      .toEqual([{ floor: 3, released: 1, total: 3 }, { floor: 4, released: 1, total: 1 }]);
+    expect(floorProgress([])).toEqual([]);
   });
   it("gespeicherte Reihenfolge zuerst, dann nach Priorität", () => {
     const r = (id: string, floor: number, routeOrder: number | null = null) => ({ id, number: id, floor, section: `${floor}A`, routeOrder });

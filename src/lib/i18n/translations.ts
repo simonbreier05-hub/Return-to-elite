@@ -932,6 +932,8 @@ const en = {
     stop: "Stop {{n}}",
     empty: "Nothing here.",
     progressRooms: "{{done}} of {{total}} rooms done",
+    perFloor: "Progress per floor",
+    floorReleased: "{{done}}/{{total}} released",
   },
   dayNumbers: {
     occupied: "Occupied",
@@ -2141,6 +2143,8 @@ const de = {
     stop: "Stopp {{n}}",
     empty: "Nichts hier.",
     progressRooms: "{{done}} von {{total}} Zimmern fertig",
+    perFloor: "Stand je Etage",
+    floorReleased: "{{done}}/{{total}} freigegeben",
   },
   dayNumbers: {
     occupied: "Belegt",
