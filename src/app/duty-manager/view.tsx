@@ -10,7 +10,8 @@ import LiveListsPanel from "@/components/lists/LiveListsPanel";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import TodayAtAGlance from "@/components/TodayAtAGlance";
 import { glanceKpis } from "@/lib/dayplan/glance";
-import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
+import type { DayNumberRow, DayNumbers } from "@/lib/dayplan/dayNumbers";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
@@ -24,12 +25,14 @@ interface Room {
   blockReason?: string | null;
   isCheckoutToday: boolean;
   arrivals: { guestName: string }[];
+  assignedTo?: { id: string; name: string } | null;
+  guestDndActive?: boolean;
 }
 
 interface WorkOrder {
   id: string;
   status: string;
-  defect?: { room?: { floor?: number } };
+  defect?: { category?: string; room?: { floor?: number; number?: string } };
 }
 
 interface RoomTask {
@@ -64,6 +67,7 @@ export default function DutyManagerView() {
   const [error, setError] = useState<string | null>(null);
   const [hub, setHub] = useState<HubState | null>(null);
   const [numbers, setNumbers] = useState<DayNumbers | null>(null);
+  const [dayRows, setDayRows] = useState<DayNumberRow[]>([]);
 
   const load = useCallback(async () => {
     const [roomsData, workOrdersData, roomTasksData, supervisorsData, numbersData] = await Promise.all([
@@ -71,9 +75,10 @@ export default function DutyManagerView() {
       api<{ workOrders: WorkOrder[] }>("/api/workorders"),
       api<{ roomTasks: RoomTask[] }>("/api/roomtasks"),
       api<{ supervisors: Supervisor[] }>("/api/users/supervisors"),
-      api<{ numbers: DayNumbers | null }>("/api/day-numbers"),
+      api<{ numbers: DayNumbers | null; rows?: DayNumberRow[] }>("/api/day-numbers"),
     ]);
     setNumbers(numbersData.numbers);
+    setDayRows(numbersData.rows ?? []);
     setRooms(roomsData.rooms);
     setHub(roomsData.hub ?? null);
     setWorkOrders(workOrdersData.workOrders);
@@ -152,7 +157,31 @@ export default function DutyManagerView() {
         </div>
       )}
 
-      <TodayAtAGlance numbers={numbers} kpis={kpis} extraKpi={{ label: t("dutyManager.unassignedFloorsKpi"), value: unassignedFloors.length }} />
+      <ErrorBoundary>
+        <TodayAtAGlance
+          numbers={numbers}
+          kpis={kpis}
+          onChanged={() => refetchSoon()}
+          source={{
+            rooms,
+            rows: dayRows,
+            workOrders: workOrders.map((w) => ({ id: w.id, status: w.status, floor: w.defect?.room?.floor, roomNumber: w.defect?.room?.number, category: w.defect?.category })),
+            roomTasks: roomTasks.map((rt) => ({ id: rt.id, status: rt.status, floor: rt.room?.floor, roomNumber: rt.room?.number, type: rt.type })),
+            floors: null,
+          }}
+          extraKpi={{
+            label: t("dutyManager.unassignedFloorsKpi"),
+            value: unassignedFloors.length,
+            detail: {
+              title: t("dutyManager.unassignedFloorsKpi"),
+              sections: [
+                { title: t("glance.floorsWithoutSupervisor"), items: unassignedFloors.map((f) => ({ key: `f${f}`, title: t("glance.floorLine", { floor: f }), tone: "accent" as const })) },
+                { title: t("glance.supervisorsSection"), items: supervisors.map((s) => ({ key: s.id, title: s.name, meta: s.assignedFloors.length ? s.assignedFloors.map((f) => t("glance.floorShort", { n: f })).join(", ") : t("glance.noSupervisorFloors") })) },
+              ],
+            },
+          }}
+        />
+      </ErrorBoundary>
 
       <WindowPanel title={t("dutyManager.liveListsTitle")}>
         <LiveListsPanel />
