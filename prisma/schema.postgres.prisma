@@ -59,6 +59,12 @@ model User {
   assignedRoomTasks RoomTask[] @relation("RoomTaskAssignee")
   assignedGuestRequests GuestRequest[]
   importBatches ImportBatch[] @relation("ImportBatchUploader")
+  // Chat-Hub (additiv): Profilsprache für ChatMessage.originalLanguage (ISO-Code, z. B. "de", "pl"); leer = Hotel-Standard.
+  // Die Auswahl im Profil folgt mit Prompt K — hier nur gelesen.
+  language      String?
+  chatMessages  ChatMessage[]
+  chatMembers   ChatMember[]
+  chatReads     ChatReadState[]
 }
 
 model Room {
@@ -532,4 +538,62 @@ model RedistributionSuggestion {
   decidedById String?
 
   @@index([date, status])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Chat-Hub (src/lib/chat/, docs/chat.md). Rechte stehen in src/lib/chat/policy.ts, nicht in Tabellen:
+// Abteilungskanäle haben keine Mitgliederliste (Rolle entscheidet), Direktnachrichten zwei ChatMember.
+// Später andocken: ChatMessageTranslation(messageId → ChatMessage.id, targetLanguage, text, @@unique([messageId,
+// targetLanguage])) — ohne Umbau dieser Tabellen. hotelId bleibt leer bis Multi-Tenant (Prompt F); Abfragen über chatScope().
+// Aufbewahrung: Setting chatRetentionDays (Standard 14), Löschung stündlich + in der Nachtlöschung.
+// ─────────────────────────────────────────────────────────────────────────
+model ChatChannel {
+  id        String          @id @default(cuid())
+  kind      String // CHANNEL | DIRECT
+  key       String          @unique // HOUSEKEEPING | ENGINEERING | FRONT_OFFICE | HOUSEMAN, bei DIRECT "dm:<userIdA>:<userIdB>" (sortiert)
+  hotelId   String?
+  createdAt DateTime        @default(now())
+  members   ChatMember[]
+  messages  ChatMessage[]
+  reads     ChatReadState[]
+}
+
+model ChatMember {
+  id        String      @id @default(cuid())
+  channelId String
+  channel   ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id])
+  createdAt DateTime    @default(now())
+
+  @@unique([channelId, userId])
+  @@index([userId])
+}
+
+model ChatMessage {
+  id               String      @id @default(cuid())
+  channelId        String
+  channel          ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  authorId         String
+  author           User        @relation(fields: [authorId], references: [id])
+  body             String // reiner Text, höchstens 1000 Zeichen; nach Zurückziehen leer
+  originalLanguage String // Sprache des Absenders (User.language, sonst Setting hotelDefaultLanguage) — immer das Original
+  urgent           Boolean     @default(false)
+  mentions         String? // JSON {"users":[ids],"depts":[keys]}
+  retractedAt      DateTime? // vom Autor zurückgezogen (Text gelöscht, Eintrag bleibt gekennzeichnet)
+  hiddenAt         DateTime? // vom Duty Manager ausgeblendet (gekennzeichnet)
+  createdAt        DateTime    @default(now())
+
+  @@index([channelId, createdAt])
+  @@index([createdAt])
+}
+
+model ChatReadState {
+  channelId  String
+  channel    ChatChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId     String
+  user       User        @relation(fields: [userId], references: [id])
+  lastReadAt DateTime
+
+  @@id([channelId, userId])
 }

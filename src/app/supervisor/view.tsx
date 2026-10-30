@@ -19,6 +19,7 @@ import { useEscapeKey } from "@/components/useEscapeKey";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import SupervisorGlance from "@/components/SupervisorGlance";
 import SupervisorFeed from "@/components/SupervisorFeed";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
@@ -93,7 +94,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
@@ -309,31 +309,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMoreOpen((o) => !o)}
-            aria-expanded={moreOpen}
-            className="flex h-14 items-center gap-2 rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-          >
-            {guestDndCount > 0 && <span aria-hidden>🔕</span>}
-            {t("supervisor.more")}
-            <span aria-hidden className={`transition-transform duration-150 ${moreOpen ? "rotate-180" : ""}`}>▾</span>
-          </button>
-          <Link
-            href="/supervisor/service"
-            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-          >
-            {t("service.title")}
-          </Link>
-          <Link
-            href="/planung"
-            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
-          >
-            {t("supervisor.morningPlanningLink")}
-          </Link>
-        </div>
-        {moreOpen && (
-          <div className="animate-rise flex w-full flex-wrap gap-2">
+          <HubMoreMenu extraBadge={guestDndCount > 0 ? <span aria-hidden>🔕</span> : undefined}>
             <Link href="/supervisor/handover" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
               {t("supervisor.handoverLink")}
             </Link>
@@ -349,8 +325,20 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 {t("supervisor.settingsLink")}
               </Link>
             )}
-          </div>
-        )}
+          </HubMoreMenu>
+          <Link
+            href="/supervisor/service"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            {t("service.title")}
+          </Link>
+          <Link
+            href="/planung"
+            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
+          >
+            {t("supervisor.morningPlanningLink")}
+          </Link>
+        </div>
       </div>
 
       <ErrorBoundary>
