@@ -4,13 +4,16 @@ import { requireAuth } from "@/lib/rbac";
 import { resolveFloorScope } from "@/lib/floors";
 import { shortGuestName } from "@/lib/lists/guestName";
 import { assignedToday, hubDay } from "@/lib/dayplan/hubDay";
+import { activePauses } from "@/lib/work/pauseData";
+import { rewindOptions } from "@/lib/rooms/rewindData";
+import { canSeeMessages } from "@/lib/work/access";
 
 /**
  * GET /api/rooms — full board (optionally ?mine=1 for the attendant view, or
  * ?q=<partial number> for the global quick search — mutually exclusive with
  * ?mine).
  *
- * A supervisor with floors assigned (see PATCH /api/users/[id]/floors) only
+ * A supervisor with floors assigned (Tagesplanung /planung, PUT /api/planung/floors) only
  * gets back rooms on those floors — this is what makes the duty manager's
  * floor assignment actually mean something on the Live Board, rather than
  * being purely informational. A supervisor with no floors assigned yet
@@ -88,6 +91,10 @@ export async function GET(req: NextRequest) {
     ).map((r) => r.roomId)
   );
 
+  // Aktive Pausen (eigenes Signal, ändert nie den Status) und — nur für „Meine Zimmer“ — der zurückspulbare letzte Schritt.
+  const pauses = await activePauses("ROOM", rooms.filter((r) => r.status === "IN_PROGRESS").map((r) => r.id));
+  const rewinds = mine && hub.ready ? await rewindOptions(auth.session, rooms) : new Map<string, { to: string; until: string }>();
+
   // Housekeeper sehen Gäste nur als „Anrede Titel Nachname" — von Hand erfasste Namen werden hier gekürzt (nie Vornamen).
   const attendantView = auth.session.role === "room_attendant";
   const me = auth.session.userId;
@@ -101,6 +108,13 @@ export async function GET(req: NextRequest) {
     ...(attendantView && room.assignedToId !== me ? { assignedToId: null, assignedTo: null, routeOrder: null } : {}),
     ...(attendantView ? { arrivals: room.arrivals.map((a) => ({ ...a, guestName: shortGuestName(a.guestName, a.source) ?? "—" })) } : {}),
     openNotesCount: _count.notes,
+    // Nachrichten (kind MESSAGE) nur für Beteiligte; die Vorschau kennt nur Zimmermädchen/Supervisor/Duty Manager als Beteiligte.
+    notes: room.notes.filter((n) => n.kind !== "MESSAGE" || canSeeMessages(
+      { role: auth.session.role, userId: me, floors: floorScope },
+      { floor: room.floor, housekeeperId: room.assignedToId, housemanIds: [], engineerIds: [] },
+    )),
+    pause: pauses.get(room.id) ?? null,
+    rewind: rewinds.get(room.id) ?? null,
     guestRequests,
     guestDndActive: dndRoomIds.has(room.id),
   };

@@ -18,6 +18,7 @@ import SupervisorList from "@/components/lists/SupervisorList";
 import CloseButton from "@/components/CloseButton";
 import { useEscapeKey } from "@/components/useEscapeKey";
 import RoomTaskModal from "@/components/RoomTaskModal";
+import SupervisorGlance from "@/components/SupervisorGlance";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import {
@@ -386,6 +387,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           </div>
         )}
       </div>
+
+      <SupervisorGlance rooms={rooms} />
 
       <PriorityBanner
         items={[

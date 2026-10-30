@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
+import { activePauses } from "@/lib/work/pauseData";
 
 /** GET /api/workorders — engineering queue (visible to all roles). */
 export async function GET() {
@@ -23,9 +24,10 @@ export async function GET() {
       assignedTo: { select: { id: true, name: true } },
     },
   });
+  const pauses = await activePauses("WORKORDER", workOrders.filter((wo) => wo.status !== "RESOLVED").map((wo) => wo.id));
   const withNoteCounts = workOrders.map((wo) => {
     const { _count, ...room } = wo.defect.room;
-    return { ...wo, defect: { ...wo.defect, room: { ...room, openNotesCount: _count.notes } } };
+    return { ...wo, pause: pauses.get(wo.id) ?? null, defect: { ...wo.defect, room: { ...room, openNotesCount: _count.notes } } };
   });
   return NextResponse.json({ workOrders: withNoteCounts });
 }

@@ -159,6 +159,20 @@ export const NOTE_STATUSES = ["OPEN", "DONE"] as const;
 export type NoteStatus = (typeof NOTE_STATUSES)[number];
 export const NoteStatusSchema = z.enum(NOTE_STATUSES);
 
+/** NOTE = Notiz wie bisher; MESSAGE = Nachricht an Zimmer/Aufgabe (nur Beteiligte, mit Meldung) — src/lib/work/messages.ts. */
+export const NOTE_KINDS = ["NOTE", "MESSAGE"] as const;
+export type NoteKind = (typeof NOTE_KINDS)[number];
+
+/** Was pausiert werden kann (ein Mechanismus für alle Abteilungen, Tabelle WorkPause). */
+export const PAUSE_TARGETS = ["ROOM", "ROOMTASK", "TRACE", "WORKORDER"] as const;
+export type PauseTarget = (typeof PAUSE_TARGETS)[number];
+export const PauseTargetSchema = z.enum(PAUSE_TARGETS);
+
+/** Feste Pausengründe (kein Freitext — Details schreibt man als Nachricht an die Aufgabe). */
+export const PAUSE_REASONS = ["GUEST_IN_ROOM", "MATERIAL_MISSING", "WAITING_ENGINEERING", "BREAK", "OTHER"] as const;
+export type PauseReason = (typeof PAUSE_REASONS)[number];
+export const PauseReasonSchema = z.enum(PAUSE_REASONS);
+
 export const NOTE_STATUS_LABELS: Record<NoteStatus, string> = {
   OPEN: "Open",
   DONE: "Done",
@@ -257,6 +271,7 @@ export const DEFAULT_SETTINGS = {
   minutesPerCredit: 25, // Start-Schätzung, bis aus den heutigen Zeitstempeln berechnet wird
   earlyFinishMinutes: 45, // "früher fertig": geschätzte Restzeit darunter
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag
+  statusRewindMinutes: 10, // Housekeeper darf den eigenen letzten Statusschritt so lange zurückspulen (src/lib/rooms/rewind.ts)
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 

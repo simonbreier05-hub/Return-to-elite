@@ -2,9 +2,11 @@ import { prisma } from "@/lib/db";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import { listDay, type Kind } from "./dayRows";
 import { shortGuestName, timesInText } from "./guestName";
+import { activePauses, endPauseOnChange, type PauseView } from "@/lib/work/pauseData";
 
 export interface HousemanItem {
   id: string;
+  roomId: string;
   roomNumber: string;
   floor: number;
   text: string;
@@ -22,6 +24,8 @@ export interface HousemanItem {
   guest: string | null;
   /** Rückbau (Twin zurück) ist erst nach der Abreise dran. */
   waitsForDeparture: boolean;
+  /** Aktive Pause (Grund-Code, seit, von wem) — pausiert zählt nicht als erledigt. */
+  pause: PauseView | null;
 }
 export interface HousemanList { date: string | null; floors: number[]; items: HousemanItem[] }
 
@@ -46,16 +50,18 @@ export async function getHousemanList(floor?: number | null, forUserId?: string 
     const logs = await prisma.auditLog.findMany({ where: { action: "TRACE_DONE", userId: { not: null } }, orderBy: { createdAt: "asc" }, take: 2000, select: { userId: true, meta: true } });
     for (const l of logs) { try { const id = (JSON.parse(l.meta ?? "{}") as { traceId?: string }).traceId; if (id && doneIds.has(id)) doneBy.set(id, people.get(l.userId!) ?? "—"); } catch { /* ignorieren */ } }
   }
+  const pauses = await activePauses("TRACE", traces.filter((t) => t.status !== "DONE").map((t) => t.id));
   const items = traces.map((t): HousemanItem => {
     const p = planBy.get(t.roomId);
     const kind = (p?.cleaningType ?? null) as Kind | null;
     const stay = p ? stays.get(p.arrivingStayId ?? p.stayId ?? "") : undefined;
     const task = classifyTraceText(t.text);
     return {
-      id: t.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text, times: timesInText(t.text),
+      id: t.id, roomId: t.room.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text, times: timesInText(t.text),
       status: t.status === "DONE" ? "DONE" : "OPEN", doneAt: t.doneAt?.toISOString() ?? null, roomTaskId: t.roomTaskId, assignedToId: t.assignedToId, assignedToName: t.assignedToId ? people.get(t.assignedToId) ?? null : null, doneByName: doneBy.get(t.id) ?? null,
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
       waitsForDeparture: task?.type === "TWIN_REVERT" && kind !== "DEPARTURE" && kind !== "SAME_DAY_TURN",
+      pause: t.status === "DONE" ? null : pauses.get(t.id) ?? null,
     };
   }).sort((a, b) => Number(a.status === "DONE") - Number(b.status === "DONE") || a.roomNumber.localeCompare(b.roomNumber));
   // Ein Hausmann sieht seine eigenen und die nicht zugeteilten Aufgaben; Supervisor sehen alle.
@@ -79,6 +85,10 @@ export async function setHousemanTraceStatus(traceId: string, status: "OPEN" | "
         ? { status: "DONE", doneAt: new Date(), ...(actor.role === "houseman" ? { assignedToId: actor.userId } : {}) }
         : { status: "OPEN", doneAt: null },
     }).catch(() => null);
+  }
+  if (status === "DONE") {
+    await endPauseOnChange("TRACE", t.id, actor.userId, t.roomId, t.room.number);
+    if (t.roomTaskId) await endPauseOnChange("ROOMTASK", t.roomTaskId, actor.userId, t.roomId, t.room.number);
   }
   return { trace, changed: true, roomTaskId: t.roomTaskId, roomNumber: t.room.number };
 }

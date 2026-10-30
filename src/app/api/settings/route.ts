@@ -50,6 +50,7 @@ const Body = z.object({
   minutesPerCredit: z.number().min(5).max(120).optional(),
   earlyFinishMinutes: z.number().int().min(5).max(240).optional(),
   redistributionMaxMoves: z.number().int().min(1).max(20).optional(),
+  statusRewindMinutes: z.number().int().min(0).max(120).optional(),
   /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
   autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
   /** Opera-Zimmerart-Code → Zimmerart (Einstellungen). */

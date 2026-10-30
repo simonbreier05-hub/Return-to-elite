@@ -16,6 +16,7 @@ import {
 import { getGuestSystemUserId } from "@/lib/guestServer";
 import { reportDefect } from "@/lib/rooms/reportDefect";
 import { addRoomNote } from "@/lib/rooms/addRoomNote";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { sanitizeGuestText } from "@/lib/guestSanitize";
 
 /**
@@ -87,6 +88,7 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
   await audit({ action: "GUEST_DND_REQUESTED", userId: guestUserId, roomId: room.id, meta: { window: parsed.data.window } });
   broadcast("notification:new", { notification });
   broadcast("guestrequest:new", { guestRequest });
+  await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "DND" });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
@@ -120,6 +122,7 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
   await audit({ action: "GUEST_DND_CANCELLED", userId: guestUserId, roomId: room.id });
   broadcast("notification:new", { notification });
   broadcast("guestrequest:update", { guestRequest: updated });
+  await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "DND_ENDED" });
   return NextResponse.json({ ok: true }, { status: 200 });
 }
 
@@ -157,6 +160,7 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
   await audit({ action: "GUEST_CLEAN_REQUESTED", userId: guestUserId, roomId: room.id, meta: { timing, time } });
   broadcast("notification:new", { notification });
   broadcast("guestrequest:new", { guestRequest });
+  await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "GUEST_WISH" });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
@@ -227,6 +231,7 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
   await audit({ action: "GUEST_CONTACT_REQUESTED", userId: guestUserId, roomId: room.id, meta: { department: dept.key } });
   broadcast("notification:new", { notification });
   broadcast("guestrequest:new", { guestRequest });
+  if (dept.role === "room_attendant" || dept.role === "supervisor") await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "GUEST_WISH" });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 

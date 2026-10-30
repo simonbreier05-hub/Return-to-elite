@@ -4,8 +4,8 @@ import { broadcast } from "@/lib/realtime";
 import { serializeAssignedFloors } from "@/lib/floors";
 
 /**
- * Persist a duty manager's floor assignment for one supervisor. Caller
- * (PATCH /api/users/[id]/floors) has already checked the target user exists
+ * Persist a floor assignment for one supervisor. Caller
+ * (Tagesplanung: saveFloors in src/lib/planung/teamData.ts) has already checked the target user exists
  * and is a supervisor, and that the floor numbers are valid — this is just
  * the write + notify path, modeled on createRoomTask().
  */

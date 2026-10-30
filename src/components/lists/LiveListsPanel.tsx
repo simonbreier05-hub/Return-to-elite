@@ -12,12 +12,18 @@ import RoomRowView from "./RoomRowView";
 import RowLegend from "./RowLegend";
 import ServiceOverview from "./ServiceOverview";
 import SupervisorList from "./SupervisorList";
+import { PauseBadge, type PauseInfo } from "@/components/PauseControl";
+import type { TKey } from "@/lib/i18n/translations";
+
+/** Von Hand angelegte Hausmann-Aufgabe (RoomTask ohne Trace) — gehört in die Hausmann-Liste, nicht doppelt ins DM-Board. */
+interface ManualTask { id: string; type: string; note?: string | null; status: "OPEN" | "DONE"; createdAt: string; doneAt?: string | null; room: { number: string }; createdBy?: { name: string } | null; assignedTo?: { name: string } | null; pause?: PauseInfo | null }
 
 type Tab = "overview" | "hk" | "sup" | "hm";
 
 /**
  * Duty Manager: Live-Einsicht auf alle Listen — Zimmermädchen-Listen (alle Etagen), Supervisor-Listen (Fortschritt je
- * Etagengruppe) und Hausmann-Liste (wer hat welche Aufgabe, was ist erledigt, von wem). Aktualisiert sich per Socket.IO.
+ * Etagengruppe) und Hausmann-Liste (wer hat welche Aufgabe, was ist erledigt, von wem — Traces aus Opera und von Hand angelegte
+ * Aufgaben). Aktualisiert sich per Socket.IO.
  * Supervisor sehen ihre eigene Liste weiter im Supervisor-Board (nur zugeteilte Etagen).
  */
 export default function LiveListsPanel() {
@@ -26,11 +32,16 @@ export default function LiveListsPanel() {
   const [data, setData] = useState<LiveOverview | null>(null);
   const [supOpen, toggleSup] = usePersistedSet("stayclean.liveSup.open");
   const [roomRef, setRoomRef] = useState<string | null>(null);
-  const load = useCallback(() => api<LiveOverview>("/api/lists/overview").then(setData).catch(() => {}), []);
+  const [manual, setManual] = useState<ManualTask[]>([]);
+  const load = useCallback(() => Promise.all([
+    api<LiveOverview>("/api/lists/overview").then(setData).catch(() => {}),
+    api<{ roomTasks?: ManualTask[] }>("/api/roomtasks").then((d) => setManual(Array.isArray(d.roomTasks) ? d.roomTasks : [])).catch(() => {}),
+  ]), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
-  useSocket({ "note:new": () => soon(), "note:update": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon() });
+  useSocket({ "note:new": () => soon(), "note:update": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
 
+  const linked = new Set((data?.tasks ?? []).map((it) => it.roomTaskId).filter((x): x is string => !!x));
   const tabs: [Tab, string][] = [["overview", t("service.title")], ["hk", t("dutyManager.liveHk")], ["sup", t("dutyManager.liveSup")], ["hm", t("dutyManager.liveHm")]];
   return (
     <div>
@@ -89,6 +100,7 @@ export default function LiveListsPanel() {
                   <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 bg-white p-3 text-sm">
                     <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-left font-medium underline decoration-charcoal/20 underline-offset-4">{it.roomNumber}</button>
                     <span className="min-w-0 flex-1 text-graphite/70">{it.text}</span>
+                    {it.status === "OPEN" && <PauseBadge pause={it.pause} showBy />}
                     <span className="text-xs text-graphite/60">{it.assignedToName ?? t("planungTool.housemanAll")}</span>
                     <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${it.status === "DONE" ? "bg-status-clean/15 text-status-clean" : "bg-parchment"}`}>
                       {it.status === "DONE" ? `✓ ${t("dutyManager.liveDone")}${it.doneByName ? ` · ${it.doneByName}` : ""}${it.doneAt ? ` · ${new Date(it.doneAt).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })}` : ""}` : t("dutyManager.liveOpen")}
@@ -97,10 +109,46 @@ export default function LiveListsPanel() {
                 ))}
               </ul>
             )}
+            <ManualTasks tasks={manual.filter((m) => !linked.has(m.id))} onOpen={setRoomRef} />
           </div>
         )
       )}
       {roomRef && <LiveRoomModal roomRef={roomRef} onClose={() => setRoomRef(null)} onChanged={() => { void load(); }} />}
+    </div>
+  );
+}
+
+/** Offene und zuletzt erledigte, von Hand angelegte Hausmann-Aufgaben (vorher als doppelte Liste im DM-Board). */
+function ManualTasks({ tasks, onOpen }: { tasks: ManualTask[]; onOpen: (roomNumber: string) => void }) {
+  const { t } = useLocale();
+  const label = (x: ManualTask) => (x.type === "SONSTIGES" ? x.note ?? t("roomTaskType.SONSTIGES") : t(`roomTaskType.${x.type}` as TKey));
+  const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+  const open = tasks.filter((x) => x.status === "OPEN");
+  const done = tasks.filter((x) => x.status === "DONE").slice(0, 10);
+  const row = (x: ManualTask) => (
+    <li key={x.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 p-3 text-sm ${x.status === "DONE" ? "bg-linen/60" : "bg-white"}`}>
+      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-left font-medium underline decoration-charcoal/20 underline-offset-4">{x.room.number}</button>
+      <span className={`min-w-0 flex-1 ${x.status === "DONE" ? "text-graphite/60 line-through" : "text-graphite/80"}`}>{label(x)}</span>
+      {x.status === "OPEN" && <PauseBadge pause={x.pause} showBy />}
+      <span className="text-xs text-graphite/60">
+        {x.createdBy?.name && `${t("houseman.requestedBy", { name: x.createdBy.name })} · `}{hhmm(x.createdAt)}
+        {x.status === "DONE" && x.doneAt && ` · ✓ ${hhmm(x.doneAt)}${x.assignedTo?.name ? ` · ${x.assignedTo.name}` : ""}`}
+      </span>
+    </li>
+  );
+  return (
+    <div className="mt-4">
+      <h4 className="mb-2 font-serif text-lg">{t("lists.hmOtherTasks")}</h4>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div>
+          <h5 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">{t("dutyManager.openTasksLabel")}</h5>
+          {open.length === 0 ? <p className="text-sm text-graphite/60">{t("dutyManager.noOpenTasks")}</p> : <ul className="space-y-1.5">{open.map(row)}</ul>}
+        </div>
+        <div>
+          <h5 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">{t("dutyManager.doneTasksLabel")}</h5>
+          {done.length === 0 ? <p className="text-sm text-graphite/60">{t("dutyManager.noDoneTasks")}</p> : <ul className="space-y-1.5">{done.map(row)}</ul>}
+        </div>
+      </div>
     </div>
   );
 }

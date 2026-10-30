@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/db";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
-import { isDone, listDay, loadRoomRows, type Kind } from "./dayRows";
+import { isDone, listDay, loadRoomRows, type Kind, type RoomRow } from "./dayRows";
 import { floorsFor } from "./supervisorList";
 import { isToClean, type DayKind } from "@/lib/dayplan/dayNumbers";
 
@@ -26,6 +26,8 @@ export interface ServiceRoom {
   id: string; number: string; floor: number; type: string;
   service: ServiceKey; vip: boolean; eta: string | null; allergy: boolean; dnd: boolean;
   credits: number; status: string; done: boolean; assignedToName: string | null; extras: ServiceExtra[];
+  /** Aktive Pause (Grund, seit, von wem). */
+  pause: RoomRow["pause"];
 }
 export interface ServiceOverview {
   date: string | null;
@@ -41,6 +43,7 @@ const short = (t: string) => (t.length > 60 ? `${t.slice(0, 57)}…` : t);
  * „Welche Zimmer sind heute zu reinigen, und welches braucht welchen Service?“ — eine Übersicht aus dem Tagesplan (DayRoomPlan):
  * Art (Turn/Abreise/Bleiber/Bleiber + Wäsche/Anreise), VIP, Anreisezeit, Allergiker, DND, Sonderleistungen (Traces: Twin, Zusatzbett …),
  * Credits und die zugeteilte Kraft. Supervisor sehen nur ihre Etagen, der Duty Manager alle. Keine Gastnamen.
+ * Hausmann-Aufgaben (Traces der Abteilung HOUSEMAN) stehen hier nicht — sie erscheinen ausschließlich in der Hausmann-Liste.
  */
 export async function getServiceOverview(session: { userId: string; role: string }): Promise<ServiceOverview> {
   const floors = await floorsFor(session);
@@ -53,14 +56,14 @@ export async function getServiceOverview(session: { userId: string; role: string
 
   const rooms = rows.map((r): ServiceRoom => {
     const f = flags.get(r.id);
-    const extras = r.traces.map((t): ServiceExtra => {
+    const extras = r.traces.filter((t) => t.dept !== "HOUSEMAN").map((t): ServiceExtra => {
       const task = classifyTraceText(t.text);
       return { dept: t.dept, label: task ? (task.type === "SONSTIGES" && task.note ? task.note : EXTRA_LABEL[task.type] ?? short(t.text)) : short(t.text), done: t.status === "DONE" };
     });
     return {
       id: r.id, number: r.number, floor: r.floor, type: f?.type ?? "STANDARD", service: serviceOf(r.kind!, r.laundry), vip: r.vip, eta: r.eta,
       allergy: !!f?.isAntiAllergic, dnd: r.dnd, credits: r.credits, status: r.status, done: isDone(r.status),
-      assignedToName: r.assignedToId && r.assignedOn === date ? hk.get(r.assignedToId) ?? null : null, extras,
+      assignedToName: r.assignedToId && r.assignedOn === date ? hk.get(r.assignedToId) ?? null : null, extras, pause: r.pause,
     };
   }).sort((a, b) => a.floor - b.floor || a.number.localeCompare(b.number));
 

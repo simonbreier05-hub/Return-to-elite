@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { berlinToday } from "@/lib/import/businessDay";
 import { traceKey } from "@/lib/dayplan/traceKey";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
 const Body = z.object({ text: z.string().trim().min(1).max(300), dept: z.enum(["HOUSEKEEPING", "HOUSEMAN", "ENGINEERING", "FRONT_OFFICE"]) }).strict();
 
@@ -27,5 +28,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const trace = await prisma.trace.create({ data: { roomId: room.id, code: "MAN", date, text: parsed.data.text, dept: parsed.data.dept, source: "MANUAL", dedupeKey } });
   await audit({ action: "TRACE_ADDED", userId: auth.session.userId, roomId: room.id, meta: { traceId: trace.id, dept: trace.dept } });
   broadcast("trace:update", { roomNumber: room.number, traceId: trace.id });
+  if (trace.dept === "HOUSEKEEPING") await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "TRACE", actorId: auth.session.userId });
   return NextResponse.json({ trace: { id: trace.id, code: trace.code, text: trace.text, dept: trace.dept, status: trace.status, doneAt: null } }, { status: 201 });
 }

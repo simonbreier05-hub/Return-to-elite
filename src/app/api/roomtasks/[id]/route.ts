@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { RoomTaskStatusSchema } from "@/lib/domain";
+import { endPauseOnChange } from "@/lib/work/pauseData";
 
 const INCLUDE = {
   room: { select: { id: true, number: true, floor: true } },
@@ -44,6 +45,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Die zugehörige Hausmann-Trace-Zeile ist damit auch erledigt (eine Wahrheit für die Hausmann-Liste)
   await prisma.trace.updateMany({ where: { roomTaskId: id, status: "OPEN" }, data: { status: "DONE", doneAt: new Date() } });
+
+  await endPauseOnChange("ROOMTASK", id, auth.session.userId, existing.roomId);
+  for (const tr of await prisma.trace.findMany({ where: { roomTaskId: id }, select: { id: true } })) await endPauseOnChange("TRACE", tr.id, auth.session.userId, existing.roomId);
 
   await audit({
     action: "ROOM_TASK_DONE",

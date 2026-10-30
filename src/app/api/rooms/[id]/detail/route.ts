@@ -7,7 +7,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ id: str
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const { id } = await params;
-  const detail = await getRoomDetail(id, auth.session.role);
+  const detail = await getRoomDetail(id, auth.session.role, auth.session);
   if (!detail) return NextResponse.json({ error: "Zimmer nicht gefunden." }, { status: 404 });
   return NextResponse.json({ room: detail });
 }
