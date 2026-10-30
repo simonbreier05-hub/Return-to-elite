@@ -17,6 +17,7 @@ interface Thresholds {
   roomsPerAttendantMax: number;
   attendantPoolMax: number;
   roomInventory: number;
+  chatRetentionDays: number;
 }
 
 type Weights = Record<string, number>;
@@ -174,6 +175,25 @@ export default function SettingsView() {
       <HousekeeperSettingsPanel />
 
       <PurgePanel />
+
+      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+        <h3 className="mb-1 font-serif text-2xl">{t("settings.chatTitle")}</h3>
+        <p className="mb-4 text-sm text-graphite/60">{t("settings.chatHint")}</p>
+        <label className="block max-w-sm rounded-xl border border-charcoal/15 bg-white p-4">
+          <div className="text-sm font-medium">{t("settings.chatRetentionDays")}</div>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={thresholds.chatRetentionDays}
+              onChange={(e) => setThresholds({ ...thresholds, chatRetentionDays: Math.min(365, Math.max(1, Number(e.target.value) || 1)) })}
+              className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
+            />
+            <span className="text-sm text-graphite/60">{t("settings.days")}</span>
+          </div>
+        </label>
+      </section>
 
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">

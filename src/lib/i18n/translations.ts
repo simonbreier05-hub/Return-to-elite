@@ -391,6 +391,10 @@ const en = {
     noTasks: "No open tasks — nothing waiting right now.",
   },
   settings: {
+    chatTitle: "Chat",
+    chatHint: "Messages are deleted automatically after this many days (hourly and in the nightly purge).",
+    chatRetentionDays: "Keep chat messages for",
+    days: "days",
     title: "Settings",
     dutyManagerOnly: "Duty manager only. Changes apply to the next calculation.",
     liveBoardLink: "← Live board",
@@ -1719,6 +1723,10 @@ const de = {
     noTasks: "Keine offenen Aufgaben — aktuell wartet nichts.",
   },
   settings: {
+    chatTitle: "Chat",
+    chatHint: "Nachrichten werden nach so vielen Tagen automatisch gelöscht (stündlich und in der Nachtlöschung).",
+    chatRetentionDays: "Chat-Nachrichten aufbewahren",
+    days: "Tage",
     title: "Einstellungen",
     dutyManagerOnly: "Nur Duty Manager. Änderungen gelten ab der nächsten Berechnung.",
     liveBoardLink: "← Live-Board",

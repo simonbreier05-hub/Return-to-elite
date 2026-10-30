@@ -1,6 +1,7 @@
 "use client";
 
 import CloseButton from "@/components/CloseButton";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { useEscapeKey } from "@/components/useEscapeKey";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
@@ -93,6 +94,7 @@ export default function FrontOfficeView() {
 
   return (
     <div>
+      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-serif text-3xl">{t("frontOffice.arrivals")}</h2>
