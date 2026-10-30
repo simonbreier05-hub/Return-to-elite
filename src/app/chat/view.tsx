@@ -177,7 +177,7 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
               ) : (
                 <p className="whitespace-pre-wrap break-words text-sm">
                   {tokenize(m.body).map((tok, i) => tok.kind === "room"
-                    ? <button key={i} type="button" onClick={() => setRoom(tok.number)} className="font-semibold text-navy underline underline-offset-2">#{tok.number}</button>
+                    ? <button key={i} type="button" onClick={() => setRoom(tok.number)} className="-my-3 inline-block px-0.5 py-3 font-semibold text-navy underline underline-offset-2">#{tok.number}</button>
                     : tok.kind === "mention" ? <span key={i} className="font-semibold text-gold-soft">{tok.text}</span> : <span key={i}>{tok.text}</span>)}
                 </p>
               )}
