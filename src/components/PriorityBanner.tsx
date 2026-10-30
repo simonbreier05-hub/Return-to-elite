@@ -45,7 +45,7 @@ export default function PriorityBanner({ items, children }: { items: PriorityIte
         <div className="flex flex-wrap gap-2">
           {active.map((item, i) => {
             const Icon = ICONS[item.icon];
-            const className = `flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
+            const className = `flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
               item.tone === "urgent"
                 ? "border-status-out-of-order/35 bg-status-out-of-order/10 text-status-out-of-order"
                 : "border-gold/40 bg-gold/10 text-gold-soft"

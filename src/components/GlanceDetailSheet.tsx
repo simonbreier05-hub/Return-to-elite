@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 import Modal from "@/components/Modal";
 import LiveRoomModal from "@/components/lists/LiveRoomModal";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -36,7 +37,8 @@ export function GlanceDetailHost({ state, content, onChanged }: {
 }) {
   if (state.room) return <LiveRoomModal roomRef={state.room} onClose={state.closeRoom} onChanged={onChanged} />;
   if (!state.key || !content) return null;
-  return <GlanceDetailSheet content={content} onClose={state.close} onOpenRoom={state.openRoom} />;
+  // Am `body`: die Startscreens liegen in animierten (transformierten) Containern, an denen sich ein `fixed`-Fenster sonst ausrichten würde.
+  return createPortal(<GlanceDetailSheet content={content} onClose={state.close} onOpenRoom={state.openRoom} />, document.body);
 }
 
 export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { content: DetailContent; onClose: () => void; onOpenRoom: (ref: string) => void }) {
@@ -61,7 +63,7 @@ export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { co
                     </>
                   );
                   return (
-                    <li key={item.key} className={`flex items-center gap-2 rounded-lg border px-3 py-1 ${tone}`}>
+                    <li key={item.key} className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-1 ${tone}`}>
                       {item.roomRef ? (
                         <button type="button" onClick={() => onOpenRoom(item.roomRef!)} aria-label={t("glance.openRoom", { n: item.title })}
                           className="min-h-11 flex-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
@@ -70,7 +72,7 @@ export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { co
                       ) : (
                         <div className="min-h-11 flex-1 py-1">{body}</div>
                       )}
-                      {item.actions && <div className="flex shrink-0 gap-1.5">{item.actions}</div>}
+                      {item.actions && <div className="mb-1 grid w-full grid-cols-2 gap-1.5 sm:mb-0 sm:flex sm:w-auto sm:shrink-0">{item.actions}</div>}
                     </li>
                   );
                 })}

@@ -64,7 +64,7 @@ export default function SupervisorFeed() {
         <dt className="text-graphite/60">{t("feed.detailTime")}</dt><dd>{hhmm(item.at)}</dd>
         {who(item) && <><dt className="text-graphite/60">{t("feed.detailTrigger")}</dt><dd>{who(item)}</dd></>}
         {item.fromStatus && item.toStatus && <><dt className="text-graphite/60">{t("feed.detailChange")}</dt><dd>{t(`status.${item.fromStatus}` as TKey)} → {t(`status.${item.toStatus}` as TKey)}</dd></>}
-        {extra(item) && <><dt className="text-graphite/60">·</dt><dd>{extra(item)}</dd></>}
+        {extra(item) && <><dt className="text-graphite/60">{t("feed.detailInfo")}</dt><dd>{extra(item)}</dd></>}
         {item.count > 1 && <><dt className="text-graphite/60">{t("feed.detailCount")}</dt><dd>{t("feed.detailCountValue", { n: item.count, from: hhmm(item.firstAt), to: hhmm(item.at) })}</dd></>}
       </dl>
     ),
