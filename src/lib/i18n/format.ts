@@ -12,6 +12,7 @@ export function formatTime(lang: string, d: Date | string | number, opts: { seco
   return toDate(d).toLocaleTimeString(intlLocale(lang), {
     hour: "2-digit",
     minute: "2-digit",
+    hourCycle: "h23",
     ...(opts.seconds ? { second: "2-digit" } : {}),
     timeZone: opts.timeZone ?? HOTEL_TZ,
   });
@@ -22,7 +23,7 @@ export function formatDate(lang: string, d: Date | string | number, opts: Intl.D
 }
 
 export function formatDateTime(lang: string, d: Date | string | number, opts: Intl.DateTimeFormatOptions = {}): string {
-  return toDate(d).toLocaleString(intlLocale(lang), { dateStyle: "short", timeStyle: "short", timeZone: HOTEL_TZ, ...opts });
+  return toDate(d).toLocaleString(intlLocale(lang), { dateStyle: "short", timeStyle: "short", hourCycle: "h23", timeZone: HOTEL_TZ, ...opts });
 }
 
 export function formatNumber(lang: string, n: number, opts: Intl.NumberFormatOptions = {}): string {

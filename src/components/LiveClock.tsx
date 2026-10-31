@@ -14,7 +14,7 @@ export default function LiveClock({ tone = "shell" }: { tone?: "shell" | "pl" })
   }, []);
   if (!now) return tone === "pl" ? <span className="inline-block h-4 w-44" aria-hidden /> :  <div className="h-10 w-16 md:hidden lg:block lg:w-40" aria-hidden />;
   const tag = intl;
-  const time = now.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Berlin" });
+  const time = now.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit", second: "2-digit", hourCycle: "h23", timeZone: "Europe/Berlin" });
   const date = now.toLocaleDateString(tag, { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Berlin" });
   if (tone === "pl") {
     // kurz (TT.MM.), damit es mobil in die Kopfzeile passt

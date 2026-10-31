@@ -18,7 +18,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "fixtures:opera": "tsx scripts/generate-opera-fixtures.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:review": "tsx scripts/i18n.ts review",
+    "i18n:import": "tsx scripts/i18n.ts import",
+    "i18n:missing": "tsx scripts/i18n.ts missing"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
@@ -50,6 +53,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "jsdom": "^25.0.1",
     "vitest": "^3.1.1"
   }
 }

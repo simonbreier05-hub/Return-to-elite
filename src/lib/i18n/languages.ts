@@ -75,9 +75,11 @@ export function fallbackChain(lang: string): string[] {
 /**
  * Locale für Intl: immer lateinische Ziffern (1, 2, 3 …), auch auf Persisch/Arabisch/Hindi —
  * Zimmernummern, Etagen und Uhrzeiten sollen überall gleich aussehen.
+ * Uhrzeiten zusätzlich immer 24-Stunden (format.ts, `hourCycle: "h23"`).
  */
 export function intlLocale(lang: string): string {
-  return `${lang}-u-nu-latn`;
+  // Englisch im Berliner Hotel: britische Schreibweise (31/10/2026), nicht US (10/31/2026)
+  return `${lang === "en" ? "en-GB" : lang}-u-nu-latn`;
 }
 
 /** Sprachname in der Sprache selbst („Deutsch“, „Tiếng Việt“, „فارسی“); unbekannt → Code. */
