@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { IconBan, IconCheckCircle, IconClock, IconWarning } from "./icons";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 
@@ -25,7 +26,8 @@ const ICONS = { warning: IconWarning, clock: IconClock, ban: IconBan } as const;
  * "all clear" state instead of just... nothing — an empty area reads as
  * "is this broken?", not "you're caught up".
  */
-export default function PriorityBanner({ items }: { items: PriorityItem[] }) {
+/** `children`: optional unter den Zählern (Supervisor: Ereignis-Feed) — ohne bleibt das Banner wie in allen anderen Rollen. */
+export default function PriorityBanner({ items, children }: { items: PriorityItem[]; children?: ReactNode }) {
   const { t } = useLocale();
   const active = items.filter((i) => i.count > 0);
 
@@ -43,7 +45,7 @@ export default function PriorityBanner({ items }: { items: PriorityItem[] }) {
         <div className="flex flex-wrap gap-2">
           {active.map((item, i) => {
             const Icon = ICONS[item.icon];
-            const className = `flex items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
+            const className = `flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
               item.tone === "urgent"
                 ? "border-status-out-of-order/35 bg-status-out-of-order/10 text-status-out-of-order"
                 : "border-gold/40 bg-gold/10 text-gold-soft"
@@ -66,6 +68,7 @@ export default function PriorityBanner({ items }: { items: PriorityItem[] }) {
           })}
         </div>
       )}
+      {children}
     </div>
   );
 }

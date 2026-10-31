@@ -74,10 +74,15 @@ export interface DayNumbers {
   doneUnassigned: number;
 }
 
+/** Zählt als „zugeteilt“: schon fertig, oder heute einer Kraft zugeteilt/begonnen (auch für die Detail-Listen der Kacheln). */
+export const isAssignedRow = (r: Pick<DayNumberRow, "status" | "assignedToId" | "assignedToday">) => DONE.has(r.status) || (!!r.assignedToId && r.assignedToday);
+/** Status „gereinigt“ (CLEAN/INSPECTED). */
+export const isDoneStatus = (status: string) => DONE.has(status);
+
 export function computeDayNumbers(input: { rows: DayNumberRow[]; inventory: number; team?: string[] | null }): DayNumbers {
   const toCleanRows = input.rows.filter((r) => isToClean(r.kind, r.status));
   const notCleanedRows = input.rows.filter((r) => r.kind !== "OCCUPIED" && r.status in NOT_CLEANED_REASONS);
-  const isAssigned = (r: DayNumberRow) => DONE.has(r.status) || (!!r.assignedToId && r.assignedToday);
+  const isAssigned = isAssignedRow;
   const assignedRows = toCleanRows.filter(isAssigned);
   const openRows = toCleanRows.filter((r) => !isAssigned(r));
   const byReason: Record<Reason, number> = { outOfOrder: 0, outOfService: 0, optOut: 0 };
