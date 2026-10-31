@@ -31,6 +31,12 @@ function parseVars(json: string | null | undefined): Record<string, unknown> {
   }
 }
 
+/** Art der Meldung („Zimmer zugeteilt“) in der Sprache des Lesers; unbekannte Art → lesbarer Code. */
+export function notificationTypeLabel(type: string, t: T): string {
+  const key = `notifyType.${type}`;
+  return key in SOURCE_DICTS.de ? t(key as TKey) : type.replace(/_/g, " ");
+}
+
 /** Meldungstext in der Sprache des Lesers: Textschlüssel, falls der Server einen mitschickt, sonst der gespeicherte Klartext. */
 export function notificationText(n: LocalizableNotification, t: T): string {
   if (n.messageKey && n.messageKey in SOURCE_DICTS.de) return t(n.messageKey as TKey, resolveVars(parseVars(n.messageVars), t));

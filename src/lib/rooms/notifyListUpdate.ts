@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { parseAssignedFloors } from "@/lib/floors";
+import { keyed } from "@/lib/i18n/notificationText";
 
 export interface RoomChange { number: string; floor: number; roomId: string; from: string; to: string }
 export interface NewTrace { number: string; floor: number; dept: string }
@@ -22,12 +23,13 @@ const list = (nums: string[], max = 6) => (nums.length > max ? `${nums.slice(0, 
 export async function notifyListUpdate(opts: { date: string; actorId: string | null; changes: RoomChange[]; newTraces: NewTrace[]; source: "IMPORT" | "MANUAL" }): Promise<number> {
   const { date, actorId, changes, newTraces, source } = opts;
   if (!changes.length && !newTraces.length) return 0;
-  const out: { type: string; level: string; targetRole: string; targetUserId: string; message: string; dedupeKey: string }[] = [];
-  const add = (role: string, userId: string, message: string, level = "info") => {
+  const out: { type: string; level: string; targetRole: string; targetUserId: string; message: string; messageKey: string; messageVars: string; dedupeKey: string }[] = [];
+  const add = (role: string, userId: string, message: string, k: ReturnType<typeof keyed>, level = "info") => {
     if (userId === actorId) return;
     const sig = createHash("sha1").update(`${date}|${userId}|${message}`).digest("hex").slice(0, 16);
-    out.push({ type: "LIST_UPDATED", level, targetRole: role, targetUserId: userId, message, dedupeKey: `LISTUPD:${sig}` });
+    out.push({ type: "LIST_UPDATED", level, targetRole: role, targetUserId: userId, message, ...k, dedupeKey: `LISTUPD:${sig}` });
   };
+  const headKey = `notify.head${source}`;
   const head = source === "IMPORT" ? "Nachimport" : "Änderung";
 
   // Zimmermädchen: wem gehören die geänderten Zimmer / Hinweise?
@@ -41,14 +43,16 @@ export async function notifyListUpdate(opts: { date: string; actorId: string | n
     const parts: string[] = [];
     if (v.changed.length) parts.push(v.changed.length === 1 ? `Zimmer ${v.changed[0].number}: ${lab(v.changed[0].from)} → ${lab(v.changed[0].to)}` : `${v.changed.length} Zimmer geändert (${list(v.changed.map((c) => c.number))})`);
     if (v.traces.length) parts.push(`neuer Hinweis in ${list([...new Set(v.traces)])}`);
-    add("room_attendant", id, `${head}: Deine Liste hat sich geändert — ${parts.join("; ")}.`, "warning");
+    add("room_attendant", id, `${head}: Deine Liste hat sich geändert — ${parts.join("; ")}.`,
+      keyed("notify.listUpdatedHk", { headKey, rooms: list([...new Set([...v.changed.map((c) => c.number), ...v.traces])]) }), "warning");
   }
 
   // Hausmann: neue Aufgaben (Traces der Abteilung Hausmann) — für alle Hausmänner sichtbar oder dem zugeteilten
   const hmNew = newTraces.filter((t) => t.dept === "HOUSEMAN");
   if (hmNew.length) {
     const housemen = await prisma.user.findMany({ where: { role: "houseman" }, select: { id: true } });
-    for (const h of housemen) add("houseman", h.id, `${head}: Deine Hausmann-Liste hat sich geändert — ${hmNew.length} ${hmNew.length === 1 ? "neue Aufgabe" : "neue Aufgaben"} (${list([...new Set(hmNew.map((t) => t.number))])}).`);
+    for (const h of housemen) add("houseman", h.id, `${head}: Deine Hausmann-Liste hat sich geändert — ${hmNew.length} ${hmNew.length === 1 ? "neue Aufgabe" : "neue Aufgaben"} (${list([...new Set(hmNew.map((t) => t.number))])}).`,
+      keyed("notify.listUpdatedHm", { headKey, count: hmNew.length, rooms: list([...new Set(hmNew.map((t) => t.number))]) }));
   }
 
   // Supervisor: nur ihre Etagen
@@ -60,12 +64,13 @@ export async function notifyListUpdate(opts: { date: string; actorId: string | n
     const parts: string[] = [];
     if (c.length) parts.push(`${c.length} ${c.length === 1 ? "Zimmer" : "Zimmer"} mit geänderter Art (${list(c.map((x) => x.number))})`);
     if (t.length) parts.push(`${t.length} neue ${t.length === 1 ? "Hinweis" : "Hinweise"}`);
-    add("supervisor", s.id, `${head}: Liste deiner Etagen aktualisiert — ${parts.join(", ")}.`);
+    add("supervisor", s.id, `${head}: Liste deiner Etagen aktualisiert — ${parts.join(", ")}.`, keyed("notify.listUpdatedSup", { headKey, changed: c.length, traces: t.length }));
   }
 
   // Duty Manager: Zusammenfassung
   const dms = await prisma.user.findMany({ where: { role: "duty_manager" }, select: { id: true } });
-  for (const d of dms) add("duty_manager", d.id, `${head}: ${changes.length} Zimmer mit geänderter Art, ${newTraces.length} neue Hinweise/Aufgaben.`);
+  for (const d of dms) add("duty_manager", d.id, `${head}: ${changes.length} Zimmer mit geänderter Art, ${newTraces.length} neue Hinweise/Aufgaben.`,
+    keyed("notify.listUpdatedDm", { headKey, changed: changes.length, traces: newTraces.length }));
 
   let created = 0;
   for (const data of out) {

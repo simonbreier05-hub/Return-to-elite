@@ -7,6 +7,7 @@ import { checkTransition } from "@/lib/stateMachine";
 import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
 import { endPauseOnChange } from "@/lib/work/pauseData";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * The one place a room's status is allowed to change.
@@ -172,6 +173,7 @@ export async function applyStatusChange(
           message: `Room ${room.number} released (INSPECTED) — ready for ${arrival.guestName}${
             arrival.vip ? " (VIP)" : ""
           }.`,
+          ...keyed(arrival.vip ? "notify.roomReleasedVip" : "notify.roomReleased", { n: room.number }),
           dedupeKey: `ROOM_RELEASED:${arrival.id}:${now.getTime()}`,
         },
       });

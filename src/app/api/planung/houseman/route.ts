@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { keyed } from "@/lib/i18n/notificationText";
 
 const Body = z.object({
   assignments: z.array(z.object({ traceId: z.string().min(1), userId: z.string().min(1).nullable() }).strict()).max(500),
@@ -32,7 +33,7 @@ export async function PUT(req: NextRequest) {
   // Spätere Änderung nach der Bestätigung: nur die betroffenen Hausmänner erfahren es
   for (const [userId, n] of gained) {
     if (userId === auth.session.userId) continue;
-    const notification = await prisma.notification.create({ data: { type: "HOUSEMAN_TASKS_ASSIGNED", level: "info", targetRole: "houseman", targetUserId: userId, message: `Dir ${n === 1 ? "wurde 1 Aufgabe" : `wurden ${n} Aufgaben`} zugeteilt.` } });
+    const notification = await prisma.notification.create({ data: { type: "HOUSEMAN_TASKS_ASSIGNED", level: "info", targetRole: "houseman", targetUserId: userId, message: `Dir ${n === 1 ? "wurde 1 Aufgabe" : `wurden ${n} Aufgaben`} zugeteilt.`, ...keyed("notify.housemanAssigned", { n }) } });
     broadcast("notification:new", { notification });
   }
   if (changed) {

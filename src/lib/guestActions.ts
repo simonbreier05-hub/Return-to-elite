@@ -18,6 +18,7 @@ import { reportDefect } from "@/lib/rooms/reportDefect";
 import { addRoomNote } from "@/lib/rooms/addRoomNote";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { sanitizeGuestText } from "@/lib/guestSanitize";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * The five guest write actions, shared by both access paths
@@ -79,6 +80,7 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
         targetRole: "supervisor",
         roomId: room.id,
         message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
+        ...keyed("notify.guestDnd", { n: room.number, windowKey: `dndWindow.${parsed.data.window}` }),
       },
     }),
     prisma.guestRequest.create({
@@ -116,6 +118,7 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
         targetRole: "supervisor",
         roomId: room.id,
         message: `Room ${room.number}: guest lifted Do Not Disturb.`,
+        ...keyed("notify.guestDndLifted", { n: room.number }),
       },
     }),
   ]);
@@ -151,6 +154,7 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
         targetRole: "supervisor",
         roomId: room.id,
         message: `Room ${room.number}: guest requests cleaning — ${timingLabel}.`,
+        ...(timing === "LATER" && time ? keyed("notify.guestCleanAt", { n: room.number, time }) : keyed("notify.guestClean", { n: room.number, timingKey: `cleanTiming.${timing}` })),
       },
     }),
     prisma.guestRequest.create({
@@ -222,6 +226,7 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
         targetRole: dept.role,
         roomId: room.id,
         message: `Room ${room.number}: guest wants to be contacted by ${dept.label}.`,
+        ...keyed("notify.guestContact", { n: room.number, deptKey: `department.${dept.key}` }),
       },
     }),
     prisma.guestRequest.create({

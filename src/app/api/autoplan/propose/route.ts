@@ -17,8 +17,8 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   const { missing, stale } = await listBlockersNow();
-  if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, missing }, { status: 409 });
-  if (stale.length) return NextResponse.json({ error: `Veraltete Listen ohne Bestätigung: ${stale.map((s) => `${s.type} (${s.businessDate})`).join(", ")}.`, stale }, { status: 409 });
+  if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, code: "LISTS_MISSING", missing }, { status: 409 });
+  if (stale.length) return NextResponse.json({ error: `Veraltete Listen ohne Bestätigung: ${stale.map((s) => `${s.type} (${s.businessDate})`).join(", ")}.`, code: "LISTS_STALE", stale }, { status: 409 });
   const date = parsed.data.date ?? (await latestPlanDate());
   if (!date) return NextResponse.json({ error: "Noch kein Tagesplan. Bitte zuerst importieren und den Tagesplan berechnen.", code: "NO_DAY_PLAN" }, { status: 409 });
   try {

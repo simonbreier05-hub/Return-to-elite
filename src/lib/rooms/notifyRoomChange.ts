@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /** Was sich an einem Zimmer geändert hat (Zuteilung/Verschiebung melden `notifyReassignment`/`notifyBulkReassignment`). */
 export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY";
@@ -29,7 +30,7 @@ export async function notifyHousekeeperOfRoomChange(opts: { roomId: string; kind
     const room = await prisma.room.findUnique({ where: { id: opts.roomId }, select: { id: true, number: true, floor: true, assignedToId: true, assignedOn: true } });
     if (!room?.assignedToId || room.assignedOn !== berlinDate(opts.now ?? new Date()) || room.assignedToId === opts.actorId) return false;
     const notification = await prisma.notification.create({
-      data: { type: "ROOM_CHANGED", level: opts.kind === "DND" || opts.kind === "PRIORITY" ? "warning" : "info", targetRole: "room_attendant", targetUserId: room.assignedToId, roomId: room.id, message: roomChangeMessage(room, opts.kind) },
+      data: { type: "ROOM_CHANGED", level: opts.kind === "DND" || opts.kind === "PRIORITY" ? "warning" : "info", targetRole: "room_attendant", targetUserId: room.assignedToId, roomId: room.id, message: roomChangeMessage(room, opts.kind), ...keyed("notify.roomChange", { n: room.number, floor: room.floor, whatKey: `notify.change${opts.kind}` }) },
     });
     broadcast("notification:new", { notification });
     return true;

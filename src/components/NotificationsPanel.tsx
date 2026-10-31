@@ -5,7 +5,7 @@ import { api } from "./api";
 import { useSocket } from "./useSocket";
 import WindowPanel from "./WindowPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import { notificationText } from "@/lib/i18n/notificationText";
+import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 
 interface Notification {
   id: string;
@@ -92,7 +92,7 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
             }`}
           >
             <div className="text-[0.68rem] uppercase tracking-wider text-graphite/60">
-              {n.type.replace(/_/g, " ")} · {fmt.time(n.createdAt)}
+              {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
             </div>
             <div className="mt-0.5">{notificationText(n, t)}</div>
           </div>

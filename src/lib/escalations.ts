@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { broadcast } from "./realtime";
 import { getSettings } from "./settings";
 import type { Role } from "./domain";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * Escalation engine — executed every minute by the ticker in server.js
@@ -21,6 +22,8 @@ async function notifyOnce(entry: {
   targetRole: Role;
   roomId?: string | null;
   message: string;
+  messageKey?: string;
+  messageVars?: string;
   dedupeKey: string;
 }) {
   const existing = await prisma.notification.findFirst({ where: { dedupeKey: entry.dedupeKey } });
@@ -49,6 +52,7 @@ export async function runEscalations(now = new Date()) {
         targetRole: "room_attendant",
         roomId: room.id,
         message: `Room ${room.number}: ${room.blockReason ?? "BLOCKED"} for ${Math.round(ageMin)} min — please re-check.`,
+        ...keyed("notify.blockedRecheck", { n: room.number, min: Math.round(ageMin), reasonKey: room.blockReason ? `blockReason.${room.blockReason}` : "status.BLOCKED" }),
         dedupeKey: `BLOCKED_RECHECK:${room.id}:${stamp}:${stage}`,
       });
       if (n) created.push(n.type);
@@ -61,6 +65,7 @@ export async function runEscalations(now = new Date()) {
         targetRole: "duty_manager",
         roomId: room.id,
         message: `Room ${room.number}: DND for ${Math.round(ageMin)} min — welfare check recommended.`,
+        ...keyed("notify.welfareCheck", { n: room.number, min: Math.round(ageMin) }),
         dedupeKey: `WELFARE_CHECK:${room.id}:${stamp}`,
       });
       if (n) created.push(n.type);
@@ -84,6 +89,9 @@ export async function runEscalations(now = new Date()) {
       message: `Room ${arrival.room.number}: ${arrival.guestName}${arrival.vip ? " (VIP)" : ""} ETA ${
         minutes <= 0 ? "passed" : `in ${minutes} min`
       } but room is ${arrival.room.status}, not INSPECTED.`,
+      ...(minutes <= 0
+        ? keyed("notify.etaPassed", { n: arrival.room.number, statusKey: `status.${arrival.room.status}` })
+        : keyed("notify.etaSoon", { n: arrival.room.number, min: minutes, statusKey: `status.${arrival.room.status}` })),
       dedupeKey: `ETA_AT_RISK:${arrival.id}`,
     });
     if (n) created.push(n.type);
@@ -98,6 +106,7 @@ export async function runEscalations(now = new Date()) {
       level: "warning",
       targetRole: "supervisor",
       message: `${cleanCount} rooms are CLEAN and waiting for inspection — release queue backlog.`,
+      ...keyed("notify.releaseBacklog", { n: cleanCount }),
       dedupeKey: `RELEASE_QUEUE_BACKLOG:${bucket}`,
     });
     if (n) created.push(n.type);

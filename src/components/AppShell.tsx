@@ -15,7 +15,7 @@ import ErrorBoundary from "./ErrorBoundary";
 import { ChatProvider } from "./chat/ChatContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
-import { notificationText } from "@/lib/i18n/notificationText";
+import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
 import LiveClock from "./LiveClock";
 import CloseButton from "./CloseButton";
@@ -314,7 +314,7 @@ export default function AppShell({
                 }`}
               >
                 <div className="text-xs uppercase tracking-wider text-graphite/70">
-                  {n.type.replace(/_/g, " ")} · {fmt.time(n.createdAt)}
+                  {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
                 </div>
                 <div className="mt-1 text-sm">{notificationText(n, t)}</div>
               </div>

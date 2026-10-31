@@ -8,7 +8,7 @@ export const PHASE1_NAMESPACES = [
   "common", "errorBoundary", "nav", "role", "status", "blockReason", "blockReasonShort", "roomType", "defectCategory",
   "workOrderStatus", "roomTaskType", "department", "guestRequestKind", "guestRequestStatus", "dndWindow", "cleanTiming",
   "login", "appShell", "roomFlags", "priority", "attendant", "engineering", "houseman", "offline", "work", "hkHub",
-  "dayNumbers", "hubDay", "lists", "chat", "language", "errors", "shared", "notify", "floorPlanRef",
+  "dayNumbers", "hubDay", "lists", "chat", "language", "errors", "shared", "notify", "notifyType", "floorPlanRef",
 ] as const;
 
 /** Einzelne Schlüssel aus Supervisor-Namensräumen, die auch Housekeeper sehen („Mehr“-Menü, Zimmer-Detail aus der Suche). */
