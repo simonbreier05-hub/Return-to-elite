@@ -38,14 +38,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   const parsed = NoteSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Note body required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Note body required.", code: "TEXT_REQUIRED" }, { status: 400 });
 
   const room = await prisma.room.findUnique({ where: { id } });
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  if (!room) return NextResponse.json({ error: "Room not found.", code: "ROOM_NOT_FOUND" }, { status: 404 });
 
   const kind = parsed.data.kind ?? (parsed.data.task ? "MESSAGE" : "NOTE");
   if (kind === "MESSAGE" && !(await sessionSeesMessages(auth.session, room.id))) {
-    return NextResponse.json({ error: "Nachrichten an dieses Zimmer können nur Beteiligte schreiben." }, { status: 403 });
+    return NextResponse.json({ error: "Nachrichten an dieses Zimmer können nur Beteiligte schreiben.", code: "MESSAGES_PARTICIPANTS_ONLY" }, { status: 403 });
   }
   const note = await addRoomNote({ room, authorId: auth.session.userId, body: parsed.data.body, kind, task: parsed.data.task ?? null });
   return NextResponse.json({ note }, { status: 201 });

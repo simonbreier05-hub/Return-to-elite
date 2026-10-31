@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import type { RoomTaskType } from "@/lib/domain";
+import { keyed } from "@/lib/i18n/notificationText";
 
 const INCLUDE = {
   room: { select: { id: true, number: true, floor: true } },
@@ -43,6 +44,7 @@ export async function createRoomTask(input: {
       targetRole: "houseman",
       roomId: room.id,
       message: `New task: room ${room.number} — ${type}${note ? `: ${note}` : ""}`,
+      ...(note ? keyed("notify.newTaskNote", { n: room.number, typeKey: `roomTaskType.${type}`, note }) : keyed("notify.newTask", { n: room.number, typeKey: `roomTaskType.${type}` })),
       dedupeKey: `ROOM_TASK:${roomTask.id}`,
     },
   });

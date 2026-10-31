@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 
 interface Handover {
   headline: string;
@@ -47,7 +48,7 @@ export default function HandoverView() {
     try {
       setData(await api<{ handover: Handover; facts: Facts }>(`/api/handover?hours=${h}`));
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

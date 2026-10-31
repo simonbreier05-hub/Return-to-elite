@@ -18,9 +18,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   const u = await prisma.user.findUnique({ where: { id } });
-  if (!u || u.role !== "room_attendant") return NextResponse.json({ error: "Housekeeper nicht gefunden." }, { status: 404 });
+  if (!u || u.role !== "room_attendant") return NextResponse.json({ error: "Housekeeper nicht gefunden.", code: "USER_NOT_FOUND" }, { status: 404 });
   const { homeFloors, ...rest } = parsed.data;
   await prisma.user.update({
     where: { id },

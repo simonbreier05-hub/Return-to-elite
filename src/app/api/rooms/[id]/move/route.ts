@@ -18,7 +18,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "toAttendantId required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "toAttendantId required.", code: "INVALID_INPUT" }, { status: 400 });
 
   const result = await moveRoomBetweenAttendants(auth.session, id, parsed.data.toAttendantId, { confirmStarted: parsed.data.confirmStarted });
   if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: result.status });

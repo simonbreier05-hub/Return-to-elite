@@ -14,6 +14,7 @@ import { roomDayCategory, type RoomDayCategory } from "@/lib/rooms/roomDayCatego
 import { computeRoomCredit } from "@/lib/rooms/roomCredit";
 import type { RoomType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface OnShiftAttendant {
@@ -121,7 +122,7 @@ export default function PlanningFloorPlanPanel({
   const loadLive = () => {
     Promise.all([api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1"), api<{ rows: DayNumberRow[] }>("/api/day-numbers")])
       .then(([d, n]) => { setLiveRooms(d.rooms); setDayRows(n.rows); })
-      .catch((e) => setNotice(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setNotice(errorText(e, t)));
   };
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export default function PlanningFloorPlanPanel({
         setDayRows(numbersData.rows);
         if (settingsData.settings?.roomInventory) setInventory(settingsData.settings.roomInventory);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setError(errorText(e, t)));
   }, []);
 
   // Neue Daten vom Server (z. B. nach einer Zuteilung): im Hintergrund nachladen, nichts neu aufbauen

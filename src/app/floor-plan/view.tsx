@@ -6,6 +6,8 @@ import FloorPlanGrid, { FloorPlanLegend, type FloorPlanResponse } from "@/compon
 import AssignmentFloorPlan from "@/components/AssignmentFloorPlan";
 import { roomDayCategory } from "@/lib/rooms/roomDayCategory";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 
 interface LiveRoom {
   id: string;
@@ -32,6 +34,7 @@ interface LiveRoom {
  * the existing /api/rooms and merged in here by room number.
  */
 function ReferenceFloorPlan() {
+  const { t } = useLocale();
   const [plan, setPlan] = useState<FloorPlanResponse | null>(null);
   const [liveRooms, setLiveRooms] = useState<LiveRoom[]>([]);
   const [hub, setHub] = useState<HubState | null>(null);
@@ -49,7 +52,7 @@ function ReferenceFloorPlan() {
         setLiveRooms(roomsData.rooms);
         setHub(roomsData.hub ?? null);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setError(errorText(e, t)));
   };
 
   useEffect(load, []);
@@ -57,31 +60,28 @@ function ReferenceFloorPlan() {
   const liveByNumber = useMemo(() => new Map(liveRooms.map((r) => [r.number, r])), [liveRooms]);
 
   if (error) return <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>;
-  if (!plan) return <p className="text-sm text-graphite/60">Loading floor plan…</p>;
+  if (!plan) return <p className="text-sm text-graphite/60">{t("floorPlanRef.loading")}</p>;
 
   return (
     <div className="animate-rise">
       <div className="mb-5">
-        <h2 className="font-serif text-4xl leading-none">Floor Plan</h2>
+        <h2 className="font-serif text-4xl leading-none">{t("floorPlanRef.title")}</h2>
         <div className="rule-gold my-2 w-40" />
         <p className="text-sm text-graphite/70">
-          Digitized from the housekeeping floor-plan binder — wayfinding, HSK &amp; service-lift
-          locations, room flags, and today&apos;s live status for every floor.
+          {t("floorPlanRef.intro")}
         </p>
       </div>
 
       <HubMissingNotice hub={hub} planner />
       <div className="mb-4 rounded-xl border border-gold-line/40 bg-parchment/60 p-3 text-xs text-graphite/70">
-        <strong>Staff &amp; housekeeping always arrive on a floor via the SVC (service) lift.</strong>{" "}
-        Everything a room attendant needs is kept in the HSK office marked <strong>★ primary</strong> below —
-        it is always the one positioned at that SVC lift, not any other HSK/storage room on the floor.
+        <strong>{t("floorPlanRef.liftNoteStrong")}</strong> {t("floorPlanRef.liftNote")}
       </div>
 
       {/* Legend — wraps rather than scrolling out of view; each floor's own
           room grid below scrolls horizontally on its own if a section ever
           runs wider than a narrow screen (see the per-section overflow-x-auto
           wrapper), so this never needs to be pinned in place itself. */}
-      <FloorPlanLegend className="mb-4" occupiedLabel="Occupied" guestDndLabel="Guest: Do Not Disturb" />
+      <FloorPlanLegend className="mb-4" occupiedLabel={t("floorPlanRef.occupied")} guestDndLabel={t("floorPlanRef.guestDnd")} />
 
       <FloorPlanGrid
         plan={plan}
@@ -102,11 +102,11 @@ function ReferenceFloorPlan() {
             guestDndActive: live?.guestDndActive ?? false,
             title:
               [
-                live?.guestDndActive && "Guest: Do Not Disturb",
-                r.interconnectingGroup && `Interconnecting with ${r.interconnectingGroup}`,
-                r.hasDisabledAccess && "Room for disabled",
-                r.isAntiAllergic && "Anti-allergic",
-                r.hasTerrace && "Has terrace",
+                live?.guestDndActive && t("floorPlanRef.guestDnd"),
+                r.interconnectingGroup && t("floorPlanRef.interconnecting", { group: r.interconnectingGroup }),
+                r.hasDisabledAccess && t("floorPlanRef.disabled"),
+                r.isAntiAllergic && t("floorPlanRef.antiAllergic"),
+                r.hasTerrace && t("floorPlanRef.terrace"),
               ]
                 .filter(Boolean)
                 .join(" · ") || undefined,

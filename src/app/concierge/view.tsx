@@ -9,6 +9,8 @@ import RoomDetailModal from "@/components/RoomDetailModal";
 import { useRoomLookup } from "@/components/useRoomLookup";
 import { NOTE_STATUS_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
+import { hhmm } from "@/lib/i18n/format";
 
 interface Excursion {
   id: string;
@@ -65,7 +67,7 @@ export default function ConciergeView() {
       setRoomNumber(""); setGuestName(""); setStart(""); setEnd(""); setNote("");
       load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -142,8 +144,8 @@ export default function ConciergeView() {
                     )}
                   </button>
                   <span className="text-sm">
-                    {new Date(e.startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
-                    {new Date(e.endsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                    {hhmm(e.startsAt)} –{" "}
+                    {hhmm(e.endsAt)}
                     {active && <span className="ml-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">{t("concierge.guestOut")}</span>}
                   </span>
                 </div>

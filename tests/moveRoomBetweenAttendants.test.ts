@@ -107,7 +107,7 @@ describe("moveRoomBetweenAttendants", () => {
 
     const result = await moveRoomBetweenAttendants(session, "room-1", "att-a");
 
-    expect(result).toEqual({ ok: false, status: 409, error: expect.any(String) });
+    expect(result).toEqual({ ok: false, status: 409, error: expect.any(String), code: "ALREADY_ASSIGNED" });
     expect(transactionMock).not.toHaveBeenCalled();
   });
 
@@ -154,6 +154,6 @@ describe("moveRoomBetweenAttendants", () => {
 
     const result = await moveRoomBetweenAttendants(session, "missing", "att-b");
 
-    expect(result).toEqual({ ok: false, status: 404, error: expect.any(String) });
+    expect(result).toEqual({ ok: false, status: 404, error: expect.any(String), code: "ROOM_NOT_FOUND" });
   });
 });

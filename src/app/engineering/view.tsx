@@ -10,9 +10,11 @@ import RoomDetailModal from "@/components/RoomDetailModal";
 import { useRoomLookup } from "@/components/useRoomLookup";
 import { NOTE_STATUS_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import PauseControl, { type PauseInfo } from "@/components/PauseControl";
 import TaskMessageModal from "@/components/TaskMessageModal";
+import { hhmm } from "@/lib/i18n/format";
 
 interface WorkOrder {
   id: string;
@@ -85,7 +87,7 @@ export default function EngineeringView() {
       });
       upsert(res.workOrder);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusyId(null);
     }
@@ -143,11 +145,11 @@ export default function EngineeringView() {
                 <strong>{t(`defectCategory.${wo.defect.category}` as TKey)}</strong> — {wo.defect.note}
               </p>
               {wo.defect.photoPath && (
-                <div className="mt-2"><ImageLightbox src={wo.defect.photoPath} alt="Defect photo" className="max-h-40 rounded-lg object-cover" /></div>
+                <div className="mt-2"><ImageLightbox src={wo.defect.photoPath} alt={t("shared.defectPhoto")} className="max-h-40 rounded-lg object-cover" /></div>
               )}
               <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-graphite/60">
                 {t("engineering.reportedBy", { name: wo.defect.reportedBy?.name ?? "—" })} ·{" "}
-                {new Date(wo.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {hhmm(wo.createdAt)}
                 {wo.assignedTo && ` · ${t("engineering.assignedTo", { name: wo.assignedTo.name })}`}
                 {wo.defect.reportedBy?.role === "guest" && (
                   <span className="rounded-full bg-status-out-of-order/10 px-2 py-0.5 font-semibold text-status-out-of-order">

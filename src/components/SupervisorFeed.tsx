@@ -8,12 +8,12 @@ import { GlanceDetailHost, useGlanceDetail, type DetailContent } from "@/compone
 import { FEED_PAGE_SIZE, type FeedItem } from "@/lib/supervisorFeed/rules";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import { hhmm } from "@/lib/i18n/format";
 
 /** Zuletzt gesehen (je Gerät/Browser, nur Komfort): Einträge danach gelten als „neu“. */
 const SEEN_KEY = "stayclean.supervisorFeed.seenAt";
 const readSeen = () => { try { return Number(window.localStorage.getItem(SEEN_KEY)) || 0; } catch { return 0; } };
 const writeSeen = (ms: number) => { try { window.localStorage.setItem(SEEN_KEY, String(ms)); } catch { /* Speicher gesperrt */ } };
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
 
 /**
  * Ereignis-Feed unter den Zählern von „Das ist jetzt wichtig“ (nur Supervisor-Startansicht): heutige Ereignisse der eigenen

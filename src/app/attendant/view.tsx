@@ -25,8 +25,10 @@ import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } fr
 import { chunkByFloor, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 import { ACTION_TARGET, floorProgress, hkGroupOf, orderRoute, primaryActionFor, type HkAction, type HkGroup } from "@/lib/rooms/hkGroups";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { hhmm } from "@/lib/i18n/format";
 
 interface Note {
   id: string;
@@ -82,7 +84,7 @@ const ACTION_LABEL: Record<Exclude<HkAction, null | "DND">, TKey> = {
   START: "attendant.startCleaning", FINISH: "attendant.markClean", UNBLOCK: "attendant.unblockAndStart", RESUME: "work.resume",
 };
 const GROUP_TITLE: Record<HkGroup, TKey> = { NOW: "hkHub.groupNow", NEXT: "hkHub.groupNext", DONE: "hkHub.groupDone", OTHER: "hkHub.groupOther" };
-const time = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+const time = (iso: string) => hhmm(iso);
 
 /**
  * Housekeeper-Hub „Meine Zimmer“ — eine Ansicht statt „Meine Liste“ + „Meine Zimmer“: der ruhige Listen-Look (Art, Wäsche,
@@ -122,7 +124,7 @@ export default function AttendantView() {
   }, []);
 
   useEffect(() => {
-    loadRooms().catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    loadRooms().catch((e) => setError(errorText(e, t)));
     void loadList();
     void loadPriorities();
   }, [loadRooms, loadList, loadPriorities]);
@@ -191,7 +193,7 @@ export default function AttendantView() {
           )
         );
       } else {
-        setError(`${room.number}: ${e instanceof ApiError ? e.message : String(e)}`);
+        setError(`${room.number}: ${errorText(e, t)}`);
       }
     } finally {
       setBusyRoomId(null);
@@ -206,7 +208,7 @@ export default function AttendantView() {
       setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, pause: null } : r)));
       refreshRoomsSoon();
     } catch (e) {
-      setError(`${room.number}: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`${room.number}: ${errorText(e, t)}`);
     } finally {
       setBusyRoomId(null);
     }
@@ -220,7 +222,7 @@ export default function AttendantView() {
       setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, ...res.room, notes: r.notes, defects: r.defects, arrivals: r.arrivals, rewind: null } : r)));
       refreshAll();
     } catch (e) {
-      setError(`${room.number}: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`${room.number}: ${errorText(e, t)}`);
       refreshRoomsSoon();
     } finally {
       setBusyRoomId(null);
@@ -288,7 +290,7 @@ export default function AttendantView() {
     try {
       await api("/api/rooms/reorder", { method: "PATCH", body: { roomIds: newOrder } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save the new order.");
+      setError(errorText(e, t, "shared.reorderFailed"));
       void loadRooms();
     }
   };
@@ -586,7 +588,7 @@ function DefectModal({
       await api(`/api/rooms/${room.id}/defects`, { formData: fd });
       onDone();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

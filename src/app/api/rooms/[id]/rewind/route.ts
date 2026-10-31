@@ -12,6 +12,6 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const result = await rewindRoomStatus(auth.session, id);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: result.status });
   return NextResponse.json({ room: result.room });
 }

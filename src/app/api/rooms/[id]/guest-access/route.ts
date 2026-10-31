@@ -16,7 +16,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const { id } = await params;
   const room = await prisma.room.findUnique({ where: { id }, select: { id: true, number: true } });
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  if (!room) return NextResponse.json({ error: "Room not found.", code: "ROOM_NOT_FOUND" }, { status: 404 });
 
   const code = await regenerateRoomAccessCode(room.id);
   await audit({ action: "GUEST_ACCESS_CODE_REGENERATED", userId: auth.session.userId, roomId: room.id, meta: { roomNumber: room.number } });

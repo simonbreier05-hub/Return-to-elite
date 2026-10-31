@@ -11,6 +11,7 @@ import type { BlockReason, PauseTarget, RoomStatus } from "@/lib/domain";
 import { PauseBadge, type PauseInfo } from "./PauseControl";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import { hhmm, dateTime } from "@/lib/i18n/format";
 
 /** The room shape returned by GET /api/rooms — shared by the global quick search. */
 export interface SearchedRoom {
@@ -114,7 +115,7 @@ export default function RoomDetailModal({
       )}
       {room.oooUntil && (
         <p className="mt-1 text-xs text-graphite/60">
-          {t("supervisor.oooUntil", { date: new Date(room.oooUntil).toLocaleString() })}
+          {t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}
         </p>
       )}
       {room.reworkNote && room.status === "PICKUP" && (
@@ -188,7 +189,7 @@ export default function RoomDetailModal({
             <p key={i} className="text-sm">
               {a.vip && "★ "}
               {a.guestName}
-              {a.eta && ` · ETA ${new Date(a.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+              {a.eta && ` · ETA ${hhmm(a.eta)}`}
               {a.neededNow && ` ${t("supervisor.neededNowFlag")}`}
             </p>
           ))}
@@ -218,7 +219,7 @@ export default function RoomDetailModal({
               {r.kind === "DND" ? "🔕" : r.kind === "CLEAN_REQUEST" ? "✨" : "💬"}{" "}
               {t(`guestRequestKind.${r.kind}` as TKey)}
               <span className="ml-1 text-xs text-graphite/60">
-                [{t(`guestRequestStatus.${r.status}` as TKey)} · {new Date(r.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}]
+                [{t(`guestRequestStatus.${r.status}` as TKey)} · {hhmm(r.createdAt)}]
               </span>
             </p>
           ))}

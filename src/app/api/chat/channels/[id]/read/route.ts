@@ -7,7 +7,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ id: st
   const a = await chatAuth();
   if (!a.ok) return a.response;
   const { id } = await params;
-  if (!(await accessibleChannel(a.s, id))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal." }, { status: 403 });
+  if (!(await accessibleChannel(a.s, id))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal.", code: "CHANNEL_FORBIDDEN" }, { status: 403 });
   await markRead(a.s, id);
   return NextResponse.json({ ok: true });
 }

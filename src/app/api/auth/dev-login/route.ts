@@ -42,14 +42,14 @@ const Body = z.object({ email: z.string().email() });
 
 export async function POST(req: NextRequest) {
   if (!devLoginEnabled()) {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return NextResponse.json({ error: "Not found.", code: "NOT_FOUND" }, { status: 404 });
   }
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "email required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "email required.", code: "INVALID_INPUT" }, { status: 400 });
 
   const user = await prisma.user.findUnique({ where: { email: parsed.data.email.toLowerCase() } });
-  if (!user) return NextResponse.json({ error: "Unknown user." }, { status: 404 });
+  if (!user) return NextResponse.json({ error: "Unknown user.", code: "USER_NOT_FOUND" }, { status: 404 });
 
   const role = RoleSchema.parse(user.role);
   const token = await createSessionToken({ userId: user.id, name: user.name, role });

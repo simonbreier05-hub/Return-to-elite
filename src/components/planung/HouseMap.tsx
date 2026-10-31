@@ -2,7 +2,7 @@
 
 import { useRef, useState, type KeyboardEvent } from "react";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import { floorStats, houseTotals, orderedFloors, TILE_LABEL_DE, waveDelay, type HouseData, type HouseTile, type TileKind } from "@/lib/planung/model";
+import { floorStats, houseTotals, orderedFloors, waveDelay, type HouseData, type HouseTile, type TileKind } from "@/lib/planung/model";
 import FloorOccupancy from "./FloorOccupancy";
 
 const TILE_CLASS: Record<TileKind, string> = {
@@ -84,7 +84,7 @@ export default function HouseMap({
                       onFocus={() => setRoving(tile.number)}
                       onClick={() => setSel(sel?.tile.number === tile.number ? null : { floor: f.floor, tile })}
                       aria-pressed={sel?.tile.number === tile.number}
-                      aria-label={`${tile.number}, ${TILE_LABEL_DE[tile.kind]}`}
+                      aria-label={`${tile.number}, ${t(`shared.tile${tile.kind}`)}`}
                       className={`relative aspect-square rounded-[3px] after:absolute after:-inset-1 after:content-[''] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brass-light ${TILE_CLASS[tile.kind]} ${animateKey > 0 && house.hasData ? "pl-tile" : ""} ${highlight?.has(tile.number) ? "pl-flash" : ""}`}
                       style={{ ["--d" as string]: waveDelay(row, i) }}
                     />
@@ -103,7 +103,7 @@ export default function HouseMap({
           })}
         </div>
 
-        <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-1 pt-3 text-xs text-pl-muted" aria-label="Legende">
+        <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-1 pt-3 text-xs text-pl-muted" aria-label={t("lists.legendTitle")}>
           {(["DEPARTURE", "TURN", "STAYOVER", "ARRIVAL", "EMPTY"] as const).map((k) => (
             <li key={k} className="flex items-center gap-1.5">
               <span aria-hidden className={`inline-block h-3 w-3 rounded-[3px] ${TILE_CLASS[k]}`} />
@@ -115,8 +115,8 @@ export default function HouseMap({
 
       {sel && (
         <p role="status" className="mt-3 rounded-full border border-line-1 bg-night-600 px-4 py-2 text-sm">
-          <strong>{sel.tile.number}</strong> · {t("planungTool.colFloor")} {sel.floor} · {TILE_LABEL_DE[sel.tile.kind]}
-          {sel.tile.vip ? " · VIP" : ""}{sel.tile.laundry ? " · Wäschewechsel" : ""}{sel.tile.eta ? ` · ${sel.tile.eta}` : ""}
+          <strong>{sel.tile.number}</strong> · {t("planungTool.colFloor")} {sel.floor} · {t(`shared.tile${sel.tile.kind}`)}
+          {sel.tile.vip ? ` · ${t("shared.vip")}` : ""}{sel.tile.laundry ? ` · ${t("shared.laundry")}` : ""}{sel.tile.eta ? ` · ${sel.tile.eta}` : ""}
           {sel.tile.openTraces ? ` · ${sel.tile.openTraces} Traces` : ""}
         </p>
       )}

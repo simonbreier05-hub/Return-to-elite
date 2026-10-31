@@ -30,18 +30,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   // that still smuggles a traversal token, then re-verify the resolved path
   // never leaves UPLOADS_DIR — defense in depth, not just the segment check.
   if (segments.length === 0 || segments.some((s) => s === ".." || s === "." || s.includes("/") || s.includes("\\"))) {
-    return NextResponse.json({ error: "Invalid path." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid path.", code: "INVALID_INPUT" }, { status: 400 });
   }
   const filePath = path.join(UPLOADS_DIR, ...segments);
   if (path.relative(UPLOADS_DIR, filePath).startsWith("..")) {
-    return NextResponse.json({ error: "Invalid path." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid path.", code: "INVALID_INPUT" }, { status: 400 });
   }
 
   let data: Buffer;
   try {
     data = await readFile(filePath);
   } catch {
-    return NextResponse.json({ error: "Not found." }, { status: 404 });
+    return NextResponse.json({ error: "Not found.", code: "NOT_FOUND" }, { status: 404 });
   }
 
   const ext = (segments[segments.length - 1].split(".").pop() || "").toLowerCase();

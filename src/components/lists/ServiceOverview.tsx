@@ -101,7 +101,7 @@ export default function ServiceOverview() {
                     <button type="button" onClick={() => setRoomRef(r.id)} title={t("lists.hmOpenRoom", { n: r.number })} className="min-h-11 w-14 text-left font-serif text-2xl leading-none underline decoration-charcoal/20 underline-offset-4">{r.number}</button>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${style.chip}`}>{t(NAME[r.service])}</span>
                     <span className="flex flex-wrap items-center gap-1 text-[0.7rem] font-semibold">
-                      {r.vip && <span className="rounded-full bg-gold/20 px-2 py-0.5 text-gold-soft">★ VIP</span>}
+                      {r.vip && <span className="rounded-full bg-gold/20 px-2 py-0.5 text-gold-soft">★ {t("shared.vip")}</span>}
                       {r.eta && <span className="rounded-full bg-parchment px-2 py-0.5">{t("service.eta", { time: r.eta })}</span>}
                       {r.allergy && <span className="rounded-full bg-parchment px-2 py-0.5">{t("service.allergy")}</span>}
                       {r.dnd && <span className="rounded-full bg-status-blocked/10 px-2 py-0.5 text-status-blocked">DND</span>}
@@ -114,7 +114,7 @@ export default function ServiceOverview() {
                     )}
                     <span className="ml-auto text-xs text-graphite/70">
                       {needsCleaning(r.service, r.status) ? (r.assignedToName ? `→ ${r.assignedToName}` : <span className="font-medium text-gold-soft">{t("service.unassigned")}</span>) : ""}
-                      {r.credits > 0 && <span className="ml-2 text-graphite/50">{r.credits} Cr.</span>}
+                      {r.credits > 0 && <span className="ml-2 text-graphite/50">{r.credits} {t("shared.creditsShort")}</span>}
                       {r.done && <span className="ml-2 text-status-clean">✓</span>}
                     </span>
                   </li>

@@ -55,7 +55,7 @@ export const ROLE_ALLOWED_TARGETS: Record<Role, RoomStatus[]> = {
 
 export type TransitionCheck =
   | { ok: true }
-  | { ok: false; code: 403 | 409; error: string };
+  | { ok: false; code: 403 | 409; error: string; reason?: string };
 
 /**
  * Validate a requested status change. Returns a structured result so the API
@@ -74,10 +74,10 @@ export function checkTransition(role: Role, from: RoomStatus, to: RoomStatus): T
     };
   }
   if (from === to) {
-    return { ok: false, code: 409, error: `Room is already '${from}'.` };
+    return { ok: false, code: 409, error: `Room is already '${from}'.`, reason: "ALREADY_IN_STATUS" };
   }
   if (!LEGAL_TRANSITIONS[from].includes(to)) {
-    return { ok: false, code: 409, error: `Illegal transition ${from} → ${to}.` };
+    return { ok: false, code: 409, error: `Illegal transition ${from} → ${to}.`, reason: "ILLEGAL_TRANSITION" };
   }
   return { ok: true };
 }

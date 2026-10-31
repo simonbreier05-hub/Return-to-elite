@@ -34,16 +34,16 @@ export async function rewindOptions(session: Session, rooms: { id: string; statu
   return out;
 }
 
-export type RewindResult = { ok: true; room: unknown } | { ok: false; status: number; error: string };
+export type RewindResult = { ok: true; room: unknown } | { ok: false; status: number; error: string; code?: string };
 
 /** Spult den eigenen letzten Statusschritt eine Stufe zurück — protokolliert als STATUS_REWIND, live als room:update. */
 export async function rewindRoomStatus(session: Session, roomId: string, now = new Date()): Promise<RewindResult> {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
-  if (!room) return { ok: false, status: 404, error: "Zimmer nicht gefunden." };
+  if (!room) return { ok: false, status: 404, error: "Zimmer nicht gefunden.", code: "ROOM_NOT_FOUND" };
   const opt = (await rewindOptions(session, [room], now)).get(room.id);
   if (!opt) {
     await audit({ action: "STATUS_REWIND_DENIED", userId: session.userId, roomId: room.id, fromStatus: room.status, meta: { role: session.role } });
-    return { ok: false, status: 409, error: "Zurückspulen ist hier nicht (mehr) möglich." };
+    return { ok: false, status: 409, error: "Zurückspulen ist hier nicht (mehr) möglich.", code: "REWIND_NOT_POSSIBLE" };
   }
   const updated = await prisma.room.update({
     where: { id: room.id },

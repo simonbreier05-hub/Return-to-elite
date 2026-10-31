@@ -6,6 +6,7 @@ import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import RedistributionCards from "@/components/RedistributionCards";
 import LiveListBoards from "@/components/LiveListBoards";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
@@ -30,7 +31,7 @@ export default function AssignmentFloorPlan() {
   const toggle = async (id: string, absent: boolean) => {
     setError(null);
     try { await api(`/api/housekeepers/${id}/absent`, { body: { absent } }); await load(); setVersion((v) => v + 1); }
-    catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    catch (e) { setError(errorText(e, t)); }
   };
 
   if (!day) return null;

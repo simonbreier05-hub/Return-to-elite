@@ -18,10 +18,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültiger Status." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültiger Status.", code: "INVALID_STATUS" }, { status: 400 });
 
   const r = await setHousemanTraceStatus(id, parsed.data.status, auth.session);
-  if (!r) return NextResponse.json({ error: "Aufgabe nicht gefunden." }, { status: 404 });
+  if (!r) return NextResponse.json({ error: "Aufgabe nicht gefunden.", code: "TASK_NOT_FOUND" }, { status: 404 });
   if (r.changed) {
     const room = await prisma.room.findUnique({ where: { number: r.roomNumber }, select: { id: true, number: true, floor: true } });
     await audit({ action: parsed.data.status === "DONE" ? "TRACE_DONE" : "TRACE_REOPENED", userId: auth.session.userId, roomId: room?.id, meta: { traceId: id } });

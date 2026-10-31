@@ -14,7 +14,7 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
   } catch (e) {
     // Eigene Meldungen (Vorschau vorbei, kritische Befunde) gehen durch; Datenbankfehler nie roh an die Oberfläche.
     const db = e instanceof Error && e.constructor.name.startsWith("PrismaClient");
-    if (db || !(e instanceof Error)) return NextResponse.json({ error: "Liste konnte nicht übernommen werden (Datenbank antwortet nicht). Bitte erneut versuchen." }, { status: 503 });
+    if (db || !(e instanceof Error)) return NextResponse.json({ error: "Liste konnte nicht übernommen werden (Datenbank antwortet nicht). Bitte erneut versuchen.", code: "TRY_AGAIN" }, { status: 503 });
     return NextResponse.json({ error: e.message }, { status: 409 });
   }
   const b = await prisma.importBatch.findUnique({ where: { id }, select: { type: true, businessDate: true } });

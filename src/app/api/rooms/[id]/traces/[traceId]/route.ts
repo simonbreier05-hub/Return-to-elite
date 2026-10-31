@@ -21,13 +21,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (!auth.ok) return auth.response;
   const { id, traceId } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Text oder Status angeben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Text oder Status angeben.", code: "TEXT_REQUIRED" }, { status: 400 });
   const trace = await prisma.trace.findUnique({ where: { id: traceId }, include: { room: { select: { id: true, number: true, floor: true } } } });
-  if (!trace || trace.roomId !== id) return NextResponse.json({ error: "Trace nicht gefunden." }, { status: 404 });
+  if (!trace || trace.roomId !== id) return NextResponse.json({ error: "Trace nicht gefunden.", code: "TRACE_NOT_FOUND" }, { status: 404 });
 
   if (parsed.data.text !== undefined && parsed.data.text !== trace.text) {
     const dedupeKey = traceKey(trace.room.number, trace.code, trace.date, parsed.data.text);
-    if (await prisma.trace.findFirst({ where: { dedupeKey, NOT: { id: trace.id } } })) return NextResponse.json({ error: "Diesen Trace gibt es schon." }, { status: 409 });
+    if (await prisma.trace.findFirst({ where: { dedupeKey, NOT: { id: trace.id } } })) return NextResponse.json({ error: "Diesen Trace gibt es schon.", code: "DUPLICATE" }, { status: 409 });
     // Neuer Schlüssel: ein späterer Import legt den Original-Trace sonst als zweiten Eintrag neu an
     await prisma.trace.update({ where: { id: trace.id }, data: { text: parsed.data.text, dedupeKey } });
     await audit({ action: "TRACE_EDITED", userId: auth.session.userId, roomId: trace.roomId, meta: { traceId } });

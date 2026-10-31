@@ -5,12 +5,15 @@ import { api } from "./api";
 import { useSocket } from "./useSocket";
 import WindowPanel from "./WindowPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { notificationText } from "@/lib/i18n/notificationText";
 
 interface Notification {
   id: string;
   type: string;
   level: string;
   message: string;
+  messageKey?: string | null;
+  messageVars?: string | null;
   targetRole: string;
   targetUserId?: string | null;
   acknowledged: boolean;
@@ -39,7 +42,7 @@ const LEVEL_STYLES: Record<string, string> = {
  * "notification:new" has to be filtered here too).
  */
 export default function NotificationsPanel({ targetRole }: { targetRole: string }) {
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const load = () =>
@@ -89,9 +92,9 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
             }`}
           >
             <div className="text-[0.68rem] uppercase tracking-wider text-graphite/60">
-              {n.type.replace(/_/g, " ")} · {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {n.type.replace(/_/g, " ")} · {fmt.time(n.createdAt)}
             </div>
-            <div className="mt-0.5">{n.message}</div>
+            <div className="mt-0.5">{notificationText(n, t)}</div>
           </div>
         ))}
       </div>

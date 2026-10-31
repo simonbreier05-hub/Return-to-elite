@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Anfrage.", code: "INVALID_INPUT" }, { status: 400 });
   const ok = await acknowledgePlausibility(berlinToday(), parsed.data.signature, auth.session.userId);
   if (!ok) return NextResponse.json({ error: "Die Befunde haben sich geändert — bitte neu ansehen." }, { status: 409 });
   return NextResponse.json({ ok: true });

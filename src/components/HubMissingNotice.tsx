@@ -11,9 +11,9 @@ export interface HubState { date: string; ready: boolean }
  * Supervisor/Duty Manager bekommen den Weg dorthin, Zimmermädchen den Hinweis, dass ihre Zimmer nach der Planung kommen.
  */
 export default function HubMissingNotice({ hub, planner }: { hub: HubState | null | undefined; planner: boolean }) {
-  const { t } = useLocale();
+  const { t, intl } = useLocale();
   if (!hub || hub.ready) return null;
-  const date = new Date(`${hub.date}T12:00:00Z`).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
+  const date = new Date(`${hub.date}T12:00:00Z`).toLocaleDateString(intl, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" });
   return (
     <div role="status" className="mb-4 rounded-xl border border-gold-line/60 bg-parchment/70 p-4 text-sm text-graphite">
       <p className="font-medium">{t("hubDay.missingTitle", { date })}</p>

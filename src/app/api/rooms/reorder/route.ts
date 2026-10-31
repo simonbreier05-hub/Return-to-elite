@@ -30,20 +30,20 @@ export async function PATCH(req: NextRequest) {
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload.", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Invalid payload.", code: "INVALID_INPUT", details: parsed.error.flatten() }, { status: 400 });
   }
   const { roomIds, attendantId } = parsed.data;
 
   const canActForOthers = auth.session.role === "supervisor" || auth.session.role === "duty_manager";
   const targetAttendantId = attendantId ?? auth.session.userId;
   if (attendantId && attendantId !== auth.session.userId && !canActForOthers) {
-    return NextResponse.json({ error: "Forbidden: cannot reorder another attendant's rooms." }, { status: 403 });
+    return NextResponse.json({ error: "Forbidden: cannot reorder another attendant's rooms.", code: "NO_PERMISSION" }, { status: 403 });
   }
 
   const rooms = await prisma.room.findMany({ where: { id: { in: roomIds } } });
   if (rooms.length !== roomIds.length || rooms.some((r) => r.assignedToId !== targetAttendantId)) {
     return NextResponse.json(
-      { error: "Every room must currently be assigned to the target attendant." },
+      { error: "Every room must currently be assigned to the target attendant.", code: "INVALID_ASSIGNEE" },
       { status: 409 }
     );
   }

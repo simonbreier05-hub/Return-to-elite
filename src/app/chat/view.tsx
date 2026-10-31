@@ -11,12 +11,13 @@ import { channelTitle } from "@/components/chat/labels";
 import { useSocket } from "@/components/useSocket";
 import { CHAT_MAX_LENGTH, tokenize } from "@/lib/chat/text";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import type { ChannelSummary, ChatMessageView } from "@/lib/chat/service";
+import { hhmm, dateTime } from "@/lib/i18n/format";
 
 const PRIVACY_KEY = "stayclean.chat.privacySeen";
 const RETRACT_MS = 5 * 60_000; // gleich RETRACT_WINDOW_MS im Server (Server prüft)
-const hhmm = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
 const portal = (node: React.ReactNode) => (typeof document === "undefined" ? null : createPortal(node, document.body));
 
 /**
@@ -111,7 +112,7 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
   useEffect(() => {
     api<{ messages: ChatMessageView[]; hasMore: boolean }>(`/api/chat/channels/${channel.id}/messages`)
       .then((d) => { setMessages(Array.isArray(d.messages) ? d.messages : []); setHasMore(!!d.hasMore); markRead(); })
-      .catch((e) => setError((e as Error).message));
+      .catch((e) => setError(errorText(e, t)));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages.length]);
@@ -144,11 +145,11 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
       const r = await api<{ message: ChatMessageView }>(`/api/chat/channels/${channel.id}/messages`, { body: { body, urgent } });
       setMessages((prev) => (prev.some((x) => x.id === r.message.id) ? prev : [...prev, r.message]));
       setText(""); setUrgent(false);
-    } catch (e) { setError((e as Error).message || t("chat.sendFailed")); }
+    } catch (e) { setError(errorText(e, t, "chat.sendFailed")); }
     finally { setBusy(false); }
   };
   const retract = async (id: string) => {
-    try { await api(`/api/chat/messages/${id}/retract`, { method: "POST" }); } catch (e) { setError((e as Error).message); }
+    try { await api(`/api/chat/messages/${id}/retract`, { method: "POST" }); } catch (e) { setError(errorText(e, t)); }
   };
 
   return (
@@ -233,7 +234,7 @@ function PeoplePicker({ onClose, onPick }: { onClose: () => void; onPick: (userI
   const { me } = useChat();
   const [people, setPeople] = useState<{ id: string; name: string; role: string }[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { api<{ people: { id: string; name: string; role: string }[] }>("/api/chat/people").then((d) => setPeople(d.people ?? [])).catch((e) => setError((e as Error).message)); }, []);
+  useEffect(() => { api<{ people: { id: string; name: string; role: string }[] }>("/api/chat/people").then((d) => setPeople(d.people ?? [])).catch((e) => setError(errorText(e, t))); }, []);
   return portal(
     <Modal title={t("chat.newDirect")} subtitle={t("chat.pickPerson")} onClose={onClose}>
       {me?.role === "room_attendant" && <p className="mb-3 text-xs text-graphite/70">{t("chat.hkRuleHint")}</p>}
@@ -242,7 +243,7 @@ function PeoplePicker({ onClose, onPick }: { onClose: () => void; onPick: (userI
       <ul className="space-y-1">
         {(people ?? []).map((p) => (
           <li key={p.id}>
-            <button type="button" onClick={() => onPick(p.id).catch((e) => setError((e as Error).message))}
+            <button type="button" onClick={() => onPick(p.id).catch((e) => setError(errorText(e, t)))}
               className="flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border border-charcoal/10 bg-white px-3 text-left text-sm hover:border-gold-line">
               <span className="font-medium">{p.name}</span><span className="text-xs text-graphite/60">{t(`role.${p.role}` as TKey)}</span>
             </button>
@@ -261,7 +262,7 @@ function ReviewPanel({ onClose }: { onClose: () => void }) {
   const [caseRef, setCaseRef] = useState("");
   const [result, setResult] = useState<ChatMessageView[] | null>(null);
   const [error, setError] = useState<string | null>(null);
-  useEffect(() => { api<{ directs: typeof directs }>("/api/chat/review").then((d) => setDirects(d.directs ?? [])).catch((e) => setError((e as Error).message)); }, []);
+  useEffect(() => { api<{ directs: typeof directs }>("/api/chat/review").then((d) => setDirects(d.directs ?? [])).catch((e) => setError(errorText(e, t))); }, []);
   const open = async () => {
     setError(null);
     try { setResult((await api<{ messages: ChatMessageView[] }>(`/api/chat/review/${encodeURIComponent(pick)}?caseRef=${encodeURIComponent(caseRef.trim())}`)).messages ?? []); }
@@ -281,7 +282,7 @@ function ReviewPanel({ onClose }: { onClose: () => void }) {
         <ul className="max-h-80 space-y-1 overflow-y-auto text-sm">
           {result.map((m) => (
             <li key={m.id} className="rounded-lg bg-white p-2">
-              <span className="text-xs text-graphite/60">{new Date(m.createdAt).toLocaleString("de-DE", { timeZone: "Europe/Berlin" })} · {m.author.name}</span>
+              <span className="text-xs text-graphite/60">{dateTime(m.createdAt)} · {m.author.name}</span>
               <p className="whitespace-pre-wrap break-words">{m.retracted ? t("chat.retracted") : m.hidden ? t("chat.hidden") : m.body}</p>
             </li>
           ))}

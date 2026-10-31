@@ -3,9 +3,10 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
 import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
-import { AUTOPLAN_WEIGHT_PREFIX, getAutoplanWeights, getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
+import { AUTOPLAN_WEIGHT_PREFIX, getChatSettings, HOTEL_DEFAULT_LANGUAGE_KEY, getAutoplanWeights, getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
 import { PRIORITY_WEIGHTS } from "@/lib/priority/computePriority";
 import { audit } from "@/lib/audit";
+import { normalizeLanguage } from "@/lib/i18n/languages";
 import { getRoomTypeMap, getRoomTypeSeen, saveRoomTypeMap } from "@/lib/import/roomTypes";
 
 export async function GET() {
@@ -23,6 +24,7 @@ export async function GET() {
     autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
     roomTypeMap: await getRoomTypeMap(),
     roomTypeSeen: Object.fromEntries(Object.entries(await getRoomTypeSeen()).map(([c, n]) => [c, n.length])),
+    hotelDefaultLanguage: (await getChatSettings()).hotelDefaultLanguage,
   });
 }
 
@@ -52,6 +54,8 @@ const Body = z.object({
   redistributionMaxMoves: z.number().int().min(1).max(20).optional(),
   statusRewindMinutes: z.number().int().min(0).max(120).optional(),
   chatRetentionDays: z.number().int().min(1).max(365).optional(),
+  /** Hotel-Standardsprache der Mitarbeiter-Oberfläche (Prompt K1), ISO-Basiscode. */
+  hotelDefaultLanguage: z.string().max(12).optional(),
   /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
   autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
   /** Opera-Zimmerart-Code → Zimmerart (Einstellungen). */
@@ -67,7 +71,7 @@ export async function PATCH(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid settings payload.", code: "INVALID_INPUT" }, { status: 400 });
 
   const { roomsPerAttendantMin: minRooms, roomsPerAttendantMax: maxRooms } = parsed.data;
   if (minRooms !== undefined && maxRooms !== undefined && minRooms > maxRooms) {
@@ -88,7 +92,12 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  const { weights, autoplanWeights, roomTypeMap, ...thresholds } = parsed.data;
+  const { weights, autoplanWeights, roomTypeMap, hotelDefaultLanguage, ...thresholds } = parsed.data;
+  if (hotelDefaultLanguage !== undefined) {
+    const lang = normalizeLanguage(hotelDefaultLanguage);
+    if (!lang) return NextResponse.json({ error: "Unknown language.", code: "UNKNOWN_LANGUAGE" }, { status: 400 });
+    await prisma.setting.upsert({ where: { key: HOTEL_DEFAULT_LANGUAGE_KEY }, create: { key: HOTEL_DEFAULT_LANGUAGE_KEY, value: lang }, update: { value: lang } });
+  }
   let roomTypesApplied: number | undefined;
   if (roomTypeMap) roomTypesApplied = (await saveRoomTypeMap(roomTypeMap)).applied;
 
@@ -131,5 +140,6 @@ export async function PATCH(req: NextRequest) {
     planningCredits: await getPlanningCreditSettings(),
     autoplanWeights: await getAutoplanWeights(),
     autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
+    hotelDefaultLanguage: (await getChatSettings()).hotelDefaultLanguage,
   });
 }

@@ -17,9 +17,9 @@ export async function PUT(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   const users = new Set((await prisma.user.findMany({ where: { role: "houseman" }, select: { id: true } })).map((u) => u.id));
-  if (parsed.data.assignments.some((a) => a.userId && !users.has(a.userId))) return NextResponse.json({ error: "Unbekannter Hausmann." }, { status: 400 });
+  if (parsed.data.assignments.some((a) => a.userId && !users.has(a.userId))) return NextResponse.json({ error: "Unbekannter Hausmann.", code: "USER_NOT_FOUND" }, { status: 400 });
   let changed = 0;
   const gained = new Map<string, number>();
   for (const a of parsed.data.assignments) {

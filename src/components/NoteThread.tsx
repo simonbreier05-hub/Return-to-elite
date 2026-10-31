@@ -5,6 +5,9 @@ import { api } from "./api";
 import { NOTE_STATUS_STYLES } from "./status";
 import type { NoteStatus, PauseTarget } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { SOURCE_DICTS } from "@/lib/i18n/core";
+import type { TKey } from "@/lib/i18n/translations";
+import { hhmm } from "@/lib/i18n/format";
 
 export interface ThreadNote {
   id: string;
@@ -17,10 +20,6 @@ export interface ThreadNote {
   roomId?: string;
 }
 
-const ROLE: Record<string, string> = {
-  room_attendant: "Housekeeping", supervisor: "Supervisor", duty_manager: "Duty Manager", houseman: "Hausmann",
-  engineering: "Technik", front_office: "Front Office", concierge: "Concierge", guest: "Gast",
-};
 
 /**
  * The room-note thread: full history, per-note OPEN/DONE toggle, and a
@@ -51,6 +50,7 @@ export default function NoteThread({
   task?: { type: PauseTarget; id: string };
 }) {
   const { t } = useLocale();
+  const roleLabel = (r: string) => (r === "guest" ? t("shared.guest") : `role.${r}` in SOURCE_DICTS.de ? t(`role.${r}` as TKey) : r.replace(/_/g, " "));
   const [notes, setNotes] = useState<ThreadNote[]>(Array.isArray(initialNotes) ? initialNotes : []);
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -120,8 +120,8 @@ export default function NoteThread({
               <span className="text-xs text-graphite/60">
                 {isMessage && <span className="mr-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
                 {isMessage && outOfScope && <span className="mr-1 rounded-full border border-gold-line/60 bg-white px-1.5 py-0.5 font-semibold text-gold-soft">{t("work.outOfScope")}</span>}
-                <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({ROLE[n.author?.role ?? ""] ?? (n.author?.role ?? "").replace(/_/g, " ")}) ·{" "}
-                {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({roleLabel(n.author?.role ?? "")}) ·{" "}
+                {hhmm(n.createdAt)}
               </span>
               <button
                 onClick={() => toggleStatus(n)}

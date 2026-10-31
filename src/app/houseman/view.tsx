@@ -6,9 +6,11 @@ import HousemanList from "@/components/lists/HousemanList";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import PauseControl, { type PauseInfo } from "@/components/PauseControl";
 import TaskMessageModal from "@/components/TaskMessageModal";
+import { hhmm } from "@/lib/i18n/format";
 
 interface RoomTask {
   id: string;
@@ -67,7 +69,7 @@ export default function HousemanView() {
       });
       upsert(res.roomTask);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusyId(null);
     }
@@ -104,7 +106,7 @@ export default function HousemanView() {
               <p className="font-serif text-2xl">{taskLabel(task)}</p>
               <p className="mt-1 text-xs text-graphite/60">
                 {t("houseman.requestedBy", { name: task.createdBy.name })} ·{" "}
-                {new Date(task.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {hhmm(task.createdAt)}
               </p>
               <button
                 onClick={() => complete(task)}

@@ -13,6 +13,7 @@ import { useRoomLookup } from "@/components/useRoomLookup";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import { type RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Arrival {
@@ -72,7 +73,7 @@ export default function FrontOfficeView() {
       const res = await api<{ arrival: Arrival }>(`/api/arrivals/${id}`, { method: "PATCH", body });
       setArrivals((prev) => prev.map((a) => (a.id === res.arrival.id ? { ...a, ...res.arrival } : a)));
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     }
   };
 
@@ -274,7 +275,7 @@ function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (ar
       });
       onDone(res.arrival);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

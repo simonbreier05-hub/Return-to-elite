@@ -39,14 +39,14 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid room task." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid room task.", code: "INVALID_INPUT" }, { status: 400 });
   const { roomId, type, note } = parsed.data;
   if (type === "SONSTIGES" && !note?.trim()) {
-    return NextResponse.json({ error: "A note is required for type SONSTIGES." }, { status: 400 });
+    return NextResponse.json({ error: "A note is required for type SONSTIGES.", code: "TEXT_REQUIRED" }, { status: 400 });
   }
 
   const room = await prisma.room.findUnique({ where: { id: roomId }, select: { id: true, number: true } });
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  if (!room) return NextResponse.json({ error: "Room not found.", code: "ROOM_NOT_FOUND" }, { status: 404 });
 
   const roomTask = await createRoomTask({
     room,

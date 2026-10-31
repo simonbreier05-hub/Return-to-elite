@@ -5,7 +5,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 
 /** Live-Uhr mit Datum im Kopfbereich (Hotelzeit Berlin). Erst nach dem Mounten gerendert, damit Server und Browser nicht auseinanderlaufen. */
 export default function LiveClock({ tone = "shell" }: { tone?: "shell" | "pl" }) {
-  const { locale } = useLocale();
+  const { intl } = useLocale();
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
     setNow(new Date());
@@ -13,7 +13,7 @@ export default function LiveClock({ tone = "shell" }: { tone?: "shell" | "pl" })
     return () => clearInterval(id);
   }, []);
   if (!now) return tone === "pl" ? <span className="inline-block h-4 w-44" aria-hidden /> :  <div className="h-10 w-16 md:hidden lg:block lg:w-40" aria-hidden />;
-  const tag = locale === "de" ? "de-DE" : "en-GB";
+  const tag = intl;
   const time = now.toLocaleTimeString(tag, { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Berlin" });
   const date = now.toLocaleDateString(tag, { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric", timeZone: "Europe/Berlin" });
   if (tone === "pl") {

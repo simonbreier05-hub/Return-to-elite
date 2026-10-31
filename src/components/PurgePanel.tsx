@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { dateTime } from "@/lib/i18n/format";
 
 interface Status {
   purgeHour: number; stayDeleteDays: number; lastOkAt: string | null; lastCounts: Record<string, number> | null;
@@ -10,7 +11,7 @@ interface Status {
 }
 interface StayRow { id: string; checkIn: string; checkOut: string; status: string; hasName: boolean }
 
-const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" });
+const fmt = (iso: string) => dateTime(iso);
 const summary = (c: Record<string, number> | null) => Object.entries(c ?? {}).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join(", ") || "—";
 
 /** Einstellungen → Datenschutz: letzter Lauf, Zeitplan, "jetzt löschen", Einzellöschung. Nur Duty Manager. */

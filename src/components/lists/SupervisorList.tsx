@@ -11,6 +11,7 @@ import { usePersistedSet } from "@/components/usePersistedSet";
 import LiveRoomModal from "./LiveRoomModal";
 import RoomRowView, { type ListRoom } from "./RoomRowView";
 import RowLegend from "./RowLegend";
+import { hhmm } from "@/lib/i18n/format";
 
 type Group = "PROGRESS" | "DONE" | "OPEN" | "DND" | "ARRIVAL";
 const GROUPS: Group[] = ["PROGRESS", "OPEN", "DND", "ARRIVAL", "DONE"];
@@ -68,7 +69,7 @@ export default function SupervisorList() {
       {mover(room, fromId)}
     </div>
   );
-  const stand = data.dataAsOf ? new Date(data.dataAsOf).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : null;
+  const stand = data.dataAsOf ? hhmm(data.dataAsOf) : null;
 
   return (
     <section aria-labelledby="sup-list-title" className="mb-6 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">

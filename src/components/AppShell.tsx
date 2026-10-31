@@ -15,7 +15,8 @@ import ErrorBoundary from "./ErrorBoundary";
 import { ChatProvider } from "./chat/ChatContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
-import LanguageSwitcher from "./LanguageSwitcher";
+import { notificationText } from "@/lib/i18n/notificationText";
+import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
 import LiveClock from "./LiveClock";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
@@ -25,6 +26,8 @@ interface Notification {
   type: string;
   level: string;
   message: string;
+  messageKey?: string | null;
+  messageVars?: string | null;
   targetRole: string;
   targetUserId?: string | null;
   acknowledged: boolean;
@@ -64,7 +67,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
@@ -238,8 +241,9 @@ export default function AppShell({
                 </div>
               )}
             </div>
-            <div className="hidden sm:inline-flex">
-              <LanguageSwitcher />
+            <div className="hidden items-center gap-1.5 sm:inline-flex">
+              <LanguageButton />
+              <LanguageQualityBadge className="hidden lg:inline" />
             </div>
             {devUsers && (
               <select
@@ -291,7 +295,7 @@ export default function AppShell({
             <span className="font-serif text-lg text-navy">{t("appShell.notifications")}</span>
             <div className="flex items-center gap-2">
               <div className="sm:hidden">
-                <LanguageSwitcher />
+                <LanguageButton />
               </div>
               <button onClick={ackAll} className="h-10 rounded-sm px-3 text-sm text-gold-soft hover:bg-parchment">
                 {t("appShell.markAllRead")}
@@ -310,9 +314,9 @@ export default function AppShell({
                 }`}
               >
                 <div className="text-xs uppercase tracking-wider text-graphite/70">
-                  {n.type.replace(/_/g, " ")} · {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {n.type.replace(/_/g, " ")} · {fmt.time(n.createdAt)}
                 </div>
-                <div className="mt-1 text-sm">{n.message}</div>
+                <div className="mt-1 text-sm">{notificationText(n, t)}</div>
               </div>
             ))}
           </div>
@@ -322,6 +326,7 @@ export default function AppShell({
       {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
 
       <div className="h-px w-full bg-gradient-to-r from-gold-line/70 via-gold-line/20 to-transparent" />
+      <div className="px-3 sm:px-6"><LanguageSuggestion /></div>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-6 sm:px-6">
         <ErrorBoundary>

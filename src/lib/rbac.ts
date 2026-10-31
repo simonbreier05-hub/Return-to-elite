@@ -21,7 +21,7 @@ export async function requireAuth(): Promise<AuthResult> {
   if (!session) {
     return {
       ok: false,
-      response: NextResponse.json({ error: "Not authenticated." }, { status: 401 }),
+      response: NextResponse.json({ error: "Not authenticated.", code: "NOT_AUTHENTICATED" }, { status: 401 }),
     };
   }
   return { ok: true, session };
@@ -35,7 +35,7 @@ export async function requireRole(roles: Role[]): Promise<AuthResult> {
     return {
       ok: false,
       response: NextResponse.json(
-        { error: `Forbidden: requires one of [${roles.join(", ")}].` },
+        { error: `Forbidden: requires one of [${roles.join(", ")}].`, code: "FORBIDDEN" },
         { status: 403 }
       ),
     };

@@ -18,7 +18,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültiges Datum." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültiges Datum.", code: "INVALID_DATE" }, { status: 400 });
   const { missing, stale } = await listBlockersNow();
   if (missing.length) return NextResponse.json({ error: `Es fehlen noch Listen: ${missing.join(", ")}.`, missing }, { status: 409 });
   if (stale.length) return NextResponse.json({ error: `Veraltete Listen ohne Bestätigung: ${stale.map((s) => `${s.type} (${s.businessDate})`).join(", ")}.`, stale }, { status: 409 });

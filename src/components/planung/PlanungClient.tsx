@@ -36,7 +36,7 @@ const READ_MS = 850;
 
 /** Planungstool: Gerüst, Schritt 1 „Listen" und Haus-Ansicht. Schritte 2–4 folgen in D2 (hier Platzhalter). */
 export default function PlanungClient({ initialHouse }: { initialHouse: HouseData }) {
-  const { t } = useLocale();
+  const { t, intl } = useLocale();
   const [step, setStep] = useState<StepId>(1);
   const [reached, setReached] = useState<StepId>(1);
   const [house, setHouse] = useState<HouseData>(initialHouse);
@@ -334,7 +334,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     </>
   );
 
-  const top = <StepSegments current={step} labels={labels} dateText={dateLabel(house.date).split(",").slice(-1)[0]?.trim() ?? ""} stepText={t("planungTool.stepOf", { n: step })} ariaLabel={t("planungTool.stepsLabel")} leaveLabel={t("planungTool.leave")} />;
+  const top = <StepSegments current={step} labels={labels} dateText={dateLabel(house.date, intl).split(",").slice(-1)[0]?.trim() ?? ""} stepText={t("planungTool.stepOf", { n: step })} ariaLabel={t("planungTool.stepsLabel")} leaveLabel={t("planungTool.leave")} />;
 
   const overlays = (
     <>
@@ -369,7 +369,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   return (
     <>
       {overlays}
-      <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date)} />} panel={panel} />
+      <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date, intl)} />} panel={panel} />
     </>
   );
 }

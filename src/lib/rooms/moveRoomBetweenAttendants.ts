@@ -29,7 +29,7 @@ function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["
 
 export type MoveRoomResult =
   | { ok: true; room: Awaited<ReturnType<typeof updateRoom>> }
-  | { ok: false; status: number; error: string; code?: "STARTED_ROOM" };
+  | { ok: false; status: number; error: string; code?: string };
 
 export { isStartedStatus };
 
@@ -40,14 +40,14 @@ export async function moveRoomBetweenAttendants(
   opts: { confirmStarted?: boolean } = {},
 ): Promise<MoveRoomResult> {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
-  if (!room) return { ok: false, status: 404, error: "Room not found." };
+  if (!room) return { ok: false, status: 404, error: "Room not found.", code: "ROOM_NOT_FOUND" };
   if (room.assignedToId === toAttendantId) {
-    return { ok: false, status: 409, error: "Room is already assigned to this attendant." };
+    return { ok: false, status: 409, error: "Room is already assigned to this attendant.", code: "ALREADY_ASSIGNED" };
   }
 
   const toAttendant = await prisma.user.findUnique({ where: { id: toAttendantId } });
   if (!toAttendant || toAttendant.role !== "room_attendant") {
-    return { ok: false, status: 400, error: "toAttendantId must reference a room attendant." };
+    return { ok: false, status: 400, error: "toAttendantId must reference a room attendant.", code: "INVALID_ASSIGNEE" };
   }
 
   // Keine Sperren: jedes Zimmer darf jederzeit jeder Kraft zugeteilt werden. Begonnene/fertige nur nach ausdrücklicher Bestätigung.
