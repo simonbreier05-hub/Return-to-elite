@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { createPortal } from "react-dom";
 import { ApiError, NetworkError, api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -364,6 +365,7 @@ export default function AttendantView() {
 
   return (
     <div className="animate-rise">
+      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
       <div className="mb-4">
         <h2 className="font-serif text-4xl leading-none">{t("attendant.myRooms")}</h2>
         <div className="rule-gold my-2 w-40" />

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
@@ -81,6 +82,7 @@ export default function ConciergeView() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[24rem_1fr]">
+      <div className="flex flex-wrap gap-2 lg:col-span-2"><HubMoreMenu /></div>
       <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-sm">
         <h2 className="mb-1 font-serif text-2xl">{t("concierge.logExcursion")}</h2>
         <p className="mb-4 text-sm text-graphite/60">{t("concierge.outOfHouseHint")}</p>

@@ -1,6 +1,7 @@
 "use client";
 
 import ImageLightbox from "@/components/ImageLightbox";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -97,6 +98,7 @@ export default function EngineeringView() {
 
   return (
     <div>
+      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
       <h2 className="mb-1 font-serif text-3xl">{t("engineering.workOrders")}</h2>
       <p className="mb-4 text-sm text-graphite/70">{t("engineering.openResolved", { open: open.length, resolved: resolved.length })}</p>
 

@@ -271,6 +271,8 @@ export const DEFAULT_SETTINGS = {
   minutesPerCredit: 25, // Start-Schätzung, bis aus den heutigen Zeitstempeln berechnet wird
   earlyFinishMinutes: 45, // "früher fertig": geschätzte Restzeit darunter
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag
+  // Chat-Hub: Nachrichten werden so viele Tage nach dem Senden gelöscht (stündlich + Nachtlöschung, src/lib/chat/retention.ts).
+  chatRetentionDays: 14,
   statusRewindMinutes: 10, // Housekeeper darf den eigenen letzten Statusschritt so lange zurückspulen (src/lib/rooms/rewind.ts)
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };

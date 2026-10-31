@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -142,12 +143,19 @@ export default function DutyManagerView() {
           <div className="rule-gold my-2 w-40" />
           <p className="text-sm text-graphite/70">{t("dutyManager.subtitle")}</p>
         </div>
-        <Link
-          href="/planung"
-          className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
-        >
-          {t("dutyManager.planningLink")}
-        </Link>
+        <div className="flex flex-wrap gap-2">
+          <HubMoreMenu>
+            <Link href="/settings" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+              {t("supervisor.settingsLink")}
+            </Link>
+          </HubMoreMenu>
+          <Link
+            href="/planung"
+            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
+          >
+            {t("dutyManager.planningLink")}
+          </Link>
+        </div>
       </div>
 
       <HubMissingNotice hub={hub} planner />

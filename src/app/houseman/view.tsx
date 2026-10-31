@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import HousemanList from "@/components/lists/HousemanList";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -81,6 +82,7 @@ export default function HousemanView() {
 
   return (
     <div>
+      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
       <HousemanList onLinkedTasks={setLinked} />
       <h2 className="mb-1 font-serif text-3xl">{t("lists.hmOtherTasks")}</h2>
       <p className="mb-4 text-sm text-graphite/70">{t("houseman.openCount", { count: open.length })}</p>

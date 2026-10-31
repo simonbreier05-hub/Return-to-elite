@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { getGuestSystemUserId } from "@/lib/guestServer";
+import { purgeExpiredChat } from "@/lib/chat/retention";
 import { runGuestDataRetention } from "@/lib/guestDataRetention";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { legacyTraceKey, TRACE_KEY_PREFIX, traceKey } from "@/lib/dayplan/traceKey";
@@ -88,6 +89,8 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
   counts.importRows = (await prisma.importRow.deleteMany({})).count;
   counts.guestNotes = guestSystemUserId ? (await prisma.roomNote.deleteMany({ where: { authorId: guestSystemUserId } })).count : 0;
   counts.auditEntries = await scrubAuditMeta();
+  // Chat-Freitext kann trotz Hinweis Gastnamen enthalten: abgelaufene Nachrichten (chatRetentionDays) auch hier löschen.
+  Object.assign(counts, await purgeExpiredChat(now));
 
   const cutoff = new Date(now.getTime() - settings.guestStayDeleteDays * 86_400_000);
   counts.staysDeleted = (await prisma.stay.deleteMany({ where: { checkOut: { lt: cutoff } } })).count;
