@@ -66,15 +66,18 @@ async function build(lang: string, provider: TranslationProvider | null): Promis
         console.warn(`[i18n] Laufzeit-Übersetzung ${lang} abgebrochen (${provider.id})`);
         break;
       }
-      for (const [key, text] of done) {
-        strings[key] = text;
-        const hash = sourceHash(SOURCE_DICTS.de[key]);
-        await prisma.uiTranslation.upsert({
-          where: { lang_key: { lang, key } },
-          create: { lang, key, text, sourceHash: hash, provider: provider.id },
-          update: { text, sourceHash: hash, provider: provider.id },
-        });
-      }
+      for (const [key, text] of done) strings[key] = text;
+      // ein Block = eine Transaktion (schneller als Einzel-Schreiben, nie halbe Blöcke)
+      await prisma.$transaction(
+        done.map(([key, text]) => {
+          const hash = sourceHash(SOURCE_DICTS.de[key]);
+          return prisma.uiTranslation.upsert({
+            where: { lang_key: { lang, key } },
+            create: { lang, key, text, sourceHash: hash, provider: provider.id },
+            update: { text, sourceHash: hash, provider: provider.id },
+          });
+        }),
+      );
     }
   }
   return { lang, strings, missing: Object.keys(SOURCE_DICTS.de).length - Object.keys(strings).length, provider: provider?.id ?? null, machine: true };

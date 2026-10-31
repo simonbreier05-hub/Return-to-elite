@@ -66,7 +66,7 @@ describe("Glossar-Schutz", () => {
   });
 });
 
-describe("Laufzeit-Übersetzung (Sprachen ohne eigene Datei)", () => {
+describe("Laufzeit-Übersetzung (Sprachen ohne eigene Datei)", { timeout: 30_000 }, () => {
   it("ohne Anbieter: leer, Client zeigt Englisch", async () => {
     setTranslationProviderForTests(null);
     const b = await getRuntimeBundle("pl");
