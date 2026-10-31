@@ -1,8 +1,8 @@
 /**
- * Umfang der Prioritäts-Sprachdateien (Prompt K1, Teil 1): Namensräume, die Housekeeper, Hausmann und Techniker sehen
- * (inkl. gemeinsamer Teile wie Kopfzeile, Status, Meldungen, Chat). Für diese Namensräume müssen vi/it/tr/fa/hi
- * vollständig sein — `tests/i18n/completeness.test.ts` meldet jeden fehlenden Schlüssel.
- * Teil 2 (Supervisor-Werkzeuge, Duty Manager, Front Office, Concierge, Planungstool, Import) zeigt bis dahin Englisch.
+ * Umfang Teil 1 der Prioritäts-Sprachdateien (Prompt K1): Namensräume, die Housekeeper, Hausmann und Techniker sehen
+ * (inkl. gemeinsamer Teile wie Kopfzeile, Status, Meldungen, Chat). Seit Teil 2 sind vi/it/tr/fa/hi für **alle**
+ * Schlüssel vollständig; `tests/i18n/completeness.test.ts` verlangt jeden Schlüssel. Die Einteilung bleibt nur noch für
+ * die Gegenlese-Reihenfolge (zuerst Teil 1 prüfen lassen) und `npm run i18n:missing`.
  */
 export const PHASE1_NAMESPACES = [
   "common", "errorBoundary", "nav", "role", "status", "blockReason", "blockReasonShort", "roomType", "defectCategory",

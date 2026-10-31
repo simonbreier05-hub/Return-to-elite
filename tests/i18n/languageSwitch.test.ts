@@ -33,7 +33,14 @@ function Probe() {
 let root: Root;
 let el: HTMLDivElement;
 const text = () => el.querySelector("#probe")?.textContent;
-const flush = async () => { for (let i = 0; i < 10; i++) await act(async () => { await new Promise((r) => setTimeout(r, 0)); }); };
+/** Wartet, bis alle Ladevorgänge (Fetch, nachgeladene Sprachdatei) durch sind — die Dateien sind groß, daher nicht nur ein Takt. */
+const flush = async () => {
+  let quiet = 0;
+  for (let i = 0; i < 200 && quiet < 5; i++) {
+    await act(async () => { await new Promise((r) => setTimeout(r, 5)); });
+    quiet = api && !api.loading ? quiet + 1 : 0;
+  }
+};
 
 beforeEach(async () => {
   localStorage.clear();
