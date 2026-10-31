@@ -38,8 +38,11 @@ describe("Zahlen, Datum, Uhrzeit", () => {
       expect(formatNumber(l, 1234.5)).toMatch(/[0-9]/);
       expect(formatNumber(l, 1234.5)).not.toMatch(/[۰-۹٠-٩०-९]/);
     }
-    expect(intlLocale("fa")).toBe("fa-u-nu-latn");
-    expect(intlLocale("en")).toBe("en-GB-u-nu-latn");
+    expect(intlLocale("fa")).toBe("fa-u-ca-gregory-nu-latn");
+    expect(intlLocale("en")).toBe("en-GB-u-ca-gregory-nu-latn");
+  });
+  it("gregorianischer Kalender auch auf Persisch (kein 1405/…)", () => {
+    expect(formatDate("fa", d)).toMatch(/2026/);
   });
   it("formatiert nach Sprache", () => {
     expect(formatDate("de", d)).toBe("31.10.2026");

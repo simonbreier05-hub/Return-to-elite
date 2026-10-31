@@ -1,10 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import Modal from "./Modal";
 import { useLocale, type LanguageQuality } from "@/lib/i18n/LocaleContext";
 import { ALL_LANGUAGE_CODES, autonym, languageNameIn, languageTier, PRIORITY_LANGUAGES } from "@/lib/i18n/languages";
 import type { TKey } from "@/lib/i18n/translations";
+
+/** Kleinschreibung ohne Akzente/Diakritika, für die Suche. */
+export const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d").toLowerCase();
 
 /** Kennzeichnung je Sprache in der Liste (unabhängig davon, ob sie gerade geladen ist). */
 function tierLabel(code: string): TKey {
@@ -39,15 +43,18 @@ export function LanguagePickerModal({ onClose }: { onClose: () => void }) {
   const all = useMemo(() => {
     const order = (c: string) => (c === "de" ? 0 : c === "en" ? 1 : (PRIORITY_LANGUAGES as readonly string[]).includes(c) ? 2 : 3);
     return [...ALL_LANGUAGE_CODES]
-      .map((code) => ({ code, own: autonym(code), local: languageNameIn(code, locale) }))
+      .map((code) => {
+        const own = autonym(code);
+        const local = languageNameIn(code, locale);
+        // Suche über Eigenname, Name in der Oberflächensprache, englischen Namen und Code — ohne Akzente („viet“ → „Tiếng Việt“)
+        return { code, own, local, hay: fold([own, local, languageNameIn(code, "en"), code].join(" ")) };
+      })
       .filter((l) => l.own !== l.code || l.code === locale)
       .sort((a, b) => order(a.code) - order(b.code) || a.local.localeCompare(b.local, locale));
   }, [locale]);
 
-  const needle = q.trim().toLocaleLowerCase();
-  const shown = needle
-    ? all.filter((l) => [l.own, l.local, l.code].some((s) => s.toLocaleLowerCase().includes(needle)))
-    : all;
+  const needle = fold(q.trim());
+  const shown = needle ? all.filter((l) => l.hay.includes(needle)) : all;
 
   return (
     <Modal title={t("language.title")} subtitle={t("language.subtitle")} onClose={onClose}>
@@ -112,7 +119,8 @@ export default function LanguageButton({ className = "" }: { className?: string 
         </svg>
         <span className="uppercase tracking-wider">{locale}</span>
       </button>
-      {open && <LanguagePickerModal onClose={() => setOpen(false)} />}
+      {/* Portal: der Knopf sitzt mobil im Meldungs-Panel (transformiert) — sonst würde das Fenster darin festkleben */}
+      {open && createPortal(<LanguagePickerModal onClose={() => setOpen(false)} />, document.body)}
     </>
   );
 }

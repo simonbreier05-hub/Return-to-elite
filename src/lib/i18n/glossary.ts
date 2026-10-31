@@ -42,7 +42,7 @@ export const GLOSSARY: GlossaryTerm[] = [
   { id: "supervisor", de: ["Supervisor", "Supervisoren", "Supervisorin"], en: "Supervisor", t: { vi: "Supervisor", it: "Supervisor", tr: "Supervisor", fa: "سوپروایزر", hi: "सुपरवाइज़र" } },
   { id: "dutyManager", de: ["Duty Manager"], en: "Duty Manager", t: { vi: "Duty Manager", it: "Duty Manager", tr: "Duty Manager", fa: "دیوتی منیجر", hi: "ड्यूटी मैनेजर" } },
   { id: "engineering", de: ["Technik"], en: "Engineering", t: { vi: "Kỹ thuật", it: "Manutenzione", tr: "Teknik", fa: "فنی", hi: "तकनीकी" } },
-  { id: "defect", de: ["Mangel", "Mängel", "Mangels"], en: "Defect", t: { vi: "Hư hỏng", it: "Guasto", tr: "Arıza", fa: "خرابی", hi: "ख़राबी" }, alt: { it: ["Guasti"] } },
+  { id: "defect", de: ["Mangel", "Mängel", "Mangels"], en: "Defect", t: { vi: "Hư hỏng", it: "Guasto", tr: "Arıza", fa: "خرابی", hi: "ख़राबी" }, alt: { it: ["Guasti"], hi: ["ख़राबियाँ"] } },
 ];
 
 /** Zielbegriff eines Eintrags für `lang`; null = frei übersetzen. */

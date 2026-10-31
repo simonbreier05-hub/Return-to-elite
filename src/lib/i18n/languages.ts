@@ -79,7 +79,8 @@ export function fallbackChain(lang: string): string[] {
  */
 export function intlLocale(lang: string): string {
   // Englisch im Berliner Hotel: britische Schreibweise (31/10/2026), nicht US (10/31/2026)
-  return `${lang === "en" ? "en-GB" : lang}-u-nu-latn`;
+  // immer gregorianischer Kalender (Persisch würde sonst den Sonnenkalender zeigen: 1405/08/09)
+  return `${lang === "en" ? "en-GB" : lang}-u-ca-gregory-nu-latn`;
 }
 
 /** Sprachname in der Sprache selbst („Deutsch“, „Tiếng Việt“, „فارسی“); unbekannt → Code. */

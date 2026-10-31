@@ -51,3 +51,14 @@ describe("Sprachcodes", () => {
     expect(languageTier("pl")).toBe("runtime");
   });
 });
+
+describe("Sprachsuche", () => {
+  it("findet ohne Akzente und über den englischen Namen", async () => {
+    const { fold } = await import("@/components/LanguagePicker");
+    const { autonym, languageNameIn } = await import("@/lib/i18n/languages");
+    const hay = fold([autonym("vi"), languageNameIn("vi", "fa"), languageNameIn("vi", "en"), "vi"].join(" "));
+    expect(hay).toContain(fold("viet"));
+    expect(hay).toContain(fold("Tiếng Việt"));
+    expect(autonym("fa")).toBe("فارسی");
+  });
+});

@@ -352,3 +352,11 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/*
+ * Prompt K1: Schriften, deren Zeichen verbunden werden (Arabisch/Persisch/Urdu) oder Ligaturen bilden (Devanagari),
+ * vertragen keine Buchstaben-Sperrung (tracking-*). Die Sperrung der Design-Überschriften bleibt für lateinische Schrift.
+ */
+:where(:lang(fa), :lang(ar), :lang(ur), :lang(ps), :lang(hi), :lang(mr), :lang(ne), :lang(bn), :lang(pa), :lang(gu)) * {
+  letter-spacing: normal !important;
+}

@@ -11,4 +11,12 @@ export const PHASE1_NAMESPACES = [
   "dayNumbers", "hubDay", "lists", "chat", "language", "errors", "shared", "notify", "floorPlanRef",
 ] as const;
 
-export const inPhase1 = (key: string) => (PHASE1_NAMESPACES as readonly string[]).includes(key.split(".")[0]);
+/** Einzelne Schlüssel aus Supervisor-Namensräumen, die auch Housekeeper sehen („Mehr“-Menü, Zimmer-Detail aus der Suche). */
+export const PHASE1_EXTRA_KEYS = [
+  "supervisor.more", "supervisor.assignedAttendant", "supervisor.defectsTitle", "supervisor.expectedArrivals", "supervisor.floorN",
+  "supervisor.guestDndBanner", "supervisor.guestRequestsTitle", "supervisor.neededNowFlag", "supervisor.notesTitle",
+  "supervisor.oooUntil", "supervisor.reportedByGuest", "supervisor.unassignedOption",
+] as const;
+
+export const inPhase1 = (key: string) =>
+  (PHASE1_NAMESPACES as readonly string[]).includes(key.split(".")[0]) || (PHASE1_EXTRA_KEYS as readonly string[]).includes(key);
