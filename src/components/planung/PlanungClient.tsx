@@ -181,7 +181,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
       <div className="mb-8 hidden md:block">
         <Stepper current={step} reached={reached} labels={labels} onSelect={goStep} ariaLabel={t("planungTool.stepsLabel")} />
         <div className="mt-3 flex items-center justify-between text-xs text-pl-muted">
-          <Link href="/supervisor" className="-ml-3 inline-flex min-h-11 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden>←</span>{t("planungTool.leave")}</Link>
+          <Link href="/supervisor" className="-ms-3 inline-flex min-h-11 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span>{t("planungTool.leave")}</Link>
           <span>{t("planungTool.stepOf", { n: step })} · <LiveClock tone="pl" /></span>
           <Link href="/supervisor" className="rounded-full px-3 py-2 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
         </div>
@@ -354,7 +354,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         </Modal>
       )}
       {undo && !plan.confirmed && (
-        <div role="status" className="fixed bottom-24 left-4 right-4 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-line-2 bg-night-600 px-4 py-2 text-sm text-pl-text shadow-lg">
+        <div role="status" className="fixed bottom-24 start-4 end-4 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-line-2 bg-night-600 px-4 py-2 text-sm text-pl-text shadow-lg">
           <span>{t("planungTool.skippedBar", { name: undo.name })}</span>
           <button type="button" onClick={() => { const u = undo; setUndo(null); void plan.toggleHk(u.id); }} className="min-h-11 rounded-full px-3 font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.undoSkip")}</button>
         </div>

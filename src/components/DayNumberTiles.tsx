@@ -28,7 +28,7 @@ export default function DayNumberTiles({ numbers, onShowOpen, onTile, className 
       </>
     );
     return onTile && key
-      ? <button key={key} type="button" onClick={() => onTile(key)} className={`${width} min-h-11 rounded-lg text-left transition hover:bg-parchment focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}>{inner}</button>
+      ? <button key={key} type="button" onClick={() => onTile(key)} className={`${width} min-h-11 rounded-lg text-start transition hover:bg-parchment focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}>{inner}</button>
       : <div key={label} className={width}>{inner}</div>;
   };
   return (
@@ -49,7 +49,7 @@ export default function DayNumberTiles({ numbers, onShowOpen, onTile, className 
           n.arrivalChecks.released < n.arrivalChecks.total ? "text-gold-soft" : "text-status-clean", "arrivalChecks")}
       </div>
       {n.notCleaned.total > 0 && (onTile
-        ? <button type="button" onClick={() => onTile("notCleaned")} className="mt-2 min-h-11 text-left text-sm text-graphite/75 underline-offset-2 hover:underline">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</button>
+        ? <button type="button" onClick={() => onTile("notCleaned")} className="mt-2 min-h-11 text-start text-sm text-graphite/75 underline-offset-2 hover:underline">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</button>
         : <p className="mt-2 text-sm text-graphite/75">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</p>)}
       {n.outsideTeam > 0 && <p role="status" className="mt-1 text-sm text-status-in-progress">{t("dayNumbers.outsideTeam", { n: n.outsideTeam })}</p>}
     </div>

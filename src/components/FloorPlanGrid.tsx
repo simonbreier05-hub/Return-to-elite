@@ -231,7 +231,7 @@ export default function FloorPlanGrid({
                   {wayfinding.straight.map((leg, idx) => (
                     <div key={idx} className="text-sm">
                       # {leg.range} <span className="text-graphite/50">{leg.side}</span>
-                      {leg.note && <span className="ml-1 text-xs text-amber-700">{leg.note}</span>}
+                      {leg.note && <span className="ms-1 text-xs text-amber-700">{leg.note}</span>}
                     </div>
                   ))}
                 </div>
@@ -242,7 +242,7 @@ export default function FloorPlanGrid({
                   {wayfinding.right.map((leg, idx) => (
                     <div key={idx} className="text-sm">
                       # {leg.range} <span className="text-graphite/50">{leg.side}</span>
-                      {leg.note && <span className="ml-1 text-xs text-amber-700">{leg.note}</span>}
+                      {leg.note && <span className="ms-1 text-xs text-amber-700">{leg.note}</span>}
                     </div>
                   ))}
                 </div>
@@ -259,13 +259,14 @@ export default function FloorPlanGrid({
                   }`}
                 >
                   {FACILITY_ICON[f.type] ?? "•"} {f.label}
-                  {f.nearRoom && ` (near ${f.nearRoom})`}
+                  {f.nearRoom && ` (${t("shared.near", { n: f.nearRoom })})`}
                   {f.isPrimaryHsk && " ★"}
                 </span>
               ))}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* Grundriss nie spiegeln (auch nicht auf Persisch/Arabisch): feste Links-nach-rechts-Anordnung. */}
+            <div dir="ltr" className="grid gap-3 sm:grid-cols-2">
               {[...sections.entries()].map(([section, secRooms]) => (
                 <div key={section} className="overflow-x-auto rounded-lg border border-charcoal/10 bg-white p-3">
                   <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
@@ -303,7 +304,7 @@ export default function FloorPlanGrid({
                           {meta.unassignedActionable && (
                             <span
                               aria-hidden
-                              className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-dashed border-status-dirty bg-white"
+                              className="absolute -end-1 -top-1 h-3 w-3 rounded-full border-2 border-dashed border-status-dirty bg-white"
                             />
                           )}
                         </button>

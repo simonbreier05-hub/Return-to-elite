@@ -89,7 +89,7 @@ export default function SupervisorFeed() {
           {data.items.map((i) => (
             <li key={i.id}>
               <button type="button" onClick={() => open(i)}
-                className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-left text-sm transition hover:border-gold-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${i.weight >= 3 ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
+                className={`flex min-h-11 w-full items-center gap-2 rounded-lg border px-3 py-1.5 text-start text-sm transition hover:border-gold-line focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${i.weight >= 3 ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
                 <span className="w-12 shrink-0 tabular-nums text-xs text-graphite/60">{hhmm(i.at)}</span>
                 <span className="font-serif text-lg leading-none">{i.roomNumber}</span>
                 <span className="min-w-0 flex-1 truncate">{kindLabel(i)}{extra(i) ? ` · ${extra(i)}` : ""}{i.count > 1 ? ` · ${t("feed.times", { n: i.count })}` : ""}</span>

@@ -58,7 +58,7 @@ export default function ServiceOverview() {
 
   const tile = (key: Filter, big: string, label: string, sub?: string) => (
     <button key={String(key)} type="button" aria-pressed={filter === key} onClick={() => setFilter((f) => (f === key ? null : key))}
-      className={`min-h-16 rounded-xl border p-3 text-left transition ${filter === key ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/10 bg-white hover:border-gold-line"}`}>
+      className={`min-h-16 rounded-xl border p-3 text-start transition ${filter === key ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/10 bg-white hover:border-gold-line"}`}>
       <div className="font-serif text-3xl leading-none">{big}</div>
       <div className="mt-1 text-sm font-medium">{label}</div>
       {sub && <div className="text-xs text-graphite/60">{sub}</div>}
@@ -72,8 +72,8 @@ export default function ServiceOverview() {
       <div className="mb-3 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <div className="col-span-2 rounded-xl border border-charcoal/15 bg-parchment/50 p-3 sm:col-span-3 lg:col-span-6">
           <span className="font-serif text-4xl">{data.counts.clean}</span>
-          <span className="ml-2 text-base font-medium">{data.numbers && data.numbers.toClean !== data.counts.clean ? t("service.toCleanFloors") : t("service.toClean")}</span>
-          <span className="ml-2 text-xs text-graphite/60">{t("service.legendHint")}</span>
+          <span className="ms-2 text-base font-medium">{data.numbers && data.numbers.toClean !== data.counts.clean ? t("service.toCleanFloors") : t("service.toClean")}</span>
+          <span className="ms-2 text-xs text-graphite/60">{t("service.legendHint")}</span>
         </div>
         {SERVICE_ORDER.map((k) => tile(k, String(data.counts[k]), t(NAME[k]), t(HINT[k])))}
         {tile("SPECIAL", String(data.counts.special), t("service.special"), t("service.special_hint"))}
@@ -98,7 +98,7 @@ export default function ServiceOverview() {
                 const style = DAY_CATEGORY_STYLES[CATEGORY[r.service]];
                 return (
                   <li key={r.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border bg-white p-2.5 ${r.done ? "border-status-clean/30 opacity-70" : "border-charcoal/10"}`}>
-                    <button type="button" onClick={() => setRoomRef(r.id)} title={t("lists.hmOpenRoom", { n: r.number })} className="min-h-11 w-14 text-left font-serif text-2xl leading-none underline decoration-charcoal/20 underline-offset-4">{r.number}</button>
+                    <button type="button" onClick={() => setRoomRef(r.id)} title={t("lists.hmOpenRoom", { n: r.number })} className="min-h-11 w-14 text-start font-serif text-2xl leading-none underline decoration-charcoal/20 underline-offset-4">{r.number}</button>
                     <span className={`rounded-full border px-2.5 py-1 text-xs font-semibold ${style.chip}`}>{t(NAME[r.service])}</span>
                     <span className="flex flex-wrap items-center gap-1 text-[0.7rem] font-semibold">
                       {r.vip && <span className="rounded-full bg-gold/20 px-2 py-0.5 text-gold-soft">★ {t("shared.vip")}</span>}
@@ -112,10 +112,10 @@ export default function ServiceOverview() {
                         {r.extras.map((x, i) => <li key={i} className={`rounded-md border px-2 py-0.5 ${x.done ? "border-status-clean/30 text-graphite/50 line-through" : "border-charcoal/15"}`}>{x.label}</li>)}
                       </ul>
                     )}
-                    <span className="ml-auto text-xs text-graphite/70">
+                    <span className="ms-auto text-xs text-graphite/70">
                       {needsCleaning(r.service, r.status) ? (r.assignedToName ? `→ ${r.assignedToName}` : <span className="font-medium text-gold-soft">{t("service.unassigned")}</span>) : ""}
-                      {r.credits > 0 && <span className="ml-2 text-graphite/50">{r.credits} {t("shared.creditsShort")}</span>}
-                      {r.done && <span className="ml-2 text-status-clean">✓</span>}
+                      {r.credits > 0 && <span className="ms-2 text-graphite/50">{r.credits} {t("shared.creditsShort")}</span>}
+                      {r.done && <span className="ms-2 text-status-clean">✓</span>}
                     </span>
                   </li>
                 );

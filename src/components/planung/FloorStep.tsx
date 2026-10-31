@@ -46,7 +46,7 @@ export default function FloorStep({
               <div role="group" aria-label={pickLabel} className="mt-2.5 hidden flex-wrap gap-2 md:flex">
                 {sups.map((s) => (
                   <button key={s.id} type="button" aria-pressed={assign[f] === s.id} onClick={() => onPick(f, s.id)}
-                    className={`inline-flex min-h-11 items-center gap-2 rounded-full border py-1 pl-1 pr-4 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light ${assign[f] === s.id ? "border-brass-light bg-night-800 font-semibold" : "border-line-1 hover:border-line-2"}`}>
+                    className={`inline-flex min-h-11 items-center gap-2 rounded-full border py-1 ps-1 pe-4 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light ${assign[f] === s.id ? "border-brass-light bg-night-800 font-semibold" : "border-line-1 hover:border-line-2"}`}>
                     <Badge b={s.badge} size="h-8 w-8" />{s.name}
                   </button>
                 ))}
@@ -54,7 +54,7 @@ export default function FloorStep({
               {/* Mobil: Antippen wechselt reihum */}
               <button type="button" onClick={() => { const n = nextSupervisor(assign[f], ids); if (n) onPick(f, n); }}
                 aria-label={`${pickLabel}: ${cur ? cur.name : t("planungTool.floorNone")}. ${t("planungTool.tapToChange")}`}
-                className="mt-2.5 flex min-h-14 w-full items-center gap-3 rounded-full border border-line-2 bg-night-800 px-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:hidden">
+                className="mt-2.5 flex min-h-14 w-full items-center gap-3 rounded-full border border-line-2 bg-night-800 px-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:hidden">
                 {cur ? <Badge b={cur.badge} size="h-10 w-10" /> : <span aria-hidden className="flex h-10 w-10 shrink-0 rounded-full border-[1.5px] border-dashed border-line-2" />}
                 <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{cur ? cur.name : t("planungTool.floorNone")}</span><span className="block text-xs text-pl-muted">{t("planungTool.tapToChange")}</span></span>
                 <span aria-hidden className="text-pl-muted">⇄</span>

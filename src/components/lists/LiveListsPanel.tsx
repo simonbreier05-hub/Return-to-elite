@@ -66,7 +66,7 @@ export default function LiveListsPanel() {
               const pct = s.rooms ? Math.round((s.done / s.rooms) * 100) : 0;
               return (
                 <div key={s.id} className="rounded-xl border border-charcoal/10 bg-ivory">
-                  <button type="button" aria-expanded={isOpen} onClick={() => toggleSup(s.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                  <button type="button" aria-expanded={isOpen} onClick={() => toggleSup(s.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-sm font-semibold">{s.name} <span className="text-xs font-normal text-graphite/60">· {t("planungTool.floorsLabel")} {s.floors.join(", ") || "—"}</span></span>
                       <span className="block text-xs text-graphite/70">{t("lists.progress", { done: s.done, total: s.rooms })} · {t("lists.supRooms", { n: s.rooms })}</span>
@@ -99,7 +99,7 @@ export default function LiveListsPanel() {
               <ul className="space-y-1.5">
                 {data.tasks.map((it) => (
                   <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 bg-white p-3 text-sm">
-                    <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-left font-medium underline decoration-charcoal/20 underline-offset-4">{it.roomNumber}</button>
+                    <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-start font-medium underline decoration-charcoal/20 underline-offset-4">{it.roomNumber}</button>
                     <span className="min-w-0 flex-1 text-graphite/70">{it.text}</span>
                     {it.status === "OPEN" && <PauseBadge pause={it.pause} showBy />}
                     <span className="text-xs text-graphite/60">{it.assignedToName ?? t("planungTool.housemanAll")}</span>
@@ -127,7 +127,7 @@ function ManualTasks({ tasks, onOpen }: { tasks: ManualTask[]; onOpen: (roomNumb
   const done = tasks.filter((x) => x.status === "DONE").slice(0, 10);
   const row = (x: ManualTask) => (
     <li key={x.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 p-3 text-sm ${x.status === "DONE" ? "bg-linen/60" : "bg-white"}`}>
-      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-left font-medium underline decoration-charcoal/20 underline-offset-4">{x.room.number}</button>
+      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-start font-medium underline decoration-charcoal/20 underline-offset-4">{x.room.number}</button>
       <span className={`min-w-0 flex-1 ${x.status === "DONE" ? "text-graphite/60 line-through" : "text-graphite/80"}`}>{label(x)}</span>
       {x.status === "OPEN" && <PauseBadge pause={x.pause} showBy />}
       <span className="text-xs text-graphite/60">

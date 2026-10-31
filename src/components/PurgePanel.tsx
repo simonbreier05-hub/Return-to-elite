@@ -73,7 +73,7 @@ export default function PurgePanel() {
           <input type="number" min={1} max={3650} value={days} onChange={(e) => setDays(Number(e.target.value))}
             onBlur={() => days !== st?.stayDeleteDays && saveSetting({ guestStayDeleteDays: days })}
             className="h-12 w-24 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold" />
-          <span className="ml-2 text-sm text-graphite/60">{t("purge.days")}</span>
+          <span className="ms-2 text-sm text-graphite/60">{t("purge.days")}</span>
         </label>
       </div>
 

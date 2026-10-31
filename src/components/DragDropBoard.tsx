@@ -154,7 +154,7 @@ export default function DragDropBoard({ columns, onMove, hint }: { columns: Boar
                           style={{ WebkitTouchCallout: "none", userSelect: "none" }}
                           className={`min-h-11 cursor-grab touch-manipulation rounded-lg border px-3 text-sm font-medium ${on ? "border-gold-line bg-parchment ring-2 ring-gold-line" : "border-charcoal/15 bg-white hover:border-gold-line"} ${drag?.ids.includes(i.id) ? "opacity-40" : ""}`}>
                           {i.label}{i.mark ? ` ${i.mark}` : ""}
-                          {i.sub && <span className="ml-1 text-xs text-graphite/60">{i.sub}</span>}
+                          {i.sub && <span className="ms-1 text-xs text-graphite/60">{i.sub}</span>}
                         </button>
                       </li>
                     );
@@ -171,7 +171,7 @@ export default function DragDropBoard({ columns, onMove, hint }: { columns: Boar
       )}
 
       {selected.size > 0 && (
-        <div role="region" aria-label={t("board.bar")} className="fixed inset-x-3 bottom-3 z-[60] rounded-2xl border border-charcoal/10 bg-linen/95 p-3 shadow-lift backdrop-blur sm:left-auto sm:right-4 sm:w-[28rem]">
+        <div role="region" aria-label={t("board.bar")} className="fixed inset-x-3 bottom-3 z-[60] rounded-2xl border border-charcoal/10 bg-linen/95 p-3 shadow-lift backdrop-blur sm:start-auto sm:end-4 sm:w-[28rem]">
           <div className="mb-2 flex items-center justify-between gap-2">
             <span className="font-medium">{t("board.nSelected", { n: selected.size })}</span>
             <button type="button" onClick={() => setSelected(new Set())} className="min-h-11 rounded-lg border border-charcoal/15 px-3 text-xs font-medium hover:border-gold-line">{t("board.clear")}</button>

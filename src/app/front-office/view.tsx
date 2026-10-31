@@ -132,7 +132,7 @@ export default function FrontOfficeView() {
 
       <p className="mb-1 text-xs text-graphite/60 md:hidden" aria-hidden>↔ {t("frontOffice.swipeHint")}</p>
       <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-sm">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+        <table className="w-full min-w-[44rem] text-start text-sm">
           <thead className="border-b border-charcoal/10 text-xs uppercase tracking-wider text-graphite/60">
             <tr>
               <th className="px-4 py-3">{t("frontOffice.guest")}</th>
@@ -152,7 +152,7 @@ export default function FrontOfficeView() {
                   <td className="px-4 py-3 font-medium">
                     {a.vip && <span className="text-gold">★ </span>}
                     {a.guestName}
-                    {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-status-inspected">{t("frontOffice.checkedIn")}</span>}
+                    {a.status === "CHECKED_IN" && <span className="ms-2 text-xs text-status-inspected">{t("frontOffice.checkedIn")}</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button

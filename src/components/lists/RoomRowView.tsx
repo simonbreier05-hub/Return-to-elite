@@ -78,7 +78,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
           {room.guest && (
             <p className="mt-1.5 text-sm font-medium">
               {room.guest}
-              {room.kind === "ARRIVAL" || room.kind === "SAME_DAY_TURN" ? <span className="ml-2 text-xs font-normal text-graphite/60">{t("lists.guestArrives")}{room.eta ? ` ${room.eta}` : ""}</span> : null}
+              {room.kind === "ARRIVAL" || room.kind === "SAME_DAY_TURN" ? <span className="ms-2 text-xs font-normal text-graphite/60">{t("lists.guestArrives")}{room.eta ? ` ${room.eta}` : ""}</span> : null}
             </p>
           )}
         </div>
@@ -97,7 +97,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
           {traces.map((x) => (
             <li key={x.id} className={x.status === "DONE" ? "text-graphite/50 line-through" : "text-graphite"}>
               <span aria-hidden>▸ </span>
-              {showDept && <span className="mr-1 font-semibold">{t(`lists.dept${x.dept}` as TKey)}:</span>}
+              {showDept && <span className="me-1 font-semibold">{t(`lists.dept${x.dept}` as TKey)}:</span>}
               {x.text}
             </li>
           ))}
@@ -114,7 +114,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
 function Wrap({ onOpen, label, children }: { onOpen?: () => void; label: string; children: React.ReactNode }) {
   if (!onOpen) return <div className="px-3 py-2.5">{children}</div>;
   return (
-    <button type="button" onClick={onOpen} title={label} className="block min-h-11 w-full rounded-xl px-3 py-2.5 text-left hover:bg-parchment/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+    <button type="button" onClick={onOpen} title={label} className="block min-h-11 w-full rounded-xl px-3 py-2.5 text-start hover:bg-parchment/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
       {children}
     </button>
   );

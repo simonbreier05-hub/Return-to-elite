@@ -486,7 +486,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               summary={
                 <h3 className="font-serif text-xl">
                   {t("supervisor.floorN", { floor })}
-                  <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
+                  <span className="ms-2 text-xs uppercase tracking-wider text-graphite/50">
                     {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
                   </span>
                 </h3>
@@ -511,23 +511,23 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                           ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey)
                           : room.section}
                       </span>
-                      {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
+                      {room.arrivals.some((a) => a.vip) && <span className="absolute start-1 top-0.5 text-[10px]">★</span>}
                       {attHere && (
-                        <span className="absolute right-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
+                        <span className="absolute end-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
                           👤
                         </span>
                       )}
                       <RoomFlagIcons
                         occupancy={room.occupancy}
                         isCheckoutToday={room.isCheckoutToday}
-                        className="absolute -bottom-1 -left-1"
+                        className="absolute -bottom-1 -start-1"
                         badgeClassName="h-4 w-4"
                         iconClassName="h-2.5 w-2.5"
                       />
                       <NoteCountBadge
                         openCount={room.openNotesCount}
                         totalCount={room.notes.length}
-                        className="absolute -bottom-1 -right-1"
+                        className="absolute -bottom-1 -end-1"
                       />
                     </button>
                   );
@@ -920,7 +920,7 @@ function RoomDrawer({
             {room.defects.map((d) => (
               <p key={d.id} className="text-sm">
                 🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
-                {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
+                {d.workOrder && <span className="ms-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
               </p>
             ))}
           </div>

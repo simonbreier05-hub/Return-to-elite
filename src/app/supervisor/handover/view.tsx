@@ -147,7 +147,7 @@ export default function HandoverView() {
           <section className="rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
             <button
               onClick={() => setShowFacts((s) => !s)}
-              className="flex min-h-11 w-full items-center justify-between text-left"
+              className="flex min-h-11 w-full items-center justify-between text-start"
             >
               <span className="font-serif text-xl">{t("handover.factsTitle")}</span>
               <span className="text-sm text-gold">{showFacts ? `${t("common.hide")} ▲` : `${t("common.show")} ▼`}</span>

@@ -96,7 +96,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
     <div className="mt-3 space-y-3">
       {data.numbers && (
         <button type="button" onClick={() => detail.open("house")} aria-label={t("glance.houseTitle")}
-          className="min-h-11 rounded-2xl text-left transition hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+          className="min-h-11 rounded-2xl text-start transition hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
           <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-graphite/55">{t("glance.houseTitle")} <span className="font-normal normal-case tracking-normal">· {t("glance.houseHint")} · {t("glance.houseTileHint")}</span></p>
           <DayNumberTiles numbers={data.numbers} compact />
         </button>

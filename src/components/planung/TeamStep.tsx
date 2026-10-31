@@ -11,7 +11,7 @@ type Group = keyof TeamSelection;
 function Chip({ name, line, on, onToggle }: { name: string; line?: string; on: boolean; onToggle: () => void }) {
   return (
     <button type="button" aria-pressed={on} onClick={onToggle}
-      className={`flex min-h-11 w-full items-center gap-3 rounded-full border py-1.5 pl-1.5 pr-3 text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:w-auto ${on ? "border-brass-light bg-night-800" : "border-line-1 hover:border-line-2"}`}>
+      className={`flex min-h-11 w-full items-center gap-3 rounded-full border py-1.5 ps-1.5 pe-3 text-start transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:w-auto ${on ? "border-brass-light bg-night-800" : "border-line-1 hover:border-line-2"}`}>
       <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors duration-200 ${on ? "bg-brass-light text-btn-text" : "bg-line-1 text-pl-text"}`}>{name.trim().charAt(0).toUpperCase() || "?"}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">{name}</span>

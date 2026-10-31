@@ -62,7 +62,8 @@ export default function HouseMap({
         </dl>
       </div>
 
-      <div className="relative overflow-hidden rounded-[22px] border border-line-1 bg-night-800 p-3 sm:p-5">
+      {/* Haus-Bild nie spiegeln (RTL): Etagen, Kacheln und Pfeiltasten bleiben links-nach-rechts. */}
+      <div dir="ltr" className="relative overflow-hidden rounded-[22px] border border-line-1 bg-night-800 p-3 sm:p-5">
         {beamKey > 0 && (
           <div key={beamKey} aria-hidden className="pl-beam pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-transparent via-brass-light/35 to-transparent" />
         )}
@@ -90,7 +91,7 @@ export default function HouseMap({
                     />
                   ))}
                 </div>
-                <div className="ml-auto lg:ml-0"><FloorOccupancy stats={stats} hasData={house.hasData} index={row} animateKey={animateKey}
+                <div className="ms-auto lg:ms-0"><FloorOccupancy stats={stats} hasData={house.hasData} index={row} animateKey={animateKey}
                   textOccupied={t("planungTool.occupiedOf", { n: stats.occupied, total: stats.total })} textNoData={t("planungTool.noData")} /></div>
                 <div
                   className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${sup ? `${BADGE_TONE[sup.tone]} text-ink` : "border-[1.5px] border-dashed border-line-2"}`}

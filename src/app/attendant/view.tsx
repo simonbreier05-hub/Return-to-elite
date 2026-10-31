@@ -317,7 +317,7 @@ export default function AttendantView() {
             <button type="button" onClick={() => rewind(room)} disabled={busyRoomId === room.id}
               className="min-h-11 w-full rounded-xl border border-charcoal/20 bg-white px-3 text-sm font-medium disabled:opacity-50">
               ↶ {t("work.rewind", { status: t(`status.${room.rewind.to}` as TKey) })}
-              <span className="ml-1 text-xs font-normal text-graphite/60">· {t("work.rewindUntil", { time: time(room.rewind.until) })}</span>
+              <span className="ms-1 text-xs font-normal text-graphite/60">· {t("work.rewindUntil", { time: time(room.rewind.until) })}</span>
             </button>
           )}
         </>

@@ -48,7 +48,7 @@ export default function PlanStep({
                   {s === "waiting" && <span className="inline-block h-2 w-2 rounded-full bg-line-2" />}
                 </span>
                 <span className={s === "waiting" ? "text-pl-muted" : "font-medium"}>{t(PH_LABEL[p])}</span>
-                <span className="ml-auto text-xs text-pl-muted">{s === "done" ? "✓" : s === "running" ? "…" : s === "error" ? "✖" : ""}</span>
+                <span className="ms-auto text-xs text-pl-muted">{s === "done" ? "✓" : s === "running" ? "…" : s === "error" ? "✖" : ""}</span>
               </li>
             );
           })}
@@ -59,10 +59,10 @@ export default function PlanStep({
         <>
           <div className="relative mx-auto mt-6 h-32 max-w-md" role="list" aria-label={t("planungTool.draft")}>
             {cards.map((c, i) => (
-              <div key={i} role="listitem" className="pl-fan absolute bottom-0 left-[34%] w-[32%]"
+              <div key={i} role="listitem" className="pl-fan absolute bottom-0 start-[34%] w-[32%]"
                 style={{ ["--i" as string]: i, transform: `translateX(${(i - 1) * 104}%) translateY(${i === 1 ? 0 : 8}px) rotate(${c.rot}deg)`, zIndex: i === 1 ? 2 : 1 }}>
                 <button type="button" onClick={() => onOpen(c.tab)} aria-label={`${c.text} — ${t("planungTool.openDetails")}`}
-                  className="block min-h-11 w-full rounded-[18px] border border-line-2 bg-night-600 p-3 text-left shadow-lg hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                  className="block min-h-11 w-full rounded-[18px] border border-line-2 bg-night-600 p-3 text-start shadow-lg hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
                   <div className="font-serif text-base font-semibold leading-tight">{c.text}</div>
                   <div className="mt-1.5 inline-block rounded-full border border-line-2 px-2 text-[11px] text-pl-muted">{t("planungTool.draft")} ›</div>
                 </button>
@@ -80,9 +80,9 @@ export default function PlanStep({
                 {hkRows.map((h) => (
                   <li key={h.id} className="flex min-h-11 items-center gap-2 rounded-full border border-line-1 bg-night-600 px-4 text-sm">
                     {h.excluded ? <span className="text-pl-muted line-through">{h.name}</span> : (
-                      <button type="button" onClick={() => onOpen("rooms", "list")} className="min-h-11 text-left font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{h.name} ›</button>
+                      <button type="button" onClick={() => onOpen("rooms", "list")} className="min-h-11 text-start font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{h.name} ›</button>
                     )}
-                    <span className="ml-auto text-xs text-pl-muted">
+                    <span className="ms-auto text-xs text-pl-muted">
                       {h.excluded ? t("planungTool.skippedNote") : `${h.rooms} ${t("planungTool.roomsShort")} · ${fmt(h.credits)} / ${fmt(h.lo)}–${fmt(h.hi)}`}
                     </span>
                     <button type="button" onClick={() => onToggleHk(h.id)} className="min-h-11 rounded-full px-2 text-xs underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">

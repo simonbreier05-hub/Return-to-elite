@@ -202,9 +202,9 @@ export default function RoomDetailModal({
           {defects.map((d) => (
             <p key={d.id} className="text-sm">
               🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
-              {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
+              {d.workOrder && <span className="ms-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
               {d.reportedBy?.role === "guest" && (
-                <span className="ml-1 text-xs font-medium text-status-out-of-order">{t("supervisor.reportedByGuest")}</span>
+                <span className="ms-1 text-xs font-medium text-status-out-of-order">{t("supervisor.reportedByGuest")}</span>
               )}
             </p>
           ))}
@@ -218,7 +218,7 @@ export default function RoomDetailModal({
             <p key={r.id} className="text-sm">
               {r.kind === "DND" ? "🔕" : r.kind === "CLEAN_REQUEST" ? "✨" : "💬"}{" "}
               {t(`guestRequestKind.${r.kind}` as TKey)}
-              <span className="ml-1 text-xs text-graphite/60">
+              <span className="ms-1 text-xs text-graphite/60">
                 [{t(`guestRequestStatus.${r.status}` as TKey)} · {hhmm(r.createdAt)}]
               </span>
             </p>

@@ -66,7 +66,7 @@ export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { co
                     <li key={item.key} className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-1 ${tone}`}>
                       {item.roomRef ? (
                         <button type="button" onClick={() => onOpenRoom(item.roomRef!)} aria-label={t("glance.openRoom", { n: item.title })}
-                          className="min-h-11 flex-1 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                          className="min-h-11 flex-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                           {body}
                         </button>
                       ) : (
@@ -89,7 +89,7 @@ export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { co
 export function GlanceTile({ label, value, sub, accent, bar, onClick }: { label: string; value: string | number; sub?: string; accent?: boolean; bar?: number; onClick: () => void }) {
   return (
     <button type="button" onClick={onClick}
-      className={`min-h-11 w-full rounded-2xl border p-4 text-left shadow-sm transition hover:border-gold-line active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
+      className={`min-h-11 w-full rounded-2xl border p-4 text-start shadow-sm transition hover:border-gold-line active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
       <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
       <div className="mt-1 font-serif text-3xl">{value}</div>
       {sub && <div className="text-xs text-graphite/70">{sub}</div>}

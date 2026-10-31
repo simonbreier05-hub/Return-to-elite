@@ -29,7 +29,7 @@ export default function PlausibilityBanner({ refreshKey }: { refreshKey?: string
   return (
     <div role="alert" className="mb-4 rounded-xl border border-brass-light bg-night-800 p-3 text-sm">
       <div className="font-medium text-brass-ink">{t("planungTool.plausTitle")}</div>
-      <ul className="mt-1.5 list-disc space-y-0.5 pl-5 text-pl-text">
+      <ul className="mt-1.5 list-disc space-y-0.5 ps-5 text-pl-text">
         {state.findings.map((f, i) => <li key={i}>{f.message}</li>)}
       </ul>
       <p className="mt-1.5 text-xs text-pl-muted">{t("planungTool.plausHint")}</p>

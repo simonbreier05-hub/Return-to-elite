@@ -139,14 +139,14 @@ export default function ImportView() {
 
                   {pv.sample.length > 0 && (
                     <div className="mt-2 overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-start text-xs">
                         <thead className="text-graphite/60">
-                          <tr>{previewColumns(it.type).map((c) => <th key={c.head} className="pr-3">{t(c.head)}</th>)}</tr>
+                          <tr>{previewColumns(it.type).map((c) => <th key={c.head} className="pe-3">{t(c.head)}</th>)}</tr>
                         </thead>
                         <tbody>
                           {pv.sample.map((r, i) => (
                             <tr key={i} className="border-t border-charcoal/5">
-                              {previewColumns(it.type).map((c) => <td key={c.head} className="py-1 pr-3">{String(r[c.key] ?? "")}</td>)}
+                              {previewColumns(it.type).map((c) => <td key={c.head} className="py-1 pe-3">{String(r[c.key] ?? "")}</td>)}
                             </tr>
                           ))}
                         </tbody>
@@ -208,7 +208,7 @@ export default function ImportView() {
               {listStateOf(status?.[ty] ?? null, today) === "stale" && (
                 <>
                   {" · "}<span className="font-medium text-status-out-of-order">{t("planungTool.stale", { date: status![ty]!.businessDate })}</span>
-                  <button type="button" onClick={() => void acceptStale(ty)} className="ml-2 h-11 rounded-xl border border-charcoal/15 bg-white px-3 text-xs hover:border-gold-line">{t("planungTool.useAnyway")}</button>
+                  <button type="button" onClick={() => void acceptStale(ty)} className="ms-2 h-11 rounded-xl border border-charcoal/15 bg-white px-3 text-xs hover:border-gold-line">{t("planungTool.useAnyway")}</button>
                 </>
               )}
               {listStateOf(status?.[ty] ?? null, today) === "accepted" && <span className="text-graphite/60"> · {t("planungTool.staleAccepted", { date: status![ty]!.businessDate })}</span>}

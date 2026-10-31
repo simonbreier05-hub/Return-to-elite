@@ -49,7 +49,7 @@ export default function ChatView() {
   const item = (c: ChannelSummary) => (
     <li key={c.id}>
       <button type="button" onClick={() => setSelected(c.id)} aria-current={c.id === selected}
-        className={`flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-left text-sm transition ${c.id === selected ? "bg-navy text-ivory" : "hover:bg-parchment"}`}>
+        className={`flex min-h-12 w-full items-center gap-2 rounded-xl px-3 text-start text-sm transition ${c.id === selected ? "bg-navy text-ivory" : "hover:bg-parchment"}`}>
         <span aria-hidden>{c.kind === "DIRECT" ? "👤" : "#"}</span>
         <span className="min-w-0 flex-1 truncate font-medium">{channelTitle(c, t)}</span>
         {c.kind === "DIRECT" && c.partner && <span className={`hidden text-xs sm:inline ${c.id === selected ? "text-ivory/70" : "text-graphite/60"}`}>{t(`role.${c.partner.role}` as TKey)}</span>}
@@ -165,7 +165,7 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
           const mine = m.author.id === me.id;
           const canRetract = !m.retracted && !m.hidden && ((mine && Date.now() - Date.parse(m.createdAt) < RETRACT_MS) || me.role === "duty_manager");
           return (
-            <article key={m.id} className={`max-w-[85%] rounded-2xl border px-3 py-2 ${mine ? "ml-auto border-navy/15 bg-parchment" : "border-charcoal/10 bg-ivory"} ${m.urgent ? "border-l-4 border-l-status-out-of-order" : ""}`}>
+            <article key={m.id} className={`max-w-[85%] rounded-2xl border px-3 py-2 ${mine ? "ms-auto border-navy/15 bg-parchment" : "border-charcoal/10 bg-ivory"} ${m.urgent ? "border-s-4 border-s-status-out-of-order" : ""}`}>
               <div className="flex flex-wrap items-baseline gap-x-2 text-xs text-graphite/70">
                 <span className="font-semibold text-charcoal">{mine ? t("chat.you") : m.author.name}</span>
                 <span>{t(`role.${m.author.role}` as TKey)}</span>
@@ -244,7 +244,7 @@ function PeoplePicker({ onClose, onPick }: { onClose: () => void; onPick: (userI
         {(people ?? []).map((p) => (
           <li key={p.id}>
             <button type="button" onClick={() => onPick(p.id).catch((e) => setError(errorText(e, t)))}
-              className="flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border border-charcoal/10 bg-white px-3 text-left text-sm hover:border-gold-line">
+              className="flex min-h-12 w-full items-center justify-between gap-2 rounded-xl border border-charcoal/10 bg-white px-3 text-start text-sm hover:border-gold-line">
               <span className="font-medium">{p.name}</span><span className="text-xs text-graphite/60">{t(`role.${p.role}` as TKey)}</span>
             </button>
           </li>

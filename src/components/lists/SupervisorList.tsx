@@ -89,7 +89,7 @@ export default function SupervisorList() {
             const pct = h.progress.total ? Math.round((h.progress.done / h.progress.total) * 100) : 0;
             return (
               <div key={h.id} className="rounded-xl border border-charcoal/10 bg-ivory">
-                <button type="button" aria-expanded={isOpen} onClick={() => toggle(h.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                <button type="button" aria-expanded={isOpen} onClick={() => toggle(h.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory">{h.dailyNumber ?? h.name.charAt(0)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{h.name}</span>

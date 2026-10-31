@@ -87,19 +87,19 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
           )}
 
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-start text-xs">
               <thead className="text-graphite/60">
                 <tr>
-                  <th className="pr-3">{t("importPage.colRoom")}</th><th className="pr-3">{t("importPage.dpColType")}</th>
-                  <th className="pr-3">{t("importPage.dpColLinen")}</th><th className="pr-3">{t("importPage.dpColEta")}</th>
-                  <th className="pr-3">{t("importPage.dpColTraces")}</th><th>{t("importPage.dpColAssigned")}</th>
+                  <th className="pe-3">{t("importPage.colRoom")}</th><th className="pe-3">{t("importPage.dpColType")}</th>
+                  <th className="pe-3">{t("importPage.dpColLinen")}</th><th className="pe-3">{t("importPage.dpColEta")}</th>
+                  <th className="pe-3">{t("importPage.dpColTraces")}</th><th>{t("importPage.dpColAssigned")}</th>
                 </tr>
               </thead>
               <tbody>
                 {plan.rooms.map((r) => (
                   <tr key={r.room} className="border-t border-charcoal/5">
-                    <td className="py-1 pr-3 font-medium">{r.room}{r.vip ? " ★" : ""}</td>
-                    <td className="pr-3">
+                    <td className="py-1 pe-3 font-medium">{r.room}{r.vip ? " ★" : ""}</td>
+                    <td className="pe-3">
                       <select value={r.cleaningType} disabled={busy} onChange={(e) => override(r.room, e.target.value as DayCleaningType)}
                         className="h-10 rounded-lg border border-charcoal/20 bg-white px-2">
                         {TYPES.map((ty) => <option key={ty} value={ty}>{t(`importPage.type${ty}` as "importPage.typeDEPARTURE")}</option>)}
@@ -108,9 +108,9 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
                         <div className="text-[11px] text-gold-soft">{t("importPage.dpOverridden", { type: t(`importPage.type${r.derivedType}` as "importPage.typeDEPARTURE") })}</div>
                       )}
                     </td>
-                    <td className="pr-3">{r.laundryDue ? t("importPage.dpLinenDue") : ""}</td>
-                    <td className="pr-3">{r.eta ?? ""}</td>
-                    <td className="pr-3">{r.openTraces || ""}</td>
+                    <td className="pe-3">{r.laundryDue ? t("importPage.dpLinenDue") : ""}</td>
+                    <td className="pe-3">{r.eta ?? ""}</td>
+                    <td className="pe-3">{r.openTraces || ""}</td>
                     <td>{r.assigned ? "✓" : ""}</td>
                   </tr>
                 ))}

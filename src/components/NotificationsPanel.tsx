@@ -23,9 +23,9 @@ interface Notification {
 /** Alert *levels* — kept in the same muted register as AppShell's own bell
  * dropdown, so the two never disagree about what "urgent" looks like. */
 const LEVEL_STYLES: Record<string, string> = {
-  info: "border-l-navy-line",
-  warning: "border-l-gold",
-  critical: "border-l-status-out-of-order",
+  info: "border-s-navy-line",
+  warning: "border-s-gold",
+  critical: "border-s-status-out-of-order",
 };
 
 /**
@@ -87,7 +87,7 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`rounded-lg border border-charcoal/5 border-l-4 bg-ivory p-2.5 text-sm ${LEVEL_STYLES[n.level] ?? ""} ${
+            className={`rounded-lg border border-charcoal/5 border-s-4 bg-ivory p-2.5 text-sm ${LEVEL_STYLES[n.level] ?? ""} ${
               n.acknowledged ? "opacity-50" : ""
             }`}
           >

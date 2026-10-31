@@ -75,7 +75,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
           {room.allowedStatuses.map((s) => {
             const style = STATUS_STYLES[s];
             return s === "OUT_OF_ORDER" ? null : (
-              <TwoTapButton key={s} onConfirm={() => setStatus(s)}><span className={`mr-1 inline-block h-2.5 w-2.5 rounded-full border ${style.chip}`} aria-hidden />{t("roomEdit.statusSet", { status: t(`status.${s}` as TKey) })}</TwoTapButton>
+              <TwoTapButton key={s} onConfirm={() => setStatus(s)}><span className={`me-1 inline-block h-2.5 w-2.5 rounded-full border ${style.chip}`} aria-hidden />{t("roomEdit.statusSet", { status: t(`status.${s}` as TKey) })}</TwoTapButton>
             );
           })}
         </div>
@@ -119,7 +119,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
           <ul className="space-y-2">
             {room.traces.map((x) => (
               <li key={x.id} className="rounded-lg bg-white p-2 text-sm">
-                <div className={`break-words ${x.status === "DONE" ? "text-graphite/50 line-through" : ""}`}><span className="mr-1 text-xs font-semibold">{t(`lists.dept${x.dept}` as TKey)}:</span>{x.text}</div>
+                <div className={`break-words ${x.status === "DONE" ? "text-graphite/50 line-through" : ""}`}><span className="me-1 text-xs font-semibold">{t(`lists.dept${x.dept}` as TKey)}:</span>{x.text}</div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   <TwoTapButton onConfirm={() => traceDone(x.id, x.status !== "DONE")}>{x.status === "DONE" ? t("roomEdit.traceReopen") : t("roomEdit.traceDone")}</TwoTapButton>
                   <button type="button" className="min-h-11 rounded-lg border border-charcoal/20 bg-white px-3 text-sm" onClick={() => setEditing({ kind: "trace", id: x.id, text: x.text })}>{t("roomEdit.traceEdit")}</button>

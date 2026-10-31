@@ -13,7 +13,7 @@ export default function FloorOccupancy({
           <div key={animateKey} className="pl-bar h-full w-full rounded-full bg-brass-light" style={{ transform: `scaleX(${stats.ratio})`, ["--i" as string]: index }} />
         )}
       </div>
-      <div className="mt-1 text-right text-xs text-pl-muted">{hasData ? textOccupied : textNoData}</div>
+      <div className="mt-1 text-end text-xs text-pl-muted">{hasData ? textOccupied : textNoData}</div>
     </div>
   );
 }

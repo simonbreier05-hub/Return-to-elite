@@ -115,11 +115,11 @@ export default function NoteThread({
       {notes.map((n) => {
         const isMessage = n.kind === "MESSAGE";
         return (
-          <div key={n.id} className={`mb-1 rounded-lg ${isMessage ? "border-l-4 border-gold bg-parchment" : "bg-ivory"} ${pad} ${textSize}`}>
+          <div key={n.id} className={`mb-1 rounded-lg ${isMessage ? "border-s-4 border-gold bg-parchment" : "bg-ivory"} ${pad} ${textSize}`}>
             <div className="flex items-start justify-between gap-2">
               <span className="text-xs text-graphite/60">
-                {isMessage && <span className="mr-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
-                {isMessage && outOfScope && <span className="mr-1 rounded-full border border-gold-line/60 bg-white px-1.5 py-0.5 font-semibold text-gold-soft">{t("work.outOfScope")}</span>}
+                {isMessage && <span className="me-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
+                {isMessage && outOfScope && <span className="me-1 rounded-full border border-gold-line/60 bg-white px-1.5 py-0.5 font-semibold text-gold-soft">{t("work.outOfScope")}</span>}
                 <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({roleLabel(n.author?.role ?? "")}) ·{" "}
                 {hhmm(n.createdAt)}
               </span>

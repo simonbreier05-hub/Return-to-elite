@@ -146,7 +146,7 @@ export default function ConciergeView() {
                   <span className="text-sm">
                     {hhmm(e.startsAt)} –{" "}
                     {hhmm(e.endsAt)}
-                    {active && <span className="ml-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">{t("concierge.guestOut")}</span>}
+                    {active && <span className="ms-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">{t("concierge.guestOut")}</span>}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-graphite/70">
