@@ -49,3 +49,5 @@
 - `ImportBatch.type`/`ImportRow.kind` sind Strings: ein neuer Listentyp braucht keine Schema-Änderung/Migration.
 - INHOUSE-Layout ist angenommen (Departures-Zeilenform), nicht an einem echten Opera-Export geprüft; Parser nutzt als Kopfmarker die Zeile „Room …".
 - Gate ist bewusst nicht in `mergeDay()` selbst (Tests/Skripte rufen es mit Teildaten); es sitzt in den API-Routen.
+- Zähllogik (`docs/zaehllogik.md`, Test `tests/countLogic.test.ts`): „belegt" im Planungstool = Abreise + Turn + Bleiber aus `DayRoomPlan` (`houseTotals`), Import-„Zu reinigen" = dieselbe Menge (`derive.ts`); Duty Manager/`/supervisor/planning` zählen aus `Room.occupancy`/`isCheckoutToday`, der Autoplan (`loadDay`) zieht OOO/OOS/Green-Opt-out und schon CLEAN/INSPECTED ohne heutige Zuteilung ab. Neue Zähler über eine dieser Funktionen, nicht neu ableiten.
+- `Room.status` wird morgens nicht auf DIRTY zurückgesetzt (Import schreibt keinen Status) — Zähler, die auf CLEAN/INSPECTED schauen, sind morgens zu optimistisch. Offener Punkt, nicht stillschweigend „reparieren".
