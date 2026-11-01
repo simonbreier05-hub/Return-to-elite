@@ -9,6 +9,8 @@ import { useOfflineQueue } from "@/components/useOfflineQueue";
 import OfflineBar from "@/components/OfflineBar";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import MyWorkData from "@/components/lists/MyWorkData";
+import MyFloorsToday from "@/components/lists/MyFloorsToday";
 import DragReorderList from "@/components/DragReorderList";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { type ThreadNote } from "@/components/NoteThread";
@@ -370,6 +372,7 @@ export default function AttendantView() {
       <div className="mb-4">
         <h2 className="font-serif text-4xl leading-none">{t("attendant.myRooms")}</h2>
         <div className="rule-gold my-2 w-40" />
+        <MyFloorsToday />
         <p className="text-sm font-medium" aria-live="polite">
           {t("hkHub.progressRooms", { done: progress.done, total: progress.total })}
           {progress.creditsTotal > 0 && <> · {t("lists.credits", { done: progress.creditsDone.toString().replace(".", ","), total: progress.creditsTotal.toString().replace(".", ",") })}</>}
@@ -482,6 +485,7 @@ export default function AttendantView() {
           </>
         )}
       </ErrorBoundary>
+      <MyWorkData />
 
       {/* Modal rendert selbst per Portal in <body> (die Seite liegt in einem animierten Container) — gilt auch für Sperre/Mangel unten. */}
       {detailRoom && (

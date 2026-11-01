@@ -16,7 +16,7 @@ import LiveClock from "@/components/LiveClock";
 import { listStateOf, planningAllowed, type ListStatus } from "@/lib/import/readiness";
 import { dateLabel, fileStatus, listsReady, type HouseData, type StepId } from "@/lib/planung/model";
 import FileDropCard from "./FileDropCard";
-import FloorStep from "./FloorStep";
+import FloorTeamStep from "./FloorTeamStep";
 import HouseMap from "./HouseMap";
 import PlanungShell from "./PlanungShell";
 import PlanEditorWindow, { type EditorTab } from "./PlanEditorWindow";
@@ -28,6 +28,7 @@ import ProgressRing from "./ProgressRing";
 import StepSegments from "./StepSegments";
 import TeamStep from "./TeamStep";
 import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
+import { useFloorTeam } from "./useFloorTeam";
 import Stepper from "./Stepper";
 import { errorText, useImportSession, type ImportItem } from "./useImportSession";
 
@@ -124,6 +125,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     if (r.ok) await team.saveFloors();
     return r;
   };
+  const floorTeam = useFloorTeam(house.date);
 
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
@@ -159,17 +161,24 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   // Team einmal laden, sobald „Team" erreicht ist (Auswahl bleibt beim Vor- und Zurückgehen erhalten)
   useEffect(() => { if (step >= 2 && !team.state && !team.loading && house.date) void team.load(); }, [step, team, house.date]);
 
-  const next2 = async () => { if (await team.saveTeam()) goNext(3); };
-  const next3 = async () => { if (await team.saveFloors()) goNext(4); };
-  const startPlan = () => { void plan.run(team.sel, team.floorSel); };
+  const next2 = async () => { if (await team.saveTeam()) { goNext(3); void floorTeam.load(); } };
+  // Etagen des ganzen Teams speichern; die Supervisor-Etagen gehen in die Auswahl, die der Plan-Editor nach dem Bestätigen speichert
+  const next3 = async () => {
+    if (!(await floorTeam.save())) return;
+    for (const f of [1, 2, 3, 4, 5]) { const id = floorTeam.supByFloor[f]; if (id) team.pickFloor(f, id); }
+    goNext(4);
+  };
+  // Etagenzuweisung laden, wenn Schritt 3 ohne vorherigen Wechsel aus Schritt 2 erreicht wird (Zurückspringen)
+  useEffect(() => { if (step >= 3 && !floorTeam.state && !floorTeam.loading && !floorTeam.error && house.date) void floorTeam.load(); }, [step, floorTeam, house.date]);
+  const startPlan = () => { void plan.run(team.sel, floorTeam.supByFloor); };
 
   // Haus: ab „Etagen" zeigen die Badges sofort die gewählte Zuteilung (vor dem Speichern)
   const houseView = useMemo<HouseData>(() => {
     if (step < 3 || !team.state) return house;
     const supervisors: HouseData["supervisors"] = {};
-    for (const f of [1, 2, 3, 4, 5]) { const m = team.state.members.sup.find((x) => x.id === team.floorSel[f]); if (m) supervisors[f] = m.badge; }
+    for (const f of [1, 2, 3, 4, 5]) { const m = team.state.members.sup.find((x) => x.id === floorTeam.supByFloor[f]); if (m) supervisors[f] = m.badge; }
     return { ...house, supervisors };
-  }, [step, team.state, team.floorSel, house]);
+  }, [step, team.state, floorTeam.supByFloor, house]);
   const doneCount = SLOTS.filter((ty) => appliedMap[ty] || itemFor(ty)?.phase === "read").length;
   const labels = { 1: t("planungTool.step1"), 2: t("planungTool.step2"), 3: t("planungTool.step3"), 4: t("planungTool.step4") } as Record<StepId, string>;
 
@@ -295,8 +304,11 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
           <TeamStep state={team.state} sel={team.sel} onToggle={team.toggle} verdict={team.verdict} missing={team.missing} loading={team.loading} previous={team.state?.source === "previous"} />
         ) : step === 3 ? (
           <>
-            <FloorStep house={house} sups={team.chosenSups} assign={team.floorSel} onPick={team.pickFloor} animateKey={1} />
-            <p role="status" className="mt-3 min-h-5 text-sm text-brass-ink">{team.openFloors.length ? t("planungTool.floorOpen", { list: team.openFloors.join(", ") }) : ""}</p>
+            <FloorTeamStep state={floorTeam.state} loading={floorTeam.loading} assign={floorTeam.assign} active={floorTeam.active} open={floorTeam.open}
+              kpis={floorTeam.kpis} warnings={floorTeam.warnings} onTapPerson={floorTeam.tapPerson} onTapFloor={floorTeam.tapFloor} onRemove={floorTeam.remove}
+              onDrop={floorTeam.drop} onAcceptAll={floorTeam.acceptAll} onAccept={floorTeam.acceptOne} onDismiss={floorTeam.dismissOne} onDone={() => floorTeam.setActive(null)} />
+            <p role="status" className="mt-3 min-h-5 text-sm text-brass-ink">{floorTeam.state && floorTeam.openFloors.length ? t("planungTool.floorOpen", { list: floorTeam.openFloors.join(", ") }) : ""}</p>
+            {floorTeam.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {floorTeam.error}</p>}
           </>
         ) : (
           <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.view?.warnings ?? []} error={plan.error} started={plan.started}
@@ -312,11 +324,11 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const mainLabel = step === 1
     ? (merging || items.some((i) => i.busy) ? t("planungTool.applying") : mode === "apply" ? t("planungTool.applyLists") : mode === "next" ? t("planungTool.nextTeam") : t("planungTool.readLists"))
     : step === 2 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextFloors"))
-    : step === 3 ? (team.saving ? t("planungTool.saving") : t("planungTool.nextPlan"))
+    : step === 3 ? (floorTeam.saving ? t("planungTool.saving") : t("planungTool.nextPlan"))
     : plan.running ? t("planungTool.planRunning") : plan.confirmed ? t("planungTool.toAssignmentBtn") : plan.done ? t("planungTool.reviewConfirm") : plan.error ? t("planungTool.planRetry") : t("planungTool.startPlan");
   const mainDisabled = step === 1 ? busyStep1
     : step === 2 ? team.saving || team.loading || !team.state?.hasPlan || team.missing.length > 0
-    : step === 3 ? team.saving || team.openFloors.length > 0
+    : step === 3 ? floorTeam.saving || floorTeam.loading || !floorTeam.state || floorTeam.openFloors.length > 0
     : plan.running;
   const mainPulse = !mainDisabled && (step === 1 ? mode !== "read" || items.length === 0 : step === 4 ? !plan.running : true);
   const mainClick = step === 1 ? main : step === 2 ? () => void next2() : step === 3 ? () => void next3() : plan.confirmed ? () => router.push("/floor-plan") : plan.done ? () => setConfirmOpen(true) : startPlan;

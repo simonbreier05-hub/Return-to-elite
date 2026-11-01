@@ -8,9 +8,13 @@ import { estimateSpeeds } from "./speed";
 import type { LiveInput } from "./redistribute";
 import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, PlanRoom, RoomState } from "./types";
 import type { SettingsShape } from "@/lib/domain";
+import { roomBand } from "@/lib/planung/floorTeam";
+import { parseAssignedFloors } from "@/lib/floors";
+import { activePatterns } from "@/lib/learning/store";
+import { planningMinutesFor } from "@/lib/workdata/load";
 
-/** Zimmertypen, die als "Suite" (anspruchsvoll) gelten — offene Frage 3 im Interview: alle Suiten oder nur höhere? */
-export const SUITE_TYPES = ["JUNIOR_SUITE", "SUITE", "PENTHOUSE"] as const;
+import { SUITE_TYPES } from "./types";
+export { SUITE_TYPES };
 /** Zimmer in diesen Status werden nicht gereinigt/zugeteilt. */
 const NOT_CLEANED = new Set(["OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT"]);
 
@@ -24,6 +28,8 @@ export interface DayData {
   settings: SettingsShape;
   weights: Awaited<ReturnType<typeof getAutoplanWeights>>;
   fullTimeTarget: number;
+  /** H3: gelernte Muster, die eine harte Regel verletzen würden — nur als Hinweis, nicht angewendet. */
+  learnedNotes: string[];
   /** DB-Zustand der Zimmer, um vor dem Anwenden zu prüfen, ob inzwischen etwas begonnen wurde. */
   roomState: Record<string, { number: string; state: RoomState; assignedToId: string | null; assignedOn: string | null }>;
 }
@@ -115,10 +121,41 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     id: u.id, name: u.name, type: (u.hkType as HkType), level: Math.min(3, Math.max(1, u.hkLevel)) as 1 | 2 | 3,
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
     ...bandFor({ hkType: u.hkType, dailyTarget: u.dailyTarget }, settings, fullTimeTarget),
+    ...(() => { const b = roomBand(u.hkType, u.hkLevel, settings as unknown as Record<string, number>); return { roomsLo: b.lo, roomsHi: b.hi }; })(),
+    todayFloors: u.floorsOn === date ? parseAssignedFloors(u.assignedFloors) : [],
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!team || team.includes(u.id)),
   }));
-  return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState };
+  const learnedNotes = await applyLearned(date, rooms, hks);
+  // H3: gemessene Zeiten (nur wenn „Messdaten in Planung verwenden" an ist) — Credits bleiben die Basis
+  const minutes = await planningMinutesFor(date, hks.map((h) => h.id)).catch(() => ({} as Record<string, never>));
+  for (const h of hks) if (minutes[h.id]) (h as PlanHousekeeper).minutesByKind = minutes[h.id];
+  return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState, learnedNotes };
+}
+
+/**
+ * H3: gelernte Zimmer-Muster als weiche Präferenz eintragen. Harte Regeln gewinnen: ein Muster, das ein anspruchsvolles
+ * Zimmer an Stufe 1 geben würde, wird nicht angewendet und nur als Hinweis gezeigt.
+ */
+async function applyLearned(date: string, rooms: PlanRoom[], hks: { id: string; name: string; level: number }[]): Promise<string[]> {
+  const notes: string[] = [];
+  const patterns = await activePatterns(date).catch(() => []);
+  const byNumber = new Map(rooms.map((r) => [r.number, r]));
+  const hkBy = new Map(hks.map((h) => [h.id, h]));
+  for (const p of patterns) {
+    const r = p.roomNumber ? byNumber.get(p.roomNumber) : undefined;
+    if (!r || r.fixedTo) continue;
+    const why = `gelernt: an ${p.days} von ${p.of} Planungstagen so geändert`;
+    if (p.kind === "ROOM_PERSON" && p.target) {
+      const h = hkBy.get(p.target);
+      if (!h) continue;
+      if (h.level < 2 && r.demanding.length) { notes.push(`Gelerntes Muster für Zimmer ${r.number} nicht angewendet: Stufe-1-Regel geht vor.`); continue; }
+      r.preferHk = p.target; r.learnedReason = why;
+    } else if (p.kind === "ROOM_LEVEL" && p.minLevel) {
+      r.minLevel = Math.max(r.minLevel ?? 0, p.minLevel); r.learnedReason = why;
+    }
+  }
+  return notes;
 }
 
 export function morningInput(d: DayData): PlanInput {
@@ -131,6 +168,7 @@ export function morningInput(d: DayData): PlanInput {
   return {
     rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
     weights: d.weights, maxFloors: d.settings.autoplanMaxFloors, fullTimeTarget: d.fullTimeTarget,
+    ...(d.hks.some((h) => h.minutesByKind) ? { shiftMinutes: d.settings.shiftMinutes } : {}),
   };
 }
 
