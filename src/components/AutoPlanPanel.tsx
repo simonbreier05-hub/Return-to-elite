@@ -126,12 +126,19 @@ export default function AutoPlanPanel() {
             {input.housekeepers.map((h) => {
               const m = view.metrics.find((x) => x.hkId === h.id)!;
               const route = view.routes.find((x) => x.hkId === h.id)!;
-              const outOfBand = m.credits > m.hi + 0.25 || (m.rooms > 0 && m.credits < m.lo - 0.25);
+              const hasRoomBand = m.roomsLo !== undefined && m.roomsHi !== undefined;
+              const outOfBand = hasRoomBand
+                ? m.rooms > (m.roomsHi ?? 0) || (m.rooms > 0 && m.rooms < (m.roomsLo ?? 0))
+                : m.credits > m.hi + 0.25 || (m.rooms > 0 && m.credits < m.lo - 0.25);
               return (
                 <div key={h.id} className="rounded-xl border border-charcoal/10 bg-white p-3">
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <div className="font-medium">{h.name} <span className="text-xs text-graphite/60">· {t("autoplan.level", { n: h.level })}</span></div>
-                    <div className={`font-serif text-xl ${outOfBand ? "text-status-in-progress" : ""}`}>{fmt(m.credits)} <span className="text-xs text-graphite/60">/ {fmt(m.lo)}–{fmt(m.hi)}</span></div>
+                    {hasRoomBand ? (
+                      <div className={`font-serif text-xl ${outOfBand ? "text-status-in-progress" : ""}`}>{t("autoplan.rooms", { n: m.rooms })} <span className="text-xs text-graphite/60">/ {m.roomsLo === m.roomsHi ? m.roomsLo : `${m.roomsLo}–${m.roomsHi}`} · {fmt(m.credits)} Cr.</span></div>
+                    ) : (
+                      <div className={`font-serif text-xl ${outOfBand ? "text-status-in-progress" : ""}`}>{fmt(m.credits)} <span className="text-xs text-graphite/60">/ {fmt(m.lo)}–{fmt(m.hi)}</span></div>
+                    )}
                   </div>
                   <div className="mb-1 text-xs text-graphite/60">
                     {t("autoplan.rooms", { n: m.rooms })} · {t("autoplan.departures")} {m.departures} · {t("autoplan.stayovers")} {m.stayovers} · {t("autoplan.linen")} {m.linen} · {t("autoplan.floors")} {m.floors.join(", ") || "—"} · {t("autoplan.demanding")} {m.demanding}

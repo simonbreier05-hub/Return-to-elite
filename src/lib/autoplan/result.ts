@@ -39,7 +39,7 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
       departures: rs.filter((r) => r.kind !== "STAYOVER").length, turns: rs.filter((r) => r.kind === "TURN").length,
       stayovers: rs.filter((r) => r.kind === "STAYOVER" && !r.laundry).length, linen: rs.filter((r) => r.kind === "STAYOVER" && r.laundry).length,
       floors: [...new Set(rs.map((r) => r.floor))].sort((a, b) => a - b), demanding: rs.filter((r) => r.demanding.length).length,
-      lo: h.lo, hi: h.hi,
+      lo: h.lo, hi: h.hi, roomsLo: h.roomsLo, roomsHi: h.roomsHi,
     };
   });
 
@@ -56,7 +56,8 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     const h = input.housekeepers[k];
     if (r.kind === "TURN") list.push("Same-Day-Turn: zuerst in der Route");
     if (r.demanding.length) list.push(`${r.demanding.map((d) => DEMANDING_LABEL[d]).join(", ")}: Stufe ${h.level}`);
-    if (h.homeFloors.includes(r.floor)) list.push(`Stammetage ${r.floor}`);
+    if (h.todayFloors?.includes(r.floor)) list.push(`Etage ${r.floor} laut Etagenzuweisung`);
+    else if (h.homeFloors.includes(r.floor)) list.push(`Stammetage ${r.floor}`);
     else if (h.yesterdayFloors.includes(r.floor)) list.push(`Etage von gestern (${r.floor})`);
     const partner = r.interconnect.map((id) => roomById.get(id)).find((p) => p && idx[c.roomIdx.get(p.id)!] === k);
     if (partner) list.push(`Verbunden mit ${partner.number}: beim selben Housekeeper`);
@@ -74,9 +75,14 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   const overstaffed = input.housekeepers.length > 0 && totalAll < input.housekeepers.reduce((a, h) => a + h.lo, 0) - 0.5;
   for (const m of metrics) {
     const name = nameOf.get(m.hkId)!;
+    const roomsOut = m.roomsLo !== undefined && m.roomsHi !== undefined && m.rooms > 0 && (m.rooms > m.roomsHi || m.rooms < m.roomsLo);
+    if (roomsOut && !overstaffed) {
+      warnings.push({ code: "ROOMS_OUT_OF_BAND", severity: "WARNING", hkId: m.hkId,
+        message: `${name} hat ${m.rooms} Zimmer. Ziel sind ${m.roomsLo === m.roomsHi ? m.roomsLo : `${m.roomsLo} bis ${m.roomsHi}`}.` });
+    }
     if (overstaffed && m.credits <= m.hi + CREDIT_WARN_SLACK) { /* siehe Gesamthinweis unten */ }
     else if (m.credits > m.hi + CREDIT_WARN_SLACK || (m.credits < m.lo - CREDIT_WARN_SLACK && m.rooms > 0)) {
-      warnings.push({ code: "CREDITS_OUT_OF_BAND", severity: "WARNING", hkId: m.hkId,
+      warnings.push({ code: "CREDITS_OUT_OF_BAND", severity: m.roomsLo !== undefined ? "INFO" : "WARNING", hkId: m.hkId,
         message: `${name} hat ${fmt(m.credits)} Credits. Ziel sind ${fmt(m.lo)} bis ${fmt(m.hi)}.` });
     } else if (m.rooms === 0 && m.lo > 0) {
       warnings.push({ code: "NO_ROOMS", severity: "INFO", hkId: m.hkId, message: `${name} hat noch keine Zimmer.` });

@@ -758,6 +758,8 @@ const en = {
       interconnectSplit: "Interconnecting pair split",
       homeFloor: "Room away from home / yesterday's floor",
       jump: "Wing or number jump",
+      rooms: "Deviation from room target (primary)",
+      assignedFloor: "Room off today's assigned floor",
     },
   },
   lists: {
@@ -1731,6 +1733,8 @@ const de = {
       interconnectSplit: "Interconnecting-Paar getrennt",
       homeFloor: "Zimmer abseits von Stammetage / Etage von gestern",
       jump: "Flügel- oder Nummernsprung",
+      rooms: "Abweichung vom Zimmer-Ziel (Hauptziel)",
+      assignedFloor: "Zimmer abseits der heute eingeteilten Etage",
     },
   },
   lists: {

@@ -6,6 +6,8 @@ import { estimateSpeeds } from "./speed";
 import type { LiveInput } from "./redistribute";
 import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, PlanRoom, RoomState } from "./types";
 import type { SettingsShape } from "@/lib/domain";
+import { roomBand } from "@/lib/planung/floorTeam";
+import { parseAssignedFloors } from "@/lib/floors";
 
 /** Zimmertypen, die als "Suite" (anspruchsvoll) gelten — offene Frage 3 im Interview: alle Suiten oder nur höhere? */
 export const SUITE_TYPES = ["JUNIOR_SUITE", "SUITE", "PENTHOUSE"] as const;
@@ -115,6 +117,8 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     id: u.id, name: u.name, type: (u.hkType as HkType), level: Math.min(3, Math.max(1, u.hkLevel)) as 1 | 2 | 3,
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
     ...bandFor({ hkType: u.hkType, dailyTarget: u.dailyTarget }, settings, fullTimeTarget),
+    ...(() => { const b = roomBand(u.hkType, u.hkLevel, settings as unknown as Record<string, number>); return { roomsLo: b.lo, roomsHi: b.hi }; })(),
+    todayFloors: u.floorsOn === date ? parseAssignedFloors(u.assignedFloors) : [],
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!opts.attendantIds || opts.attendantIds.includes(u.id)),
   }));

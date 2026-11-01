@@ -11,6 +11,8 @@ export const AUTOPLAN_WEIGHTS = {
   interconnectSplit: 20, // je getrenntes Interconnecting-Paar
   homeFloor: 1, // je Zimmer abseits der Stammetage / gestrigen Etage
   jump: 2, // je Flügel-/Nummernsprung
+  rooms: 20, // H1: quadratische Abweichung vom Zimmer-Zielband (Hauptziel, vor den Credits)
+  assignedFloor: 6, // H1: je Zimmer abseits der heute eingeteilten Etagen (Etagenzuweisung)
 } as const;
 
 export type AutoplanWeights = { -readonly [K in keyof typeof AUTOPLAN_WEIGHTS]: number };

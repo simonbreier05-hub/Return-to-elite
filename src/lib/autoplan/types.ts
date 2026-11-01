@@ -38,6 +38,11 @@ export interface PlanHousekeeper {
   /** Zielband der Credits [lo, hi]. */
   lo: number;
   hi: number;
+  /** H1: Zielband in Zimmern (Hauptziel, aus Typ + Stufe). Fehlt → nur Credits. */
+  roomsLo?: number;
+  roomsHi?: number;
+  /** H1: heutige Etagen laut Etagenzuweisung (User.floorsOn === heute). Gesetzt → ersetzt Stammetage/gestern als Präferenz. */
+  todayFloors?: number[];
 }
 
 export interface PlanInput {
@@ -72,6 +77,8 @@ export interface HkMetrics {
   demanding: number;
   lo: number;
   hi: number;
+  roomsLo?: number;
+  roomsHi?: number;
 }
 
 export interface PlanResult {
