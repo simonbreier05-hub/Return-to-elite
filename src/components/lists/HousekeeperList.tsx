@@ -10,6 +10,7 @@ import RoomRowView, { type ListRoom } from "./RoomRowView";
 interface HkList {
   date: string | null;
   progress: { done: number; total: number; creditsDone: number; creditsTotal: number };
+  myFloors?: number[];
   rooms: ListRoom[];
 }
 
@@ -30,6 +31,7 @@ export default function HousekeeperList() {
   useSocket({
     "room:update": () => soon(),
     "assignments:applied": () => soon(),
+    "user:floors": () => soon(), // Etagenzuweisung geändert (eigene Etage live)
     "dayplan:updated": (p: { changedRooms?: string[] }) => {
       soon();
       if (p?.changedRooms?.length) {
@@ -48,6 +50,7 @@ export default function HousekeeperList() {
     <section aria-labelledby="hk-list-title" className="mb-6 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
         <h3 id="hk-list-title" className="font-serif text-2xl">{t("lists.title")}</h3>
+        {(list.myFloors?.length ?? 0) > 0 && <p className="text-sm text-graphite/80"><span aria-hidden>▦ </span>{t("lists.myFloors", { list: list.myFloors!.join(", ") })}</p>}
         <p className="text-sm font-medium" aria-live="polite">
           {t("lists.progress", { done: p.done, total: p.total })} · {t("lists.credits", { done: p.creditsDone.toString().replace(".", ","), total: p.creditsTotal.toString().replace(".", ",") })}
         </p>

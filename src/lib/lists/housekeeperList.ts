@@ -1,9 +1,13 @@
+import { prisma } from "@/lib/db";
+import { parseAssignedFloors } from "@/lib/floors";
 import { loadRoomRows, isDone, listDay, type RoomRow } from "./dayRows";
 
 export interface HousekeeperList {
   date: string | null;
   progress: { done: number; total: number; creditsDone: number; creditsTotal: number };
   rooms: RoomRow[];
+  /** Eigene Etage(n) heute laut Etagenzuweisung (nur eigene, nur wenn floorsOn = Listentag). */
+  myFloors: number[];
 }
 
 const round = (n: number) => Math.round(n * 100) / 100;
@@ -14,7 +18,9 @@ const round = (n: number) => Math.round(n * 100) / 100;
  */
 export async function getHousekeeperList(userId: string): Promise<HousekeeperList> {
   const date = await listDay();
-  if (!date) return { date: null, progress: { done: 0, total: 0, creditsDone: 0, creditsTotal: 0 }, rooms: [] };
+  if (!date) return { date: null, progress: { done: 0, total: 0, creditsDone: 0, creditsTotal: 0 }, rooms: [], myFloors: [] };
+  const me = await prisma.user.findUnique({ where: { id: userId }, select: { assignedFloors: true, floorsOn: true } });
+  const myFloors = me?.floorsOn === date ? parseAssignedFloors(me.assignedFloors) : [];
   // Nur heutige Arbeit: Zimmer mit Tagesplan oder heute zugeteilt (alte Zuteilungen bleiben außen vor)
   const rows = (await loadRoomRows(date, { assignedToId: userId }, ["HOUSEKEEPING"])).filter((r) => r.kind !== null || r.assignedOn === date);
   rows.sort((a, b) => (a.routeOrder ?? Infinity) - (b.routeOrder ?? Infinity) || a.number.localeCompare(b.number));
@@ -29,5 +35,6 @@ export async function getHousekeeperList(userId: string): Promise<HousekeeperLis
       creditsTotal: round(work.reduce((a, r) => a + r.credits, 0)),
     },
     rooms: rows,
+    myFloors,
   };
 }

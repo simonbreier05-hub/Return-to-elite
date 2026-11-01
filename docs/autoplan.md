@@ -57,3 +57,8 @@ Typ und Stufe (`User.hkType`, `hkLevel`, `homeFloors`, `dailyTarget`) sehen nur 
 5. Typ/Stufe speichern ist Beschäftigtendatenschutz (siehe oben).
 6. Wie lange dauert ein Zimmer je Credit? Start 25 Minuten, wird später aus den Zeitstempeln berechnet.
 7. Neue Housekeeper haben vorerst Typ Vollzeit und **Stufe 2** — bitte Stufen pflegen (Azubis/Neue auf 1).
+
+## H1 (01.11.2026): Zimmerzahl und Etagenzuweisung
+
+- **Hauptziel Zimmerzahl:** Jeder Housekeeper hat ein Zimmer-Zielband aus Typ + Stufe (`roomBand`, Einstellungen „Zimmer Vollzeit/Teilzeit Stufe n"). Kostenteil `rooms` (Standard 20) bestraft die quadratische Abweichung; Credits (`credits`, 10) bleiben die Gegenprobe. Warnung `ROOMS_OUT_OF_BAND`; eine Credit-Abweichung ist dann nur noch ein Hinweis.
+- **Heutige Etagen:** Wer im Planungstool Schritt 3 Etagen bekommen hat (`User.floorsOn` = heute), hat sie als `todayFloors`. Sie ersetzen Stammetage/gestern als Präferenz; Kostenteil `assignedFloor` (Standard 6) je Zimmer abseits davon. Harte Regeln (Stufe 1, feste Zimmer) bleiben Filter.
