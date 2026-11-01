@@ -13,6 +13,8 @@ import LiveRoomModal from "./LiveRoomModal";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import DayNumberTiles from "@/components/DayNumberTiles";
 import { PauseBadge } from "@/components/PauseControl";
+import { usePersistedSet } from "@/components/usePersistedSet";
+import { serviceFloorSummary } from "@/lib/lists/serviceFloorSummary";
 import type { DayNumbers } from "@/lib/dayplan/dayNumbers";
 
 type Data = ServiceOverview & { hub?: HubState; numbers?: DayNumbers | null };
@@ -33,6 +35,8 @@ export default function ServiceOverview() {
   const [filter, setFilter] = useState<Filter>(null);
   const [showArrivals, setShowArrivals] = useState(false);
   const [roomRef, setRoomRef] = useState<string | null>(null);
+  // H2 Schritt 8: Etagen standardmäßig zu, offene Etagen merkt sich der Bildschirm für die Sitzung
+  const [openFloors, toggleFloor, setOpenFloors] = usePersistedSet("stayclean.service.openFloors");
   const load = useCallback(() => api<Data>("/api/lists/service").then(setData).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
@@ -86,14 +90,36 @@ export default function ServiceOverview() {
         </label>
       )}
 
+      {floors.length > 0 && (
+        <div className="mb-2 flex justify-end">
+          <button type="button" onClick={() => setOpenFloors(openFloors.size >= floors.length ? [] : floors.map(String))}
+            className="min-h-11 rounded-xl border border-charcoal/15 bg-white px-4 text-sm hover:border-charcoal/30">
+            {openFloors.size >= floors.length ? t("service.collapseAll") : t("service.expandAll")}
+          </button>
+        </div>
+      )}
       {floors.length === 0 ? <p className="text-sm text-graphite/60">{t("service.none")}</p> : floors.map((f) => {
         const rs = rooms.filter((r) => r.floor === f);
+        const all = data.rooms.filter((r) => r.floor === f);
+        const sum = serviceFloorSummary(all);
+        const isOpen = filter !== null || openFloors.has(String(f)); // Filter aktiv → Treffer sichtbar
         return (
-          <section key={f} className="mb-4" aria-label={t("planungTool.floorLabel", { n: f })}>
-            <h4 className="mb-1.5 flex items-baseline gap-2 border-b border-charcoal/10 pb-1 font-serif text-xl">
-              {t("planungTool.floorLabel", { n: f })} <span className="font-sans text-xs text-graphite/60">· {rs.filter((r) => needsCleaning(r.service, r.status)).length} {t("service.toCleanShort")}</span>
-            </h4>
-            <ul className="space-y-1.5">
+          <section key={f} className="mb-3 rounded-xl border border-charcoal/10 bg-linen/50" aria-label={t("planungTool.floorLabel", { n: f })}>
+            <button type="button" onClick={() => toggleFloor(String(f))} aria-expanded={isOpen}
+              className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-start hover:bg-parchment/60">
+              <span className="min-w-0">
+                <span className="flex flex-wrap items-baseline gap-2 font-serif text-xl">
+                  {t("planungTool.floorLabel", { n: f })}
+                  <span className="font-sans text-xs text-graphite/60">· {rs.filter((r) => needsCleaning(r.service, r.status)).length} {t("service.toCleanShort")}</span>
+                  {sum.dnd > 0 && <span className="font-sans text-sm text-status-blocked" title={t("service.floorDnd", { n: sum.dnd })}><span aria-hidden>⚠</span><span className="sr-only">{t("service.floorDnd", { n: sum.dnd })}</span></span>}
+                </span>
+                <span className="block text-xs text-graphite/70">
+                  {t("service.floorFacts", { rooms: sum.rooms, dep: sum.departures, stay: sum.stayovers, arr: sum.arrivals, done: sum.done, total: sum.total })} · {sum.credits} {t("shared.creditsShort")}
+                </span>
+              </span>
+              <svg aria-hidden className={`h-4 w-4 shrink-0 text-graphite/45 transition-transform duration-150 ${isOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" /></svg>
+            </button>
+            {isOpen && <ul className="space-y-1.5 px-2 pb-2">
               {rs.map((r) => {
                 const style = DAY_CATEGORY_STYLES[CATEGORY[r.service]];
                 return (
@@ -120,7 +146,7 @@ export default function ServiceOverview() {
                   </li>
                 );
               })}
-            </ul>
+            </ul>}
           </section>
         );
       })}

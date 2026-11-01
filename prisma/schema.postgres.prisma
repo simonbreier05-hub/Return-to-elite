@@ -38,6 +38,9 @@ model User {
   // only for now — see the duty-manager-screen prompt for why this doesn't
   // (yet) restrict what a supervisor can see in their own screen.
   assignedFloors String   @default("")
+  // H1: Tag ("YYYY-MM-DD"), für den assignedFloors aus der Etagenzuweisung im Planungstool gilt.
+  // Für Housekeeper/Hausmann gilt assignedFloors nur, wenn floorsOn === heute; Supervisor-Etagen bleiben dauerhaft.
+  floorsOn      String?
   // M2b — Stammdaten für den Zuteilungsvorschlag. Beschäftigtendaten: nur Supervisor/Duty Manager
   // dürfen sie sehen, nie Housekeeper; nie in Logs (siehe docs/autoplan.md).
   hkType       String   @default("VOLLZEIT") // VOLLZEIT | TEILZEIT | AZUBI
@@ -614,4 +617,24 @@ model ChatReadState {
   lastReadAt DateTime
 
   @@id([channelId, userId])
+}
+
+// H3: Abweichung Systemvorschlag → endgültiger Plan (Lernen aus Planungsänderungen, docs/lernen.md).
+// Keine Gastdaten, keine Namen, keine Trace-Texte. kind: FLOOR_CHANGED | ROOM_MOVED | ROOM_DEFERRED.
+// weight 0 = Tag mit außergewöhnlicher Lage (z. B. > 30 % weniger Personal) — zählt nicht fürs Lernen.
+model PlanDeviation {
+  id         String   @id @default(cuid())
+  date       String // Planungstag "YYYY-MM-DD"
+  kind       String
+  personId   String? // betroffene Person (ID)
+  floor      Int?
+  roomNumber String?
+  before     String? // Vorschlag (kurz, z. B. Etage "3", Person-ID, Stufe "2")
+  after      String? // Entscheidung
+  reason     String? // optional, Einzeltap-Auswahl (Code, kein Freitext)
+  weight     Float    @default(1)
+  createdAt  DateTime @default(now())
+
+  @@index([date])
+  @@index([kind, date])
 }

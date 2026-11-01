@@ -1,6 +1,7 @@
 "use client";
 
 import { IconBan, IconBroom, IconClock, IconLaundry, IconMoon, IconPerson, IconSuitcase, IconWrench, StatusIcon } from "@/components/icons";
+import { mainLabel, markers, type MainLabel } from "@/lib/lists/rowLabels";
 import { STATUS_STYLES } from "@/components/status";
 import type { RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -16,13 +17,23 @@ export interface ListRoom {
   traces: ListTrace[];
   /** Zimmertyp, offene Mängel und Gästewunsch — nur in Supervisor-/Duty-Manager-Listen gefüllt. */
   type?: string; defects?: number; wish?: string | null;
+  /** H2: offene Hinweise des Teams (z. B. aus der Planung). */
+  hints?: { id: string; body: string }[];
   /** Durch Nachimport geändert (nur Supervisor-Liste). */
   changed?: boolean;
   /** Aktive Pause (Grund, seit, von wem) — Supervisor/Duty Manager sehen sie in jeder Liste. */
   pause?: PauseInfo | null;
 }
 
-const KIND_ICON = { DEPARTURE: IconBroom, SAME_DAY_TURN: IconClock, STAYOVER: IconMoon, ARRIVAL: IconSuitcase } as const;
+const LABEL_ICON = { TURN: IconClock, DEPARTURE: IconBroom, STAYOVER: IconMoon, ARRIVAL: IconSuitcase, NONE: null } as const;
+/** Gedämpfte Farben je Hauptlabel (immer zusammen mit Icon + Text). Turn = höchste Dringlichkeit, Messing. */
+export const LABEL_STYLE: Record<MainLabel, { chip: string; edge: string }> = {
+  TURN: { chip: "border-gold bg-gold/20 text-charcoal font-semibold", edge: "border-s-gold" },
+  DEPARTURE: { chip: "border-status-dirty/40 bg-status-dirty/10 text-status-dirty", edge: "border-s-status-dirty" },
+  STAYOVER: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected", edge: "border-s-status-inspected" },
+  ARRIVAL: { chip: "border-status-pickup/40 bg-status-pickup/10 text-status-pickup", edge: "border-s-status-pickup" },
+  NONE: { chip: "border-charcoal/15 bg-ivory text-charcoal", edge: "border-s-charcoal/15" },
+};
 const chip = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.7rem] font-medium";
 
 /**
@@ -39,13 +50,15 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
   prefix?: ReactNode;
 }) {
   const { t } = useLocale();
-  const KindIcon = room.kind ? KIND_ICON[room.kind] : null;
+  const label = mainLabel(room.kind);
+  const KindIcon = LABEL_ICON[label];
+  const marks = new Set(markers({ ...room, number: room.number }));
   const style = STATUS_STYLES[room.status as RoomStatus];
   const traces = Array.isArray(room.traces) ? room.traces : [];
   const openTraces = traces.filter((x) => x.status === "OPEN");
   return (
     <li data-room={room.number} data-highlight={highlight ? "1" : undefined}
-      className={`rounded-xl border bg-white transition-shadow duration-500 ${highlight ? "border-gold shadow-[0_0_0_3px_rgba(169,132,63,0.35)]" : "border-charcoal/10"}`}>
+      className={`rounded-xl border border-s-4 bg-white transition-shadow duration-500 ${LABEL_STYLE[label].edge} ${highlight ? "border-gold shadow-[0_0_0_3px_rgba(169,132,63,0.35)]" : "border-charcoal/10"}`}>
       <Wrap onOpen={onOpen ? () => onOpen(room) : undefined} label={t("lists.hmOpenRoom", { n: room.number })}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
@@ -55,7 +68,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             <span className="text-xs text-graphite/60">{t("lists.floorN", { n: room.floor })}</span>
           </div>
           <div className="mt-1.5 flex flex-wrap gap-1.5">
-            <span className={`${chip} border-charcoal/15 bg-ivory text-charcoal`}>
+            <span className={`${chip} ${LABEL_STYLE[label].chip}`} data-label={label}>
               {KindIcon && <KindIcon className="h-3.5 w-3.5" />}
               {room.kind ? t(`lists.kind${room.kind}` as TKey) : t("lists.kindNone")}
             </span>
@@ -70,6 +83,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             {traces.length > 0 && <span className={`${chip} border-charcoal/15 bg-white text-graphite`}><span aria-hidden>▸</span>{t("lists.rowTraces", { n: traces.length })}</span>}
             {(room.defects ?? 0) > 0 && <span className={`${chip} border-status-defect/40 bg-status-defect/10 text-status-defect`}><IconWrench className="h-3.5 w-3.5" />{t("lists.rowDefects", { n: room.defects ?? 0 })}</span>}
             {room.wish && <span className={`${chip} border-gold-line/60 bg-parchment text-charcoal`}><span aria-hidden>{room.wish === "CLEAN_REQUEST" ? "✨" : "💬"}</span>{t(`lists.wish${room.wish}` as TKey)}</span>}
+            {marks.has("HINT") && <span className={`${chip} border-navy/30 bg-navy/10 text-navy`}><span aria-hidden>📝</span>{t("lists.hint")}</span>}
             {room.pax != null && <span className={`${chip} border-charcoal/15 text-graphite`}><IconPerson className="h-3.5 w-3.5" />{room.pax === 1 ? t("lists.paxOne") : t("lists.pax", { n: room.pax })}</span>}
             {room.changed && <span className={`${chip} border-gold bg-parchment text-charcoal`}>↻ {t("lists.changed")}</span>}
             {room.pause && <PauseBadge pause={room.pause} showBy={showDept} />}
@@ -92,6 +106,11 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
           {room.credits > 0 && <span className="text-xs text-graphite/70">{t("lists.creditsN", { n: room.credits.toString().replace(".", ",") })}</span>}
         </div>
       </div>
+      {(room.hints?.length ?? 0) > 0 && (
+        <ul className="mt-2 space-y-0.5 break-words rounded-lg border border-navy/20 bg-navy/5 px-2 py-1.5 text-sm text-navy" aria-label={t("lists.hints")}>
+          {room.hints!.map((h) => <li key={h.id}><span aria-hidden>📝 </span><span className="font-semibold">{t("lists.hint")}:</span> {h.body}</li>)}
+        </ul>
+      )}
       {traces.length > 0 && (
         <ul className="mt-2 space-y-0.5 break-words border-t border-charcoal/10 pt-1.5 text-xs" aria-label={t("lists.traces")}>
           {traces.map((x) => (

@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import PurgePanel from "@/components/PurgePanel";
 import HousekeeperSettingsPanel from "@/components/HousekeeperSettingsPanel";
+import LearnedRulesPanel from "@/components/LearnedRulesPanel";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Thresholds {
@@ -183,6 +184,7 @@ export default function SettingsView() {
       </section>
 
       <HousekeeperSettingsPanel />
+      <LearnedRulesPanel />
 
       <PurgePanel />
 
