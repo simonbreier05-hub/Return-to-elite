@@ -257,6 +257,21 @@ export const DEFAULT_SETTINGS = {
   minutesPerCredit: 25, // Start-Schätzung, bis aus den heutigen Zeitstempeln berechnet wird
   earlyFinishMinutes: 45, // "früher fertig": geschätzte Restzeit darunter
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag
+  // H1 (Antwort Simon 01.11.2026): Zimmerzahl ist das Hauptziel, Credits nur noch Gegenprobe.
+  // Vollzeit: Stufe 3 = 13, Stufe 2 = 10–11, Stufe 1 = 6–8 Zimmer. Teilzeit: Stufe 3 = 9, Stufe 2 = 7.
+  // Teilzeit Stufe 1 (5–6) und Azubi (= Stufe-1-Band) sind Annahmen, bis Simon sie bestätigt.
+  roomsVz3Min: 13, roomsVz3Max: 13,
+  roomsVz2Min: 10, roomsVz2Max: 11,
+  roomsVz1Min: 6, roomsVz1Max: 8,
+  roomsTz3Min: 9, roomsTz3Max: 9,
+  roomsTz2Min: 7, roomsTz2Max: 7,
+  roomsTz1Min: 5, roomsTz1Max: 6,
+  // Etagen-Vorschlag aus tatsächlichen Einsätzen (src/lib/planung/floorTeam.ts):
+  // Etage vorschlagen, wenn die Person an ≥ floorSuggestMinDays der letzten floorSuggestWindow Einsatztage dort war.
+  floorSuggestWindow: 5,
+  floorSuggestMinDays: 3,
+  // Warnung „Stufe 1 auf anspruchsvoller Etage": ab diesem Anteil anspruchsvoller Zimmer (VIP, Suite, Allergiker, viele Traces).
+  floorDemandingWarnShare: 0.3,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 
