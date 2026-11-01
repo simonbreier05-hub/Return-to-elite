@@ -38,6 +38,26 @@ export function bandFor(u: { hkType: string; dailyTarget: number | null }, s: Se
   return { lo: fullTimeTarget - s.autoplanTolerance, hi: fullTimeTarget + s.autoplanTolerance };
 }
 
+/** Status, mit denen ein Zimmer vom Vortag „liegen geblieben" ist. */
+const LEFTOVER = new Set(["DIRTY", "PICKUP", "BLOCKED", "DEFECT_REPORTED"]);
+
+/**
+ * Liegen gebliebene Abreisen vom Vortag (Status unverändert, siehe dayplan/rollover.ts): heute kein Arbeits-Eintrag
+ * im Tagesplan, aber noch nicht gereinigt. Heute Anreise → wie ein Turn, sonst wie eine Abreise.
+ */
+async function leftoverDepartures(date: string) {
+  const prevDay = (await prisma.dayRoomPlan.findFirst({ where: { date: { lt: date } }, orderBy: { date: "desc" }, select: { date: true } }))?.date;
+  if (!prevDay) return [];
+  const prev = await prisma.dayRoomPlan.findMany({ where: { date: prevDay, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN"] } }, include: { room: true } });
+  const today = new Map((await prisma.dayRoomPlan.findMany({ where: { date, roomId: { in: prev.map((p) => p.roomId) } } })).map((p) => [p.roomId, p]));
+  return prev
+    .filter((p) => LEFTOVER.has(p.room.status) && (!today.has(p.roomId) || today.get(p.roomId)!.cleaningType === "ARRIVAL"))
+    .map((p) => {
+      const t = today.get(p.roomId);
+      return { ...p, date, cleaningType: t ? "SAME_DAY_TURN" : "DEPARTURE", laundryDue: false, vip: t?.vip ?? false, eta: t?.eta ?? null, carriedOver: true };
+    });
+}
+
 const floors = (csv: string) => csv.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n)).slice(0, 2);
 
 export async function loadDay(date: string, opts: { attendantIds?: string[] } = {}): Promise<DayData> {
@@ -45,6 +65,7 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
   const fullTimeTarget = planning.targetCreditsPerAttendant;
 
   const plan = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER"] } }, include: { room: true } });
+  plan.push(...(await leftoverDepartures(date)));
   const traces = await prisma.trace.groupBy({ by: ["roomId"], where: { status: "OPEN" }, _count: true });
   const traceCount = new Map(traces.map((t) => [t.roomId, t._count]));
   const idByNumber = new Map(plan.map((p) => [p.room.number, p.roomId]));

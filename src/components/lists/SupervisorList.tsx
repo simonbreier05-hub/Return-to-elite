@@ -17,7 +17,7 @@ type SupRoom = ListRoom & { group: Group; changed: boolean };
 interface Hk { id: string; name: string; dailyNumber: number | null; progress: { done: number; total: number; credits: number; creditsDone: number }; rooms: SupRoom[] }
 interface Data {
   date: string | null; floors: number[]; noFloors: boolean; dataAsOf: string | null;
-  housekeepers: Hk[]; unassigned: SupRoom[]; attendants: { id: string; name: string; dailyNumber: number | null }[];
+  housekeepers: Hk[]; unassigned: SupRoom[]; control?: SupRoom[]; attendants: { id: string; name: string; dailyNumber: number | null }[];
 }
 const label = (a: { name: string; dailyNumber?: number | null }) => (a.dailyNumber ? `#${a.dailyNumber} ${a.name}` : a.name);
 const num = (n: number) => n.toString().replace(".", ",");
@@ -117,6 +117,15 @@ export default function SupervisorList() {
               </div>
             );
           })}
+          {(data.control?.length ?? 0) > 0 && (
+            <div className="rounded-xl border border-gold-line/60 bg-parchment p-3" aria-labelledby="sup-control-title">
+              <h4 id="sup-control-title" className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-graphite/70">
+                <span aria-hidden>🔍 </span>{t("lists.supControl")} ({data.control!.length})
+              </h4>
+              <p className="mb-2 text-xs text-graphite/70">{t("lists.supControlHint")}</p>
+              <ol className="space-y-2">{data.control!.map((r) => <RoomRowView key={r.id} room={r} showDept />)}</ol>
+            </div>
+          )}
           {data.unassigned.length > 0 && (
             <div className="rounded-xl border border-dashed border-charcoal/25 p-3">
               <h4 className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-graphite/70">{t("lists.supUnassigned")} ({data.unassigned.length})</h4>

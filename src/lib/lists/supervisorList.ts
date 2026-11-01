@@ -3,6 +3,7 @@ import { FLOORS } from "@/lib/domain";
 import { parseAssignedFloors } from "@/lib/floors";
 import { isDone, listDay, loadRoomRows, type RoomRow } from "./dayRows";
 import { groupOf, GROUP_ORDER, type RoomGroup } from "./groups";
+import { isControlRoom } from "@/lib/dayplan/rollover";
 
 export interface SupRoom extends RoomRow { group: RoomGroup; changed: boolean }
 export interface SupHousekeeper {
@@ -19,6 +20,8 @@ export interface SupervisorList {
   dataAsOf: string | null;
   housekeepers: SupHousekeeper[];
   unassigned: SupRoom[];
+  /** Vorgemerkt für Kontrolle: Anreise heute in ein schon gereinigtes Zimmer (Abreise vom Vortag, kein Turn). */
+  control: SupRoom[];
   /** Housekeeper, an die Zimmer verschoben werden können. */
   attendants: { id: string; name: string; dailyNumber: number | null }[];
 }
@@ -59,7 +62,7 @@ export async function getSupervisorList(session: { userId: string; role: string 
   const date = await listDay();
   const attendantsAll = await prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, orderBy: { name: "asc" }, select: { id: true, name: true, dailyNumber: true } });
   const base = { date, floors, noFloors: floors.length === 0, dataAsOf: await dataAsOf(), attendants: attendantsAll };
-  if (!date || floors.length === 0) return { ...base, housekeepers: [], unassigned: [] };
+  if (!date || floors.length === 0) return { ...base, housekeepers: [], unassigned: [], control: [] };
 
   const changed = await changedByReimport(date);
   const rows = (await loadRoomRows(date, { floors }, null))
@@ -69,6 +72,7 @@ export async function getSupervisorList(session: { userId: string; role: string 
 
   const byHk = new Map<string, SupRoom[]>();
   const unassigned: SupRoom[] = [];
+  const control = rows.filter((r) => isControlRoom(r.kind, r.status));
   for (const r of rows) {
     if (r.assignedToId && (r.assignedOn === date || isDone(r.status) || r.status === "IN_PROGRESS")) byHk.set(r.assignedToId, [...(byHk.get(r.assignedToId) ?? []), r]);
     else if (r.kind !== "ARRIVAL") unassigned.push(r);
@@ -86,5 +90,5 @@ export async function getSupervisorList(session: { userId: string; role: string 
       rooms: sorted,
     };
   }).sort((a, b) => (a.dailyNumber ?? 999) - (b.dailyNumber ?? 999) || a.name.localeCompare(b.name));
-  return { ...base, housekeepers, unassigned };
+  return { ...base, housekeepers, unassigned, control };
 }
