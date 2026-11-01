@@ -1,4 +1,4 @@
-import { compile, cost, type Compiled } from "./cost";
+import { compile, cost, roomMinutes, type Compiled } from "./cost";
 import { orderRoute } from "./route";
 import type { Assignment, HkMetrics, PlanInput, PlanResult, PlanRoom, PlanWarning } from "./types";
 
@@ -40,6 +40,7 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
       stayovers: rs.filter((r) => r.kind === "STAYOVER" && !r.laundry).length, linen: rs.filter((r) => r.kind === "STAYOVER" && r.laundry).length,
       floors: [...new Set(rs.map((r) => r.floor))].sort((a, b) => a - b), demanding: rs.filter((r) => r.demanding.length).length,
       lo: h.lo, hi: h.hi, roomsLo: h.roomsLo, roomsHi: h.roomsHi,
+      ...(h.minutesByKind ? { expectedMinutes: Math.round(rs.reduce((a, r) => a + roomMinutes(h, r), 0)) } : {}),
     };
   });
 
@@ -87,6 +88,11 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
         message: `${name} hat ${fmt(m.credits)} Credits. Ziel sind ${fmt(m.lo)} bis ${fmt(m.hi)}.` });
     } else if (m.rooms === 0 && m.lo > 0) {
       warnings.push({ code: "NO_ROOMS", severity: "INFO", hkId: m.hkId, message: `${name} hat noch keine Zimmer.` });
+    }
+    if (input.shiftMinutes && m.expectedMinutes !== undefined && m.expectedMinutes > input.shiftMinutes) {
+      const f = (x: number) => `${Math.floor(x / 60)}:${String(Math.round(x % 60)).padStart(2, "0")}`;
+      warnings.push({ code: "OVER_SHIFT", severity: "WARNING", hkId: m.hkId,
+        message: `${name} wird voraussichtlich nicht vor Schichtende fertig (geschätzt ${f(m.expectedMinutes)} h, Schicht ${f(input.shiftMinutes)} h).` });
     }
     if (m.floors.length > input.maxFloors) {
       warnings.push({ code: "TOO_MANY_FLOORS", severity: "WARNING", hkId: m.hkId,

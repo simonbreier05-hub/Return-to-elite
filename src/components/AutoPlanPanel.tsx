@@ -135,7 +135,7 @@ export default function AutoPlanPanel() {
                   <div className="flex flex-wrap items-baseline justify-between gap-2">
                     <div className="font-medium">{h.name} <span className="text-xs text-graphite/60">· {t("autoplan.level", { n: h.level })}</span></div>
                     {hasRoomBand ? (
-                      <div className={`font-serif text-xl ${outOfBand ? "text-status-in-progress" : ""}`}>{t("autoplan.rooms", { n: m.rooms })} <span className="text-xs text-graphite/60">/ {m.roomsLo === m.roomsHi ? m.roomsLo : `${m.roomsLo}–${m.roomsHi}`} · {fmt(m.credits)} Cr.</span></div>
+                      <div className={`font-serif text-xl ${outOfBand ? "text-status-in-progress" : ""}`}>{t("autoplan.rooms", { n: m.rooms })} <span className="text-xs text-graphite/60">/ {m.roomsLo === m.roomsHi ? m.roomsLo : `${m.roomsLo}–${m.roomsHi}`} · {fmt(m.credits)} Cr.{m.expectedMinutes !== undefined && ` · ≈ ${Math.floor(m.expectedMinutes / 60)}:${String(m.expectedMinutes % 60).padStart(2, "0")} h`}</span></div>
                     ) : (
                       <div className={`font-serif text-xl ${outOfBand ? "text-status-in-progress" : ""}`}>{fmt(m.credits)} <span className="text-xs text-graphite/60">/ {fmt(m.lo)}–{fmt(m.hi)}</span></div>
                     )}

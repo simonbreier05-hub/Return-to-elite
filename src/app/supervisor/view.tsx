@@ -378,6 +378,9 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               {guestDndCount > 0 && "🔕 "}
               {t("supervisor.guestRequestsLink")}
             </Link>
+            <Link href="/supervisor/workdata" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+              {t("workdata.linkLabel")}
+            </Link>
             {isDutyManager && (
               <Link href="/settings" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
                 {t("supervisor.settingsLink")}

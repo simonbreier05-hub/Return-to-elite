@@ -206,3 +206,21 @@ export function floorDiff(before: FloorAssign, after: FloorAssign): { userId: st
     userId: id, before: [...(before[id] ?? [])].sort((a, b) => a - b), after: [...(after[id] ?? [])].sort((a, b) => a - b),
   }));
 }
+
+/**
+ * H3: geschätzte Dauer eines Housekeepers aus der Etagenzuweisung (nur mit Messdaten): je eingeteilter Etage der Anteil
+ * an Abreisen/Bleibern (Etage geteilt durch die Köpfe dort, wer auf 2 Etagen ist zählt je ½) × eigene Minuten je Art.
+ */
+export function personEstimate(id: string, people: Person[], assign: FloorAssign, loads: FloorLoad[], minutes: { DEPARTURE: number; STAYOVER: number }): number {
+  const floors = assign[id] ?? [];
+  let total = 0;
+  for (const f of floors) {
+    const l = loads.find((x) => x.floor === f);
+    if (!l) continue;
+    const heads = people.filter((p) => p.role === "HK" && (assign[p.id] ?? []).includes(f)).reduce((a, p) => a + 1 / (assign[p.id]?.length || 1), 0);
+    if (!heads) continue;
+    const share = 1 / floors.length / heads;
+    total += (l.departures * minutes.DEPARTURE + l.stayovers * minutes.STAYOVER) * share;
+  }
+  return Math.round(total);
+}

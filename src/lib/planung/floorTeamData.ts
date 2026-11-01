@@ -9,6 +9,7 @@ import { loadDay } from "@/lib/autoplan/load";
 import { getSettings } from "@/lib/settings";
 import { PLAN_FLOORS } from "./team";
 import { activePatterns, recordFloorDeviations } from "@/lib/learning/store";
+import { planningMinutesFor } from "@/lib/workdata/load";
 import { supervisorBadges, type HouseSupervisor } from "./model";
 import {
   floorDiff, resolveSuggestions, roomBand,
@@ -31,6 +32,8 @@ export interface FloorPerson {
   id: string; name: string; role: TeamRole;
   /** Nur Housekeeper (Beschäftigtendaten, nur Supervisor sehen das). */
   level?: number; kind?: string; roomsLo?: number; roomsHi?: number;
+  /** H3: Minuten je Art aus Messdaten (nur wenn „Messdaten in Planung verwenden" an ist). */
+  minutes?: { DEPARTURE: number; STAYOVER: number };
   badge?: HouseSupervisor;
 }
 export interface FloorTeamState {
@@ -40,7 +43,7 @@ export interface FloorTeamState {
   /** Stand heute (Supervisor: dauerhaft; Housekeeper/Hausmann: nur wenn floorsOn = heute). */
   assign: FloorAssign;
   suggestions: Suggestion[];
-  rules: { window: number; minDays: number; demandingShare: number; maxFloors: number };
+  rules: { window: number; minDays: number; demandingShare: number; maxFloors: number; shiftMinutes: number };
 }
 
 async function savedTeam(date: string): Promise<{ hk: string[]; sup: string[]; hm: string[] } | null> {
@@ -124,7 +127,9 @@ export async function getFloorTeamState(date: string): Promise<FloorTeamState> {
     };
   });
 
-  const rules = { window: settings.floorSuggestWindow, minDays: settings.floorSuggestMinDays, demandingShare: settings.floorDemandingWarnShare, maxFloors: settings.autoplanMaxFloors };
+  const rules = { window: settings.floorSuggestWindow, minDays: settings.floorSuggestMinDays, demandingShare: settings.floorDemandingWarnShare, maxFloors: settings.autoplanMaxFloors, shiftMinutes: settings.shiftMinutes };
+  const minutes = await planningMinutesFor(date, people.filter((p) => p.role === "HK").map((p) => p.id)).catch(() => ({} as Record<string, never>));
+  for (const p of people) { const m = minutes[p.id]; if (m) p.minutes = { DEPARTURE: m.DEPARTURE, STAYOVER: m.STAYOVER }; }
   const persons: Person[] = people.map((p) => ({ id: p.id, role: p.role, roomsLo: p.roomsLo ?? 0, roomsHi: p.roomsHi ?? 0, level: p.level ?? 0 }));
   const history = await loadHistory(persons, date);
   // H3: gelernte Etagen („Frau X wird immer von Etage 3 auf 2 getauscht") fließen als Vorschlag mit Grund ein

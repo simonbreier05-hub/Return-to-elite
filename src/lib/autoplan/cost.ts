@@ -1,5 +1,13 @@
 import { CENTER_PULL, NUMBER_JUMP_GAP, UNASSIGNED_PENALTY } from "./weights";
-import type { PlanInput, PlanRoom } from "./types";
+import type { PlanHousekeeper, PlanInput, PlanRoom } from "./types";
+
+/** H3: geschätzte Minuten eines Zimmers für eine Person (Suite vor Art; Bleiber mit Wäsche = LAUNDRY). */
+export function roomMinutes(h: PlanHousekeeper, r: PlanRoom): number {
+  const m = h.minutesByKind;
+  if (!m) return 0;
+  if (r.demanding.includes("SUITE")) return m.SUITE;
+  return r.kind === "STAYOVER" ? (r.laundry ? m.LAUNDRY : m.STAYOVER) : m[r.kind];
+}
 
 /** Vorberechnete Struktur für schnelle Kostenberechnung (Zimmer/Housekeeper als Indizes). */
 export interface Compiled {
@@ -18,7 +26,7 @@ export interface Compiled {
   today: Set<number>[];
 }
 
-export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "rooms" | "assignedFloor" | "learned";
+export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "rooms" | "assignedFloor" | "learned" | "overtime";
 export interface CostOptions {
   /** Nur die Regeln (Etagen, Interconnecting, Stammetage, Sprünge) — für Umverteilung nach Restzeit. */
   rulesOnly?: boolean;
@@ -58,7 +66,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   const { weights: w, maxFloors, housekeepers: hks } = c.input;
   const H = hks.length;
   const credits = new Float64Array(H), dep = new Int32Array(H), stay = new Int32Array(H), linen = new Int32Array(H), dem = new Int32Array(H);
-  const mask = new Int32Array(H), last = new Int32Array(H).fill(-1), count = new Int32Array(H);
+  const mask = new Int32Array(H), last = new Int32Array(H).fill(-1), count = new Int32Array(H), minutes = new Float64Array(H);
   let homeMis = 0, todayMis = 0, jumps = 0, unassigned = 0, learnedMis = 0;
 
   for (const i of c.order) {
@@ -67,6 +75,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     const r = c.rooms[i];
     credits[a] += r.credits;
     count[a]++;
+    if (hks[a].minutesByKind) minutes[a] += roomMinutes(hks[a], r);
     if (r.preferHk && c.hkIdx.has(r.preferHk) && hks[a].id !== r.preferHk) learnedMis++;
     if (r.minLevel && hks[a].level < r.minLevel) learnedMis++;
     const today = c.today[a];
@@ -84,7 +93,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     last[a] = i;
   }
 
-  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, rooms: 0, assignedFloor: 0, learned: 0 };
+  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, rooms: 0, assignedFloor: 0, learned: 0, overtime: 0 };
   for (let h = 0; h < H; h++) {
     const extra = popcount(mask[h]) - maxFloors;
     if (extra > 0) parts.extraFloor += extra * w.extraFloor;
@@ -103,6 +112,9 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
       const dev = cr < lo ? lo - cr : cr > hi ? cr - hi : 0;
       parts.credits += w.credits * (dev * dev + CENTER_PULL * (cr - c.centers[h]) ** 2 * (dev > 0 ? 0 : 1));
     }
+    // H3: voraussichtlich nicht vor Schichtende fertig (nur mit Messdaten) — weich, Credits/Zimmer bleiben vorrangig
+    const shift = c.input.shiftMinutes;
+    if (shift) for (let h = 0; h < H; h++) if (minutes[h] > shift) parts.overtime += (w.overtime ?? 0) * ((minutes[h] - shift) / 10);
     // Zimmerzahl ist das Hauptziel (H1): Abweichung vom Zimmer-Zielband quadratisch
     for (let h = 0; h < H; h++) {
       const { roomsLo, roomsHi } = hks[h];

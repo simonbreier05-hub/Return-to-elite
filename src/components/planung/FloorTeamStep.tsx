@@ -2,7 +2,8 @@
 
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { FLOOR_ORDER } from "@/lib/planung/model";
-import type { FloorKpi, FloorWarning, Suggestion, TeamRole } from "@/lib/planung/floorTeam";
+import { personEstimate, type FloorKpi, type FloorWarning, type Person, type Suggestion, type TeamRole } from "@/lib/planung/floorTeam";
+import { hm } from "@/lib/workdata/stats";
 import type { FloorPerson, FloorTeamState } from "@/lib/planung/floorTeamData";
 import type { TKey } from "@/lib/i18n/translations";
 
@@ -44,6 +45,9 @@ export default function FloorTeamStep(p: FloorTeamProps) {
   const activePerson = p.active ? byId.get(p.active) : undefined;
   const label = (x: FloorPerson) => (x.role === "HK" && x.level ? `${x.name} · ${t("planungTool.levelN", { n: x.level })}` : x.name);
 
+  const persons: Person[] = people.map((p) => ({ id: p.id, role: p.role, roomsLo: p.roomsLo ?? 0, roomsHi: p.roomsHi ?? 0, level: p.level ?? 0 }));
+  /** H3: geschätzte Dauer (nur mit Messdaten und eingeteilten Etagen). */
+  const estimate = (x: FloorPerson) => (x.minutes && (p.assign[x.id] ?? []).length ? personEstimate(x.id, persons, p.assign, loads, x.minutes) : null);
   const personChip = (x: FloorPerson) => {
     const floors = p.assign[x.id] ?? [];
     const isActive = p.active === x.id;
@@ -56,6 +60,8 @@ export default function FloorTeamStep(p: FloorTeamProps) {
           <span aria-hidden className="text-xs text-brass-ink">{ROLE_ICON[x.role]}</span>
           <span className="min-w-0 flex-1 truncate">{label(x)}</span>
           {floors.length > 0 && <span aria-hidden className="text-xs text-pl-muted">{floors.join("·")}</span>}
+          {(() => { const est = estimate(x); if (est === null) return null; const over = est > p.state!.rules.shiftMinutes;
+            return <span className={`text-xs ${over ? "text-brass-ink" : "text-pl-muted"}`} title={t(over ? "planungTool.ftEstOver" : "planungTool.ftEst", { time: hm(est) })}>{over && <span aria-hidden>⚠ </span>}≈{hm(est)}</span>; })()}
         </button>
       </li>
     );

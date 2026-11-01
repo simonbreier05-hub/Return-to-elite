@@ -9,9 +9,10 @@ import type { SettingsShape } from "@/lib/domain";
 import { roomBand } from "@/lib/planung/floorTeam";
 import { parseAssignedFloors } from "@/lib/floors";
 import { activePatterns } from "@/lib/learning/store";
+import { planningMinutesFor } from "@/lib/workdata/load";
 
-/** Zimmertypen, die als "Suite" (anspruchsvoll) gelten — offene Frage 3 im Interview: alle Suiten oder nur höhere? */
-export const SUITE_TYPES = ["JUNIOR_SUITE", "SUITE", "PENTHOUSE"] as const;
+import { SUITE_TYPES } from "./types";
+export { SUITE_TYPES };
 /** Zimmer in diesen Status werden nicht gereinigt/zugeteilt. */
 const NOT_CLEANED = new Set(["OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT"]);
 
@@ -126,6 +127,9 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     present: u.absentDate !== date && (!opts.attendantIds || opts.attendantIds.includes(u.id)),
   }));
   const learnedNotes = await applyLearned(date, rooms, hks);
+  // H3: gemessene Zeiten (nur wenn „Messdaten in Planung verwenden" an ist) — Credits bleiben die Basis
+  const minutes = await planningMinutesFor(date, hks.map((h) => h.id)).catch(() => ({} as Record<string, never>));
+  for (const h of hks) if (minutes[h.id]) (h as PlanHousekeeper).minutesByKind = minutes[h.id];
   return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState, learnedNotes };
 }
 
@@ -158,6 +162,7 @@ export function morningInput(d: DayData): PlanInput {
   return {
     rooms: d.rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
     weights: d.weights, maxFloors: d.settings.autoplanMaxFloors, fullTimeTarget: d.fullTimeTarget,
+    ...(d.hks.some((h) => h.minutesByKind) ? { shiftMinutes: d.settings.shiftMinutes } : {}),
   };
 }
 

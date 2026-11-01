@@ -10,6 +10,7 @@ import { groupByLabel, sortRows, type SortMode } from "@/lib/lists/rowLabels";
 import type { TKey } from "@/lib/i18n/translations";
 import RoomRowView, { type ListRoom } from "./RoomRowView";
 import ListControls, { useSessionState } from "./ListControls";
+import MyWorkData from "./MyWorkData";
 
 interface HkList {
   date: string | null;
@@ -81,6 +82,7 @@ export default function HousekeeperList() {
           )}
         </>
       )}
+      <MyWorkData />
     </section>
   );
 }

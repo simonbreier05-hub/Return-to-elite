@@ -13,6 +13,7 @@ export const AUTOPLAN_WEIGHTS = {
   jump: 2, // je Flügel-/Nummernsprung
   rooms: 20, // H1: quadratische Abweichung vom Zimmer-Zielband (Hauptziel, vor den Credits)
   assignedFloor: 6, // H1: je Zimmer abseits der heute eingeteilten Etagen (Etagenzuweisung)
+  overtime: 3, // H3: je 10 Minuten über Schichtende (geschätzt aus Messdaten)
   learned: 10, // H3: je Zimmer gegen ein gelerntes Muster (Person / Mindeststufe) — weich, harte Regeln gewinnen
 } as const;
 
