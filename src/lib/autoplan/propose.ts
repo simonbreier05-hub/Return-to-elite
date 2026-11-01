@@ -8,7 +8,7 @@ export interface SolveOptions {
   now?: () => number;
 }
 
-/** Feste Zimmer (manuell/heute zugeteilt) bleiben; Zimmer fest an jemanden, der nicht anwesend ist, werden ignoriert. */
+/** Feste Zimmer (manuell/heute zugeteilt) bleiben; begonnene Zimmer einer nicht eingeplanten Kraft bleiben bei ihr (werden hier ignoriert). Nicht begonnene werden schon beim Laden freigegeben (`morningInput`). */
 export function splitFixed(input: PlanInput) {
   const present = new Set(input.housekeepers.map((h) => h.id));
   const fixed = input.rooms.filter((r) => r.fixedTo && present.has(r.fixedTo));

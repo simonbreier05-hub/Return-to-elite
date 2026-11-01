@@ -93,11 +93,11 @@ describe("Zuteilungsvorschlag und Umverteilung (Wegwerf-DB)", () => {
     expect(rooms.get("103")!.fixedTo).toBe(started.assignedToId);
     expect(rooms.get("103")!.state).toBe("STARTED");
     for (const x of r.payload.input.rooms.filter((y) => y.fixedTo)) expect(r.payload.result.assignment[x.id]).toBe(x.fixedTo);
-    // Feste Zimmer lassen sich nicht umbiegen
+    // Keine Sperren — aber ein begonnenes Zimmer nur nach ausdrücklicher Bestätigung (Fortschritt bleibt)
     const bad = { ...r.payload.result.assignment, [started.id]: hkId.d };
-    await expect(confirmProposal(r.proposalId, bad, sup)).rejects.toThrow(/fest zugeteilt/);
+    await expect(confirmProposal(r.proposalId, bad, sup, { acceptOpen: true })).rejects.toThrow(/begonnen oder fertig/);
     await prisma.room.update({ where: { id: started.id }, data: { status: "DIRTY" } });
-    await prisma.autoPlanProposal.updateMany({ data: { status: "SUPERSEDED" } });
+    // der bestätigte Plan bleibt: Umverteilung gibt es nur für einen bestätigten Plan (mit dessen Kräften)
   });
 
   it("Ausfall: ein Tap erzeugt einen konkreten Vorschlag; Ablehnen ist dauerhaft, Änderung der Lage nicht", async () => {
@@ -146,7 +146,6 @@ describe("Zuteilungsvorschlag und Umverteilung (Wegwerf-DB)", () => {
     await setAbsent(hkId.b, false, sup.userId);
     await prisma.room.updateMany({ where: { assignedToId: hkId.d, id: { not: (await prisma.room.findFirstOrThrow({ where: { assignedToId: hkId.d }, orderBy: { number: "asc" } })).id } }, data: { status: "CLEAN" } });
     await prisma.room.updateMany({ where: { assignedToId: hkId.b }, data: { status: "DIRTY" } });
-    await prisma.autoPlanProposal.updateMany({ data: { status: "SUPERSEDED" } });
     const r = await checkRedistribution(DATE);
     const list = (await listSuggestions(DATE)).suggestions.filter((x) => x.kind === "EARLY_FINISH");
     expect(r.created).toBeGreaterThanOrEqual(1);

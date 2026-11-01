@@ -13,19 +13,18 @@ interface PlanRow {
 }
 interface Figures { departures: number; arrivals: number; stayovers: number; eveningOccupancy: number; cleaningCount: number }
 interface PlanResponse { date: string | null; rooms: PlanRow[]; figures: Figures | null; issues: ParseIssue[] }
-interface MergeResponse { issues: ParseIssue[]; counts: { stays: number; traces: number; roomTasks: number } }
+interface MergeResponse { issues: ParseIssue[]; counts: { stays: number; traces: number; roomTasks: number }; board?: { rooms: number; changedRooms: number; arrivalsCreated: number; notes: string[] } }
 
 const TYPES: DayCleaningType[] = ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER", "ARRIVAL"];
 const ICON = { CRITICAL: "✖", WARNING: "⚠", INFO: "ℹ" } as const;
 const TONE = { CRITICAL: "text-status-out-of-order", WARNING: "text-status-in-progress", INFO: "text-graphite/70" } as const;
 
-/** Tagesplan aus den übernommenen Listen: berechnen → prüfen → auf das Board übernehmen. */
+/** Tagesplan aus den übernommenen Listen: berechnen (geht automatisch aufs Board) → prüfen. */
 export default function DayPlanPanel({ date, refreshKey }: { date: string | null; refreshKey: string }) {
   const { t } = useLocale();
   const [plan, setPlan] = useState<PlanResponse | null>(null);
   const [mergeInfo, setMergeInfo] = useState<MergeResponse | null>(null);
   const [busy, setBusy] = useState(false);
-  const [confirm, setConfirm] = useState(false);
   const [applied, setApplied] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -40,14 +39,12 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
     try { await fn(); } catch (e) { setError(e instanceof Error ? e.message : "?"); } finally { setBusy(false); }
   };
   const compute = () => run(async () => {
-    setMergeInfo(await api<MergeResponse>("/api/dayplan/merge", { body: { date } }));
-    setApplied(null); load();
+    const r = await api<MergeResponse>("/api/dayplan/merge", { body: {} });
+    setMergeInfo(r);
+    setApplied(r.board ? t("importPage.dpApplied", { rooms: r.board.rooms, changed: r.board.changedRooms, arrivals: r.board.arrivalsCreated }) + (r.board.notes.length ? " " + r.board.notes.join(" ") : "") : null);
+    load();
   });
-  const apply = () => run(async () => {
-    const r = await api<{ rooms: number; changedRooms: number; arrivalsCreated: number; notes: string[] }>("/api/dayplan/apply", { body: { date } });
-    setApplied(t("importPage.dpApplied", { rooms: r.rooms, changed: r.changedRooms, arrivals: r.arrivalsCreated }) + (r.notes.length ? " " + r.notes.join(" ") : ""));
-    setConfirm(false);
-  });
+
   const override = (room: string, cleaningType: DayCleaningType) => run(async () => {
     await api("/api/dayplan/override", { body: { date, room, cleaningType } }); load(); setApplied(null);
   });
@@ -90,19 +87,19 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
           )}
 
           <div className="mt-3 overflow-x-auto">
-            <table className="w-full text-left text-xs">
+            <table className="w-full text-start text-xs">
               <thead className="text-graphite/60">
                 <tr>
-                  <th className="pr-3">{t("importPage.colRoom")}</th><th className="pr-3">{t("importPage.dpColType")}</th>
-                  <th className="pr-3">{t("importPage.dpColLinen")}</th><th className="pr-3">{t("importPage.dpColEta")}</th>
-                  <th className="pr-3">{t("importPage.dpColTraces")}</th><th>{t("importPage.dpColAssigned")}</th>
+                  <th className="pe-3">{t("importPage.colRoom")}</th><th className="pe-3">{t("importPage.dpColType")}</th>
+                  <th className="pe-3">{t("importPage.dpColLinen")}</th><th className="pe-3">{t("importPage.dpColEta")}</th>
+                  <th className="pe-3">{t("importPage.dpColTraces")}</th><th>{t("importPage.dpColAssigned")}</th>
                 </tr>
               </thead>
               <tbody>
                 {plan.rooms.map((r) => (
                   <tr key={r.room} className="border-t border-charcoal/5">
-                    <td className="py-1 pr-3 font-medium">{r.room}{r.vip ? " ★" : ""}</td>
-                    <td className="pr-3">
+                    <td className="py-1 pe-3 font-medium">{r.room}{r.vip ? " ★" : ""}</td>
+                    <td className="pe-3">
                       <select value={r.cleaningType} disabled={busy} onChange={(e) => override(r.room, e.target.value as DayCleaningType)}
                         className="h-10 rounded-lg border border-charcoal/20 bg-white px-2">
                         {TYPES.map((ty) => <option key={ty} value={ty}>{t(`importPage.type${ty}` as "importPage.typeDEPARTURE")}</option>)}
@@ -111,9 +108,9 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
                         <div className="text-[11px] text-gold-soft">{t("importPage.dpOverridden", { type: t(`importPage.type${r.derivedType}` as "importPage.typeDEPARTURE") })}</div>
                       )}
                     </td>
-                    <td className="pr-3">{r.laundryDue ? t("importPage.dpLinenDue") : ""}</td>
-                    <td className="pr-3">{r.eta ?? ""}</td>
-                    <td className="pr-3">{r.openTraces || ""}</td>
+                    <td className="pe-3">{r.laundryDue ? t("importPage.dpLinenDue") : ""}</td>
+                    <td className="pe-3">{r.eta ?? ""}</td>
+                    <td className="pe-3">{r.openTraces || ""}</td>
                     <td>{r.assigned ? "✓" : ""}</td>
                   </tr>
                 ))}
@@ -122,21 +119,10 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
           </div>
 
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            {!confirm ? (
-              <button type="button" disabled={busy} onClick={() => setConfirm(true)}
-                className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line disabled:opacity-40">{t("importPage.dpApply")}</button>
-            ) : (
-              <>
-                <button type="button" disabled={busy} onClick={apply}
-                  className="h-12 rounded-xl bg-gold-soft px-6 text-sm font-medium text-white disabled:opacity-40">{t("importPage.dpApplyConfirm")}</button>
-                <button type="button" onClick={() => setConfirm(false)}
-                  className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("common.cancel")}</button>
-              </>
-            )}
             {applied && (
               <>
                 <span className="text-sm text-status-clean">{applied}</span>
-                <Link href="/supervisor/planning" className="text-sm font-medium text-gold-soft hover:underline">{t("importPage.dpToPlanning")}</Link>
+                <Link href="/floor-plan" className="text-sm font-medium text-gold-soft hover:underline">{t("importPage.dpToPlanning")}</Link>
               </>
             )}
           </div>

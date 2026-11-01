@@ -1,3 +1,6 @@
+/** Zimmertypen, die als "Suite" (anspruchsvoll) gelten — offene Frage 3 im Interview: alle Suiten oder nur höhere? */
+export const SUITE_TYPES = ["JUNIOR_SUITE", "SUITE", "PENTHOUSE"] as const;
+
 import type { AutoplanWeights } from "./weights";
 
 /** Art der Arbeit im Zimmer heute (ARRIVAL-Zimmer werden nicht gereinigt und kommen hier nicht vor). */
@@ -25,6 +28,12 @@ export interface PlanRoom {
   state: RoomState;
   /** Feste (manuelle/heutige) Zuteilung: der Vorschlag verschiebt das Zimmer nie. */
   fixedTo: string | null;
+  /** H3 gelernt: Zimmer ging an den letzten Tagen immer an diese Person (weich, Gewicht `learned`). */
+  preferHk?: string;
+  /** H3 gelernt: Zimmer ging immer an mindestens diese Stufe (weich). */
+  minLevel?: number;
+  /** H3: Begründung für die Anzeige, z. B. „gelernt: an 4 von 5 Planungstagen so geändert". */
+  learnedReason?: string;
 }
 
 export interface PlanHousekeeper {
@@ -38,6 +47,13 @@ export interface PlanHousekeeper {
   /** Zielband der Credits [lo, hi]. */
   lo: number;
   hi: number;
+  /** H1: Zielband in Zimmern (Hauptziel, aus Typ + Stufe). Fehlt → nur Credits. */
+  roomsLo?: number;
+  roomsHi?: number;
+  /** H1: heutige Etagen laut Etagenzuweisung (User.floorsOn === heute). Gesetzt → ersetzt Stammetage/gestern als Präferenz. */
+  todayFloors?: number[];
+  /** H3: gemessene bzw. geschätzte Minuten je Reinigungsart (nur wenn „Messdaten in Planung verwenden" an ist). */
+  minutesByKind?: { TURN: number; DEPARTURE: number; STAYOVER: number; LAUNDRY: number; SUITE: number };
 }
 
 export interface PlanInput {
@@ -47,6 +63,8 @@ export interface PlanInput {
   maxFloors: number;
   /** Tagesziel Vollzeit (für "Benötigt: X Housekeeper"). */
   fullTimeTarget: number;
+  /** H3: Schichtlänge in Minuten (Warnung/Gewicht „nicht vor Schichtende fertig"). */
+  shiftMinutes?: number;
 }
 
 /** roomId → housekeeperId (oder null = offen). */
@@ -72,6 +90,10 @@ export interface HkMetrics {
   demanding: number;
   lo: number;
   hi: number;
+  roomsLo?: number;
+  roomsHi?: number;
+  /** H3: geschätzte Arbeitszeit in Minuten (nur mit Messdaten). */
+  expectedMinutes?: number;
 }
 
 export interface PlanResult {

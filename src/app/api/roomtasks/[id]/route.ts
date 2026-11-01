@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { RoomTaskStatusSchema } from "@/lib/domain";
+import { endPauseOnChange } from "@/lib/work/pauseData";
 
 const INCLUDE = {
   room: { select: { id: true, number: true, floor: true } },
@@ -21,15 +22,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid room task status." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid room task status.", code: "INVALID_STATUS" }, { status: 400 });
 
   const existing = await prisma.roomTask.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "Room task not found." }, { status: 404 });
+  if (!existing) return NextResponse.json({ error: "Room task not found.", code: "TASK_NOT_FOUND" }, { status: 404 });
   if (existing.status === "DONE") {
-    return NextResponse.json({ error: "Room task is already done." }, { status: 409 });
+    return NextResponse.json({ error: "Room task is already done.", code: "TASK_ALREADY_DONE" }, { status: 409 });
   }
   if (parsed.data.status !== "DONE") {
-    return NextResponse.json({ error: "A room task can only be marked DONE." }, { status: 409 });
+    return NextResponse.json({ error: "A room task can only be marked DONE.", code: "INVALID_STATUS" }, { status: 409 });
   }
 
   const roomTask = await prisma.roomTask.update({
@@ -44,6 +45,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // Die zugehörige Hausmann-Trace-Zeile ist damit auch erledigt (eine Wahrheit für die Hausmann-Liste)
   await prisma.trace.updateMany({ where: { roomTaskId: id, status: "OPEN" }, data: { status: "DONE", doneAt: new Date() } });
+
+  await endPauseOnChange("ROOMTASK", id, auth.session.userId, existing.roomId);
+  for (const tr of await prisma.trace.findMany({ where: { roomTaskId: id }, select: { id: true } })) await endPauseOnChange("TRACE", tr.id, auth.session.userId, existing.roomId);
 
   await audit({
     action: "ROOM_TASK_DONE",

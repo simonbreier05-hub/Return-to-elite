@@ -6,11 +6,13 @@ import {
   DEFAULT_TIDY_CREDIT,
   ROOM_TYPE_DEFAULT_CREDITS,
   ROOM_TYPES,
+  ROLES,
   type RoomType,
   type SettingsShape,
 } from "./domain";
 import { AUTOPLAN_WEIGHTS, type AutoplanWeights } from "./autoplan/weights";
 import { PRIORITY_WEIGHTS, type PriorityWeights } from "./priority/computePriority";
+import { DEFAULT_HOUSEKEEPER_DM_ROLES } from "./chat/policy";
 
 /** Priority weights are stored under this prefix so they cannot collide. */
 export const WEIGHT_PREFIX = "priorityWeight.";
@@ -100,4 +102,26 @@ export async function getAutoplanWeights(): Promise<AutoplanWeights> {
     if (map[key] !== undefined && Number.isFinite(parsed) && parsed >= 0) out[key] = parsed;
   }
   return out;
+}
+
+/** Setting-Schlüssel des Chat-Hubs (Text, nicht in DEFAULT_SETTINGS, weil keine Zahl). */
+export const CHAT_HK_DM_ROLES_KEY = "chat.housekeeperDmRoles";
+export const HOTEL_DEFAULT_LANGUAGE_KEY = "hotelDefaultLanguage";
+export const DEFAULT_HOTEL_LANGUAGE = "de";
+/** ISO-639-Sprachcode, optional mit Region („de“, „pl“, „pt-BR“). */
+export const LANGUAGE_CODE_RE = /^[a-z]{2,3}(-[A-Z]{2})?$/;
+
+/**
+ * Chat-Regeln aus der Setting-Tabelle (Code-Standard + DB-Wert): mit wem Housekeeper direkt schreiben (Rollenliste,
+ * kommagetrennt, nur bekannte Rollen; leer/ungültig → Standard) und die Hotel-Standardsprache für originalLanguage.
+ */
+export async function getChatSettings(): Promise<{ housekeeperDmRoles: string[]; hotelDefaultLanguage: string }> {
+  const rows = await prisma.setting.findMany({ where: { key: { in: [CHAT_HK_DM_ROLES_KEY, HOTEL_DEFAULT_LANGUAGE_KEY] } } });
+  const map = Object.fromEntries(rows.map((r) => [r.key, r.value]));
+  const roles = (map[CHAT_HK_DM_ROLES_KEY] ?? "").split(",").map((r) => r.trim()).filter((r) => (ROLES as readonly string[]).includes(r));
+  const lang = map[HOTEL_DEFAULT_LANGUAGE_KEY];
+  return {
+    housekeeperDmRoles: roles.length ? roles : [...DEFAULT_HOUSEKEEPER_DM_ROLES],
+    hotelDefaultLanguage: lang && LANGUAGE_CODE_RE.test(lang) ? lang : DEFAULT_HOTEL_LANGUAGE,
+  };
 }

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo, useState } from "react";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
@@ -59,7 +60,6 @@ export default function HousekeeperRoster({
 }) {
   const { t } = useLocale();
   const [openId, setOpenId] = useState<string | null>(null);
-  const [movingRoomId, setMovingRoomId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   // Stable, deterministic numbering for the day — alphabetical, not arrival order.
@@ -72,19 +72,6 @@ export default function HousekeeperRoster({
 
   const openAttendant = sorted.find((a) => a.id === openId) ?? null;
 
-  const moveRoom = async (roomId: string, toAttendantId: string) => {
-    setMovingRoomId(roomId);
-    setError(null);
-    try {
-      await api(`/api/rooms/${roomId}/move`, { body: { toAttendantId } });
-      onMoved();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : t("roster.moveFailed"));
-    } finally {
-      setMovingRoomId(null);
-    }
-  };
-
   return (
     <>
       <div className="flex flex-wrap gap-2">
@@ -96,7 +83,7 @@ export default function HousekeeperRoster({
             <button
               key={a.id}
               onClick={() => setOpenId(a.id)}
-              className="flex items-center gap-2 rounded-xl border border-charcoal/15 bg-ivory px-3 py-2 text-left text-sm hover:border-gold-line active:scale-[0.98]"
+              className="flex items-center gap-2 rounded-xl border border-charcoal/15 bg-ivory px-3 py-2 text-start text-sm hover:border-gold-line active:scale-[0.98]"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-[0.68rem] font-semibold text-ivory">
                 {a.dailyNumber ?? i + 1}
@@ -166,26 +153,9 @@ export default function HousekeeperRoster({
                     <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} badgeClassName="h-4 w-4" iconClassName="h-2.5 w-2.5" />
                   </div>
 
-                  {others.length > 0 && (
-                    <select
-                      value=""
-                      disabled={movingRoomId === room.id}
-                      onChange={(e) => {
-                        if (e.target.value) moveRoom(room.id, e.target.value);
-                      }}
-                      aria-label={t("roster.moveTo")}
-                      className="mt-1.5 h-10 w-full rounded-lg border border-charcoal/20 bg-white px-2 text-sm outline-none focus:border-gold disabled:opacity-50"
-                    >
-                      <option value="">
-                        {movingRoomId === room.id ? t("roster.moving") : `→ ${t("roster.moveTo")}`}
-                      </option>
-                      {others.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {attendantLabel(a)}
-                        </option>
-                      ))}
-                    </select>
-                  )}
+                  <Link href="/floor-plan" className="mt-1.5 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">
+                    {t("roster.changeInFloorPlan")}
+                  </Link>
                 </div>
               );
             })}

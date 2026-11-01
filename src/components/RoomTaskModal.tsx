@@ -47,7 +47,7 @@ export default function RoomTaskModal({
           <button
             key={rt}
             onClick={() => setType(rt)}
-            className={`h-14 rounded-xl border px-4 text-left text-sm font-medium ${
+            className={`h-14 rounded-xl border px-4 text-start text-sm font-medium ${
               type === rt ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
             }`}
           >

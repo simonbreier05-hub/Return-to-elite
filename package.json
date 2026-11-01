@@ -10,7 +10,7 @@
     "start": "NODE_ENV=production node server.js",
     "lint": "next lint",
     "build:railway": "prisma generate --schema prisma/schema.postgres.prisma && next build",
-    "start:railway": "bash scripts/railway-boot.sh && SEED_MODE=if-empty tsx prisma/seed.ts && tsx prisma/ensure-demo-users.ts && NODE_ENV=production node server.js",
+    "start:railway": "bash scripts/railway-boot.sh && SEED_MODE=if-empty tsx prisma/seed.ts && tsx prisma/ensure-demo-users.ts && tsx prisma/reset-day-data.ts && NODE_ENV=production node server.js",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",
     "db:push:postgres": "prisma db push --schema prisma/schema.postgres.prisma",
@@ -18,7 +18,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "fixtures:opera": "tsx scripts/generate-opera-fixtures.ts",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "i18n:review": "tsx scripts/i18n.ts review",
+    "i18n:import": "tsx scripts/i18n.ts import",
+    "i18n:missing": "tsx scripts/i18n.ts missing"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
@@ -50,6 +53,7 @@
     "seed": "tsx prisma/seed.ts"
   },
   "devDependencies": {
+    "jsdom": "^25.0.1",
     "vitest": "^3.1.1"
   }
 }

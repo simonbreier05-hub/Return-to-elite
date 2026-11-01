@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
 import { getGuestSystemUserId } from "@/lib/guestServer";
+import { purgeExpiredChat } from "@/lib/chat/retention";
 import { runGuestDataRetention } from "@/lib/guestDataRetention";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { legacyTraceKey, TRACE_KEY_PREFIX, traceKey } from "@/lib/dayplan/traceKey";
@@ -79,7 +80,7 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
   const guestSystemUserId = await getGuestSystemUserId().catch(() => null);
   const counts: PurgeCounts = {};
 
-  counts.stayNames = (await prisma.stay.updateMany({ where: { guestName: { not: "" } }, data: { guestName: "" } })).count;
+  counts.stayNames = (await prisma.stay.updateMany({ where: { guestName: { not: "" }, source: { not: "DEMO" } }, data: { guestName: "" } })).count; // DEMO = Gast-Vorschau (301), erfundener Name
   counts.arrivalNames = (await prisma.arrival.updateMany({ where: { guestName: { not: "" } }, data: { guestName: "" } })).count;
   counts.excursions = (await prisma.excursion.updateMany({
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },
@@ -88,6 +89,8 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
   counts.importRows = (await prisma.importRow.deleteMany({})).count;
   counts.guestNotes = guestSystemUserId ? (await prisma.roomNote.deleteMany({ where: { authorId: guestSystemUserId } })).count : 0;
   counts.auditEntries = await scrubAuditMeta();
+  // Chat-Freitext kann trotz Hinweis Gastnamen enthalten: abgelaufene Nachrichten (chatRetentionDays) auch hier löschen.
+  Object.assign(counts, await purgeExpiredChat(now));
 
   const cutoff = new Date(now.getTime() - settings.guestStayDeleteDays * 86_400_000);
   counts.staysDeleted = (await prisma.stay.deleteMany({ where: { checkOut: { lt: cutoff } } })).count;

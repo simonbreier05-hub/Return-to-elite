@@ -10,7 +10,7 @@ import { moveRoomBetweenAttendants } from "@/lib/rooms/moveRoomBetweenAttendants
  * use /api/rooms/[id]/assign instead for assigning a room that has no
  * attendant yet.
  */
-const Body = z.object({ toAttendantId: z.string().min(1) });
+const Body = z.object({ toAttendantId: z.string().min(1), confirmStarted: z.boolean().optional() });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireRole(["supervisor"]);
@@ -18,9 +18,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "toAttendantId required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "toAttendantId required.", code: "INVALID_INPUT" }, { status: 400 });
 
-  const result = await moveRoomBetweenAttendants(auth.session, id, parsed.data.toAttendantId);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  const result = await moveRoomBetweenAttendants(auth.session, id, parsed.data.toAttendantId, { confirmStarted: parsed.data.confirmStarted });
+  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: result.status });
   return NextResponse.json({ room: result.room });
 }

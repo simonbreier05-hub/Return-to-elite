@@ -1,4 +1,4 @@
-import { compile, cost, type Compiled } from "./cost";
+import { compile, cost, roomMinutes, type Compiled } from "./cost";
 import { orderRoute } from "./route";
 import type { Assignment, HkMetrics, PlanInput, PlanResult, PlanRoom, PlanWarning } from "./types";
 
@@ -39,7 +39,8 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
       departures: rs.filter((r) => r.kind !== "STAYOVER").length, turns: rs.filter((r) => r.kind === "TURN").length,
       stayovers: rs.filter((r) => r.kind === "STAYOVER" && !r.laundry).length, linen: rs.filter((r) => r.kind === "STAYOVER" && r.laundry).length,
       floors: [...new Set(rs.map((r) => r.floor))].sort((a, b) => a - b), demanding: rs.filter((r) => r.demanding.length).length,
-      lo: h.lo, hi: h.hi,
+      lo: h.lo, hi: h.hi, roomsLo: h.roomsLo, roomsHi: h.roomsHi,
+      ...(h.minutesByKind ? { expectedMinutes: Math.round(rs.reduce((a, r) => a + roomMinutes(h, r), 0)) } : {}),
     };
   });
 
@@ -54,9 +55,11 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     const list: string[] = [];
     if (k < 0) { reasons[r.id] = ["Offen — bitte selbst zuteilen"]; return; }
     const h = input.housekeepers[k];
+    if (r.learnedReason && (r.preferHk === h.id || (r.minLevel && h.level >= r.minLevel))) list.push(r.learnedReason);
     if (r.kind === "TURN") list.push("Same-Day-Turn: zuerst in der Route");
     if (r.demanding.length) list.push(`${r.demanding.map((d) => DEMANDING_LABEL[d]).join(", ")}: Stufe ${h.level}`);
-    if (h.homeFloors.includes(r.floor)) list.push(`Stammetage ${r.floor}`);
+    if (h.todayFloors?.includes(r.floor)) list.push(`Etage ${r.floor} laut Etagenzuweisung`);
+    else if (h.homeFloors.includes(r.floor)) list.push(`Stammetage ${r.floor}`);
     else if (h.yesterdayFloors.includes(r.floor)) list.push(`Etage von gestern (${r.floor})`);
     const partner = r.interconnect.map((id) => roomById.get(id)).find((p) => p && idx[c.roomIdx.get(p.id)!] === k);
     if (partner) list.push(`Verbunden mit ${partner.number}: beim selben Housekeeper`);
@@ -74,12 +77,22 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   const overstaffed = input.housekeepers.length > 0 && totalAll < input.housekeepers.reduce((a, h) => a + h.lo, 0) - 0.5;
   for (const m of metrics) {
     const name = nameOf.get(m.hkId)!;
+    const roomsOut = m.roomsLo !== undefined && m.roomsHi !== undefined && m.rooms > 0 && (m.rooms > m.roomsHi || m.rooms < m.roomsLo);
+    if (roomsOut && !overstaffed) {
+      warnings.push({ code: "ROOMS_OUT_OF_BAND", severity: "WARNING", hkId: m.hkId,
+        message: `${name} hat ${m.rooms} Zimmer. Ziel sind ${m.roomsLo === m.roomsHi ? m.roomsLo : `${m.roomsLo} bis ${m.roomsHi}`}.` });
+    }
     if (overstaffed && m.credits <= m.hi + CREDIT_WARN_SLACK) { /* siehe Gesamthinweis unten */ }
     else if (m.credits > m.hi + CREDIT_WARN_SLACK || (m.credits < m.lo - CREDIT_WARN_SLACK && m.rooms > 0)) {
-      warnings.push({ code: "CREDITS_OUT_OF_BAND", severity: "WARNING", hkId: m.hkId,
+      warnings.push({ code: "CREDITS_OUT_OF_BAND", severity: m.roomsLo !== undefined ? "INFO" : "WARNING", hkId: m.hkId,
         message: `${name} hat ${fmt(m.credits)} Credits. Ziel sind ${fmt(m.lo)} bis ${fmt(m.hi)}.` });
     } else if (m.rooms === 0 && m.lo > 0) {
       warnings.push({ code: "NO_ROOMS", severity: "INFO", hkId: m.hkId, message: `${name} hat noch keine Zimmer.` });
+    }
+    if (input.shiftMinutes && m.expectedMinutes !== undefined && m.expectedMinutes > input.shiftMinutes) {
+      const f = (x: number) => `${Math.floor(x / 60)}:${String(Math.round(x % 60)).padStart(2, "0")}`;
+      warnings.push({ code: "OVER_SHIFT", severity: "WARNING", hkId: m.hkId,
+        message: `${name} wird voraussichtlich nicht vor Schichtende fertig (geschätzt ${f(m.expectedMinutes)} h, Schicht ${f(input.shiftMinutes)} h).` });
     }
     if (m.floors.length > input.maxFloors) {
       warnings.push({ code: "TOO_MANY_FLOORS", severity: "WARNING", hkId: m.hkId,
@@ -90,27 +103,24 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     const k = idx[i];
     if (k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length) {
       warnings.push({ code: "LEVEL1_DEMANDING", severity: "WARNING", roomIds: [r.id], hkId: input.housekeepers[k].id,
-        message: `${input.housekeepers[k].name} (Stufe 1) hat das anspruchsvolle Zimmer ${r.number}. Bitte prüfen.` });
+        message: `${input.housekeepers[k].name} (Stufe 1) hat das anspruchsvolle Zimmer ${r.number}. Wurde zugeteilt, weil sonst niemand mehr frei ist — bitte prüfen.` });
     }
   });
   if (unassigned.length) {
     const rs = unassigned.map((id) => roomById.get(id)!);
-    const noSenior = !input.housekeepers.some((h) => h.level >= 2);
     warnings.push({ code: "UNASSIGNED", severity: "WARNING", roomIds: unassigned,
-      message: rs.some((r) => r.demanding.length) && noSenior
-        ? `Zimmer ${rs.map((r) => r.number).join(", ")} bleiben offen: keine Kraft der Stufe 2 oder 3 anwesend. Bitte selbst entscheiden.`
-        : `Zimmer ${rs.map((r) => r.number).join(", ")} bleiben offen. Bitte selbst zuteilen.` });
+      message: `${unassigned.length} Zimmer sind noch offen (${rs.map((r) => r.number).join(", ")}). Bitte im Grundriss zuteilen.` });
   }
   const totalCredits = totalAll;
   const needed = Math.ceil(totalCredits / Math.max(1, input.fullTimeTarget));
   const present = input.housekeepers.length;
   if (overstaffed) {
     warnings.push({ code: "TOO_MANY_STAFF", severity: "INFO",
-      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}. Nicht benötigte Kräfte bitte abwählen.` });
+      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}. Wenn jemand nicht eingeplant werden soll, bitte „Nicht einplanen“ wählen — sonst sind alle Anwesenden gleichmäßig eingeplant.` });
   }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
-      message: `Zu wenige Kräfte: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}.` });
+      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${fmt(input.fullTimeTarget)} Credits je Kraft). Alle Zimmer sind trotzdem verteilt — Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
   }
 
   const { total, parts } = cost(c, idx);

@@ -51,7 +51,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json().catch(() => null);
   const parsed = LoginSchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid credentials payload." }, { status: 400 });
+    return NextResponse.json({ error: "Invalid credentials payload.", code: "INVALID_INPUT" }, { status: 400 });
   }
 
   const rawIdentifier = parsed.data.email.trim();
@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
   const handleEmail = devLoginEnabled() ? POSITION_HANDLES[normalizeHandle(rawIdentifier)] : undefined;
   const isDevHandle = handleEmail !== undefined;
   if (!isDevHandle && !rawIdentifier.includes("@")) {
-    return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    return NextResponse.json({ error: "Invalid email or password.", code: "INVALID_LOGIN" }, { status: 401 });
   }
 
   const user = await prisma.user.findUnique({
@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
   });
   const valid = user && (await bcrypt.compare(parsed.data.password, user.passwordHash));
   if (!user || !valid) {
-    return NextResponse.json({ error: "Invalid email or password." }, { status: 401 });
+    return NextResponse.json({ error: "Invalid email or password.", code: "INVALID_LOGIN" }, { status: 401 });
   }
 
   const role = RoleSchema.parse(user.role);

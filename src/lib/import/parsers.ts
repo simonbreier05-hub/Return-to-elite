@@ -13,6 +13,8 @@ import type {
 const NO_TEXT_MSG = "Foto/Scan wird nicht unterstützt. Bitte PDF- oder Excel-Export aus Opera hochladen.";
 const num = (s: string) => (/^-?[\d.,]+$/.test(s) ? Number(s.replace(/,/g, "")) : NaN);
 const isInt = (s: string | undefined): s is string => !!s && /^\d+$/.test(s);
+/** Opera-Zimmerart-Code: nur ein kurzer Großbuchstaben-Code, der kein Reservierungsstatus ist. Bedeutung gibt erst die Zuordnung in den Einstellungen. */
+const roomTypeCode = (x: string | undefined, cfg: ImportMappingConfig): string | null => (x && /^[A-Z][A-Z0-9]{1,5}$/.test(x) && !cfg.statusCodes.includes(x) ? x : null);
 
 function empty<T>(type: ParseResult<T>["type"], issues: ParseIssue[]): ParseResult<T> {
   return {
@@ -32,9 +34,65 @@ function tokens(segs: string[]): string[] {
   return out;
 }
 
+type CountCol = "adl" | "chl" | "rms" | "nts";
+/** Standardreihenfolge der Zahlenspalten nach dem Abreisedatum (Opera-Departures-Layout). */
+const DEFAULT_COUNT_ORDER: CountCol[] = ["adl", "chl", "rms", "nts"];
+
+/**
+ * Reihenfolge der Zahlenspalten (Erw., Kinder, Zimmer, Nächte) aus der Kopfzeile lesen — Opera-Listen unterscheiden sich
+ * (In House: „Nts Adl. Chl. Rms“, Departures: „Adl. Chl. Rms Nts“). Ohne erkennbare Kopfzeile gilt die Standardreihenfolge.
+ */
+export function countOrder(header: PdfLine[]): CountCol[] {
+  for (const l of header) {
+    const segs = l.segments.flatMap((x) => x.split(/\s+/));
+    if (!segs.some((x) => /^Adl/i.test(x))) continue;
+    const dep = segs.findIndex((x) => /^Dep/i.test(x));
+    const cols = segs.slice(dep + 1).map((x) => (/^Adl/i.test(x) ? "adl" : /^Chl/i.test(x) ? "chl" : /^Rms/i.test(x) ? "rms" : /^Nts/i.test(x) ? "nts" : null))
+      .filter((x): x is CountCol => !!x);
+    if (cols.includes("adl")) return cols;
+  }
+  return DEFAULT_COUNT_ORDER;
+}
+
+/**
+ * Personen nach dem Abreisedatum: führende ganze Zahlen in der Reihenfolge der Kopfzeile (`countOrder`). Die letzte Zahl darf
+ * mit der Zimmerart verklebt sein („4LFAMIL“). Erwachsene müssen lesbar sein; fehlt die Kinderspalte, sind es 0.
+ */
+function readCounts(t: string[], order: CountCol[] = DEFAULT_COUNT_ORDER): { adults: number; children: number; used: number; glued: string | null } | null {
+  const ints: number[] = [];
+  let glued: string | null = null, i = 0;
+  for (; i < t.length; i++) {
+    const m = /^(\d+)([A-Z][A-Z0-9]*)?$/.exec(t[i]);
+    if (!m) break;
+    ints.push(Number(m[1]));
+    if (m[2]) { glued = m[2]; i++; break; }
+  }
+  const at = (c: CountCol) => { const k = order.indexOf(c); return k >= 0 ? ints[k] : undefined; };
+  const adults = at("adl");
+  if (adults === undefined) return null;
+  return { adults, children: at("chl") ?? 0, used: i, glued };
+}
+
+/** Zeilen mit zwei Datumswerten, die nicht mit einer Zimmernummer beginnen: nie still verwerfen, sondern melden (nur Seite, kein Text). */
+function skippedIssues(lines: PdfLine[]): ParseIssue[] {
+  if (!lines.length) return [];
+  const pages = [...new Set(lines.map((l) => l.page))].sort((a, b) => a - b);
+  return [issue("WARNING", "ROW_SKIPPED", `${lines.length} Zeile(n) mit Datumswerten ohne erkennbare Zimmernummer verworfen (Seite ${pages.join(", ")}) — Layout prüfen.`)];
+}
+
 function footerRaw(footer: PdfLine[], re: RegExp): string | null {
   for (const l of footer) { const m = re.exec(l.text); if (m) return m[1]; }
   return null;
+}
+
+/** Anrede ist optional: fehlt sie bei allen Zeilen, gibt es genau einen Hinweis (kein Warnungs-Schwall, keine Blockade). */
+export function salutationIssues(rows: { guest: { salutation: string | null } }[]): ParseIssue[] {
+  const noSal = rows.filter((r) => !r.guest.salutation).length;
+  if (!noSal) return [];
+  if (noSal === rows.length) {
+    return [issue("INFO", "NO_SALUTATION_COLUMN", "Spalte Anrede nicht gefunden — Gäste werden nur mit Nachnamen angezeigt. Die Planung ist nicht betroffen.")];
+  }
+  return [issue("INFO", "NO_SALUTATION", `${noSal} von ${rows.length} Gästen ohne erkennbare Anrede.`)];
 }
 
 function pageIssues(lines: PdfLine[], issues: ParseIssue[]) {
@@ -57,12 +115,13 @@ export function parseDepartures(
   const { seen, total } = pageIssues(lines, issues);
 
   type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; nts: number;
-    status: string | null; time: string | null; vip: boolean; group: string | null; line: PdfLine };
+    status: string | null; time: string | null; vip: boolean; group: string | null; line: PdfLine; extra: string[]; roomType: string | null };
   const raws: Raw[] = [];
   let group: string | null = null;
   let sums = { adl: 0, chl: 0, rms: 0, nts: 0 };
   const vipRe = new RegExp(cfg.vipPattern, "i");
 
+  const skipped: PdfLine[] = [];
   for (const l of body) {
     const s = l.segments;
     if (s[0] === "Departure" && s[1] && DATE_RE.test(s[1])) { group = s[1]; sums = { adl: 0, chl: 0, rms: 0, nts: 0 }; continue; }
@@ -73,8 +132,8 @@ export function parseDepartures(
       }
       continue;
     }
-    if (!ROOM_RE.test(s[0] ?? "")) continue;
     const di = s.map((x, i) => (DATE_RE.test(x) ? i : -1)).filter((i) => i >= 0);
+    if (!ROOM_RE.test(s[0] ?? "")) { if (di.length >= 2) skipped.push(l); continue; }
     if (di.length < 2) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Zeile ohne zwei Datumswerte.", { room: s[0], page: l.page })); continue; }
     const t = tokens(s.slice(di[1] + 1));
     const ntsM = /^(\d+)([A-Z]+)?$/.exec(t[3] ?? "");
@@ -87,12 +146,13 @@ export function parseDepartures(
     const adl = Number(t[0]), chl = Number(t[1]), rms = Number(t[2]);
     sums = { adl: sums.adl + adl, chl: sums.chl + chl, rms: sums.rms + rms, nts: sums.nts + Number(ntsM[1]) };
     raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl, chl, nts: Number(ntsM[1]),
-      status, time, vip, group, line: l });
+      status, time, vip, group, line: l, extra: s.slice(2, di[0]), roomType: roomTypeCode(ntsM[2] ?? t[4], cfg) });
   }
+  issues.push(...skippedIssues(skipped));
 
   const fromRaw = footerRaw(footer, /From Departure Date\s+(\S+)/i);
   const toRaw = footerRaw(footer, /To Departure Date\s+(\S+)/i);
-  const hdrRaw = findHeaderDateRaw(header);
+  const hdrRaw = findHeaderDateRaw(header, lines);
   const allRaw = [...raws.flatMap((r) => [r.arr, r.dep, ...(r.group ? [r.group] : [])]),
     ...[fromRaw, toRaw, hdrRaw].filter((x): x is string => !!x)];
   const ctx: DateCtx = makeDateCtx(allRaw, issues, cfg.dateFormat, opts.confirmedDateFormat, undefined, { raw: hdrRaw, iso: opts.expectedDate });
@@ -105,8 +165,8 @@ export function parseDepartures(
       if (r.group && ctx.iso(r.group) !== depDate) {
         issues.push(issue("WARNING", "GROUP_DATE_MISMATCH", "Abreisedatum weicht von der Gruppenzeile ab.", { room: r.room, page: r.line.page }));
       }
-      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg), arrDate, depDate, adults: r.adl, children: r.chl,
-        nights: r.nts, status: r.status, depTime: r.time, vip: r.vip });
+      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, adults: r.adl, children: r.chl,
+        nights: r.nts, status: r.status, depTime: r.time, vip: r.vip, roomType: r.roomType });
     }
   }
   const dup = rows.length - new Set(rows.map((r) => `${r.room}|${r.arrDate}`)).size;
@@ -127,9 +187,11 @@ export function parseDepartures(
 // ───────────────────────────── In House (Tagesbelegung) ─────────────────────────────
 
 /**
- * Opera „In House": eine Zeile je belegtes Zimmer — Zimmer, Name, Anreise, Abreise,
- * Erwachsene, Kinder, Zimmer, Nächte (gleiche Zellenfolge wie die Departures-Zeilen).
- * Geschäftsdatum = Druckdatum der Liste.
+ * Opera „In House" (Tagesbelegung): eine Zeile je Zimmer, das heute Nacht belegt ist — Zimmer, Name, [Firma], [VIP], Anreise,
+ * Abreise, Erwachsene, Kinder, [Zimmer], [Nächte][Zimmerart], …, Status (CKIN = im Haus, RESV = Anreise heute), [T].
+ * Spalten in eckigen Klammern sind optional: Personen werden nach dem Abreisedatum gelesen, die Nächte aus den beiden
+ * Datumswerten berechnet (nie aus einer Spaltenposition geraten). Etagenüberschriften, Kopf/Fuß je Seite und
+ * Summenzeilen sind keine Zimmerzeilen. Geschäftsdatum = Druckdatum der Liste.
  */
 export function parseInHouse(
   lines: PdfLine[], opts: ParseOptions = {}, cfg: ImportMappingConfig = DEFAULT_MAPPING,
@@ -139,24 +201,26 @@ export function parseInHouse(
   const { body, header } = bodyLines(lines, /^(Room|Rm)\b/i);
   const { seen, total } = pageIssues(lines, issues);
   const vipRe = new RegExp(cfg.vipPattern, "i");
+  const order = countOrder(lines.filter((l) => l.page === (lines[0]?.page ?? 1)).slice(0, 15));
 
-  type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; nts: number; vip: boolean; line: PdfLine };
+  type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; vip: boolean; line: PdfLine; extra: string[]; roomType: string | null; status: string | null };
   const raws: Raw[] = [];
+  const skipped: PdfLine[] = [];
   for (const l of body) {
     const s = l.segments;
-    if (!ROOM_RE.test(s[0] ?? "")) continue;
     const di = s.map((x, i) => (DATE_RE.test(x) ? i : -1)).filter((i) => i >= 0);
+    if (!ROOM_RE.test(s[0] ?? "")) { if (di.length >= 2) skipped.push(l); continue; }
     if (di.length < 2) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Zeile ohne zwei Datumswerte.", { room: s[0], page: l.page })); continue; }
     const t = tokens(s.slice(di[1] + 1));
-    const ntsM = /^(\d+)([A-Z]+)?$/.exec(t[3] ?? "");
-    if (!isInt(t[0]) || !isInt(t[1]) || !ntsM) {
-      issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen/Nächte nicht lesbar.", { room: s[0], page: l.page })); continue;
-    }
-    raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: Number(t[0]), chl: Number(t[1]), nts: Number(ntsM[1]),
-      vip: s.slice(2, di[0]).some((x) => vipRe.test(x)), line: l });
+    const c = readCounts(t, order);
+    if (!c) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen nicht lesbar.", { room: s[0], page: l.page })); continue; }
+    raws.push({ room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: c.adults, chl: c.children,
+      vip: s.slice(2, di[0]).some((x) => vipRe.test(x)), line: l, extra: s.slice(2, di[0]),
+      roomType: roomTypeCode(c.glued ?? t.slice(c.used).find((x) => roomTypeCode(x, cfg)), cfg), status: t.find((x) => cfg.statusCodes.includes(x)) ?? null });
   }
+  issues.push(...skippedIssues(skipped));
 
-  const hdrRaw = findHeaderDateRaw(header);
+  const hdrRaw = findHeaderDateRaw(header, lines);
   const ctx: DateCtx = makeDateCtx([...raws.flatMap((r) => [r.arr, r.dep]), ...(hdrRaw ? [hdrRaw] : [])], issues, cfg.dateFormat,
     opts.confirmedDateFormat, undefined, { raw: hdrRaw, iso: opts.expectedDate });
 
@@ -165,7 +229,8 @@ export function parseInHouse(
     for (const r of raws) {
       const arrDate = ctx.iso(r.arr), depDate = ctx.iso(r.dep);
       if (!arrDate || !depDate) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Datum nicht lesbar.", { room: r.room, page: r.line.page })); continue; }
-      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg), arrDate, depDate, adults: r.adl, children: r.chl, nights: r.nts, vip: r.vip });
+      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, adults: r.adl, children: r.chl,
+        nights: Math.max(0, diffDays(arrDate, depDate)), vip: r.vip, roomType: r.roomType, status: r.status });
     }
   }
   const dup = rows.length - new Set(rows.map((r) => r.room)).size;
@@ -190,20 +255,22 @@ export function parseArrivals(
   const traceRe = /^Traces:\s*(\S+)\s+(\d{1,2}[-/.]\d{1,2}[-/.]\d{2,4})\s+(.*)$/;
 
   type Raw = { room: string; name: string; arr: string; dep: string; adl: number; chl: number; status: string | null;
-    time: string | null; vip: boolean; traces: { code: string; date: string; text: string }[]; page: number };
+    time: string | null; vip: boolean; traces: { code: string; date: string; text: string }[]; page: number; extra: string[]; roomType: string | null };
   const raws: Raw[] = [];
   let cur: Raw | null = null;
+  const skipped: PdfLine[] = [];
 
   for (const l of body) {
     const s = l.segments;
     const di = s.map((x, i) => (DATE_RE.test(x) ? i : -1)).filter((i) => i >= 0);
+    if (!ROOM_RE.test(s[0] ?? "") && di.length >= 2 && !/^Traces:/i.test(l.text)) { skipped.push(l); continue; }
     if (ROOM_RE.test(s[0] ?? "") && di.length >= 2) {
       const t = tokens(s.slice(di[1] + 1));
       if (!isInt(t[1]) || !isInt(t[2])) {
         issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Personen nicht lesbar.", { room: s[0], page: l.page })); cur = null; continue;
       }
       cur = { room: s[0], name: s[1], arr: s[di[0]], dep: s[di[1]], adl: Number(t[1]), chl: Number(t[2]),
-        status: t.slice(4).find((x) => cfg.statusCodes.includes(x)) ?? null, time: null, vip: false, traces: [], page: l.page };
+        status: t.slice(4).find((x) => cfg.statusCodes.includes(x)) ?? null, time: null, vip: false, traces: [], page: l.page, extra: s.slice(2, di[0]), roomType: roomTypeCode(t[0], cfg) };
       raws.push(cur);
       continue;
     }
@@ -217,10 +284,11 @@ export function parseArrivals(
     }
     if (s.some((x) => vipRe.test(x))) cur.vip = true;
   }
+  issues.push(...skippedIssues(skipped));
 
   const fromRaw = footerRaw(footer, /Stay From Date\s+(\S+)/i);
   const toRaw = footerRaw(footer, /Stay To Date\s+(\S+)/i);
-  const hdrRaw = findHeaderDateRaw(header);
+  const hdrRaw = findHeaderDateRaw(header, lines);
   const allRaw = [...raws.flatMap((r) => [r.arr, r.dep, ...r.traces.map((t) => t.date)]),
     ...[fromRaw, toRaw, hdrRaw].filter((x): x is string => !!x)];
   const ctx = makeDateCtx(allRaw, issues, cfg.dateFormat, opts.confirmedDateFormat, undefined, { raw: hdrRaw, iso: opts.expectedDate });
@@ -232,12 +300,11 @@ export function parseArrivals(
       if (!arrDate || !depDate) { issues.push(issue("CRITICAL", "ROW_UNREADABLE", "Datum nicht lesbar.", { room: r.room, page: r.page })); continue; }
       const traces: TraceEntry[] = r.traces.map((t) => ({ code: t.code, date: ctx.iso(t.date) ?? arrDate, text: t.text }));
       if (!r.time) issues.push(issue("INFO", "NO_ARRIVAL_TIME", "Keine Anreisezeit gelesen.", { room: r.room, page: r.page }));
-      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg), arrDate, depDate, arrTime: r.time,
-        adults: r.adl, children: r.chl, status: r.status, vip: r.vip, traces });
+      rows.push({ room: r.room, guest: parseGuestName(r.name, cfg, r.extra), arrDate, depDate, arrTime: r.time,
+        adults: r.adl, children: r.chl, status: r.status, vip: r.vip, roomType: r.roomType, traces });
     }
   }
-  const noSal = rows.filter((r) => !r.guest.salutation).length;
-  if (noSal) issues.push(issue("WARNING", "NO_SALUTATION", `${noSal} Gast/Gäste ohne erkennbare Anrede.`));
+  issues.push(...salutationIssues(rows));
   const dup = rows.length - new Set(rows.map((r) => `${r.room}|${r.arrDate}`)).size;
   if (dup > 0) issues.push(issue("WARNING", "DUPLICATE_ROWS", `${dup} doppelte Zeile(n) (Zimmer + Anreise).`));
 
@@ -289,11 +356,20 @@ export function parseForecast(
     raws.push({ date: m[1], wd, v: Object.fromEntries(cols.map((c, i) => [c, rest[i]])), line: l });
   }
 
-  const hdrRaw = findHeaderDateRaw(header);
-  const ctx = makeDateCtx([...raws.map((r) => r.date), ...(hdrRaw ? [hdrRaw] : [])], issues, "DMY", opts.confirmedDateFormat,
+  const hdrRaw = findHeaderDateRaw(header, lines);
+  // Ersatz fürs Druckdatum: die erste Datumszeile unter „Forecast“ (= heute), falls der Kopf kein Datum hergibt.
+  let afterForecast = false, forecastFirstRaw: string | null = null;
+  for (const l of body) {
+    if (/^Forecast$/i.test(l.text.trim())) { afterForecast = true; continue; }
+    const fm = afterForecast ? /^(\d{1,2}[/.-]\d{1,2}[/.-]\d{2,4}|\d{4}-\d{2}-\d{2})/.exec(l.segments[0] ?? "") : null;
+    if (fm) { forecastFirstRaw = fm[1]; break; }
+  }
+  const printRaw = hdrRaw ?? forecastFirstRaw;
+  const ctx = makeDateCtx([...raws.map((r) => r.date), ...(hdrRaw ? [hdrRaw] : [])], issues, opts.layoutDateFormat ?? "DMY", opts.confirmedDateFormat,
     [...raws.map((r) => (weekdayIndex(r.wd) !== null ? r.wd : null)), ...(hdrRaw ? [null] : [])], { raw: hdrRaw, iso: opts.expectedDate });
-  const reportDate = hdrRaw ? ctx.iso(hdrRaw) : null;
-  const today = opts.today ?? reportDate;
+  const reportDate = printRaw ? ctx.iso(printRaw) : null;
+  // Betriebstag (App-Uhr) hat Vorrang; das Druckdatum der Datei ist nur Abgleich und Notbehelf.
+  const today = opts.today ?? opts.expectedDate ?? reportDate;
   const inventory = opts.roomInventory ?? DEFAULT_SETTINGS.roomInventory;
 
   const rows: ForecastDayRow[] = [];
@@ -364,7 +440,7 @@ export function parseTracesPdf(lines: PdfLine[], opts: ParseOptions = {}, cfg: I
     raw.push({ room: s[0], name: s[1], dept: s[di[1] + 1] ?? "", code: s[di[1] + 2] ?? "", date: s[di[2]],
       text: s.slice(di[2] + 1, -1).join(" "), resolved: /^(Y|J|X)$/i.test(s[s.length - 1]) });
   }
-  return finishTraces(raw, issues, opts, cfg, findHeaderDateRaw(header), seen, total);
+  return finishTraces(raw, issues, opts, cfg, findHeaderDateRaw(header, lines), seen, total);
 }
 
 /** UTF-8, sonst Windows-1252 (typisch für Excel-CSV). */

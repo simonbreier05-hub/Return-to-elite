@@ -8,7 +8,6 @@ import RedistributionCards from "@/components/RedistributionCards";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
-import WindowPanel from "@/components/WindowPanel";
 import NoteThread, { type ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
 import NoteCountBadge from "@/components/NoteCountBadge";
@@ -18,18 +17,24 @@ import SupervisorList from "@/components/lists/SupervisorList";
 import CloseButton from "@/components/CloseButton";
 import { useEscapeKey } from "@/components/useEscapeKey";
 import RoomTaskModal from "@/components/RoomTaskModal";
+import SupervisorGlance from "@/components/SupervisorGlance";
+import SupervisorFeed from "@/components/SupervisorFeed";
+import HubMoreMenu from "@/components/HubMoreMenu";
+import ErrorBoundary from "@/components/ErrorBoundary";
 import { StatusIcon } from "@/components/icons";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import {
   BLOCK_REASON_SHORT,
-  STATUS_LABELS,
   HOTEL,
   type BlockReason,
   type NoteStatus,
   type RoomStatus,
 } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import type { Locale, TKey } from "@/lib/i18n/translations";
+import { errorText } from "@/lib/i18n/errorText";
+import type { TKey } from "@/lib/i18n/translations";
+import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { hhmm, dateTime } from "@/lib/i18n/format";
 
 interface Note {
   id: string;
@@ -91,7 +96,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [moreOpen, setMoreOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
@@ -107,10 +111,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   // assigned floor(s) — see GET /api/rooms. Null for duty_manager (never
   // scoped) and for a supervisor with no floors assigned yet (fails open).
   const [floorScope, setFloorScope] = useState<number[] | null>(null);
+  const [hub, setHub] = useState<HubState | null>(null);
 
   const load = useCallback(async () => {
-    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null }>("/api/rooms");
+    const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null; hub?: HubState }>("/api/rooms");
     setRooms(data.rooms);
+    setHub(data.hub ?? null);
     setAttendants(data.attendants);
     setFloorScope(data.floorScope);
   }, []);
@@ -124,6 +130,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const refetchSoon = useCoalescedRefetch(load, 2000);
 
   useSocket({
+    // Tagesplan im Planungshub berechnet/geändert → Board neu laden (auch der erste Plan des Tages).
+    "dayplan:updated": () => refetchSoon(),
     // Patch the changed room in place. The broadcast carries only scalar room
     // fields plus assignedTo, so spreading it preserves the nested arrivals,
     // notes and defects already held in state.
@@ -205,15 +213,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     guestDndOnly;
 
   const guestDndCount = rooms.filter((r) => r.guestDndActive).length;
-  const focusGuestDnd = () => {
-    setStatusFilter("ALL");
-    setFloorFilter("ALL");
-    setAttendantFilter("ALL");
-    setSearch("");
-    setGuestDndOnly(true);
-    gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
-
   const byFloor = useMemo(() => {
     const map = new Map<number, Room[]>();
     for (const room of visible) {
@@ -227,33 +226,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const selected = selectedId ? roomById.get(selectedId) ?? null : null;
 
   const releaseQueue = rooms.filter((r) => r.status === "CLEAN");
-  const inspected = rooms.filter((r) => r.status === "INSPECTED").length;
-  const sellable = rooms.filter((r) => !["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status)).length;
-  const progress = sellable ? Math.round((inspected / sellable) * 100) : 0;
   const blockedCount = rooms.filter((r) => r.status === "BLOCKED").length;
-
-  /**
-   * Everything a supervisor should look at today, house-wide — broader than
-   * `releaseQueue` above (CLEAN only): also defects and OOO/OOS. CLEAN is
-   * the actual enum value for what reads as "Clean · To Inspect".
-   */
-  const needsAttention = rooms.filter((r) =>
-    ["CLEAN", "DEFECT_REPORTED", "OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status)
-  );
-
-  /**
-   * Grouped by floor over the FULL room list — `byFloor` above is derived
-   * from the filtered `visible` list (board search/filters) and would be
-   * wrong here; the Etagen window always reflects the whole house.
-   */
-  const byFloorAll = useMemo(() => {
-    const map = new Map<number, Room[]>();
-    for (const room of rooms) {
-      if (!map.has(room.floor)) map.set(room.floor, []);
-      map.get(room.floor)!.push(room);
-    }
-    return [...map.entries()].sort((a, b) => a[0] - b[0]);
-  }, [rooms]);
 
   /** Single place where a status change is issued, so busy-state and error handling are consistent. */
   const act = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
@@ -265,7 +238,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       // Apply immediately; the socket echo will simply re-apply the same values.
       setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
     } catch (e) {
-      setError(`${room.number}: ${(e as Error).message}`);
+      setError(`${room.number}: ${errorText(e, t)}`);
     } finally {
       setBusyRoomId(null);
     }
@@ -311,7 +284,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       );
       load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBulkBusy(false);
     }
@@ -320,6 +293,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   return (
     <div className="animate-rise">
       <RedistributionCards />
+      <HubMissingNotice hub={hub} planner />
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
@@ -337,25 +311,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           )}
         </div>
         <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={() => setMoreOpen((o) => !o)}
-            aria-expanded={moreOpen}
-            className="flex h-14 items-center gap-2 rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-          >
-            {guestDndCount > 0 && <span aria-hidden>🔕</span>}
-            {t("supervisor.more")}
-            <span aria-hidden className={`transition-transform duration-150 ${moreOpen ? "rotate-180" : ""}`}>▾</span>
-          </button>
-          <Link
-            href="/planung"
-            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
-          >
-            {t("supervisor.morningPlanningLink")}
-          </Link>
-        </div>
-        {moreOpen && (
-          <div className="animate-rise flex w-full flex-wrap gap-2">
+          <HubMoreMenu extraBadge={guestDndCount > 0 ? <span aria-hidden>🔕</span> : undefined}>
             <Link href="/supervisor/handover" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
               {t("supervisor.handoverLink")}
             </Link>
@@ -366,14 +322,45 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               {guestDndCount > 0 && "🔕 "}
               {t("supervisor.guestRequestsLink")}
             </Link>
+            <Link href="/supervisor/workdata" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
+              {t("workdata.linkLabel")}
+            </Link>
             {isDutyManager && (
               <Link href="/settings" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
                 {t("supervisor.settingsLink")}
               </Link>
             )}
-          </div>
-        )}
+          </HubMoreMenu>
+          <Link
+            href="/supervisor/service"
+            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+          >
+            {t("service.title")}
+          </Link>
+          <Link
+            href="/planung"
+            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
+          >
+            {t("supervisor.morningPlanningLink")}
+          </Link>
+        </div>
       </div>
+
+      <ErrorBoundary>
+        <SupervisorGlance
+          rooms={rooms}
+          onChanged={load}
+          releaseQueue={{
+            rooms: releaseQueue,
+            backlog: releaseQueue.length >= RELEASE_QUEUE_BACKLOG,
+            busyRoomId,
+            bulkBusy,
+            onRelease: (id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); },
+            onRework: (id) => { const room = roomById.get(id); if (room) setDialog({ kind: "rework", room }); },
+            onReleaseAll: () => void releaseAll(),
+          }}
+        />
+      </ErrorBoundary>
 
       <PriorityBanner
         items={[
@@ -386,121 +373,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           },
           { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
         ]}
-      />
-
-      <WindowPanel
-        title="Zimmerstatus"
-        right={<span className="text-xs text-graphite/60">{needsAttention.length}</span>}
       >
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
-          Braucht Aufmerksamkeit
-        </h4>
-        {needsAttention.length === 0 && <p className="mb-4 text-sm text-graphite/60">Nichts wartet gerade.</p>}
-        <div className="mb-4 space-y-2">
-          {needsAttention.map((room) => {
-            const busy = busyRoomId === room.id;
-            return (
-              <div
-                key={room.id}
-                className="flex items-center justify-between gap-2 rounded-lg border border-charcoal/10 bg-ivory px-3 py-2"
-              >
-                <div>
-                  <span className="inline-flex items-center gap-1.5">
-                    <span className="font-serif text-lg">
-                      Floor {room.floor} · {room.number}
-                    </span>
-                    <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
-                  </span>
-                  <p className="text-xs text-graphite/60">
-                    {room.assignedTo ? attendantLabel(room.assignedTo) : "—"} · {STATUS_LABELS[room.status]}
-                    {room.status === "DEFECT_REPORTED" &&
-                      room.defects[0] &&
-                      ` · ${room.defects[0].category}: ${room.defects[0].note}`}
-                    {room.status === "OUT_OF_ORDER" &&
-                      room.oooUntil &&
-                      ` · bis ${new Date(room.oooUntil).toLocaleString()}`}
-                  </p>
-                </div>
-                {room.status === "CLEAN" && (
-                  <button
-                    onClick={() => act(room, "INSPECTED")}
-                    disabled={busy}
-                    className="h-11 shrink-0 rounded-lg bg-emerald-600 px-4 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-50"
-                  >
-                    {busy ? "…" : "Freigeben"}
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        {guestDndCount > 0 && (
-          <>
-            <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">
-              🔕 Gast: Bitte nicht stören
-            </h4>
-            <div className="mb-4 space-y-2">
-              {rooms
-                .filter((r) => r.guestDndActive)
-                .map((room) => (
-                  <div
-                    key={room.id}
-                    className="flex items-center justify-between gap-2 rounded-lg border border-status-out-of-order/25 bg-status-out-of-order/5 px-3 py-2"
-                  >
-                    <span className="font-serif text-lg">
-                      Floor {room.floor} · {room.number}
-                    </span>
-                    <span className="text-xs text-graphite/60">{STATUS_LABELS[room.status]}</span>
-                  </div>
-                ))}
-            </div>
-          </>
-        )}
-
-        <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">Etagen</h4>
-        <div className="space-y-2">
-          {byFloorAll.map(([floor, floorRooms]) => {
-            const cleanCount = floorRooms.filter((r) => r.status === "CLEAN" || r.status === "INSPECTED").length;
-            return (
-              <Collapsible
-                key={floor}
-                defaultOpen={false}
-                summary={
-                  <div className="text-sm">
-                    Etage {floor} — {cleanCount}/{floorRooms.length} clean
-                  </div>
-                }
-              >
-                <div className="flex flex-wrap gap-1.5">
-                  {floorRooms.map((room) => (
-                    <span
-                      key={room.id}
-                      className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 text-xs shadow-sm"
-                    >
-                      <span className={`h-2.5 w-2.5 rounded-full ${STATUS_STYLES[room.status].dot}`} />
-                      {room.number}
-                    </span>
-                  ))}
-                </div>
-              </Collapsible>
-            );
-          })}
-        </div>
-      </WindowPanel>
-
-      <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <Kpi label={t("supervisor.releasedSellable")} value={`${inspected}/${sellable}`} onClick={() => focusStatus("INSPECTED")} />
-        <Kpi label={t("supervisor.dailyProgress")} value={`${progress}%`} bar={progress} onClick={() => focusStatus(null)} />
-        <Kpi
-          label={t("supervisor.releaseQueueLabel")}
-          value={String(releaseQueue.length)}
-          accent={releaseQueue.length >= RELEASE_QUEUE_BACKLOG}
-          onClick={() => focusStatus("CLEAN")}
-        />
-        <Kpi label={t("supervisor.blockedLabel")} value={String(blockedCount)} onClick={() => focusStatus("BLOCKED")} />
-        <Kpi label="🔕 Gast-DND" value={String(guestDndCount)} accent={guestDndCount > 0} onClick={focusGuestDnd} />
-      </div>
+        <ErrorBoundary>
+          <SupervisorFeed />
+        </ErrorBoundary>
+      </PriorityBanner>
 
       {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
       {error && (
@@ -574,7 +451,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 guestDndOnly ? "border-status-out-of-order bg-status-out-of-order/10 text-status-out-of-order" : "border-charcoal/15 bg-white"
               }`}
             >
-              🔕 Gast-DND
+              {t("shared.guestDnd")}
             </button>
             {filtersActive && (
               <>
@@ -612,7 +489,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               summary={
                 <h3 className="font-serif text-xl">
                   {t("supervisor.floorN", { floor })}
-                  <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
+                  <span className="ms-2 text-xs uppercase tracking-wider text-graphite/50">
                     {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
                   </span>
                 </h3>
@@ -637,23 +514,23 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                           ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey)
                           : room.section}
                       </span>
-                      {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
+                      {room.arrivals.some((a) => a.vip) && <span className="absolute start-1 top-0.5 text-[10px]">★</span>}
                       {attHere && (
-                        <span className="absolute right-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
+                        <span className="absolute end-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
                           👤
                         </span>
                       )}
                       <RoomFlagIcons
                         occupancy={room.occupancy}
                         isCheckoutToday={room.isCheckoutToday}
-                        className="absolute -bottom-1 -left-1"
+                        className="absolute -bottom-1 -start-1"
                         badgeClassName="h-4 w-4"
                         iconClassName="h-2.5 w-2.5"
                       />
                       <NoteCountBadge
                         openCount={room.openNotesCount}
                         totalCount={room.notes.length}
-                        className="absolute -bottom-1 -right-1"
+                        className="absolute -bottom-1 -end-1"
                       />
                     </button>
                   );
@@ -693,7 +570,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                         {room.arrivals[0].vip && "★ VIP · "}
                         {room.arrivals[0].guestName}
                         {room.arrivals[0].eta &&
-                          ` · ETA ${new Date(room.arrivals[0].eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                          ` · ETA ${hhmm(room.arrivals[0].eta)}`}
                       </p>
                     )}
                     <div className="mt-2 grid grid-cols-2 gap-2">
@@ -787,44 +664,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   );
 }
 
-function Kpi({
-  label,
-  value,
-  bar,
-  accent,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  bar?: number;
-  accent?: boolean;
-  /** Aufgabe C (v4): clicking a dashboard tile jumps to the matching filtered board view. */
-  onClick?: () => void;
-}) {
-  const Tag = onClick ? "button" : "div";
-  return (
-    <Tag
-      onClick={onClick}
-      className={`rounded-2xl border p-4 text-left shadow-sm transition-colors ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"} ${
-        onClick ? "cursor-pointer hover:border-gold-line active:scale-[0.98]" : ""
-      }`}
-    >
-      <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
-      <div className="mt-1 font-serif text-3xl">{value}</div>
-      {bar !== undefined && (
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-parchment">
-          <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${bar}%` }} />
-        </div>
-      )}
-    </Tag>
-  );
-}
-
 /** Rework reasons a supervisor reaches for most often — one tap instead of typing. */
-const REWORK_PRESETS: Record<Locale, string[]> = {
-  en: ["Bathroom not spotless", "Minibar not restocked", "Linen / turndown", "Dust on surfaces", "Amenities missing", "Room needs airing"],
-  de: ["Bad nicht makellos", "Minibar nicht aufgefüllt", "Wäsche / Turndown", "Staub auf Flächen", "Amenities fehlen", "Zimmer muss gelüftet werden"],
-};
+const REWORK_PRESETS: TKey[] = ["shared.reworkPreset1", "shared.reworkPreset2", "shared.reworkPreset3", "shared.reworkPreset4", "shared.reworkPreset5", "shared.reworkPreset6"];
 
 function ReworkModal({
   room,
@@ -835,7 +676,7 @@ function ReworkModal({
   onClose: () => void;
   onSubmit: (note: string) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [note, setNote] = useState("");
   const add = (preset: string) => setNote((n) => (n ? `${n}, ${preset.toLowerCase()}` : preset));
 
@@ -846,7 +687,7 @@ function ReworkModal({
       onClose={onClose}
     >
       <div className="mb-3 flex flex-wrap gap-2">
-        {REWORK_PRESETS[locale].map((p) => (
+        {REWORK_PRESETS.map((k) => t(k)).map((p) => (
           <button
             key={p}
             onClick={() => add(p)}
@@ -916,7 +757,7 @@ function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void
         className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 text-base outline-none focus:border-gold"
       />
       <p className="mb-4 rounded-lg bg-ivory p-3 text-sm text-graphite/70">
-        {t("supervisor.backInInventory")} <strong>{until.toLocaleString()}</strong>
+        {t("supervisor.backInInventory")} <strong>{dateTime(until)}</strong>
       </p>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
@@ -982,7 +823,7 @@ function RoomDrawer({
           {room.blockReason && ` · ${t(`blockReason.${room.blockReason as BlockReason}` as TKey)}`}
         </span>
         {room.oooUntil && (
-          <p className="mt-1 text-xs text-graphite/60">{t("supervisor.oooUntil", { date: new Date(room.oooUntil).toLocaleString() })}</p>
+          <p className="mt-1 text-xs text-graphite/60">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}</p>
         )}
         {room.reworkNote && room.status === "PICKUP" && (
           <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">
@@ -1048,21 +889,10 @@ function RoomDrawer({
 
         <div className="mt-4">
           <label className="mb-1 block text-sm font-medium">{t("supervisor.assignedAttendant")}</label>
-          <select
-            value={room.assignedTo?.id ?? ""}
-            onChange={async (e) => {
-              const res = await api<{ room: Room }>(`/api/rooms/${room.id}/assign`, {
-                body: { attendantId: e.target.value || null },
-              });
-              onAssigned(res.room);
-            }}
-            className="h-12 w-full rounded-lg border border-charcoal/20 bg-white px-3"
-          >
-            <option value="">{t("supervisor.unassignedOption")}</option>
-            {attendants.map((a) => (
-              <option key={a.id} value={a.id}>{attendantLabel(a)}</option>
-            ))}
-          </select>
+          <p className="flex min-h-12 items-center rounded-lg border border-charcoal/10 bg-parchment/40 px-3 text-sm">
+            {room.assignedTo ? attendantLabel(room.assignedTo as Attendant) : t("supervisor.unassignedOption")}
+          </p>
+          <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
         </div>
 
         <div className="mt-4">
@@ -1080,7 +910,7 @@ function RoomDrawer({
             {room.arrivals.map((a, i) => (
               <p key={i} className="text-sm">
                 {a.vip && "★ "}{a.guestName}
-                {a.eta && ` · ETA ${new Date(a.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                {a.eta && ` · ETA ${hhmm(a.eta)}`}
                 {a.neededNow && ` ${t("supervisor.neededNowFlag")}`}
               </p>
             ))}
@@ -1093,7 +923,7 @@ function RoomDrawer({
             {room.defects.map((d) => (
               <p key={d.id} className="text-sm">
                 🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
-                {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
+                {d.workOrder && <span className="ms-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
               </p>
             ))}
           </div>

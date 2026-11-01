@@ -5,6 +5,8 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { WorkOrderStatusSchema, type WorkOrderStatus } from "@/lib/domain";
+import { endPauseOnChange } from "@/lib/work/pauseData";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * PATCH /api/workorders/[id] — engineering advances a work order:
@@ -20,15 +22,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid work order status." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid work order status.", code: "INVALID_STATUS" }, { status: 400 });
 
   const wo = await prisma.workOrder.findUnique({ where: { id }, include: { defect: { include: { room: true } } } });
-  if (!wo) return NextResponse.json({ error: "Work order not found." }, { status: 404 });
+  if (!wo) return NextResponse.json({ error: "Work order not found.", code: "WORK_ORDER_NOT_FOUND" }, { status: 404 });
 
   const from = WorkOrderStatusSchema.parse(wo.status);
   const to = parsed.data.status;
   if (ORDER.indexOf(to) !== ORDER.indexOf(from) + 1) {
-    return NextResponse.json({ error: `Illegal work order transition ${from} → ${to}.` }, { status: 409 });
+    return NextResponse.json({ error: `Illegal work order transition ${from} → ${to}.`, code: "ILLEGAL_TRANSITION" }, { status: 409 });
   }
 
   const now = new Date();
@@ -65,6 +67,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
 
   if (to === "RESOLVED") {
+    await endPauseOnChange("WORKORDER", id, auth.session.userId, wo.defect.roomId, wo.defect.room.number);
     const notification = await prisma.notification.create({
       data: {
         type: "WORK_ORDER_RESOLVED",
@@ -72,6 +75,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         targetRole: "supervisor",
         roomId: wo.defect.roomId,
         message: `Work order resolved in room ${wo.defect.room.number} (${wo.defect.category}). Room may resume cleaning.`,
+        ...keyed("notify.workOrderResolved", { n: wo.defect.room.number, categoryKey: `defectCategory.${wo.defect.category}` }),
         dedupeKey: `WORK_ORDER_RESOLVED:${id}`,
       },
     });

@@ -18,15 +18,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   const room = await prisma.room.findUnique({ where: { id } });
-  if (!room) return NextResponse.json({ error: "Room not found." }, { status: 404 });
+  if (!room) return NextResponse.json({ error: "Room not found.", code: "ROOM_NOT_FOUND" }, { status: 404 });
 
   const form = await req.formData().catch(() => null);
-  if (!form) return NextResponse.json({ error: "Expected multipart form data." }, { status: 400 });
+  if (!form) return NextResponse.json({ error: "Expected multipart form data.", code: "INVALID_INPUT" }, { status: 400 });
 
   const category = DefectCategorySchema.safeParse(form.get("category"));
   const note = String(form.get("note") ?? "").trim();
-  if (!category.success) return NextResponse.json({ error: "Invalid defect category." }, { status: 400 });
-  if (!note) return NextResponse.json({ error: "Defect note is required." }, { status: 400 });
+  if (!category.success) return NextResponse.json({ error: "Invalid defect category.", code: "INVALID_DEFECT_CATEGORY" }, { status: 400 });
+  if (!note) return NextResponse.json({ error: "Defect note is required.", code: "TEXT_REQUIRED" }, { status: 400 });
 
   // Photo upload → local S3 mock (private ./uploads, served only via the
   // gated /api/uploads route — see src/app/api/uploads/[...path]/route.ts)
@@ -34,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > 8 * 1024 * 1024) {
-      return NextResponse.json({ error: "Photo too large (max 8 MB)." }, { status: 400 });
+      return NextResponse.json({ error: "Photo too large (max 8 MB).", code: "PHOTO_TOO_LARGE" }, { status: 400 });
     }
     const ext = (photo.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const filename = `defect-${room.number}-${Date.now()}.${ext}`;

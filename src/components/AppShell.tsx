@@ -12,9 +12,11 @@ import NoteCountBadge from "./NoteCountBadge";
 import { RoomFlagIcons } from "./RoomFlags";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
 import ErrorBoundary from "./ErrorBoundary";
+import { ChatProvider } from "./chat/ChatContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
-import LanguageSwitcher from "./LanguageSwitcher";
+import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
+import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
 import LiveClock from "./LiveClock";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
@@ -24,6 +26,8 @@ interface Notification {
   type: string;
   level: string;
   message: string;
+  messageKey?: string | null;
+  messageVars?: string | null;
   targetRole: string;
   targetUserId?: string | null;
   acknowledged: boolean;
@@ -33,9 +37,9 @@ interface Notification {
 /** Alert *levels* — a separate semantic system from room status colours,
  * kept in the same muted register so it never reads as a room-status hue. */
 const LEVEL_STYLES: Record<string, string> = {
-  info: "border-l-navy-line",
-  warning: "border-l-gold",
-  critical: "border-l-status-out-of-order",
+  info: "border-s-navy-line",
+  warning: "border-s-gold",
+  critical: "border-s-status-out-of-order",
 };
 
 /**
@@ -63,7 +67,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
   const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
@@ -175,11 +179,11 @@ export default function AppShell({
             {backHref && (
               <button
                 onClick={() => router.push(backHref)}
-                className="-ml-2 flex h-12 min-w-11 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium text-navy transition hover:bg-parchment sm:pr-3"
+                className="-ms-2 flex h-12 min-w-11 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium text-navy transition hover:bg-parchment sm:pe-3"
                 aria-label={t("appShell.back")}
                 title={t("appShell.back")}
               >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
+                <svg className="h-5 w-5 rtl:-scale-x-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
                 </svg>
                 <span className="hidden sm:inline">{t("appShell.back")}</span>
@@ -217,7 +221,7 @@ export default function AppShell({
                 className="h-11 w-40 rounded-sm border border-charcoal/15 bg-parchment/60 px-3 text-sm text-charcoal outline-none transition-all placeholder:text-charcoal/40 focus:w-56 focus:border-gold"
               />
               {searchOpen && matches.length > 0 && (
-                <div className="absolute left-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-charcoal/10 bg-linen text-charcoal shadow-2xl">
+                <div className="absolute start-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-charcoal/10 bg-linen text-charcoal shadow-2xl">
                   {matches.slice(0, 8).map((r) => (
                     <button
                       key={r.id}
@@ -237,8 +241,9 @@ export default function AppShell({
                 </div>
               )}
             </div>
-            <div className="hidden sm:inline-flex">
-              <LanguageSwitcher />
+            <div className="hidden items-center gap-1.5 sm:inline-flex">
+              <LanguageButton />
+              <LanguageQualityBadge className="hidden lg:inline" />
             </div>
             {devUsers && (
               <select
@@ -265,18 +270,18 @@ export default function AppShell({
                 <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
               </svg>
               {unread > 0 && (
-                <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-status-out-of-order px-1 text-xs font-bold text-linen">
+                <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-status-out-of-order px-1 text-xs font-bold text-linen">
                   {unread}
                 </span>
               )}
             </button>
-            <div className="hidden text-right sm:block">
+            <div className="hidden text-end sm:block">
               <div className="text-sm font-medium">{userName}</div>
               <div className="text-[0.68rem] uppercase tracking-[0.16em] text-gold-soft">{t(roleKey)}</div>
             </div>
             <button
               onClick={logout}
-              className="ml-2 h-12 rounded-sm border border-charcoal/15 px-4 text-sm transition hover:bg-parchment hover:border-charcoal/25"
+              className="ms-2 h-12 rounded-sm border border-charcoal/15 px-4 text-sm transition hover:bg-parchment hover:border-charcoal/25"
             >
               {t("common.signOut")}
             </button>
@@ -285,12 +290,12 @@ export default function AppShell({
       </header>
 
       {open && (
-        <div className="fixed inset-x-2 top-20 z-50 mx-auto max-w-lg animate-sheet rounded-2xl border border-charcoal/10 bg-linen shadow-2xl sm:right-6 sm:left-auto sm:w-[26rem]">
+        <div className="fixed inset-x-2 top-20 z-50 mx-auto max-w-lg animate-sheet rounded-2xl border border-charcoal/10 bg-linen shadow-2xl sm:end-6 sm:start-auto sm:w-[26rem]">
           <div className="flex items-center justify-between border-b border-charcoal/10 px-4 py-3">
             <span className="font-serif text-lg text-navy">{t("appShell.notifications")}</span>
             <div className="flex items-center gap-2">
               <div className="sm:hidden">
-                <LanguageSwitcher />
+                <LanguageButton />
               </div>
               <button onClick={ackAll} className="h-10 rounded-sm px-3 text-sm text-gold-soft hover:bg-parchment">
                 {t("appShell.markAllRead")}
@@ -304,14 +309,14 @@ export default function AppShell({
               <div
                 key={n.id}
                 style={{ "--stagger-i": i } as React.CSSProperties}
-                className={`mb-2 animate-stagger rounded-lg border border-charcoal/5 border-l-4 bg-ivory p-3 ${LEVEL_STYLES[n.level] ?? ""} ${
+                className={`mb-2 animate-stagger rounded-lg border border-charcoal/5 border-s-4 bg-ivory p-3 ${LEVEL_STYLES[n.level] ?? ""} ${
                   n.acknowledged ? "opacity-50" : ""
                 }`}
               >
                 <div className="text-xs uppercase tracking-wider text-graphite/70">
-                  {n.type.replace(/_/g, " ")} · {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                  {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
                 </div>
-                <div className="mt-1 text-sm">{n.message}</div>
+                <div className="mt-1 text-sm">{notificationText(n, t)}</div>
               </div>
             ))}
           </div>
@@ -321,9 +326,12 @@ export default function AppShell({
       {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
 
       <div className="h-px w-full bg-gradient-to-r from-gold-line/70 via-gold-line/20 to-transparent" />
+      <div className="px-3 sm:px-6"><LanguageSuggestion /></div>
 
       <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-6 sm:px-6">
-        <ErrorBoundary>{children}</ErrorBoundary>
+        <ErrorBoundary>
+          <ChatProvider>{children}</ChatProvider>
+        </ErrorBoundary>
       </main>
     </div>
   );

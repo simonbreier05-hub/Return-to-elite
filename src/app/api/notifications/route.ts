@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const parsed = StaffingRequestBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "message is required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "message is required.", code: "TEXT_REQUIRED" }, { status: 400 });
 
   const notification = await prisma.notification.create({
     data: {
@@ -57,7 +57,7 @@ export async function PATCH(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Pass {id} or {all:true}." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Pass {id} or {all:true}.", code: "INVALID_INPUT" }, { status: 400 });
 
   const roleFilter = scopeFor(auth.session);
   if ("all" in parsed.data) {

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!auth.ok) return auth.response;
   const { id } = await params;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   try {
     return NextResponse.json(await decideSuggestion(id, parsed.data.action, auth.session, parsed.data.moves));
   } catch (e) {

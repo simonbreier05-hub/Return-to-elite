@@ -1,6 +1,7 @@
 "use client";
 
 import ImageLightbox from "@/components/ImageLightbox";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -9,18 +10,23 @@ import RoomDetailModal from "@/components/RoomDetailModal";
 import { useRoomLookup } from "@/components/useRoomLookup";
 import { NOTE_STATUS_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
+import PauseControl, { type PauseInfo } from "@/components/PauseControl";
+import TaskMessageModal from "@/components/TaskMessageModal";
+import { hhmm } from "@/lib/i18n/format";
 
 interface WorkOrder {
   id: string;
   status: "OPEN" | "ACK" | "IN_PROGRESS" | "RESOLVED";
   createdAt: string;
   assignedTo?: { name: string } | null;
+  pause?: PauseInfo | null;
   defect: {
     category: string;
     note: string;
     photoPath?: string | null;
-    room: { number: string; status: string; floor: number; openNotesCount: number };
+    room: { id?: string; number: string; status: string; floor: number; openNotesCount: number };
     reportedBy?: { name: string; role: string } | null;
   };
 }
@@ -47,6 +53,7 @@ export default function EngineeringView() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const roomLookup = useRoomLookup();
+  const [messageFor, setMessageFor] = useState<WorkOrder | null>(null);
 
   const load = useCallback(async () => {
     const data = await api<{ workOrders: WorkOrder[] }>("/api/workorders");
@@ -65,6 +72,7 @@ export default function EngineeringView() {
     "workorder:update": (p: { workOrder: WorkOrder }) => {
       if (p.workOrder?.id) upsert(p.workOrder);
     },
+    "work:pause": (p: { targetType?: string } | undefined) => { if (!p || p.targetType === "WORKORDER") void load(); },
   });
 
   const advance = async (wo: WorkOrder) => {
@@ -79,7 +87,7 @@ export default function EngineeringView() {
       });
       upsert(res.workOrder);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusyId(null);
     }
@@ -92,6 +100,7 @@ export default function EngineeringView() {
 
   return (
     <div>
+      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
       <h2 className="mb-1 font-serif text-3xl">{t("engineering.workOrders")}</h2>
       <p className="mb-4 text-sm text-graphite/70">{t("engineering.openResolved", { open: open.length, resolved: resolved.length })}</p>
 
@@ -136,11 +145,11 @@ export default function EngineeringView() {
                 <strong>{t(`defectCategory.${wo.defect.category}` as TKey)}</strong> — {wo.defect.note}
               </p>
               {wo.defect.photoPath && (
-                <div className="mt-2"><ImageLightbox src={wo.defect.photoPath} alt="Defect photo" className="max-h-40 rounded-lg object-cover" /></div>
+                <div className="mt-2"><ImageLightbox src={wo.defect.photoPath} alt={t("shared.defectPhoto")} className="max-h-40 rounded-lg object-cover" /></div>
               )}
               <p className="mt-2 flex flex-wrap items-center gap-1.5 text-xs text-graphite/60">
                 {t("engineering.reportedBy", { name: wo.defect.reportedBy?.name ?? "—" })} ·{" "}
-                {new Date(wo.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                {hhmm(wo.createdAt)}
                 {wo.assignedTo && ` · ${t("engineering.assignedTo", { name: wo.assignedTo.name })}`}
                 {wo.defect.reportedBy?.role === "guest" && (
                   <span className="rounded-full bg-status-out-of-order/10 px-2 py-0.5 font-semibold text-status-out-of-order">
@@ -157,12 +166,19 @@ export default function EngineeringView() {
                   {busyId === wo.id ? "…" : t(NEXT[wo.status]!.labelKey)}
                 </button>
               )}
+              {wo.status !== "RESOLVED" && (
+                <div className="mt-2 grid grid-cols-[1fr_auto] items-start gap-2">
+                  <PauseControl targetType="WORKORDER" targetId={wo.id} pause={wo.pause} canPause onChanged={(pz) => setOrders((prev) => prev.map((o) => (o.id === wo.id ? { ...o, pause: pz } : o)))} />
+                  {wo.defect.room.id && <button type="button" onClick={() => setMessageFor(wo)} className="h-12 rounded-xl border border-charcoal/20 bg-white px-4 text-sm font-medium">💬 {t("work.messageBtn")}</button>}
+                </div>
+              )}
             </div>
           ))}
         </div>
       )}
 
       {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
+      {messageFor?.defect.room.id && <TaskMessageModal roomId={messageFor.defect.room.id} roomNumber={messageFor.defect.room.number} task={{ type: "WORKORDER", id: messageFor.id }} onClose={() => setMessageFor(null)} />}
     </div>
   );
 }

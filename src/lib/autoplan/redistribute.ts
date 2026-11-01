@@ -1,4 +1,4 @@
-import { compile, cost, eligible, type Compiled } from "./cost";
+import { compile, cost, suitable, type Compiled } from "./cost";
 import { greedyPlace, optimize, type SolveOptions } from "./propose";
 import { speedOf } from "./speed";
 import type { Assignment, PlanHousekeeper, PlanInput, PlanRoom } from "./types";
@@ -128,7 +128,7 @@ function suggestEarlyFinish(l: LiveInput, taken: Set<string>): Suggestion[] {
       const base = cost(c, assign, { rulesOnly: true }).total;
       let best = -1, bestScore = Infinity;
       c.rooms.forEach((r, i) => {
-        if (assign[i] !== donorK || r.state !== "TODO" || taken.has(r.id) || moved.has(r.id) || !eligible(c, i, toK)) return;
+        if (assign[i] !== donorK || r.state !== "TODO" || taken.has(r.id) || moved.has(r.id) || !suitable(c, i, toK)) return;
         const mins = (id: string) => r.credits * speedOf(l.speeds, id, l.minutesPerCredit);
         const gapAfter = Math.abs(rem[donor] - mins(donor) - (rem[to] + mins(to)));
         if (gapAfter >= Math.abs(rem[donor] - rem[to])) return; // muss die Lücke verkleinern

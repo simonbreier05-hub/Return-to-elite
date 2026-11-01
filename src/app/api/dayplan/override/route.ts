@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   try {
     await overrideCleaningType(parsed.data.date, parsed.data.room, parsed.data.cleaningType, auth.session.userId);
     return NextResponse.json({ ok: true });

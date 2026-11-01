@@ -8,13 +8,14 @@ export default async function FloorPlanPage() {
   const session = await requirePage([
     "room_attendant",
     "supervisor",
+    "duty_manager",
     "front_office",
     "concierge",
     "engineering",
   ]);
   return (
     <AppShell title="appShell.floorPlan" userName={session.name} role={session.role} backHref={roleHome(session.role)}>
-      <FloorPlanView />
+      <FloorPlanView canAssign={session.role === "supervisor" || session.role === "duty_manager"} />
     </AppShell>
   );
 }

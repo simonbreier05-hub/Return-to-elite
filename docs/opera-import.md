@@ -17,19 +17,27 @@ Das PDF/XLSX/CSV wird im Browser gelesen (`pdfjs-dist`, `exceljs`, `papaparse`);
 ## Layouts
 
 - **Arrivals: Detailed** — Block je Reservierung (Zeile 1: Zimmer/Name/Daten/Personen/Status; Zeile 2: Conf-Nr., VIP, Anreisezeit; danach `Fixed Charges:`, `Traces:`, `Inventory Items:`). Geschäftsdatum = Anreisetag der Liste (Fuß: „Stay From Date"), nicht das Druckdatum.
-- **Departures** — Gruppen „Departure <Datum>" mit `Total`-Zeilen (werden gegen die Zeilen geprüft). Über einen Zeitraum ersetzt sie die fehlende In-House-Liste: Bleiber = Abreise nach heute, Anreise bis heute. Empfohlen: heute bis +30 Tage.
+- **Departures** — Gruppen „Departure <Datum>" mit `Total`-Zeilen (werden gegen die Zeilen geprüft). Deckt oft nur wenige Tage ab (z. B. heute bis +2) — Bleiber mit späterer Abreise stehen dann nur in der In-House-Liste, die deshalb Quelle der Bleiber ist.
 - **History and Forecast** — nur heutiger und spätere Tage; Umsatz/Durchschnittspreis werden verworfen; Occ.% wird gegen belegt ÷ (Zimmer − OOO) geprüft.
-- **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je belegtes Zimmer (Zimmer, Name, Anreise, Abreise, Erw., Kinder, Nächte). Geschäftsdatum = Druckdatum. **Layout angenommen** (wie die Departures-Zeilen) — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
+- **In House (Tagesbelegung)** — fünfte Liste, `INHOUSE`: eine Zeile je heute Nacht belegtes Zimmer (Zimmer, Name, [Firma], [VIP], Anreise, Abreise, Erw., Kinder, [Zimmer], [Nächte+Typ], Status `CKIN`/`RESV`, [T]). Optionale Spalten in Klammern; Nächte werden aus den Daten berechnet. Etagenüberschriften, Kopf/Fuß je Seite und Summenzeilen sind keine Zimmerzeilen; Zeilen mit Datumswerten ohne Zimmernummer → Warnung `ROW_SKIPPED` (nie still verworfen). Geschäftsdatum = Druckdatum. Getestet am Nachbau `tests/fixtures/opera/2026-10-28/` — vor dem Echtbetrieb mit einem echten Opera-Export prüfen.
 - **Traces** — PDF oder CSV; Twin-/Zusatzbett-Texte werden zu Hausmann-Aufgaben (`traceClassifier.ts`).
+
+## Betriebstag und veraltete Listen
+
+Betriebstag ist immer der heutige Tag der App-Uhr (Berlin). Das Datum in der Datei dient nur dem Abgleich: Liste vom anderen Tag = „veraltet (Datum)“ (Warnung `LIST_NOT_TODAY`, übernehmbar). Das Gate zählt eine veraltete Liste erst nach „Trotzdem verwenden“ (Supervisor/Duty Manager, wird im Logbuch protokolliert). Ohne lesbares Druckdatum: Hinweis `NO_PRINT_DATE`, die Liste gilt für den Betriebstag. Das Datumsformat je Listentyp wird nach dem Übernehmen als Layout gespeichert (`ImportMapping`).
 
 ## Einreichungs-Gate (fünf Listen)
 
-Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `missingAppliedLists()` → HTTP 409 mit der Liste der fehlenden Typen.
+Zusätzlich muss der Stand jeder Liste dem Betriebstag entsprechen (oder bestätigt sein). Die Planung (`POST /api/dayplan/merge`, `POST /api/autoplan/propose`, Weiter-Knopf im Planungstool) startet erst, wenn **alle fünf** Listen (Forecast, Departures, Arrivals, Traces, In House) übernommen (`APPLIED`) sind — auch vier von fünf reichen nicht. Eine Quelle: `src/lib/import/readiness.ts` (`missingLists`); serverseitig `listBlockersNow()` → HTTP 409 mit den fehlenden bzw. unbestätigt veralteten Typen.
+
+## Liste löschen / ersetzen
+
+`DELETE /api/import/lists/[type][?keepPlan=1]` (Supervisor, Duty Manager) löscht die übernommene Liste — alle übernommenen Stände des Typs, damit das Gate sie wieder als *fehlend* zählt (sonst rückte ein älterer Stand als „veraltet“ nach) (`src/lib/import/deleteList.ts`): Batch samt Zeilen, dazu Import-Aufenthalte, erwartete Import-Anreisen, offene Traces ohne Hausmann-Aufgabe und Forecast-Tage — nur was **nicht** auch in der jeweils anderen Liste steht (Departures↔Arrivals, Arrivals↔Traces). Ist für den Tag ein Plan bestätigt: 409 `planConfirmed`, bis `keepPlan=1` kommt; der Plan bleibt, `GET /api/import/status` meldet dann `plan.listsChanged` („Listen geändert, Plan neu berechnen?“). Logbuch: `IMPORT_LIST_DELETED` und `IMPORT_REPLACED` (Typ, Betriebstag, Zähler — keine Gastdaten). Broadcast `import:deleted`.
 
 ## Oberfläche und API
 
 `/import` (Supervisor, Duty Manager; Link im Planungshub): mehrere Dateien per Drag-and-drop oder „Dateien wählen", Typ automatisch erkannt (sonst Auswahl), Vorschau mit maskierten Namen, Befunde, Datumsbestätigung, „Übernehmen"/„Verwerfen"/„Alle übernehmen", „Stand der Daten".
-`POST /api/import/batches` (Vorschau ablegen) → `POST /api/import/batches/[id]/apply|reject`; `GET /api/import/status`.
+`POST /api/import/batches` (Vorschau ablegen) → `POST /api/import/batches/[id]/apply|reject`; `GET /api/import/status` (Stand je Liste, `today`, Plan-Hinweis `plan`). Der Browser übernimmt mehrere Listen **nacheinander** (parallele Übernahmen liefen in DB-Transaktions-Timeouts).
 Excel/CSV: jede Zeile = Zellen in Druckreihenfolge (gleiche Parser wie PDF); Tabellen haben kein Druckdatum, das Formularfeld „Geschäftsdatum" springt ein. Zimmernummern, die Excel als Zahl gespeichert hat (4), werden zu „004" aufgefüllt. Bei PDFs gilt immer das Druckdatum; weicht es vom gewählten Tag ab, gibt es die Warnung `LIST_NOT_TODAY`.
 Zimmeranzahl für die Forecast-Prüfung: Einstellung `roomInventory` (Standard 145, in /settings änderbar) — nicht die 139 Zimmer der Grundriss-Digitalisierung.
 
@@ -52,6 +60,14 @@ Zimmeranzahl für die Forecast-Prüfung: Einstellung `roomInventory` (Standard 1
 - Reinigungsart ändern: `POST /api/dayplan/override` (Audit `CLEANING_TYPE_CHANGED`, Listenwert bleibt in `derivedType`).
 - Den Vorschlag „Plan auf das Team anwenden" liefert weiter der bestehende Planungshub (`/api/assignments/plan` + `apply`), er liest das Board. Der intelligente Vorschlag (Fairness, Stufen, 2-Etagen-Regel) ist M2b.
 
+## Tagesplan-Quellen und Plausibilität
+
+- `mergeDay` nimmt Aufenthalte aus Departures, Arrivals **und In-House** (`mergeStays`, Schlüssel Zimmer + Anreise). Bleiber = Anreise vor heute, Abreise nach heute — aus welcher Liste auch immer. `RESV`-Zeilen der In-House-Liste machen ein Zimmer weder belegt noch schmutzig (Gast ist noch nicht da).
+- Zählregeln (eine Quelle, `src/lib/dayplan/dayNumbers.ts`): **zu reinigen** = Abreisen + Turns + alle Bleiber + Anreisen in noch nicht gereinigte Zimmer, außer außer Betrieb/Service/Opt-out (`isToClean`); **belegt** = heute Nacht belegt = Bleiber + Turns + Anreisen (`isOccupiedTonight`) = Forecast „Total Occ.“. Duty-Manager-Board, Grundriss, „Zimmer und Service heute“, Etagenbalken und Entwurf/Autoplan nutzen diese Regeln.
+- Plausibilitätsprüfung (`src/lib/import/plausibility.ts`, `GET/POST /api/import/plausibility`): In-House, Arrivals, Departures und Tagesplan gegen die Forecast-Zeile des Tages (belegt, Anreisen, Abreisen, Personen, Auslastung) und Zimmer außerhalb des Zimmerstamms. Warnung oben im Planungstool mit konkreten Zahlen; blockiert nichts. „Gesehen, trotzdem planen“ bestätigt genau diesen Stand (Setting `plausibilityAck`, Logbuch `IMPORT_PLAUSIBILITY_ACK` nur mit Befund-Schlüsseln).
+- Anreise-Zimmer, die nicht gereinigt werden müssen, setzt der Hub morgens auf CLEAN („sauber, Prüfung offen“); der Supervisor prüft und gibt sie frei (INSPECTED). Kachel „Anreisen geprüft x von n“ (`arrivalChecks`), Kennzeichen „Anreise heute: prüfen und freigeben“ in der Supervisor-Liste.
+- Diagnose ohne App: `npx tsx scripts/diagnose-import.ts <PDFs…> --day=JJJJ-MM-TT` (nur Zahlen, Zimmernummern, Befunde — keine Namen).
+
 ## Datumsformat
 
 Pro Liste aus allen Werten bestimmt: Format mit ungültigem Wert (Monat > 12) scheidet aus, beim Forecast zusätzlich über den Wochentag. Bleiben beide Lesarten gültig, wird **nicht geraten**: kritischer Befund `DATE_AMBIGUOUS`, die Vorschau zeigt beide Lesarten, der Nutzer bestätigt.
@@ -68,3 +84,7 @@ Alle Gastdaten werden abends gelöscht und kommen mit dem Import zurück — sie
 ## Testdaten
 
 Nachbau-PDFs mit erfundenen Namen: `npm run fixtures:opera` (→ `tests/fixtures/opera/`). Durchlauf eines Morgens: `scripts/morning-demo.ts` (Wegwerf-DB, Aufruf im Kopf der Datei).
+
+## Planungshub = einzige Datenquelle des Arbeitstags
+
+Board, Grundriss, Arbeitslisten, Priorität und Zuteilung arbeiten ausschließlich mit dem Tagesplan des **Betriebstags** (`src/lib/dayplan/hubDay.ts`). `POST /api/dayplan/merge` berechnet ihn für heute und übernimmt ihn sofort aufs Board (Belegung, Abreise, erwartete Anreisen; Zimmer ohne Eintrag: belegt nur laut In-House-Liste). Gibt es für heute keinen Tagesplan, zeigen die Ansichten keine Tagesdaten, sondern den Hinweis „Für heute sind noch keine Listen eingelesen“ (Supervisor/Duty Manager mit Link zum Planungshub) — nie den Stand eines älteren Tages. Dabei setzt der Hub auch den morgendlichen Zimmerstatus: alle Zimmer sauber (INSPECTED), nur nachweislich belegte oder belegt gewesene (Abreise, Turn, Bleiber, In-House-Liste) schmutzig. Was heute schon bearbeitet wurde, bleibt; ein Nachimport am selben Tag macht neu abreisende Zimmer schmutzig. Der Knopf „Tagesplan aufs Board übernehmen“ entfällt (läuft automatisch). Tagsüber bleiben Statusänderungen, manuelle Anreisen (Front Office) und Zuteilungsänderungen im Grundriss erlaubt; Zuteilungen gelten nur am Tag, an dem sie gemacht wurden (`assignedOn`).

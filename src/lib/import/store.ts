@@ -4,7 +4,8 @@ import { audit } from "@/lib/audit";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { UNKNOWN_ROOM_CRITICAL_RATIO } from "./mapping";
 import { buildPreview } from "./preview";
-import { missingLists } from "./readiness";
+import { berlinToday } from "./businessDay";
+import { listBlockers, type ListStatus } from "./readiness";
 import { issue } from "./parseCommon";
 import type { ArrivalRow, DepartureRow, ForecastDayRow, InHouseRow, ParseIssue, ParseResult, TraceRow } from "./types";
 
@@ -38,8 +39,12 @@ export async function storeBatch(input: {
 }) {
   const { result, uploadedById, fileHash, knownRooms } = input;
   const issues = [...result.issues, ...(input.extraIssues ?? [])];
-  const businessDate = businessDateOf(result);
-  if (!businessDate && !isCritical(issues)) issues.push(issue("CRITICAL", "BUSINESS_DATE_UNKNOWN", "Geschäftsdatum der Liste nicht lesbar."));
+  // Betriebstag ist die App-Uhr; das Dateidatum ist nur ein Abgleich. Fehlt es, wird mit dem Betriebstag gearbeitet (Hinweis, kein Fehler).
+  let businessDate = businessDateOf(result);
+  if (!businessDate) {
+    businessDate = berlinToday();
+    issues.push(issue("INFO", "NO_PRINT_DATE", `Kein Druckdatum in der Liste gefunden — sie wird für den Betriebstag ${businessDate} verwendet.`));
+  }
   if (result.type !== "FORECAST") issues.push(...roomIssues(result.rows.map((r) => (r as { room: string }).room), knownRooms));
 
   const same = await prisma.importBatch.findFirst({ where: { type: result.type, fileHash, status: "APPLIED" } });
@@ -66,31 +71,32 @@ export async function storeBatch(input: {
 }
 
 /** Übernehmen: ersetzt den vorherigen Stand (gleicher Typ + Tag). Kritische Befunde blockieren. */
+/** Großzügiger als Prismas 5 s: ein langer Forecast über eine langsame Verbindung darf nicht abbrechen. */
+const APPLY_TIMEOUT_MS = 20_000;
+
 export async function applyBatch(batchId: string, userId: string) {
   const batch = await prisma.importBatch.findUnique({ where: { id: batchId }, include: { issues: true } });
   if (!batch) throw new Error("Import nicht gefunden.");
   if (batch.status !== "PREVIEW") throw new Error("Import ist nicht mehr in der Vorschau.");
   if (batch.issues.some((i) => i.severity === "CRITICAL")) throw new Error("Kritische Befunde: nichts wird übernommen.");
 
-  await prisma.$transaction(async (tx) => {
-    await tx.importBatch.deleteMany({
+  const replaced = await prisma.$transaction(async (tx) => {
+    const old = await tx.importBatch.deleteMany({
       where: { type: batch.type, businessDate: batch.businessDate, status: "APPLIED", id: { not: batch.id } },
     });
     if (batch.type === "FORECAST") {
-      const rows = await tx.importRow.findMany({ where: { batchId: batch.id, kind: "FORECAST" } });
-      for (const r of rows) {
-        const d = JSON.parse(r.payload) as ForecastDayRow;
-        await tx.forecastDay.upsert({
-          where: { date: d.date },
-          create: { ...d, batchId: batch.id }, update: { ...d, batchId: batch.id },
-        });
-      }
+      const rows = (await tx.importRow.findMany({ where: { batchId: batch.id, kind: "FORECAST" } })).map((r) => JSON.parse(r.payload) as ForecastDayRow);
+      // Ein deleteMany + createMany statt eines upsert je Tag: wenige Abfragen, die Transaktion bleibt kurz.
+      await tx.forecastDay.deleteMany({ where: { date: { in: rows.map((d) => d.date) } } });
+      if (rows.length) await tx.forecastDay.createMany({ data: rows.map((d) => ({ ...d, batchId: batch.id })) });
       await tx.importRow.deleteMany({ where: { batchId: batch.id, kind: "FORECAST" } }); // Zählwerte liegen jetzt in ForecastDay
     }
     await tx.importBatch.update({ where: { id: batch.id }, data: { status: "APPLIED", appliedAt: new Date() } });
-  });
+    return old.count;
+  }, { timeout: APPLY_TIMEOUT_MS, maxWait: APPLY_TIMEOUT_MS });
   // Protokoll ohne Gastnamen: nur Typ, Tag, Anzahl.
   await audit({ action: "IMPORT_APPLIED", userId, meta: { batchId, type: batch.type, businessDate: batch.businessDate, rows: batch.rowCount } });
+  if (replaced) await audit({ action: "IMPORT_REPLACED", userId, meta: { batchId, type: batch.type, businessDate: batch.businessDate, replaced } });
 }
 
 export async function rejectBatch(batchId: string, userId: string) {
@@ -98,17 +104,26 @@ export async function rejectBatch(batchId: string, userId: string) {
   await audit({ action: "IMPORT_REJECTED", userId, meta: { batchId } });
 }
 
-/** Server-Gate: welche der fünf Listen fehlen noch (nur übernommene Stände zählen). */
-export async function missingAppliedLists(): Promise<ImportType[]> {
-  return missingLists(await dataStatus());
+/** Server-Gate: fehlende und unbestätigt veraltete Listen (nur übernommene Stände zählen, Betriebstag = Berlin heute). */
+export async function listBlockersNow(now = new Date()) {
+  return listBlockers(await dataStatus(), berlinToday(now));
+}
+
+/** Veraltete Liste trotzdem verwenden: nur der aktuelle übernommene Stand des Typs, mit Protokoll (ohne Gastdaten). */
+export async function acceptStaleList(type: ImportType, userId: string) {
+  const b = await prisma.importBatch.findFirst({ where: { type, status: "APPLIED" }, orderBy: { appliedAt: "desc" } });
+  if (!b) throw new Error("Diese Liste ist nicht übernommen.");
+  await prisma.importBatch.update({ where: { id: b.id }, data: { staleAcceptedAt: new Date(), staleAcceptedById: userId } });
+  await audit({ action: "IMPORT_STALE_ACCEPTED", userId, meta: { batchId: b.id, type, businessDate: b.businessDate, today: berlinToday() } });
+  return b.businessDate;
 }
 
 /** "Stand der Daten" je Liste für das Planungshub. */
-export async function dataStatus(): Promise<Record<ImportType, { businessDate: string; appliedAt: Date; rows: number } | null>> {
+export async function dataStatus(): Promise<Record<ImportType, { businessDate: string; appliedAt: Date; rows: number; staleAccepted: boolean } | null>> {
   const out = {} as Awaited<ReturnType<typeof dataStatus>>;
   for (const type of IMPORT_TYPES) {
     const b = await prisma.importBatch.findFirst({ where: { type, status: "APPLIED" }, orderBy: { appliedAt: "desc" } });
-    out[type] = b ? { businessDate: b.businessDate, appliedAt: b.appliedAt!, rows: b.rowCount } : null;
+    out[type] = b ? { businessDate: b.businessDate, appliedAt: b.appliedAt!, rows: b.rowCount, staleAccepted: !!b.staleAcceptedAt } : null;
   }
   return out;
 }

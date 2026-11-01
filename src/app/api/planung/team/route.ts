@@ -20,7 +20,7 @@ export async function GET(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const date = req.nextUrl.searchParams.get("date") ?? (await latestPlanDate());
-  if (!date || !Date_.safeParse(date).success) return NextResponse.json({ error: "Noch kein Tagesplan. Bitte zuerst die Listen einlesen." }, { status: 409 });
+  if (!date || !Date_.safeParse(date).success) return NextResponse.json({ error: "Noch kein Tagesplan. Bitte zuerst die Listen einlesen.", code: "NO_DAY_PLAN" }, { status: 409 });
   return NextResponse.json(await getTeamState(date));
 }
 
@@ -29,7 +29,7 @@ export async function PUT(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   const { date, ...sel } = parsed.data;
   if (sel.hk.length < 1 || sel.sup.length < 1) return NextResponse.json({ error: "Mindestens ein Housekeeper und ein Supervisor." }, { status: 400 });
   try {

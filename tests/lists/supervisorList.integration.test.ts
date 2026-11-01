@@ -22,6 +22,10 @@ import { prisma } from "@/lib/db";
 import { GET as supGet } from "@/app/api/lists/supervisor/route";
 import { groupOf } from "@/lib/lists/groups";
 
+// Die App arbeitet nur mit dem Betriebstag (Planungshub, src/lib/dayplan/hubDay.ts): Uhr auf den Testtag stellen.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-09-22T10:00:00Z"));
+
 const D = "2026-09-22";
 const ids: Record<string, string> = {};
 const call = async (session: unknown, qs = "") => {

@@ -4,8 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
-import LanguageSwitcher from "@/components/LanguageSwitcher";
+import LanguageButton from "@/components/LanguagePicker";
 
 interface DevUser {
   id: string;
@@ -51,7 +52,7 @@ export default function LoginPage() {
       await api("/api/auth/dev-login", { body: { email: userEmail } });
       go();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
       setBusy(false);
     }
   };
@@ -63,7 +64,7 @@ export default function LoginPage() {
       await api("/api/auth/login", { body: { email, password } });
       go();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
       setBusy(false);
     }
   };
@@ -91,7 +92,7 @@ export default function LoginPage() {
     // Light, paper-toned throughout — no dark panel behind the door, the
     // same "quiet luxury" register the whole app now carries.
     <div className="relative flex min-h-screen items-center justify-center bg-ivory p-4">
-      <LanguageSwitcher className="absolute right-4 top-4" />
+      <LanguageButton className="absolute end-4 top-4" />
       <div className="w-full max-w-2xl">
         <div className="mb-9 text-center">
           <Image

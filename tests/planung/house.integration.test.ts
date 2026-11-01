@@ -17,6 +17,10 @@ vi.mock("@/lib/db", async () => {
 import { prisma } from "@/lib/db";
 import { getHouseData } from "@/lib/planung/house";
 
+// Die App arbeitet nur mit dem Betriebstag (Planungshub, src/lib/dayplan/hubDay.ts): Uhr auf den Testtag stellen.
+vi.useFakeTimers({ toFake: ["Date"] });
+vi.setSystemTime(new Date("2026-09-22T10:00:00Z"));
+
 beforeAll(() => { execSync("npx prisma db push --skip-generate --schema prisma/schema.prisma", { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" }); }, 90_000);
 afterAll(async () => { await prisma.$disconnect(); rmSync(dir, { recursive: true, force: true }); });
 
@@ -28,7 +32,7 @@ describe("Haus-Daten (gemeinsame Abfrage)", () => {
     }
     const h = await getHouseData();
     expect(h.hasData).toBe(false);
-    expect(h.date).toBeNull();
+    expect(h.date).toBe("2026-09-22"); // Betriebstag, auch ohne Tagesplan (Ansichten bleiben leer)
     const f5 = h.floors.find((f) => f.floor === 5)!;
     expect(f5.tiles).toHaveLength(10);
     expect(f5.tiles.every((t) => Number(t.number) >= 513)).toBe(true);
@@ -45,7 +49,7 @@ describe("Haus-Daten (gemeinsame Abfrage)", () => {
     expect(h).toMatchObject({ hasData: true, date: "2026-09-22" });
     const f1 = floorStats(h.floors.find((f) => f.floor === 1)!);
     expect(f1.total).toBe(12);
-    expect(f1.occupied).toBe(10); // 12 Zimmer, 2 davon Anreise (i=4,9) zählen nicht als belegt
+    expect(f1.occupied).toBe(9); // 12 Zimmer, 3 reine Abreisen (i=0,5,10) sind heute Nacht frei
     expect(h.floors.find((f) => f.floor === 1)!.tiles.find((t) => t.number === "104")).toMatchObject({ kind: "STAYOVER", vip: true });
     const turn = h.floors.flatMap((f) => f.tiles).find((t) => t.kind === "TURN")!;
     expect(turn.eta).toBe("14:00");

@@ -1,12 +1,17 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { api } from "@/components/api";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import { usePersistedSet } from "@/components/usePersistedSet";
+import LiveRoomModal from "./LiveRoomModal";
 import RoomRowView, { type ListRoom } from "./RoomRowView";
+import RowLegend from "./RowLegend";
+import { hhmm } from "@/lib/i18n/format";
 
 type Group = "PROGRESS" | "DONE" | "OPEN" | "DND" | "ARRIVAL";
 const GROUPS: Group[] = ["PROGRESS", "OPEN", "DND", "ARRIVAL", "DONE"];
@@ -30,7 +35,8 @@ const num = (n: number) => n.toString().replace(".", ",");
 export default function SupervisorList() {
   const { t } = useLocale();
   const [data, setData] = useState<Data | null>(null);
-  const [open, setOpen] = useState<Set<string>>(new Set());
+  const [open, toggle] = usePersistedSet("stayclean.supList.open");
+  const [roomRef, setRoomRef] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [flash, setFlash] = useState<Set<string>>(new Set());
@@ -41,7 +47,11 @@ export default function SupervisorList() {
   const soon = useCoalescedRefetch(load, 1500);
   useSocket({
     "room:update": () => soon(),
+    "work:pause": () => soon(),
     "assignments:applied": () => soon(),
+    "trace:update": () => soon(),
+    "note:new": () => soon(),
+    "note:update": () => soon(),
     "dayplan:updated": (p: { changedRooms?: string[] }) => {
       soon();
       if (p?.changedRooms?.length) { setFlash(new Set(p.changedRooms)); if (timer.current) clearTimeout(timer.current); timer.current = setTimeout(() => setFlash(new Set()), 3500); }
@@ -50,29 +60,16 @@ export default function SupervisorList() {
   useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
 
   if (!data) return null;
-  const toggle = (id: string) => setOpen((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
-  const move = async (room: SupRoom, toId: string, fromId: string | null) => {
-    setBusy(room.id); setError(null);
-    try {
-      if (fromId) await api(`/api/rooms/${room.id}/move`, { body: { toAttendantId: toId } });
-      else await api(`/api/rooms/${room.id}/assign`, { body: { attendantId: toId } });
-      await load();
-    } catch (e) { setError(e instanceof Error ? e.message : t("lists.supMoveFailed")); } finally { setBusy(null); }
-  };
-  const mover = (room: SupRoom, fromId: string | null) => (
-    <select value="" disabled={busy === room.id} aria-label={t("lists.supMove")} onChange={(e) => e.target.value && void move(room, e.target.value, fromId)}
-      className="mt-1.5 h-11 w-full rounded-lg border border-charcoal/20 bg-white px-2 text-sm outline-none focus:border-gold disabled:opacity-50">
-      <option value="">{busy === room.id ? t("lists.supMoving") : `→ ${t("lists.supMove")}`}</option>
-      {data.attendants.filter((a) => a.id !== fromId).map((a) => <option key={a.id} value={a.id}>{label(a)}</option>)}
-    </select>
+  const mover = (_room: SupRoom, _fromId: string | null) => (
+    <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
   );
   const roomItem = (room: SupRoom, fromId: string | null) => (
     <div key={room.id}>
-      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept /></ol>
+      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept precheck onOpen={(r) => setRoomRef(r.id)} /></ol>
       {mover(room, fromId)}
     </div>
   );
-  const stand = data.dataAsOf ? new Date(data.dataAsOf).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }) : null;
+  const stand = data.dataAsOf ? hhmm(data.dataAsOf) : null;
 
   return (
     <section aria-labelledby="sup-list-title" className="mb-6 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
@@ -81,6 +78,7 @@ export default function SupervisorList() {
         {!data.noFloors && <>{t("lists.supFloors", { list: data.floors.join(", ") })}</>}
         {stand && <> · {t("lists.stand", { time: stand })}</>} · {t("lists.live")}
       </p>
+      <div className="mt-3"><RowLegend /></div>
       {data.noFloors ? (
         <p className="mt-3 rounded-lg border border-gold-line/50 bg-parchment p-3 text-sm">{t("lists.supNoFloors")}</p>
       ) : (
@@ -91,7 +89,7 @@ export default function SupervisorList() {
             const pct = h.progress.total ? Math.round((h.progress.done / h.progress.total) * 100) : 0;
             return (
               <div key={h.id} className="rounded-xl border border-charcoal/10 bg-ivory">
-                <button type="button" aria-expanded={isOpen} onClick={() => toggle(h.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
+                <button type="button" aria-expanded={isOpen} onClick={() => toggle(h.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                   <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory">{h.dailyNumber ?? h.name.charAt(0)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{h.name}</span>
@@ -125,6 +123,7 @@ export default function SupervisorList() {
           )}
         </div>
       )}
+      {roomRef && <LiveRoomModal roomRef={roomRef} onClose={() => setRoomRef(null)} onChanged={() => { void load(); }} />}
     </section>
   );
 }

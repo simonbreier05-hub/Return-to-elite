@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import { IMPORT_TYPES, type ImportType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { listStateOf } from "@/lib/import/readiness";
 import DayPlanPanel from "./DayPlanPanel";
 import PurgeBanner from "@/components/PurgeBanner";
 import { buildPreview } from "@/lib/import/preview";
@@ -41,7 +42,7 @@ export default function ImportView() {
   const { t } = useLocale();
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const { items, day, setDay, status, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready } = useImportSession();
+  const { items, day, setDay, status, today, acceptStale, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready } = useImportSession();
   const anyApplied = items.some((x) => x.phase === "applied");
 
   const statusLabel = (it: Item) => {
@@ -138,14 +139,14 @@ export default function ImportView() {
 
                   {pv.sample.length > 0 && (
                     <div className="mt-2 overflow-x-auto">
-                      <table className="w-full text-left text-xs">
+                      <table className="w-full text-start text-xs">
                         <thead className="text-graphite/60">
-                          <tr>{previewColumns(it.type).map((c) => <th key={c.head} className="pr-3">{t(c.head)}</th>)}</tr>
+                          <tr>{previewColumns(it.type).map((c) => <th key={c.head} className="pe-3">{t(c.head)}</th>)}</tr>
                         </thead>
                         <tbody>
                           {pv.sample.map((r, i) => (
                             <tr key={i} className="border-t border-charcoal/5">
-                              {previewColumns(it.type).map((c) => <td key={c.head} className="py-1 pr-3">{String(r[c.key] ?? "")}</td>)}
+                              {previewColumns(it.type).map((c) => <td key={c.head} className="py-1 pe-3">{String(r[c.key] ?? "")}</td>)}
                             </tr>
                           ))}
                         </tbody>
@@ -204,6 +205,13 @@ export default function ImportView() {
             <li key={ty}>
               <span className="inline-block w-36 font-medium">{t(`importPage.type${ty}` as "importPage.typeFORECAST")}</span>
               {status?.[ty] ? t("importPage.asOf", { date: status[ty]!.businessDate, count: status[ty]!.rows }) : <span className="text-graphite/60">{t("importPage.notImported")}</span>}
+              {listStateOf(status?.[ty] ?? null, today) === "stale" && (
+                <>
+                  {" · "}<span className="font-medium text-status-out-of-order">{t("planungTool.stale", { date: status![ty]!.businessDate })}</span>
+                  <button type="button" onClick={() => void acceptStale(ty)} className="ms-2 h-11 rounded-xl border border-charcoal/15 bg-white px-3 text-xs hover:border-gold-line">{t("planungTool.useAnyway")}</button>
+                </>
+              )}
+              {listStateOf(status?.[ty] ?? null, today) === "accepted" && <span className="text-graphite/60"> · {t("planungTool.staleAccepted", { date: status![ty]!.businessDate })}</span>}
             </li>
           ))}
         </ul>

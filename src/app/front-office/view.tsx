@@ -1,6 +1,7 @@
 "use client";
 
 import CloseButton from "@/components/CloseButton";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { useEscapeKey } from "@/components/useEscapeKey";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
@@ -12,6 +13,7 @@ import { useRoomLookup } from "@/components/useRoomLookup";
 import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
 import { type RoomStatus } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Arrival {
@@ -71,7 +73,7 @@ export default function FrontOfficeView() {
       const res = await api<{ arrival: Arrival }>(`/api/arrivals/${id}`, { method: "PATCH", body });
       setArrivals((prev) => prev.map((a) => (a.id === res.arrival.id ? { ...a, ...res.arrival } : a)));
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     }
   };
 
@@ -93,6 +95,7 @@ export default function FrontOfficeView() {
 
   return (
     <div>
+      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="font-serif text-3xl">{t("frontOffice.arrivals")}</h2>
@@ -129,7 +132,7 @@ export default function FrontOfficeView() {
 
       <p className="mb-1 text-xs text-graphite/60 md:hidden" aria-hidden>↔ {t("frontOffice.swipeHint")}</p>
       <div className="overflow-x-auto rounded-2xl border border-charcoal/10 bg-white shadow-sm">
-        <table className="w-full min-w-[44rem] text-left text-sm">
+        <table className="w-full min-w-[44rem] text-start text-sm">
           <thead className="border-b border-charcoal/10 text-xs uppercase tracking-wider text-graphite/60">
             <tr>
               <th className="px-4 py-3">{t("frontOffice.guest")}</th>
@@ -149,7 +152,7 @@ export default function FrontOfficeView() {
                   <td className="px-4 py-3 font-medium">
                     {a.vip && <span className="text-gold">★ </span>}
                     {a.guestName}
-                    {a.status === "CHECKED_IN" && <span className="ml-2 text-xs text-status-inspected">{t("frontOffice.checkedIn")}</span>}
+                    {a.status === "CHECKED_IN" && <span className="ms-2 text-xs text-status-inspected">{t("frontOffice.checkedIn")}</span>}
                   </td>
                   <td className="px-4 py-3">
                     <button
@@ -272,7 +275,7 @@ function NewArrivalModal({ onClose, onDone }: { onClose: () => void; onDone: (ar
       });
       onDone(res.arrival);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }

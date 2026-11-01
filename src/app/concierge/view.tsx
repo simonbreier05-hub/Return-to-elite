@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import HubMoreMenu from "@/components/HubMoreMenu";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
@@ -8,6 +9,8 @@ import RoomDetailModal from "@/components/RoomDetailModal";
 import { useRoomLookup } from "@/components/useRoomLookup";
 import { NOTE_STATUS_STYLES } from "@/components/status";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
+import { hhmm } from "@/lib/i18n/format";
 
 interface Excursion {
   id: string;
@@ -64,7 +67,7 @@ export default function ConciergeView() {
       setRoomNumber(""); setGuestName(""); setStart(""); setEnd(""); setNote("");
       load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -81,6 +84,7 @@ export default function ConciergeView() {
 
   return (
     <div className="grid gap-4 lg:grid-cols-[24rem_1fr]">
+      <div className="flex flex-wrap gap-2 lg:col-span-2"><HubMoreMenu /></div>
       <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-sm">
         <h2 className="mb-1 font-serif text-2xl">{t("concierge.logExcursion")}</h2>
         <p className="mb-4 text-sm text-graphite/60">{t("concierge.outOfHouseHint")}</p>
@@ -140,9 +144,9 @@ export default function ConciergeView() {
                     )}
                   </button>
                   <span className="text-sm">
-                    {new Date(e.startsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })} –{" "}
-                    {new Date(e.endsAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-                    {active && <span className="ml-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">{t("concierge.guestOut")}</span>}
+                    {hhmm(e.startsAt)} –{" "}
+                    {hhmm(e.endsAt)}
+                    {active && <span className="ms-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">{t("concierge.guestOut")}</span>}
                   </span>
                 </div>
                 <p className="mt-1 text-sm text-graphite/70">

@@ -83,8 +83,8 @@
   --color-badge-2: #a9c3dc;
   --color-badge-3: #7da2c4;
 
-  --font-serif: var(--font-display), "Hoefler Text", Garamond, Georgia, serif;
-  --font-sans: var(--font-body), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-serif: var(--font-display), var(--font-deva), var(--font-arabic), "Hoefler Text", Garamond, Georgia, serif;
+  --font-sans: var(--font-body), var(--font-deva), var(--font-arabic), "Avenir Next", "Segoe UI", system-ui, -apple-system, sans-serif;
 
   --shadow-card: 0 1px 2px rgb(33 28 22 / 0.05), 0 8px 24px -12px rgb(33 28 22 / 0.14);
   --shadow-lift: 0 2px 4px rgb(33 28 22 / 0.06), 0 18px 40px -16px rgb(33 28 22 / 0.22);
@@ -171,8 +171,10 @@ body {
     transform: none;
   }
 }
+/* `backwards`, nicht `both`: nach dem Einblenden darf kein transform am Seitencontainer hängen bleiben —
+   sonst wird er zum Bezugsrahmen für jedes position:fixed-Kind (Fenster landen unter dem Bildschirm). */
 .animate-rise {
-  animation: rise var(--duration-base) var(--ease-house) both;
+  animation: rise var(--duration-base) var(--ease-house) backwards;
 }
 
 /* Staggered entrance for lists/grids of cards (room boards, queues). Apply
@@ -208,6 +210,14 @@ body {
 .animate-overlay {
   animation: overlayIn var(--duration-base) var(--ease-house) both;
 }
+/* Shared Modal (src/components/Modal.tsx): Höhe nach sichtbarem Bereich (dvh, vh als Rückfall für alte
+   Safari-Versionen), unten Platz für die iPhone-Home-Leiste (Safe Area, 0 ohne viewport-fit=cover). */
+.modal-sheet {
+  max-height: 92vh;
+  max-height: 92dvh;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
 .animate-sheet {
   animation: sheetIn var(--duration-base) var(--ease-house) both;
 }
@@ -351,4 +361,12 @@ body {
     animation: none !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/*
+ * Prompt K1: Schriften, deren Zeichen verbunden werden (Arabisch/Persisch/Urdu) oder Ligaturen bilden (Devanagari),
+ * vertragen keine Buchstaben-Sperrung (tracking-*). Die Sperrung der Design-Überschriften bleibt für lateinische Schrift.
+ */
+:where(:lang(fa), :lang(ar), :lang(ur), :lang(ps), :lang(hi), :lang(mr), :lang(ne), :lang(bn), :lang(pa), :lang(gu)) * {
+  letter-spacing: normal !important;
 }

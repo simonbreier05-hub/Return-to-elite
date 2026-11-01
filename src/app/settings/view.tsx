@@ -1,11 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ALL_LANGUAGE_CODES, autonym, languageNameIn } from "@/lib/i18n/languages";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import PurgePanel from "@/components/PurgePanel";
 import HousekeeperSettingsPanel from "@/components/HousekeeperSettingsPanel";
+import LearnedRulesPanel from "@/components/LearnedRulesPanel";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Thresholds {
@@ -17,6 +20,7 @@ interface Thresholds {
   roomsPerAttendantMax: number;
   attendantPoolMax: number;
   roomInventory: number;
+  chatRetentionDays: number;
 }
 
 type Weights = Record<string, number>;
@@ -25,6 +29,7 @@ interface SettingsResponse {
   settings: Thresholds;
   weights: Weights;
   weightDefaults: Weights;
+  hotelDefaultLanguage?: string;
 }
 
 /** Plain-language labels — nobody should have to read the source to tune this. */
@@ -63,13 +68,14 @@ const STAFFING_LABELS: Record<StaffingKey, { titleKey: TKey; hintKey: TKey; unit
 };
 
 export default function SettingsView() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [data, setData] = useState<SettingsResponse | null>(null);
   const [thresholds, setThresholds] = useState<Thresholds | null>(null);
   const [weights, setWeights] = useState<Weights>({});
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hotelLanguage, setHotelLanguage] = useState("de");
 
   useEffect(() => {
     api<SettingsResponse>("/api/settings")
@@ -77,8 +83,9 @@ export default function SettingsView() {
         setData(d);
         setThresholds(d.settings);
         setWeights(d.weights);
+        if (d.hotelDefaultLanguage) setHotelLanguage(d.hotelDefaultLanguage);
       })
-      .catch((e) => setError((e as Error).message));
+      .catch((e) => setError(errorText(e, t)));
   }, []);
 
   const save = async () => {
@@ -88,7 +95,7 @@ export default function SettingsView() {
     try {
       const res = await api<SettingsResponse>("/api/settings", {
         method: "PATCH",
-        body: { ...thresholds, weights },
+        body: { ...thresholds, weights, hotelDefaultLanguage: hotelLanguage },
       });
       setData(res);
       setThresholds(res.settings);
@@ -96,11 +103,16 @@ export default function SettingsView() {
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }
   };
+
+  const languageOptions = useMemo(
+    () => ALL_LANGUAGE_CODES.map((code) => ({ code, label: `${autonym(code)} (${languageNameIn(code, locale)})` })).filter((l) => !l.label.startsWith(`${l.code} (`)),
+    [locale],
+  );
 
   const resetWeights = () => data && setWeights({ ...data.weightDefaults });
   const changed = data ? Object.keys(weights).filter((k) => weights[k] !== data.weightDefaults[k]) : [];
@@ -172,8 +184,43 @@ export default function SettingsView() {
       </section>
 
       <HousekeeperSettingsPanel />
+      <LearnedRulesPanel />
 
       <PurgePanel />
+
+      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+        <h3 className="mb-1 font-serif text-2xl">{t("shared.hotelLanguageTitle")}</h3>
+        <p className="mb-4 text-sm text-graphite/60">{t("shared.hotelLanguageHint")}</p>
+        <select
+          aria-label={t("shared.hotelLanguageTitle")}
+          value={hotelLanguage}
+          onChange={(e) => setHotelLanguage(e.target.value)}
+          className="h-12 w-full max-w-sm rounded-lg border border-charcoal/20 bg-white px-3 text-base outline-none focus:border-gold"
+        >
+          {languageOptions.map((l) => (
+            <option key={l.code} value={l.code}>{l.label}</option>
+          ))}
+        </select>
+      </section>
+
+      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+        <h3 className="mb-1 font-serif text-2xl">{t("settings.chatTitle")}</h3>
+        <p className="mb-4 text-sm text-graphite/60">{t("settings.chatHint")}</p>
+        <label className="block max-w-sm rounded-xl border border-charcoal/15 bg-white p-4">
+          <div className="text-sm font-medium">{t("settings.chatRetentionDays")}</div>
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="number"
+              min={1}
+              max={365}
+              value={thresholds.chatRetentionDays}
+              onChange={(e) => setThresholds({ ...thresholds, chatRetentionDays: Math.min(365, Math.max(1, Number(e.target.value) || 1)) })}
+              className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
+            />
+            <span className="text-sm text-graphite/60">{t("settings.days")}</span>
+          </div>
+        </label>
+      </section>
 
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">

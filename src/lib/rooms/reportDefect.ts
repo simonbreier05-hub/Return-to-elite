@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import type { DefectCategory } from "@/lib/domain";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * Create a defect report: Defect + auto-routed WorkOrder (OPEN) + the
@@ -54,6 +55,7 @@ export async function reportDefect(input: {
       targetRole: "engineering",
       roomId: room.id,
       message: `New work order: room ${room.number} — ${category}: ${note.slice(0, 120)}`,
+      ...keyed("notify.newWorkOrder", { n: room.number, categoryKey: `defectCategory.${category}`, note: note.slice(0, 120) }),
       dedupeKey: `WORK_ORDER:${defect.id}`,
     },
   });

@@ -1,7 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import CloseButton from "./CloseButton";
+import ErrorBoundary from "./ErrorBoundary";
 import { useEscapeKey } from "./useEscapeKey";
 
 /**
@@ -14,6 +16,15 @@ import { useEscapeKey } from "./useEscapeKey";
  * Closing plays a fade+scale-out before the parent actually unmounts this
  * component — a plain conditional render has no way to animate its own
  * removal, so `close()` holds it on screen for one motion duration first.
+ *
+ * Always rendered through a portal into <body>: the hub pages sit inside an
+ * animated container (`.animate-rise`, a CSS transform). A `position: fixed`
+ * element inside a transformed ancestor is positioned against that ancestor,
+ * not the screen — on a long room list the sheet then lands far below the
+ * visible area and only the grey backdrop shows (Housekeeper DND/Mangel bug).
+ *
+ * `dirty`: the form already holds input — a tap on the backdrop then does not
+ * discard it (close button and Esc still work).
  */
 const CLOSE_MS = 220; // keep in sync with --duration-base in globals.css
 
@@ -22,13 +33,17 @@ export default function Modal({
   subtitle,
   onClose,
   children,
+  dirty = false,
 }: {
   title: string;
   subtitle?: string;
   onClose: () => void;
   children: React.ReactNode;
+  dirty?: boolean;
 }) {
   const [closing, setClosing] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   const close = () => {
     setClosing(true);
@@ -36,30 +51,38 @@ export default function Modal({
   };
   useEscapeKey(close, !closing);
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
       className={`fixed inset-0 z-50 flex items-end justify-center bg-charcoal/50 p-0 sm:items-center sm:p-4 ${
         closing ? "animate-overlay-out" : "animate-overlay"
       }`}
-      onClick={close}
+      onClick={() => {
+        if (!dirty) close();
+      }}
+      data-testid="modal-backdrop"
     >
       <div
-        className={`max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl bg-linen p-5 shadow-2xl sm:rounded-2xl ${
+        className={`modal-sheet w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-linen px-5 pt-0 shadow-2xl sm:rounded-2xl ${
           closing ? "animate-sheet-out" : "animate-sheet"
         }`}
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
+        aria-label={title}
       >
-        <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
+        {/* Kopf bleibt beim Scrollen stehen, damit „Schließen“ immer erreichbar ist. */}
+        <div className="sticky top-0 z-10 -mx-5 mb-4 flex items-start justify-between gap-3 bg-linen px-5 pt-5 pb-2">
+          <div className="min-w-0">
             <h3 className="font-serif text-2xl leading-tight text-navy">{title}</h3>
             {subtitle && <p className="mt-0.5 text-sm text-graphite">{subtitle}</p>}
           </div>
           <CloseButton onClick={close} />
         </div>
-        {children}
+        <ErrorBoundary>{children}</ErrorBoundary>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

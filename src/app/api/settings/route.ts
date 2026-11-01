@@ -3,9 +3,11 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
 import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
-import { AUTOPLAN_WEIGHT_PREFIX, getAutoplanWeights, getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
+import { AUTOPLAN_WEIGHT_PREFIX, getChatSettings, HOTEL_DEFAULT_LANGUAGE_KEY, getAutoplanWeights, getPlanningCreditSettings, getPriorityWeights, getRoomTypeCredits, getSettings, WEIGHT_PREFIX } from "@/lib/settings";
 import { PRIORITY_WEIGHTS } from "@/lib/priority/computePriority";
 import { audit } from "@/lib/audit";
+import { normalizeLanguage } from "@/lib/i18n/languages";
+import { getRoomTypeMap, getRoomTypeSeen, saveRoomTypeMap } from "@/lib/import/roomTypes";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -20,6 +22,9 @@ export async function GET() {
     planningCredits: await getPlanningCreditSettings(),
     autoplanWeights: await getAutoplanWeights(),
     autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
+    roomTypeMap: await getRoomTypeMap(),
+    roomTypeSeen: Object.fromEntries(Object.entries(await getRoomTypeSeen()).map(([c, n]) => [c, n.length])),
+    hotelDefaultLanguage: (await getChatSettings()).hotelDefaultLanguage,
   });
 }
 
@@ -38,6 +43,7 @@ const Body = z.object({
   autoplanMaxFloors: z.number().int().min(1).max(7).optional(),
   stayoverFactor: z.number().min(0.1).max(2).optional(),
   stayoverLaundryFactor: z.number().min(0.1).max(2).optional(),
+  linenCycleDays: z.number().int().min(1).max(30).optional(),
   autoplanManyTraces: z.number().int().min(1).max(20).optional(),
   azubiCreditsMin: z.number().min(0).max(40).optional(),
   azubiCreditsMax: z.number().min(0).max(40).optional(),
@@ -46,8 +52,36 @@ const Body = z.object({
   minutesPerCredit: z.number().min(5).max(120).optional(),
   earlyFinishMinutes: z.number().int().min(5).max(240).optional(),
   redistributionMaxMoves: z.number().int().min(1).max(20).optional(),
+  statusRewindMinutes: z.number().int().min(0).max(120).optional(),
+  chatRetentionDays: z.number().int().min(1).max(365).optional(),
+  /** Hotel-Standardsprache der Mitarbeiter-Oberfläche (Prompt K1), ISO-Basiscode. */
+  hotelDefaultLanguage: z.string().max(12).optional(),
+  roomsVz3Min: z.number().int().min(1).max(30).optional(),
+  roomsVz3Max: z.number().int().min(1).max(30).optional(),
+  roomsVz2Min: z.number().int().min(1).max(30).optional(),
+  roomsVz2Max: z.number().int().min(1).max(30).optional(),
+  roomsVz1Min: z.number().int().min(1).max(30).optional(),
+  roomsVz1Max: z.number().int().min(1).max(30).optional(),
+  roomsTz3Min: z.number().int().min(1).max(30).optional(),
+  roomsTz3Max: z.number().int().min(1).max(30).optional(),
+  roomsTz2Min: z.number().int().min(1).max(30).optional(),
+  roomsTz2Max: z.number().int().min(1).max(30).optional(),
+  roomsTz1Min: z.number().int().min(1).max(30).optional(),
+  roomsTz1Max: z.number().int().min(1).max(30).optional(),
+  floorSuggestWindow: z.number().int().min(1).max(30).optional(),
+  floorSuggestMinDays: z.number().int().min(1).max(30).optional(),
+  floorDemandingWarnShare: z.number().min(0).max(1).optional(),
+  learnWindow: z.number().int().min(1).max(30).optional(),
+  learnMinDays: z.number().int().min(1).max(30).optional(),
+  learnExpireDays: z.number().int().min(1).max(90).optional(),
+  learnStaffDropShare: z.number().min(0.05).max(1).optional(),
+  workdataMinSamples: z.number().int().min(1).max(50).optional(),
+  workdataRetentionDays: z.number().int().min(7).max(365).optional(),
+  shiftMinutes: z.number().int().min(60).max(720).optional(),
   /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
   autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
+  /** Opera-Zimmerart-Code → Zimmerart (Einstellungen). */
+  roomTypeMap: z.record(z.string(), z.string()).optional(),
   /** Priority weights, by their name in PRIORITY_WEIGHTS. Zero is allowed — it
    *  is how a house switches a signal off entirely. */
   weights: z.record(z.string(), z.number().min(0).max(1000)).optional(),
@@ -59,7 +93,7 @@ export async function PATCH(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid settings payload." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid settings payload.", code: "INVALID_INPUT" }, { status: 400 });
 
   const { roomsPerAttendantMin: minRooms, roomsPerAttendantMax: maxRooms } = parsed.data;
   if (minRooms !== undefined && maxRooms !== undefined && minRooms > maxRooms) {
@@ -80,7 +114,14 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  const { weights, autoplanWeights, ...thresholds } = parsed.data;
+  const { weights, autoplanWeights, roomTypeMap, hotelDefaultLanguage, ...thresholds } = parsed.data;
+  if (hotelDefaultLanguage !== undefined) {
+    const lang = normalizeLanguage(hotelDefaultLanguage);
+    if (!lang) return NextResponse.json({ error: "Unknown language.", code: "UNKNOWN_LANGUAGE" }, { status: 400 });
+    await prisma.setting.upsert({ where: { key: HOTEL_DEFAULT_LANGUAGE_KEY }, create: { key: HOTEL_DEFAULT_LANGUAGE_KEY, value: lang }, update: { value: lang } });
+  }
+  let roomTypesApplied: number | undefined;
+  if (roomTypeMap) roomTypesApplied = (await saveRoomTypeMap(roomTypeMap)).applied;
 
   for (const [key, value] of Object.entries(thresholds)) {
     if (value === undefined) continue;
@@ -121,5 +162,6 @@ export async function PATCH(req: NextRequest) {
     planningCredits: await getPlanningCreditSettings(),
     autoplanWeights: await getAutoplanWeights(),
     autoplanWeightDefaults: AUTOPLAN_WEIGHTS,
+    hotelDefaultLanguage: (await getChatSettings()).hotelDefaultLanguage,
   });
 }

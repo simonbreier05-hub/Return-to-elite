@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runGuestDataRetention } from "@/lib/guestDataRetention";
 import { requireRole } from "@/lib/rbac";
+import { purgeExpiredChat } from "@/lib/chat/retention";
 
 /**
  * POST /api/internal/guest-data-retention — executed roughly hourly by the
@@ -14,5 +15,7 @@ export async function POST(req: NextRequest) {
     if (!auth.ok) return auth.response;
   }
   const result = await runGuestDataRetention();
-  return NextResponse.json(result);
+  // Chat-Aufbewahrung im selben stündlichen Lauf (src/lib/chat/retention.ts).
+  const chat = await purgeExpiredChat();
+  return NextResponse.json({ ...result, ...chat });
 }

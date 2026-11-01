@@ -11,10 +11,10 @@ const mix = (): HouseFloor => ({
 });
 
 describe("Etagenbalken (Berechnung)", () => {
-  it("belegt = Abreise + Same-Day-Turn + Bleiber; Anreise-Zimmer zählen nicht als belegt", () => {
+  it("belegt = heute Nacht belegt: Bleiber + Turns + Anreisen; reine Abreise-Zimmer sind abends frei", () => {
     const s = floorStats(mix());
-    expect(s).toMatchObject({ total: 13, occupied: 10, departures: 5, turns: 2, stayovers: 5, arrivals: 4 });
-    expect(s.ratio).toBeCloseTo(10 / 13);
+    expect(s).toMatchObject({ total: 13, occupied: 9, departures: 5, turns: 2, stayovers: 5, arrivals: 4 });
+    expect(s.ratio).toBeCloseTo(9 / 13);
   });
   it("Text-Grundlage 'N von M belegt': Etage ohne Daten → Anteil 0", () => {
     expect(floorStats({ floor: 1, tiles: tiles(29) }).ratio).toBe(0);
@@ -29,7 +29,7 @@ describe("Etagenbalken (Berechnung)", () => {
   });
   it("Haus-Summen: belegt, Abreisen (inkl. Turns), Anreisen (inkl. Turns)", () => {
     const t = houseTotals([mix(), { floor: 3, tiles: [...tiles(4, "DEPARTURE", 300), ...tiles(1, "TURN", 310)] }]);
-    expect(t).toEqual({ occupied: 15, departures: 10, arrivals: 5, total: 18 });
+    expect(t).toEqual({ occupied: 10, departures: 10, arrivals: 5, total: 18 });
   });
   it("Etagen in Anzeigereihenfolge 5 → 1, fehlende werden leer ergänzt", () => {
     const o = orderedFloors([{ floor: 2, tiles: tiles(3) }]);
