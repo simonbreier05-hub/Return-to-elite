@@ -14,7 +14,7 @@
   - Gelernte Etagen erscheinen in Schritt 3 als Vorschlag mit dem Grund „gelernt: an N von M Planungstagen so geändert".
   - Zimmer-Muster wirken im Zuteilungsvorschlag als weiches Gewicht `learned` (10).
   - Harte Regeln gewinnen: Ein Muster, das ein anspruchsvolles Zimmer an Stufe 1 geben würde, wird nicht angewendet und nur als Hinweis gezeigt.
-- **Kontrolle:** Einstellungen › „Gelernte Regeln" mit Gesamtschalter, Ein/Aus je Muster und Löschen (`/api/learning`).
+- **Kontrolle:** Einstellungen › „Gelernte Regeln" mit Gesamtschalter, Ein/Aus je Muster und Löschen (`/api/learning`). Ändern und Löschen darf nur der Duty Manager (so entschieden 01.11.2026).
 - **Noch nicht erfasst:** Reihenfolge-Änderungen (Laufplan per Ziehen), die Begründung per Einzeltap (das Feld `reason` gibt es, die Oberfläche fehlt noch) und Muster der Art „Etage bekommt immer einen Housekeeper mehr".
 
 ## Schritt 6 – Arbeitsdaten
@@ -38,4 +38,5 @@
   - Die Team-Ansicht `/supervisor/workdata` ist nur für Supervisor und Duty Manager und zeigt immer nur eine Person (keine Bestenliste, kein Vergleich).
   - Housekeeper sehen nur ihre eigenen Werte („Meine Zeiten", `/api/workdata/me`).
   - Pro Person wird nichts gespeichert. Alles wird aus dem Statusprotokoll der letzten `workdataRetentionDays` (90) Tage berechnet.
+- **Entscheidung 01.11.2026:** Messdaten sind standardmäßig an — aktuell nur fiktive Arbeitskräfte, es geht ums Testen der Funktion.
 - **Offen (Rechtsfrage, kein Rechtsrat):** Mitbestimmung des Betriebsrats (§ 87 Abs. 1 Nr. 6 BetrVG: technische Einrichtungen zur Leistungs- und Verhaltenskontrolle) und Rechtsgrundlage der Zeitauswertung (§ 26 BDSG / Art. 6 DSGVO). Bitte vor dem echten Einsatz klären.

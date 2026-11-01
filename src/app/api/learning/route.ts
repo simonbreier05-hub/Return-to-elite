@@ -28,9 +28,9 @@ const Patch = z.union([
   z.object({ key: z.string().min(3).max(200), active: z.boolean() }).strict(),
 ]);
 
-/** PATCH /api/learning — Gesamtschalter oder einzelnes Muster ein/aus. */
+/** PATCH /api/learning — Gesamtschalter oder einzelnes Muster ein/aus. Ändern darf nur der Duty Manager. */
 export async function PATCH(req: NextRequest) {
-  const auth = await requireRole(["supervisor"]);
+  const auth = await requireRole(["duty_manager"]);
   if (!auth.ok) return auth.response;
   const parsed = Patch.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
@@ -41,7 +41,8 @@ export async function PATCH(req: NextRequest) {
 
 /** DELETE /api/learning?key= — Muster löschen (lernt danach nur aus neuen Beobachtungen). */
 export async function DELETE(req: NextRequest) {
-  const auth = await requireRole(["supervisor"]);
+  const auth = await requireRole(["duty_manager"]); // nur Duty Manager
+
   if (!auth.ok) return auth.response;
   const key = req.nextUrl.searchParams.get("key");
   if (!key) return NextResponse.json({ error: "Muster fehlt." }, { status: 400 });

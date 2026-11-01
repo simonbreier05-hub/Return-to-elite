@@ -52,3 +52,14 @@ describe("Schlüssel", () => {
     expect(keysOf(floorDev("2026-10-31", "p1", 3, "3,4")).map((k) => k.key)).toEqual(["FLOOR|p1|4"]);
   });
 });
+
+describe("Rechte", () => {
+  it("Gelernte Regeln ändern/löschen nur Duty Manager; ansehen auch Supervisor", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync("src/app/api/learning/route.ts", "utf8");
+    const fn = (name: string) => src.slice(src.indexOf(`export async function ${name}`), src.indexOf("}", src.indexOf(`export async function ${name}`) + 60) + 200);
+    expect(fn("PATCH")).toMatch(/requireRole\(\["duty_manager"\]\)/);
+    expect(fn("DELETE")).toMatch(/requireRole\(\["duty_manager"\]\)/);
+    expect(fn("GET")).toMatch(/requireRole\(\["supervisor"\]\)/);
+  });
+});
