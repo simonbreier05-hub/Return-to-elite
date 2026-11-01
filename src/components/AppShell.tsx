@@ -11,6 +11,7 @@ import { STATUS_LABELS } from "@/lib/domain";
 import NoteCountBadge from "./NoteCountBadge";
 import { RoomFlagIcons } from "./RoomFlags";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
+import { RoomLinkedText, RoomOpenerProvider } from "./RoomOpener";
 import ErrorBoundary from "./ErrorBoundary";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -164,6 +165,7 @@ export default function AppShell({
   const roleKey = `role.${role}` as TKey;
 
   return (
+    <RoomOpenerProvider>
     <div className="min-h-screen flex flex-col">
       {/* A slim navy edge — the house's own accent, kept to this one line —
           over a light, paper-toned bar carrying the real crest. Border
@@ -311,7 +313,7 @@ export default function AppShell({
                 <div className="text-xs uppercase tracking-wider text-graphite/70">
                   {n.type.replace(/_/g, " ")} · {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                 </div>
-                <div className="mt-1 text-sm">{n.message}</div>
+                <div className="mt-1 text-sm"><RoomLinkedText text={n.message} /></div>
               </div>
             ))}
           </div>
@@ -326,5 +328,6 @@ export default function AppShell({
         <ErrorBoundary>{children}</ErrorBoundary>
       </main>
     </div>
+    </RoomOpenerProvider>
   );
 }

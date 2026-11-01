@@ -34,6 +34,12 @@ export interface RoomRow {
   dnd: boolean;
   credits: number;
   traces: TraceView[];
+  /** H2: offene Mängel (Arbeitsauftrag nicht erledigt). */
+  openDefects: number;
+  /** H2: offener Gastwunsch (Reinigungswunsch/Kontakt), nur als Marker — kein Gast-Freitext. */
+  guestWish: boolean;
+  /** H2: offene Hinweise des Teams zum Zimmer (RoomNote OPEN, nicht vom Gast), z. B. aus der Planungsphase. */
+  hints: { id: string; body: string }[];
 }
 
 /** Welcher Aufenthalt zählt für die Anzeige: Anreise/Turn → der anreisende Gast, sonst der bleibende bzw. abreisende. */
@@ -63,6 +69,16 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   const traces = await prisma.trace.findMany({ where: { roomId: { in: ids }, date, ...(depts ? { dept: { in: depts } } : {}) }, orderBy: { createdAt: "asc" } });
   const traceBy = new Map<string, TraceView[]>();
   for (const t of traces) traceBy.set(t.roomId, [...(traceBy.get(t.roomId) ?? []), { id: t.id, code: t.code, text: t.text, dept: t.dept, status: t.status }]);
+  const [defects, wishes, notes] = await Promise.all([
+    prisma.defect.findMany({ where: { roomId: { in: ids }, OR: [{ workOrder: null }, { workOrder: { status: { not: "RESOLVED" } } }] }, select: { roomId: true } }),
+    prisma.guestRequest.findMany({ where: { roomId: { in: ids }, kind: { in: ["CLEAN_REQUEST", "CONTACT"] }, status: { in: ["RECEIVED", "IN_PROGRESS"] } }, select: { roomId: true } }),
+    prisma.roomNote.findMany({ where: { roomId: { in: ids }, status: "OPEN", author: { role: { not: "guest" } } }, orderBy: { createdAt: "asc" }, select: { id: true, roomId: true, body: true } }),
+  ]);
+  const defectCount = new Map<string, number>();
+  for (const d of defects) defectCount.set(d.roomId, (defectCount.get(d.roomId) ?? 0) + 1);
+  const wish = new Set(wishes.map((w) => w.roomId));
+  const hintsBy = new Map<string, { id: string; body: string }[]>();
+  for (const n of notes) hintsBy.set(n.roomId, [...(hintsBy.get(n.roomId) ?? []), { id: n.id, body: n.body }]);
   const dnd = new Set((await prisma.guestRequest.findMany({ where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true } })).map((g) => g.roomId));
 
   return rooms.map((r) => {
@@ -78,6 +94,9 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       dnd: dnd.has(r.id) || r.blockReason === "DND",
       credits: kind === "ARRIVAL" || !kind ? 0 : Math.round(((typeCredits[r.type as RoomType] ?? 1) * factor) * 100) / 100,
       traces: traceBy.get(r.id) ?? [],
+      openDefects: defectCount.get(r.id) ?? 0,
+      guestWish: wish.has(r.id),
+      hints: hintsBy.get(r.id) ?? [],
     };
   });
 }

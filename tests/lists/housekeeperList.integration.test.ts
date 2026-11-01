@@ -120,4 +120,21 @@ describe("Zimmermädchen-Liste", () => {
     const dm = JSON.stringify(await (await roomsGet(new NextRequest("http://x/api/rooms"))).json());
     expect(dm).toContain("Klaus Müller");
   });
+
+  it("H2: Hinweise des Teams, offene Mängel und Gastwunsch als Marker — Gast-Notizen sind keine Hinweise", async () => {
+    const room = await prisma.room.findUnique({ where: { number: "201" } });
+    const guestUser = await prisma.user.create({ data: { email: "guest-system@x.test", name: "Guest", passwordHash: "x", role: "guest" } });
+    await prisma.roomNote.create({ data: { roomId: room!.id, authorId: ids.sup, body: "Bitte extra Kissen" } });
+    await prisma.roomNote.create({ data: { roomId: room!.id, authorId: ids.sup, body: "erledigt", status: "DONE" } });
+    await prisma.roomNote.create({ data: { roomId: room!.id, authorId: guestUser.id, body: "Gast schreibt etwas" } });
+    await prisma.defect.create({ data: { roomId: room!.id, category: "PLUMBING", note: "Tropft", reportedById: ids.sup } });
+    await prisma.guestRequest.create({ data: { roomId: room!.id, kind: "CLEAN_REQUEST", status: "RECEIVED" } });
+    getSessionMock.mockReset(); getSessionMock.mockResolvedValue({ userId: ids.anna, name: "anna Test", role: "room_attendant" });
+    const body = await (await housekeeperGet()).json() as { rooms: { number: string; hints: { body: string }[]; openDefects: number; guestWish: boolean }[] };
+    const r201 = body.rooms.find((r) => r.number === "201")!;
+    expect(r201.hints.map((x) => x.body)).toEqual(["Bitte extra Kissen"]);
+    expect(r201.openDefects).toBe(1);
+    expect(r201.guestWish).toBe(true);
+    expect(JSON.stringify(body)).not.toContain("Gast schreibt");
+  });
 });

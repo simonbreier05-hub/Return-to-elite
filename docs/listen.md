@@ -22,3 +22,9 @@ Drei Listen aus derselben Quelle (`src/lib/lists/dayRows.ts`: `DayRoomPlan` + `S
 ## Tests
 
 `tests/lists/*` (Rollen, Namensanzeige, Etagen-Zugriff, Gruppen, Abhaken, Logbuch), `tests/dayplanMerge.integration.test.ts` (Hausmann-Liste nach Nachimport). Mobile-Screenshots (390 px, erfundene Daten) in `docs/design/listen/`.
+
+## H2 (01.11.2026): Kennzeichnung und Detailfenster
+
+- **Hauptlabel je Zeile** (Farbe + Icon + Text): Turn (Messing, höchste Dringlichkeit), Abreise, Bleiber, Anreise. **Zusatzmarker:** VIP, DND, Wäschewechsel fällig, Mangel offen, Gastwunsch, Hinweis.
+- **Reihenfolge** (nur Anzeige, die Route ändert sich nicht): „Turns & VIP zuerst" (Standard), „Route", „Nach Art" (gruppiert). Die Wahl gilt für die Sitzung. Die Legende ist einklappbar.
+- **Zimmernummer antippen** öffnet das gemeinsame Detailfenster (`RoomDetailModal`): Status, Zuteilung, Mängel, Gastwünsche, Notizen. Notizen, die der Supervisor schon in der Planung einträgt, erscheinen in der Liste des Housekeepers als „📝 Hinweis".

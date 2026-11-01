@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { RoomLink } from "@/components/RoomOpener";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
 import { StatusIcon, IconBan } from "@/components/icons";
@@ -144,7 +145,7 @@ export default function HousekeeperRoster({
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
                     {isDone && <span aria-hidden className="text-status-inspected">✓</span>}
-                    <span className="font-serif text-lg">{room.number}</span>
+                    <RoomLink number={room.number} className="font-serif text-lg font-normal" />
                     <span className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${style.chip}`}>
                       <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
                       {t(`status.${room.status}` as TKey)}

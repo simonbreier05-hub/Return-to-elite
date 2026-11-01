@@ -5,7 +5,11 @@ import { api } from "@/components/api";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useOpenRoom } from "@/components/RoomOpener";
+import { groupByLabel, sortRows, type SortMode } from "@/lib/lists/rowLabels";
+import type { TKey } from "@/lib/i18n/translations";
 import RoomRowView, { type ListRoom } from "./RoomRowView";
+import ListControls, { useSessionState } from "./ListControls";
 
 interface HkList {
   date: string | null;
@@ -22,6 +26,8 @@ export default function HousekeeperList() {
   const { t } = useLocale();
   const [list, setList] = useState<HkList | null>(null);
   const [flash, setFlash] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useSessionState<SortMode>("hkList.sort", "suggested");
+  const openRoom = useOpenRoom() ?? undefined;
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => { setList(await api<HkList>("/api/lists/housekeeper").catch(() => null)); }, []);
@@ -61,9 +67,19 @@ export default function HousekeeperList() {
       {list.rooms.length === 0 ? (
         <p className="mt-4 text-sm text-graphite/70">{t("lists.noList")}</p>
       ) : (
-        <ol className="mt-3 space-y-2">
-          {list.rooms.map((r) => <RoomRowView key={r.id} room={r} highlight={flash.has(r.number)} />)}
-        </ol>
+        <>
+          <ListControls mode={mode} onMode={setMode} />
+          {mode === "kind" ? groupByLabel(list.rooms).map((g) => (
+            <section key={g.label} className="mt-3">
+              <h4 className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-graphite/70">{t(`lists.group_${g.label}` as TKey)} ({g.rows.length})</h4>
+              <ol className="space-y-2">{g.rows.map((r) => <RoomRowView key={r.id} room={r} highlight={flash.has(r.number)} onOpen={openRoom} />)}</ol>
+            </section>
+          )) : (
+            <ol className="mt-3 space-y-2">
+              {sortRows(list.rooms, mode).map((r) => <RoomRowView key={r.id} room={r} highlight={flash.has(r.number)} onOpen={openRoom} />)}
+            </ol>
+          )}
+        </>
       )}
     </section>
   );

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { RoomLink } from "@/components/RoomOpener";
 import { api, ApiError } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -130,7 +131,7 @@ export default function GuestRequestsView({ currentUserId }: { currentUserId: st
                   </span>
                 </div>
                 <p className="text-sm">
-                  {t("supervisor.floorN", { floor: r.room.floor })} · Zimmer {r.room.number}
+                  {t("supervisor.floorN", { floor: r.room.floor })} · Zimmer <RoomLink number={r.room.number} className="!min-h-0 -my-3 px-1 py-3" />
                   {detailText(t, r) && ` — ${detailText(t, r)}`}
                 </p>
                 <p className="mt-1 text-xs text-graphite/60">

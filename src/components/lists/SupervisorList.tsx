@@ -6,6 +6,7 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import { useOpenRoom } from "@/components/RoomOpener";
 import RoomRowView, { type ListRoom } from "./RoomRowView";
 
 type Group = "PROGRESS" | "DONE" | "OPEN" | "DND" | "ARRIVAL";
@@ -29,6 +30,7 @@ const num = (n: number) => n.toString().replace(".", ",");
  */
 export default function SupervisorList() {
   const { t } = useLocale();
+  const openRoom = useOpenRoom() ?? undefined;
   const [data, setData] = useState<Data | null>(null);
   const [open, setOpen] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export default function SupervisorList() {
   );
   const roomItem = (room: SupRoom, fromId: string | null) => (
     <div key={room.id}>
-      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept /></ol>
+      <ol><RoomRowView room={{ ...room, changed: room.changed || flash.has(room.number) }} highlight={flash.has(room.number)} showDept onOpen={openRoom} /></ol>
       {mover(room, fromId)}
     </div>
   );
@@ -123,7 +125,7 @@ export default function SupervisorList() {
                 <span aria-hidden>🔍 </span>{t("lists.supControl")} ({data.control!.length})
               </h4>
               <p className="mb-2 text-xs text-graphite/70">{t("lists.supControlHint")}</p>
-              <ol className="space-y-2">{data.control!.map((r) => <RoomRowView key={r.id} room={r} showDept />)}</ol>
+              <ol className="space-y-2">{data.control!.map((r) => <RoomRowView key={r.id} room={r} showDept onOpen={openRoom} />)}</ol>
             </div>
           )}
           {data.unassigned.length > 0 && (

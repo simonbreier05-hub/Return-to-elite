@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { RoomLink } from "@/components/RoomOpener";
 import { api } from "@/components/api";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
@@ -73,7 +74,7 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
           {shown.map((i) => (
             <li key={i.id} data-status={i.status} className={`rounded-2xl border p-4 shadow-sm ${i.status === "DONE" ? "border-charcoal/10 bg-linen/70" : "border-charcoal/10 bg-white"}`}>
               <div className="flex items-baseline gap-2">
-                <span className="font-serif text-3xl leading-none">{i.roomNumber}</span>
+                <RoomLink number={i.roomNumber} className="font-serif text-3xl font-normal leading-none" />
                 <span className="text-xs text-graphite/60">{t("lists.floorN", { n: i.floor })}</span>
               </div>
               <p className={`mt-1.5 text-base ${i.status === "DONE" ? "text-graphite/60 line-through" : "font-medium"}`}>{i.text}</p>

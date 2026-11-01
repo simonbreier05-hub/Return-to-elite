@@ -8,6 +8,7 @@ import RedistributionCards from "@/components/RedistributionCards";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
+import { boardFloorSummary } from "@/lib/rooms/boardFloorSummary";
 import WindowPanel from "@/components/WindowPanel";
 import NoteThread, { type ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
@@ -213,6 +214,17 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     setGuestDndOnly(true);
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
+
+  // H2 Schritt 8: Etagen standardmäßig eingeklappt; offene Etagen merkt sich der Bildschirm für die Sitzung.
+  const [openFloors, setOpenFloors] = useState<Set<number>>(new Set());
+  useEffect(() => {
+    try { const raw = sessionStorage.getItem("liveBoard.openFloors"); if (raw) setOpenFloors(new Set(JSON.parse(raw) as number[])); } catch { /* ohne Speicher: alles zu */ }
+  }, []);
+  const saveOpenFloors = (next: Set<number>) => {
+    setOpenFloors(next);
+    try { sessionStorage.setItem("liveBoard.openFloors", JSON.stringify([...next])); } catch { /* egal */ }
+  };
+  const toggleFloor = (floor: number, open: boolean) => { const next = new Set(openFloors); if (open) next.add(floor); else next.delete(floor); saveOpenFloors(next); };
 
   const byFloor = useMemo(() => {
     const map = new Map<number, Room[]>();
@@ -605,17 +617,36 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             ))}
           </div>
 
-          {byFloor.map(([floor, floorRooms]) => (
+          <div className="mb-2 flex justify-end">
+            <button type="button" onClick={() => saveOpenFloors(openFloors.size >= byFloor.length ? new Set() : new Set(byFloor.map(([f]) => f)))}
+              className="min-h-11 rounded-xl border border-charcoal/15 bg-white px-4 text-sm hover:border-charcoal/30">
+              {openFloors.size >= byFloor.length ? t("supervisor.collapseAll") : t("supervisor.expandAll")}
+            </button>
+          </div>
+          {byFloor.map(([floor, floorRooms]) => {
+            const sum = boardFloorSummary(floorRooms);
+            return (
             <Collapsible
-              key={`${floor}-${filtersActive}`}
-              defaultOpen={filtersActive}
+              key={floor}
+              open={filtersActive || openFloors.has(floor)}
+              onToggle={(o) => toggleFloor(floor, o)}
               summary={
-                <h3 className="font-serif text-xl">
-                  {t("supervisor.floorN", { floor })}
-                  <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
-                    {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
-                  </span>
-                </h3>
+                <div className="min-w-0">
+                  <h3 className="font-serif text-xl">
+                    {t("supervisor.floorN", { floor })}
+                    <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
+                      {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
+                    </span>
+                    {(sum.dnd > 0 || sum.defects > 0) && (
+                      <span className="ml-2 text-sm text-status-out-of-order" title={t("supervisor.floorWarn", { dnd: sum.dnd, defects: sum.defects })}>
+                        <span aria-hidden>⚠</span><span className="sr-only">{t("supervisor.floorWarn", { dnd: sum.dnd, defects: sum.defects })}</span>
+                      </span>
+                    )}
+                  </h3>
+                  <p className="text-xs text-graphite/70">
+                    {t("supervisor.floorFacts", { rooms: sum.rooms, dep: sum.departures, stay: sum.stayovers, arr: sum.arrivals, done: sum.done, total: sum.total })}
+                  </p>
+                </div>
               }
             >
               <div className="grid grid-cols-[repeat(auto-fill,minmax(4.6rem,1fr))] gap-1.5">
@@ -660,7 +691,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 })}
               </div>
             </Collapsible>
-          ))}
+            );
+          })}
         </div>
 
         <div className="space-y-4">
