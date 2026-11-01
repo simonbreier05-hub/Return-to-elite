@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HubMoreMenu from "@/components/HubMoreMenu";
-import { createPortal } from "react-dom";
 import { ApiError, NetworkError, api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
@@ -484,8 +483,8 @@ export default function AttendantView() {
         )}
       </ErrorBoundary>
 
-      {/* Portal an body: die Seite liegt in einem animierten (transformierten) Container — ein fixed-Fenster darin landet sonst versetzt. */}
-      {detailRoom && createPortal(
+      {/* Modal rendert selbst per Portal in <body> (die Seite liegt in einem animierten Container) — gilt auch für Sperre/Mangel unten. */}
+      {detailRoom && (
         <ErrorBoundary>
           <RoomDetailModal
             room={detailRoom}
@@ -494,8 +493,7 @@ export default function AttendantView() {
             summary={<RoomDayInfo day={dayById.get(detailRoom.id) ? { ...asListRoom(detailRoom) } : null} traces={dayById.get(detailRoom.id)?.traces} />}
             task={{ type: "ROOM", id: detailRoom.id }}
           />
-        </ErrorBoundary>,
-        document.body,
+        </ErrorBoundary>
       )}
 
       {modal?.kind === "block" && (
@@ -595,7 +593,7 @@ function DefectModal({
   };
 
   return (
-    <Modal title={t("attendant.defectModalTitle", { number: room.number })} subtitle={t("attendant.defectModalSubtitle")} onClose={onClose}>
+    <Modal title={t("attendant.defectModalTitle", { number: room.number })} subtitle={t("attendant.defectModalSubtitle")} onClose={onClose} dirty={!!note.trim() || !!photo}>
       <label className="mb-1 block text-sm font-medium">{t("attendant.category")}</label>
       <div className="mb-3 grid grid-cols-2 gap-2">
         {DEFECT_CATEGORIES.map((c) => (

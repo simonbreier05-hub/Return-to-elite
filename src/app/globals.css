@@ -171,8 +171,10 @@ body {
     transform: none;
   }
 }
+/* `backwards`, nicht `both`: nach dem Einblenden darf kein transform am Seitencontainer hängen bleiben —
+   sonst wird er zum Bezugsrahmen für jedes position:fixed-Kind (Fenster landen unter dem Bildschirm). */
 .animate-rise {
-  animation: rise var(--duration-base) var(--ease-house) both;
+  animation: rise var(--duration-base) var(--ease-house) backwards;
 }
 
 /* Staggered entrance for lists/grids of cards (room boards, queues). Apply
@@ -208,6 +210,14 @@ body {
 .animate-overlay {
   animation: overlayIn var(--duration-base) var(--ease-house) both;
 }
+/* Shared Modal (src/components/Modal.tsx): Höhe nach sichtbarem Bereich (dvh, vh als Rückfall für alte
+   Safari-Versionen), unten Platz für die iPhone-Home-Leiste (Safe Area, 0 ohne viewport-fit=cover). */
+.modal-sheet {
+  max-height: 92vh;
+  max-height: 92dvh;
+  padding-bottom: calc(1.25rem + env(safe-area-inset-bottom, 0px));
+}
+
 .animate-sheet {
   animation: sheetIn var(--duration-base) var(--ease-house) both;
 }
