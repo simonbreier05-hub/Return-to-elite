@@ -41,18 +41,18 @@ export function canWorkOn(v: Viewer, t: WorkTarget): boolean {
   }
 }
 
-export type PauseCheck = { ok: true } | { ok: false; status: 403 | 409; error: string };
+export type PauseCheck = { ok: true } | { ok: false; status: 403 | 409; error: string; code?: string };
 
 /**
  * Pausieren: nur nicht erledigte Arbeit, Zimmer nur wenn begonnen, und nicht doppelt.
  * Fortsetzen: jederzeit, solange eine aktive Pause besteht.
  */
 export function checkPause(v: Viewer, t: WorkTarget, action: "pause" | "resume", active: boolean): PauseCheck {
-  if (!canWorkOn(v, t)) return { ok: false, status: 403, error: "Keine Berechtigung für diese Aufgabe." };
-  if (action === "resume") return active ? { ok: true } : { ok: false, status: 409, error: "Die Aufgabe ist nicht pausiert." };
-  if (active) return { ok: false, status: 409, error: "Die Aufgabe ist schon pausiert." };
-  if (t.done) return { ok: false, status: 409, error: "Erledigte Aufgaben können nicht pausiert werden." };
-  if (t.type === "ROOM" && !t.started) return { ok: false, status: 409, error: "Nur ein begonnenes Zimmer kann pausiert werden." };
+  if (!canWorkOn(v, t)) return { ok: false, status: 403, error: "Keine Berechtigung für diese Aufgabe.", code: "NO_PERMISSION" };
+  if (action === "resume") return active ? { ok: true } : { ok: false, status: 409, error: "Die Aufgabe ist nicht pausiert.", code: "NOT_PAUSED" };
+  if (active) return { ok: false, status: 409, error: "Die Aufgabe ist schon pausiert.", code: "ALREADY_PAUSED" };
+  if (t.done) return { ok: false, status: 409, error: "Erledigte Aufgaben können nicht pausiert werden.", code: "PAUSE_DONE_TASK" };
+  if (t.type === "ROOM" && !t.started) return { ok: false, status: 409, error: "Nur ein begonnenes Zimmer kann pausiert werden.", code: "PAUSE_ONLY_STARTED" };
   return { ok: true };
 }
 

@@ -4,11 +4,13 @@ import { useState } from "react";
 import { api } from "@/components/api";
 import { PAUSE_REASONS, type PauseReason, type PauseTarget } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
+import { hhmm } from "@/lib/i18n/format";
 
 export interface PauseInfo { reason: string | null; since: string; byName: string | null; byRole?: string | null }
 
-const time = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+const time = (iso: string) => hhmm(iso);
 const reasonKey = (r: string) => `work.reason${r}` as TKey;
 
 /** Kleines Kennzeichen „⏸ Pausiert · Grund“ für Listen (Zimmerzeilen, Hausmann-Liste, Arbeitsaufträge). */
@@ -53,7 +55,7 @@ export default function PauseControl({ targetType, targetId, pause, canPause, on
       setAsking(false);
       onChanged?.(res.paused ? res.pause : null);
     } catch (e) {
-      setError(e instanceof Error && e.message ? e.message : t("work.failed"));
+      setError(errorText(e, t, "work.failed"));
     } finally {
       setBusy(false);
     }

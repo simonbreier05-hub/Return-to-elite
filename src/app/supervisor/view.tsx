@@ -31,8 +31,10 @@ import {
   type RoomStatus,
 } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import type { Locale, TKey } from "@/lib/i18n/translations";
+import { errorText } from "@/lib/i18n/errorText";
+import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { hhmm, dateTime } from "@/lib/i18n/format";
 
 interface Note {
   id: string;
@@ -236,7 +238,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       // Apply immediately; the socket echo will simply re-apply the same values.
       setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
     } catch (e) {
-      setError(`${room.number}: ${(e as Error).message}`);
+      setError(`${room.number}: ${errorText(e, t)}`);
     } finally {
       setBusyRoomId(null);
     }
@@ -282,7 +284,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       );
       load();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBulkBusy(false);
     }
@@ -446,7 +448,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 guestDndOnly ? "border-status-out-of-order bg-status-out-of-order/10 text-status-out-of-order" : "border-charcoal/15 bg-white"
               }`}
             >
-              🔕 Gast-DND
+              {t("shared.guestDnd")}
             </button>
             {filtersActive && (
               <>
@@ -484,7 +486,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               summary={
                 <h3 className="font-serif text-xl">
                   {t("supervisor.floorN", { floor })}
-                  <span className="ml-2 text-xs uppercase tracking-wider text-graphite/50">
+                  <span className="ms-2 text-xs uppercase tracking-wider text-graphite/50">
                     {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
                   </span>
                 </h3>
@@ -509,23 +511,23 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                           ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey)
                           : room.section}
                       </span>
-                      {room.arrivals.some((a) => a.vip) && <span className="absolute left-1 top-0.5 text-[10px]">★</span>}
+                      {room.arrivals.some((a) => a.vip) && <span className="absolute start-1 top-0.5 text-[10px]">★</span>}
                       {attHere && (
-                        <span className="absolute right-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
+                        <span className="absolute end-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
                           👤
                         </span>
                       )}
                       <RoomFlagIcons
                         occupancy={room.occupancy}
                         isCheckoutToday={room.isCheckoutToday}
-                        className="absolute -bottom-1 -left-1"
+                        className="absolute -bottom-1 -start-1"
                         badgeClassName="h-4 w-4"
                         iconClassName="h-2.5 w-2.5"
                       />
                       <NoteCountBadge
                         openCount={room.openNotesCount}
                         totalCount={room.notes.length}
-                        className="absolute -bottom-1 -right-1"
+                        className="absolute -bottom-1 -end-1"
                       />
                     </button>
                   );
@@ -565,7 +567,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                         {room.arrivals[0].vip && "★ VIP · "}
                         {room.arrivals[0].guestName}
                         {room.arrivals[0].eta &&
-                          ` · ETA ${new Date(room.arrivals[0].eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                          ` · ETA ${hhmm(room.arrivals[0].eta)}`}
                       </p>
                     )}
                     <div className="mt-2 grid grid-cols-2 gap-2">
@@ -660,10 +662,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 }
 
 /** Rework reasons a supervisor reaches for most often — one tap instead of typing. */
-const REWORK_PRESETS: Record<Locale, string[]> = {
-  en: ["Bathroom not spotless", "Minibar not restocked", "Linen / turndown", "Dust on surfaces", "Amenities missing", "Room needs airing"],
-  de: ["Bad nicht makellos", "Minibar nicht aufgefüllt", "Wäsche / Turndown", "Staub auf Flächen", "Amenities fehlen", "Zimmer muss gelüftet werden"],
-};
+const REWORK_PRESETS: TKey[] = ["shared.reworkPreset1", "shared.reworkPreset2", "shared.reworkPreset3", "shared.reworkPreset4", "shared.reworkPreset5", "shared.reworkPreset6"];
 
 function ReworkModal({
   room,
@@ -674,7 +673,7 @@ function ReworkModal({
   onClose: () => void;
   onSubmit: (note: string) => void;
 }) {
-  const { t, locale } = useLocale();
+  const { t } = useLocale();
   const [note, setNote] = useState("");
   const add = (preset: string) => setNote((n) => (n ? `${n}, ${preset.toLowerCase()}` : preset));
 
@@ -685,7 +684,7 @@ function ReworkModal({
       onClose={onClose}
     >
       <div className="mb-3 flex flex-wrap gap-2">
-        {REWORK_PRESETS[locale].map((p) => (
+        {REWORK_PRESETS.map((k) => t(k)).map((p) => (
           <button
             key={p}
             onClick={() => add(p)}
@@ -755,7 +754,7 @@ function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void
         className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 text-base outline-none focus:border-gold"
       />
       <p className="mb-4 rounded-lg bg-ivory p-3 text-sm text-graphite/70">
-        {t("supervisor.backInInventory")} <strong>{until.toLocaleString()}</strong>
+        {t("supervisor.backInInventory")} <strong>{dateTime(until)}</strong>
       </p>
       <div className="grid grid-cols-2 gap-2">
         <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
@@ -821,7 +820,7 @@ function RoomDrawer({
           {room.blockReason && ` · ${t(`blockReason.${room.blockReason as BlockReason}` as TKey)}`}
         </span>
         {room.oooUntil && (
-          <p className="mt-1 text-xs text-graphite/60">{t("supervisor.oooUntil", { date: new Date(room.oooUntil).toLocaleString() })}</p>
+          <p className="mt-1 text-xs text-graphite/60">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}</p>
         )}
         {room.reworkNote && room.status === "PICKUP" && (
           <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">
@@ -908,7 +907,7 @@ function RoomDrawer({
             {room.arrivals.map((a, i) => (
               <p key={i} className="text-sm">
                 {a.vip && "★ "}{a.guestName}
-                {a.eta && ` · ETA ${new Date(a.eta).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+                {a.eta && ` · ETA ${hhmm(a.eta)}`}
                 {a.neededNow && ` ${t("supervisor.neededNowFlag")}`}
               </p>
             ))}
@@ -921,7 +920,7 @@ function RoomDrawer({
             {room.defects.map((d) => (
               <p key={d.id} className="text-sm">
                 🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
-                {d.workOrder && <span className="ml-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
+                {d.workOrder && <span className="ms-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
               </p>
             ))}
           </div>

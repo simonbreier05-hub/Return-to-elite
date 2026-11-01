@@ -64,11 +64,11 @@ export async function activePauses(type: PauseTarget, ids: string[]): Promise<Ma
   return out;
 }
 
-export type PauseResult = { ok: true; paused: boolean; pause: PauseView | null } | { ok: false; status: number; error: string };
+export type PauseResult = { ok: true; paused: boolean; pause: PauseView | null } | { ok: false; status: number; error: string; code?: string };
 
 export async function setPause(session: Session, type: PauseTarget, id: string, action: "pause" | "resume", reason?: PauseReason | null): Promise<PauseResult> {
   const target = await loadWorkTarget(type, id);
-  if (!target) return { ok: false, status: 404, error: "Aufgabe nicht gefunden." };
+  if (!target) return { ok: false, status: 404, error: "Aufgabe nicht gefunden.", code: "TASK_NOT_FOUND" };
   const active = await prisma.workPause.findFirst({ where: { targetType: type, targetId: id, resumedAt: null } });
   const check = checkPause(await viewerFor(session), target, action, !!active);
   if (!check.ok) return check;

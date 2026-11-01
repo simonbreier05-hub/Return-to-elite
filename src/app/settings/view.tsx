@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ALL_LANGUAGE_CODES, autonym, languageNameIn } from "@/lib/i18n/languages";
 import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import PurgePanel from "@/components/PurgePanel";
 import HousekeeperSettingsPanel from "@/components/HousekeeperSettingsPanel";
 import type { TKey } from "@/lib/i18n/translations";
@@ -26,6 +28,7 @@ interface SettingsResponse {
   settings: Thresholds;
   weights: Weights;
   weightDefaults: Weights;
+  hotelDefaultLanguage?: string;
 }
 
 /** Plain-language labels — nobody should have to read the source to tune this. */
@@ -64,13 +67,14 @@ const STAFFING_LABELS: Record<StaffingKey, { titleKey: TKey; hintKey: TKey; unit
 };
 
 export default function SettingsView() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [data, setData] = useState<SettingsResponse | null>(null);
   const [thresholds, setThresholds] = useState<Thresholds | null>(null);
   const [weights, setWeights] = useState<Weights>({});
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [hotelLanguage, setHotelLanguage] = useState("de");
 
   useEffect(() => {
     api<SettingsResponse>("/api/settings")
@@ -78,8 +82,9 @@ export default function SettingsView() {
         setData(d);
         setThresholds(d.settings);
         setWeights(d.weights);
+        if (d.hotelDefaultLanguage) setHotelLanguage(d.hotelDefaultLanguage);
       })
-      .catch((e) => setError((e as Error).message));
+      .catch((e) => setError(errorText(e, t)));
   }, []);
 
   const save = async () => {
@@ -89,7 +94,7 @@ export default function SettingsView() {
     try {
       const res = await api<SettingsResponse>("/api/settings", {
         method: "PATCH",
-        body: { ...thresholds, weights },
+        body: { ...thresholds, weights, hotelDefaultLanguage: hotelLanguage },
       });
       setData(res);
       setThresholds(res.settings);
@@ -97,11 +102,16 @@ export default function SettingsView() {
       setSaved(true);
       setTimeout(() => setSaved(false), 4000);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }
   };
+
+  const languageOptions = useMemo(
+    () => ALL_LANGUAGE_CODES.map((code) => ({ code, label: `${autonym(code)} (${languageNameIn(code, locale)})` })).filter((l) => !l.label.startsWith(`${l.code} (`)),
+    [locale],
+  );
 
   const resetWeights = () => data && setWeights({ ...data.weightDefaults });
   const changed = data ? Object.keys(weights).filter((k) => weights[k] !== data.weightDefaults[k]) : [];
@@ -175,6 +185,21 @@ export default function SettingsView() {
       <HousekeeperSettingsPanel />
 
       <PurgePanel />
+
+      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
+        <h3 className="mb-1 font-serif text-2xl">{t("shared.hotelLanguageTitle")}</h3>
+        <p className="mb-4 text-sm text-graphite/60">{t("shared.hotelLanguageHint")}</p>
+        <select
+          aria-label={t("shared.hotelLanguageTitle")}
+          value={hotelLanguage}
+          onChange={(e) => setHotelLanguage(e.target.value)}
+          className="h-12 w-full max-w-sm rounded-lg border border-charcoal/20 bg-white px-3 text-base outline-none focus:border-gold"
+        >
+          {languageOptions.map((l) => (
+            <option key={l.code} value={l.code}>{l.label}</option>
+          ))}
+        </select>
+      </section>
 
       <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
         <h3 className="mb-1 font-serif text-2xl">{t("settings.chatTitle")}</h3>

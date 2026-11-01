@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid payload.", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Invalid payload.", code: "INVALID_INPUT", details: parsed.error.flatten() }, { status: 400 });
   }
   const { roomIds, ...input } = parsed.data;
 

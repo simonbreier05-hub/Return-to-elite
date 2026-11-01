@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Cormorant_Garamond, Inter } from "next/font/google";
+import { Cormorant_Garamond, Inter, Noto_Sans_Devanagari, Vazirmatn } from "next/font/google";
 import Script from "next/script";
 import Providers from "@/components/Providers";
 import "./globals.css";
@@ -9,17 +9,38 @@ import "./globals.css";
  * browser at runtime, which also keeps the app usable on a hotel's locked-down
  * staff wifi.
  */
+/*
+ * Zeichensätze (Prompt K1): Design-Schriften mit allen Zeichensätzen, die sie haben (Vietnamesisch = latin-ext +
+ * vietnamese, dazu Kyrillisch/Griechisch für maschinell übersetzte Sprachen). Für Schriften, die sie nicht abdecken,
+ * springen Noto Sans Devanagari (Hindi) und Vazirmatn (Persisch/Arabisch) ein — ohne Preload; der Browser lädt sie
+ * per unicode-range nur, wenn solche Zeichen wirklich vorkommen. Alles andere (Thai, CJK …) kommt aus den Systemschriften.
+ */
 const serif = Cormorant_Garamond({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "vietnamese", "cyrillic", "cyrillic-ext"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-display",
   display: "swap",
 });
 
 const sans = Inter({
-  subsets: ["latin"],
+  subsets: ["latin", "latin-ext", "vietnamese", "cyrillic", "cyrillic-ext", "greek", "greek-ext"],
   variable: "--font-body",
   display: "swap",
+});
+
+const devanagari = Noto_Sans_Devanagari({
+  subsets: ["devanagari"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-deva",
+  display: "swap",
+  preload: false,
+});
+
+const arabic = Vazirmatn({
+  subsets: ["arabic"],
+  variable: "--font-arabic",
+  display: "swap",
+  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -45,7 +66,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${serif.variable} ${sans.variable}`}>
+    <html lang="de" dir="ltr" className={`${serif.variable} ${sans.variable} ${devanagari.variable} ${arabic.variable}`}>
       <body className="min-h-screen bg-ivory text-charcoal antialiased">
         <Providers>{children}</Providers>
         {/* Registers the static-asset service worker (public/sw.js) after

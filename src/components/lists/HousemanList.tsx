@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import PauseControl, { type PauseInfo } from "@/components/PauseControl";
 import TaskMessageModal from "@/components/TaskMessageModal";
+import { hhmm } from "@/lib/i18n/format";
 
 interface Item {
   id: string; roomId?: string; roomNumber: string; floor: number; text: string; times: string[]; status: "OPEN" | "DONE";
@@ -52,7 +53,7 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
       soon();
     } catch { setError(t("lists.hmFailed")); } finally { setBusy(null); }
   };
-  const time = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+  const time = (iso: string) => hhmm(iso);
 
   return (
     <section aria-labelledby="hm-list-title" className="mb-6">

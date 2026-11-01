@@ -44,11 +44,11 @@ export async function POST(req: NextRequest) {
 
   const parsed = CreateSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid excursion payload.", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Invalid excursion payload.", code: "INVALID_INPUT", details: parsed.error.flatten() }, { status: 400 });
   }
 
   const room = await prisma.room.findUnique({ where: { number: parsed.data.roomNumber } });
-  if (!room) return NextResponse.json({ error: `Room ${parsed.data.roomNumber} not found.` }, { status: 404 });
+  if (!room) return NextResponse.json({ error: `Room ${parsed.data.roomNumber} not found.`, code: "ROOM_NOT_FOUND" }, { status: 404 });
 
   const excursion = await prisma.excursion.create({
     data: {

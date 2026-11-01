@@ -23,14 +23,14 @@ export async function POST(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "roomIds und attendantId (oder null) erforderlich." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "roomIds und attendantId (oder null) erforderlich.", code: "INVALID_INPUT" }, { status: 400 });
   const { roomIds, attendantId, confirmStarted } = parsed.data;
   if (attendantId) {
     const a = await prisma.user.findUnique({ where: { id: attendantId } });
-    if (!a || a.role !== "room_attendant") return NextResponse.json({ error: "attendantId muss ein Zimmermädchen sein." }, { status: 400 });
+    if (!a || a.role !== "room_attendant") return NextResponse.json({ error: "attendantId muss ein Zimmermädchen sein.", code: "INVALID_ASSIGNEE" }, { status: 400 });
   }
   const before = await prisma.room.findMany({ where: { id: { in: roomIds } }, select: { id: true, number: true, floor: true, status: true, assignedToId: true } });
-  if (before.length !== new Set(roomIds).size) return NextResponse.json({ error: "Unbekanntes Zimmer in der Auswahl." }, { status: 400 });
+  if (before.length !== new Set(roomIds).size) return NextResponse.json({ error: "Unbekanntes Zimmer in der Auswahl.", code: "ROOM_NOT_FOUND" }, { status: 400 });
   const changing = before.filter((r) => r.assignedToId !== attendantId);
   const started = changing.filter((r) => isStartedStatus(r.status) && r.assignedToId);
   if (started.length && !confirmStarted) {

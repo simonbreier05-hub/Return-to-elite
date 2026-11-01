@@ -22,6 +22,6 @@ export async function DELETE(req: NextRequest, ctx: { params: Promise<{ type: st
   } catch (e) {
     if (e instanceof ListNotFoundError) return NextResponse.json({ error: e.message }, { status: 404 });
     if (e instanceof PlanConfirmedError) return NextResponse.json({ error: e.message, planConfirmed: true }, { status: 409 });
-    return NextResponse.json({ error: "Liste konnte nicht gelöscht werden. Bitte erneut versuchen." }, { status: 500 });
+    return NextResponse.json({ error: "Liste konnte nicht gelöscht werden. Bitte erneut versuchen.", code: "TRY_AGAIN" }, { status: 500 });
   }
 }

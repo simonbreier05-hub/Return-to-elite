@@ -17,12 +17,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const { id } = await params;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "attendantId required (or null)." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "attendantId required (or null).", code: "INVALID_INPUT" }, { status: 400 });
 
   if (parsed.data.attendantId) {
     const attendant = await prisma.user.findUnique({ where: { id: parsed.data.attendantId } });
     if (!attendant || attendant.role !== "room_attendant") {
-      return NextResponse.json({ error: "attendantId must reference a room attendant." }, { status: 400 });
+      return NextResponse.json({ error: "attendantId must reference a room attendant.", code: "INVALID_ASSIGNEE" }, { status: 400 });
     }
   }
 

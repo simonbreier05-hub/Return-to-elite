@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { createPortal } from "react-dom";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
@@ -20,14 +21,16 @@ export default function ImageLightbox({ src, alt, className = "" }: { src: strin
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src={src} alt={alt} className={className} />
       </button>
-      {open && (
+      {/* Portal: liegt sonst im transformierten Seiten-/Fenstercontainer und wäre falsch verankert. */}
+      {open && createPortal(
         <div role="dialog" aria-modal="true" aria-label={alt} className="fixed inset-0 z-[60] flex flex-col bg-black/80 print:hidden" onClick={() => setOpen(false)}>
           <div className="flex justify-end p-3"><CloseButton onClick={() => setOpen(false)} /></div>
           <div className="flex min-h-0 flex-1 items-center justify-center p-3 pt-0">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={src} alt={alt} className="max-h-full max-w-full rounded-lg bg-white object-contain" onClick={(e) => e.stopPropagation()} />
           </div>
-        </div>
+        </div>,
+        document.body,
       )}
     </>
   );

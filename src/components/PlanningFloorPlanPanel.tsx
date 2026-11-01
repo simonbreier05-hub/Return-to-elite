@@ -14,6 +14,7 @@ import { roomDayCategory, type RoomDayCategory } from "@/lib/rooms/roomDayCatego
 import { computeRoomCredit } from "@/lib/rooms/roomCredit";
 import type { RoomType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 
 interface OnShiftAttendant {
@@ -121,7 +122,7 @@ export default function PlanningFloorPlanPanel({
   const loadLive = () => {
     Promise.all([api<{ rooms: LiveRoom[] }>("/api/rooms?allFloors=1"), api<{ rows: DayNumberRow[] }>("/api/day-numbers")])
       .then(([d, n]) => { setLiveRooms(d.rooms); setDayRows(n.rows); })
-      .catch((e) => setNotice(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setNotice(errorText(e, t)));
   };
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export default function PlanningFloorPlanPanel({
         setDayRows(numbersData.rows);
         if (settingsData.settings?.roomInventory) setInventory(settingsData.settings.roomInventory);
       })
-      .catch((e) => setError(e instanceof Error ? e.message : String(e)));
+      .catch((e) => setError(errorText(e, t)));
   }, []);
 
   // Neue Daten vom Server (z. B. nach einer Zuteilung): im Hintergrund nachladen, nichts neu aufbauen
@@ -550,7 +551,7 @@ export default function PlanningFloorPlanPanel({
       )}
 
       {mode === "housekeeper-first" && activeAttendant && (
-        <div className="fixed bottom-3 left-3 right-3 z-40 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur sm:left-auto sm:right-4 sm:w-80">
+        <div className="fixed bottom-3 start-3 end-3 z-40 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur sm:start-auto sm:end-4 sm:w-80">
           <div className="flex items-center justify-between gap-2">
             <h4 className="font-serif text-xl">{t("planning.floorPlanActivePanelTitle", { name: activeAttendant.name })}</h4>
             <button
@@ -600,7 +601,7 @@ export default function PlanningFloorPlanPanel({
                     setPickingRoom(null);
                   }}
                   title={over ? t("planning.floorPlanCreditsOverTarget", { target: targetCredits }) : undefined}
-                  className="flex h-14 items-center justify-between rounded-xl border border-charcoal/15 px-4 text-left hover:border-gold-line"
+                  className="flex h-14 items-center justify-between rounded-xl border border-charcoal/15 px-4 text-start hover:border-gold-line"
                 >
                   <span className="font-medium">{a.name}</span>
                   <span className={`text-sm ${over ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>

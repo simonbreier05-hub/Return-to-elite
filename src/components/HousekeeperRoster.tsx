@@ -83,7 +83,7 @@ export default function HousekeeperRoster({
             <button
               key={a.id}
               onClick={() => setOpenId(a.id)}
-              className="flex items-center gap-2 rounded-xl border border-charcoal/15 bg-ivory px-3 py-2 text-left text-sm hover:border-gold-line active:scale-[0.98]"
+              className="flex items-center gap-2 rounded-xl border border-charcoal/15 bg-ivory px-3 py-2 text-start text-sm hover:border-gold-line active:scale-[0.98]"
             >
               <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-[0.68rem] font-semibold text-ivory">
                 {a.dailyNumber ?? i + 1}

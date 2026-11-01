@@ -4,6 +4,7 @@ import { berlinDate } from "@/lib/dayplan/time";
 import { parseAssignedFloors } from "@/lib/floors";
 import { canSeeMessages, messageRecipients, messagesOutOfScope, type RoomInvolvement } from "./access";
 import { viewerFor } from "./pauseData";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * Nachrichten an Zimmer/Aufgabe: `RoomNote` mit `kind = "MESSAGE"` (dieselbe Tabelle und derselbe Verlauf wie Notizen —
@@ -56,7 +57,7 @@ export async function notifyMessage(opts: { room: { id: string; number: string }
     });
     const message = `Neue Nachricht zu Zimmer ${opts.room.number} (Etage ${involvement.floor}) von ${opts.author.name} (${ROLE_LABEL[opts.author.role] ?? opts.author.role}).`;
     for (const r of recipients) {
-      const notification = await prisma.notification.create({ data: { type: "TASK_MESSAGE", level: "warning", targetRole: r.role, targetUserId: r.userId, roomId: opts.room.id, message } });
+      const notification = await prisma.notification.create({ data: { type: "TASK_MESSAGE", level: "warning", targetRole: r.role, targetUserId: r.userId, roomId: opts.room.id, message, ...keyed("notify.taskMessage", { n: opts.room.number, floor: involvement.floor, name: opts.author.name, roleKey: `role.${opts.author.role}` }) } });
       broadcast("notification:new", { notification });
     }
     return recipients.length;

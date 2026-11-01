@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
+import { keyed } from "@/lib/i18n/notificationText";
 
 export interface PlanNotifyInput {
   /** Eindeutig je Bestätigung (z. B. Id des Entwurfs) — verhindert doppelte Meldungen bei erneutem Aufruf. */
@@ -28,15 +29,16 @@ const fmt = (n: number) => (Math.round(n * 10) / 10).toString().replace(".", ","
  */
 export async function notifyPlanConfirmed(input: PlanNotifyInput): Promise<number> {
   const { planId, actorId, attendants, totalRooms, openRooms } = input;
-  const out: { type: string; level: string; targetRole: string; targetUserId: string; message: string; dedupeKey: string }[] = [];
-  const add = (type: string, targetRole: string, targetUserId: string, message: string, level = "info") =>
-    out.push({ type, level, targetRole, targetUserId, message, dedupeKey: `PLAN:${planId}:${targetUserId}` });
+  const out: { type: string; level: string; targetRole: string; targetUserId: string; message: string; messageKey: string; messageVars: string; dedupeKey: string }[] = [];
+  const add = (type: string, targetRole: string, targetUserId: string, message: string, k: ReturnType<typeof keyed>, level = "info") =>
+    out.push({ type, level, targetRole, targetUserId, message, ...k, dedupeKey: `PLAN:${planId}:${targetUserId}` });
 
   for (const a of attendants) {
     if (a.id === actorId || (!a.changed && !(input.first && a.rooms > 0))) continue;
     add("PLAN_CONFIRMED", "room_attendant", a.id, a.rooms > 0
       ? `Dein Plan für heute: ${a.rooms} Zimmer, ${fmt(a.credits)} Credits.`
-      : "Dein Plan für heute wurde geändert: Du hast keine Zimmer mehr auf der Liste.");
+      : "Dein Plan für heute wurde geändert: Du hast keine Zimmer mehr auf der Liste.",
+      a.rooms > 0 ? keyed("notify.planHk", { rooms: a.rooms, credits: fmt(a.credits) }) : keyed("notify.planHkEmpty"));
   }
 
   const staff = (await prisma.user.findMany({ where: { role: { in: ["houseman", "supervisor", "duty_manager"] }, id: { not: actorId } }, select: { id: true, role: true } }))
@@ -48,10 +50,12 @@ export async function notifyPlanConfirmed(input: PlanNotifyInput): Promise<numbe
       const mine = await prisma.trace.count({ where: { date: input.date, dept: "HOUSEMAN", status: "OPEN", assignedToId: u.id } });
       const free = await prisma.trace.count({ where: { date: input.date, dept: "HOUSEMAN", status: "OPEN", assignedToId: null } });
       const n = mine + free;
-      add("PLAN_CONFIRMED", "houseman", u.id, `Dein Plan für heute: ${n} ${n === 1 ? "Aufgabe" : "Aufgaben"}${mine ? ` (${mine} dir zugeteilt)` : ""}.`);
+      add("PLAN_CONFIRMED", "houseman", u.id, `Dein Plan für heute: ${n} ${n === 1 ? "Aufgabe" : "Aufgaben"}${mine ? ` (${mine} dir zugeteilt)` : ""}.`,
+        keyed("notify.planHm", { n, mine }));
     }
     else add("PLAN_CONFIRMED", u.role, u.id,
       `Tagesplan bestätigt: ${totalRooms - openRooms} von ${totalRooms} Zimmern an ${working} Kräfte verteilt${openRooms ? `, ${openRooms} noch offen` : ""}.`,
+      keyed("notify.planStaff", { assigned: totalRooms - openRooms, total: totalRooms, working, open: openRooms }),
       openRooms ? "warning" : "info");
   }
 

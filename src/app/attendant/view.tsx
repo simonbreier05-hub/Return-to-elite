@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import HubMoreMenu from "@/components/HubMoreMenu";
-import { createPortal } from "react-dom";
 import { ApiError, NetworkError, api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
@@ -25,8 +24,10 @@ import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } fr
 import { chunkByFloor, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 import { ACTION_TARGET, floorProgress, hkGroupOf, orderRoute, primaryActionFor, type HkAction, type HkGroup } from "@/lib/rooms/hkGroups";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { hhmm } from "@/lib/i18n/format";
 
 interface Note {
   id: string;
@@ -82,7 +83,7 @@ const ACTION_LABEL: Record<Exclude<HkAction, null | "DND">, TKey> = {
   START: "attendant.startCleaning", FINISH: "attendant.markClean", UNBLOCK: "attendant.unblockAndStart", RESUME: "work.resume",
 };
 const GROUP_TITLE: Record<HkGroup, TKey> = { NOW: "hkHub.groupNow", NEXT: "hkHub.groupNext", DONE: "hkHub.groupDone", OTHER: "hkHub.groupOther" };
-const time = (iso: string) => new Date(iso).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" });
+const time = (iso: string) => hhmm(iso);
 
 /**
  * Housekeeper-Hub „Meine Zimmer“ — eine Ansicht statt „Meine Liste“ + „Meine Zimmer“: der ruhige Listen-Look (Art, Wäsche,
@@ -122,7 +123,7 @@ export default function AttendantView() {
   }, []);
 
   useEffect(() => {
-    loadRooms().catch((e) => setError(e instanceof Error ? e.message : String(e)));
+    loadRooms().catch((e) => setError(errorText(e, t)));
     void loadList();
     void loadPriorities();
   }, [loadRooms, loadList, loadPriorities]);
@@ -191,7 +192,7 @@ export default function AttendantView() {
           )
         );
       } else {
-        setError(`${room.number}: ${e instanceof ApiError ? e.message : String(e)}`);
+        setError(`${room.number}: ${errorText(e, t)}`);
       }
     } finally {
       setBusyRoomId(null);
@@ -206,7 +207,7 @@ export default function AttendantView() {
       setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, pause: null } : r)));
       refreshRoomsSoon();
     } catch (e) {
-      setError(`${room.number}: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`${room.number}: ${errorText(e, t)}`);
     } finally {
       setBusyRoomId(null);
     }
@@ -220,7 +221,7 @@ export default function AttendantView() {
       setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, ...res.room, notes: r.notes, defects: r.defects, arrivals: r.arrivals, rewind: null } : r)));
       refreshAll();
     } catch (e) {
-      setError(`${room.number}: ${e instanceof Error ? e.message : String(e)}`);
+      setError(`${room.number}: ${errorText(e, t)}`);
       refreshRoomsSoon();
     } finally {
       setBusyRoomId(null);
@@ -288,7 +289,7 @@ export default function AttendantView() {
     try {
       await api("/api/rooms/reorder", { method: "PATCH", body: { roomIds: newOrder } });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Could not save the new order.");
+      setError(errorText(e, t, "shared.reorderFailed"));
       void loadRooms();
     }
   };
@@ -315,7 +316,7 @@ export default function AttendantView() {
             <button type="button" onClick={() => rewind(room)} disabled={busyRoomId === room.id}
               className="min-h-11 w-full rounded-xl border border-charcoal/20 bg-white px-3 text-sm font-medium disabled:opacity-50">
               ↶ {t("work.rewind", { status: t(`status.${room.rewind.to}` as TKey) })}
-              <span className="ml-1 text-xs font-normal text-graphite/60">· {t("work.rewindUntil", { time: time(room.rewind.until) })}</span>
+              <span className="ms-1 text-xs font-normal text-graphite/60">· {t("work.rewindUntil", { time: time(room.rewind.until) })}</span>
             </button>
           )}
         </>
@@ -482,8 +483,8 @@ export default function AttendantView() {
         )}
       </ErrorBoundary>
 
-      {/* Portal an body: die Seite liegt in einem animierten (transformierten) Container — ein fixed-Fenster darin landet sonst versetzt. */}
-      {detailRoom && createPortal(
+      {/* Modal rendert selbst per Portal in <body> (die Seite liegt in einem animierten Container) — gilt auch für Sperre/Mangel unten. */}
+      {detailRoom && (
         <ErrorBoundary>
           <RoomDetailModal
             room={detailRoom}
@@ -492,8 +493,7 @@ export default function AttendantView() {
             summary={<RoomDayInfo day={dayById.get(detailRoom.id) ? { ...asListRoom(detailRoom) } : null} traces={dayById.get(detailRoom.id)?.traces} />}
             task={{ type: "ROOM", id: detailRoom.id }}
           />
-        </ErrorBoundary>,
-        document.body,
+        </ErrorBoundary>
       )}
 
       {modal?.kind === "block" && (
@@ -586,14 +586,14 @@ function DefectModal({
       await api(`/api/rooms/${room.id}/defects`, { formData: fd });
       onDone();
     } catch (e) {
-      setError((e as Error).message);
+      setError(errorText(e, t));
     } finally {
       setBusy(false);
     }
   };
 
   return (
-    <Modal title={t("attendant.defectModalTitle", { number: room.number })} subtitle={t("attendant.defectModalSubtitle")} onClose={onClose}>
+    <Modal title={t("attendant.defectModalTitle", { number: room.number })} subtitle={t("attendant.defectModalSubtitle")} onClose={onClose} dirty={!!note.trim() || !!photo}>
       <label className="mb-1 block text-sm font-medium">{t("attendant.category")}</label>
       <div className="mb-3 grid grid-cols-2 gap-2">
         {DEFECT_CATEGORIES.map((c) => (

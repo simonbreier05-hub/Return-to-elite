@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { dateTime } from "@/lib/i18n/format";
 
 interface Status {
   purgeHour: number; stayDeleteDays: number; lastOkAt: string | null; lastCounts: Record<string, number> | null;
@@ -10,7 +11,7 @@ interface Status {
 }
 interface StayRow { id: string; checkIn: string; checkOut: string; status: string; hasName: boolean }
 
-const fmt = (iso: string) => new Date(iso).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short", timeZone: "Europe/Berlin" });
+const fmt = (iso: string) => dateTime(iso);
 const summary = (c: Record<string, number> | null) => Object.entries(c ?? {}).filter(([, n]) => n > 0).map(([k, n]) => `${k} ${n}`).join(", ") || "—";
 
 /** Einstellungen → Datenschutz: letzter Lauf, Zeitplan, "jetzt löschen", Einzellöschung. Nur Duty Manager. */
@@ -72,7 +73,7 @@ export default function PurgePanel() {
           <input type="number" min={1} max={3650} value={days} onChange={(e) => setDays(Number(e.target.value))}
             onBlur={() => days !== st?.stayDeleteDays && saveSetting({ guestStayDeleteDays: days })}
             className="h-12 w-24 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold" />
-          <span className="ml-2 text-sm text-graphite/60">{t("purge.days")}</span>
+          <span className="ms-2 text-sm text-graphite/60">{t("purge.days")}</span>
         </label>
       </div>
 

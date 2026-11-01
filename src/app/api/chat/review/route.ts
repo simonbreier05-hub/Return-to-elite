@@ -7,6 +7,6 @@ export async function GET() {
   const a = await chatAuth();
   if (!a.ok) return a.response;
   const list = await listAllDirects(a.s);
-  if (!list) return NextResponse.json({ error: "Nur Duty Manager." }, { status: 403 });
+  if (!list) return NextResponse.json({ error: "Nur Duty Manager.", code: "NO_PERMISSION" }, { status: 403 });
   return NextResponse.json({ directs: list });
 }

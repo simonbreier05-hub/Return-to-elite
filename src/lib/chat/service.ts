@@ -5,6 +5,7 @@ import { getChatSettings, LANGUAGE_CODE_RE } from "@/lib/settings";
 import { ROLES, type Role } from "@/lib/domain";
 import { ALL_CHANNEL_ROLES, CHANNEL_ROLES, CHAT_CHANNELS, canDirectMessage, canUseChannel, channelsForRole, directKey, type ChatChannelKey } from "./policy";
 import { resolveMentions } from "./text";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * Chat-Hub — Datenbankseite. Jede Funktion bekommt die Session und prüft selbst über `policy.ts`; die API-Routen sind dünn.
@@ -148,6 +149,7 @@ export async function postMessage(s: ChatSession, ch: NonNullable<Awaited<Return
       data: {
         type: "CHAT", level: urgent ? "warning" : "info", targetRole: r.role as Role, targetUserId: r.id,
         message: `${urgent ? "Dringend" : "Erwähnt"} im Chat ${label} von ${s.name}`,
+        ...keyed(urgent ? "notify.chatUrgent" : "notify.chatMention", { channel: label, name: s.name }),
       },
     });
     broadcast("notification:new", { notification });

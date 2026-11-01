@@ -7,6 +7,7 @@ import { checkTransition } from "@/lib/stateMachine";
 import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
 import { endPauseOnChange } from "@/lib/work/pauseData";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * The one place a room's status is allowed to change.
@@ -30,7 +31,7 @@ export interface StatusChangeInput {
 
 export type StatusChangeResult =
   | { ok: true; room: Awaited<ReturnType<typeof updateRoom>> }
-  | { ok: false; status: number; error: string };
+  | { ok: false; status: number; error: string; code?: string };
 
 function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["data"]) {
   return prisma.room.update({
@@ -46,7 +47,7 @@ export async function applyStatusChange(
   input: StatusChangeInput
 ): Promise<StatusChangeResult> {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
-  if (!room) return { ok: false, status: 404, error: "Room not found." };
+  if (!room) return { ok: false, status: 404, error: "Room not found.", code: "ROOM_NOT_FOUND" };
 
   const from = RoomStatusSchema.parse(room.status);
   const to = input.status;
@@ -62,7 +63,7 @@ export async function applyStatusChange(
       toStatus: to,
       meta: { reason: check.error, role: session.role },
     });
-    return { ok: false, status: check.code, error: check.error };
+    return { ok: false, status: check.code, error: check.error, code: check.reason ?? (check.code === 403 ? "FORBIDDEN" : undefined) };
   }
 
   // --- Guest "Bitte nicht stören" (Prompt G2 Teil 4) --------------------
@@ -87,7 +88,7 @@ export async function applyStatusChange(
       return {
         ok: false,
         status: 409,
-        error: "Guest has Do Not Disturb active — a supervisor can override this.",
+        error: "Guest has Do Not Disturb active — a supervisor can override this.", code: "GUEST_DND_ACTIVE",
       };
     }
   }
@@ -97,14 +98,14 @@ export async function applyStatusChange(
     return {
       ok: false,
       status: 400,
-      error: "BLOCKED requires a reason (DND | GUEST_IN_ROOM | DOUBLE_LOCKED | REFUSED).",
+      error: "BLOCKED requires a reason (DND | GUEST_IN_ROOM | DOUBLE_LOCKED | REFUSED).", code: "BLOCK_REASON_REQUIRED",
     };
   }
   if (to === "PICKUP" && !input.note?.trim()) {
-    return { ok: false, status: 400, error: "PICKUP (rework) requires a note for the attendant." };
+    return { ok: false, status: 400, error: "PICKUP (rework) requires a note for the attendant.", code: "REWORK_NOTE_REQUIRED" };
   }
   if (to === "OUT_OF_ORDER" && !input.oooUntil) {
-    return { ok: false, status: 400, error: "OUT_OF_ORDER requires an end time (oooUntil)." };
+    return { ok: false, status: 400, error: "OUT_OF_ORDER requires an end time (oooUntil).", code: "OOO_END_REQUIRED" };
   }
 
   const now = new Date();
@@ -172,6 +173,7 @@ export async function applyStatusChange(
           message: `Room ${room.number} released (INSPECTED) — ready for ${arrival.guestName}${
             arrival.vip ? " (VIP)" : ""
           }.`,
+          ...keyed(arrival.vip ? "notify.roomReleasedVip" : "notify.roomReleased", { n: room.number }),
           dedupeKey: `ROOM_RELEASED:${arrival.id}:${now.getTime()}`,
         },
       });

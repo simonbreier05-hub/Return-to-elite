@@ -23,7 +23,7 @@ export async function PUT(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   const { type, dateFormat } = parsed.data;
   const config = JSON.stringify({ dateFormat });
   await prisma.importMapping.upsert({ where: { type }, create: { type, config }, update: { config } });

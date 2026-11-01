@@ -18,6 +18,7 @@ import { reportDefect } from "@/lib/rooms/reportDefect";
 import { addRoomNote } from "@/lib/rooms/addRoomNote";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { sanitizeGuestText } from "@/lib/guestSanitize";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * The five guest write actions, shared by both access paths
@@ -68,7 +69,7 @@ const DndBody = z.object({ window: z.enum(DND_WINDOWS) });
  */
 async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextResponse> {
   const parsed = DndBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid time window." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid time window.", code: "INVALID_INPUT" }, { status: 400 });
 
   const guestUserId = await getGuestSystemUserId();
   const [notification, guestRequest] = await Promise.all([
@@ -79,6 +80,7 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
         targetRole: "supervisor",
         roomId: room.id,
         message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
+        ...keyed("notify.guestDnd", { n: room.number, windowKey: `dndWindow.${parsed.data.window}` }),
       },
     }),
     prisma.guestRequest.create({
@@ -104,7 +106,7 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
     where: { roomId: room.id, kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
     orderBy: { createdAt: "desc" },
   });
-  if (!active) return NextResponse.json({ error: "No active Do Not Disturb request." }, { status: 400 });
+  if (!active) return NextResponse.json({ error: "No active Do Not Disturb request.", code: "NO_ACTIVE_DND" }, { status: 400 });
 
   const guestUserId = await getGuestSystemUserId();
   const [updated, notification] = await Promise.all([
@@ -116,6 +118,7 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
         targetRole: "supervisor",
         roomId: room.id,
         message: `Room ${room.number}: guest lifted Do Not Disturb.`,
+        ...keyed("notify.guestDndLifted", { n: room.number }),
       },
     }),
   ]);
@@ -136,7 +139,7 @@ const CleanRequestBody = z.object({
 
 async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Promise<NextResponse> {
   const parsed = CleanRequestBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid timing." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid timing.", code: "INVALID_INPUT" }, { status: 400 });
 
   const { timing, time } = parsed.data;
   const timingLabel =
@@ -151,6 +154,7 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
         targetRole: "supervisor",
         roomId: room.id,
         message: `Room ${room.number}: guest requests cleaning — ${timingLabel}.`,
+        ...(timing === "LATER" && time ? keyed("notify.guestCleanAt", { n: room.number, time }) : keyed("notify.guestClean", { n: room.number, timingKey: `cleanTiming.${timing}` })),
       },
     }),
     prisma.guestRequest.create({
@@ -175,21 +179,21 @@ const MAX_PHOTO_BYTES = 8 * 1024 * 1024;
  */
 async function handleDefect(room: GuestActionRoom, req: NextRequest): Promise<NextResponse> {
   const form = await req.formData().catch(() => null);
-  if (!form) return NextResponse.json({ error: "Expected multipart form data." }, { status: 400 });
+  if (!form) return NextResponse.json({ error: "Expected multipart form data.", code: "INVALID_INPUT" }, { status: 400 });
 
   const category = DefectCategorySchema.safeParse(form.get("category"));
   const note = sanitizeGuestText(String(form.get("note") ?? ""));
-  if (!category.success) return NextResponse.json({ error: "Invalid defect category." }, { status: 400 });
-  if (!note) return NextResponse.json({ error: "Please describe the issue." }, { status: 400 });
+  if (!category.success) return NextResponse.json({ error: "Invalid defect category.", code: "INVALID_DEFECT_CATEGORY" }, { status: 400 });
+  if (!note) return NextResponse.json({ error: "Please describe the issue.", code: "TEXT_REQUIRED" }, { status: 400 });
   if (note.length > MAX_DEFECT_NOTE_LENGTH) {
-    return NextResponse.json({ error: `Description too long (max ${MAX_DEFECT_NOTE_LENGTH} characters).` }, { status: 400 });
+    return NextResponse.json({ error: `Description too long (max ${MAX_DEFECT_NOTE_LENGTH} characters).`, code: "TEXT_TOO_LONG" }, { status: 400 });
   }
 
   let photoPath: string | null = null;
   const photo = form.get("photo");
   if (photo instanceof File && photo.size > 0) {
     if (photo.size > MAX_PHOTO_BYTES) {
-      return NextResponse.json({ error: "Photo too large (max 8 MB)." }, { status: 400 });
+      return NextResponse.json({ error: "Photo too large (max 8 MB).", code: "PHOTO_TOO_LARGE" }, { status: 400 });
     }
     const ext = (photo.name.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
     const filename = `defect-${room.number}-${Date.now()}.${ext}`;
@@ -208,10 +212,10 @@ const ContactBody = z.object({ department: z.string() });
 
 async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<NextResponse> {
   const parsed = ContactBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Department required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Department required.", code: "DEPARTMENT_REQUIRED" }, { status: 400 });
 
   const dept = CONTACT_DEPARTMENTS.find((d) => d.key === parsed.data.department);
-  if (!dept) return NextResponse.json({ error: "Unknown department." }, { status: 400 });
+  if (!dept) return NextResponse.json({ error: "Unknown department.", code: "DEPARTMENT_REQUIRED" }, { status: 400 });
 
   const guestUserId = await getGuestSystemUserId();
   const [notification, guestRequest] = await Promise.all([
@@ -222,6 +226,7 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
         targetRole: dept.role,
         roomId: room.id,
         message: `Room ${room.number}: guest wants to be contacted by ${dept.label}.`,
+        ...keyed("notify.guestContact", { n: room.number, deptKey: `department.${dept.key}` }),
       },
     }),
     prisma.guestRequest.create({
@@ -244,10 +249,10 @@ const NotesBody = z.object({ body: z.string().trim().min(1).max(2000) });
  */
 async function handleNotes(room: GuestActionRoom, req: NextRequest): Promise<NextResponse> {
   const parsed = NotesBody.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Message required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Message required.", code: "TEXT_REQUIRED" }, { status: 400 });
 
   const body = sanitizeGuestText(parsed.data.body);
-  if (!body) return NextResponse.json({ error: "Message required." }, { status: 400 });
+  if (!body) return NextResponse.json({ error: "Message required.", code: "TEXT_REQUIRED" }, { status: 400 });
 
   const authorId = await getGuestSystemUserId();
   const note = await addRoomNote({ room, authorId, body });

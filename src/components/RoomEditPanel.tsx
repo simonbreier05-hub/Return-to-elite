@@ -4,6 +4,7 @@ import { useState } from "react";
 import { api, ApiError } from "@/components/api";
 import TwoTapButton from "@/components/TwoTapButton";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import type { RoomDetail } from "@/lib/rooms/roomDetail";
 import { STATUS_STYLES } from "@/components/status";
@@ -11,9 +12,9 @@ import { STATUS_STYLES } from "@/components/status";
 const DEPTS = ["HOUSEKEEPING", "HOUSEMAN", "ENGINEERING", "FRONT_OFFICE"] as const;
 const field = "min-h-11 w-full rounded-lg border border-charcoal/20 bg-white px-3 text-sm outline-none focus:border-gold";
 const h4 = "mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60";
-const ACTION_LABEL: Record<string, string> = {
-  ROOM_ASSIGNED: "Zuteilung", ROOM_MOVED_STARTED: "Zuteilung (begonnen)", TRACE_ADDED: "Trace hinzugefügt", TRACE_EDITED: "Trace geändert", TRACE_DONE: "Trace erledigt",
-  TRACE_REOPENED: "Trace wieder geöffnet", NOTE_ADDED: "Notiz", NOTE_EDITED: "Notiz geändert", NOTE_STATUS_CHANGED: "Notiz-Status", GUEST_REQUEST_UPDATED: "Gästewunsch", STATUS_CHANGE: "Status",
+const ACTION_LABEL: Record<string, TKey> = {
+  ROOM_ASSIGNED: "shared.logRoomAssigned", ROOM_MOVED_STARTED: "shared.logRoomMovedStarted", TRACE_ADDED: "shared.logTraceAdded", TRACE_EDITED: "shared.logTraceEdited", TRACE_DONE: "shared.logTraceDone",
+  TRACE_REOPENED: "shared.logTraceReopened", NOTE_ADDED: "shared.logNoteAdded", NOTE_EDITED: "shared.logNoteEdited", NOTE_STATUS_CHANGED: "shared.logNoteStatus", GUEST_REQUEST_UPDATED: "shared.logGuestRequest", STATUS_CHANGE: "shared.logStatus",
 };
 
 /**
@@ -23,7 +24,7 @@ const ACTION_LABEL: Record<string, string> = {
  * der Server meldet die Betroffenen live und schreibt das Logbuch.
  */
 export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; onChanged: () => void | Promise<void> }) {
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [ooo, setOoo] = useState("");
   const [assignTo, setAssignTo] = useState("");
@@ -35,7 +36,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
   const run = async (fn: () => Promise<unknown>) => {
     setMsg(null);
     try { await fn(); setMsg({ ok: true, text: t("roomEdit.saved") }); await onChanged(); }
-    catch (e) { setMsg({ ok: false, text: e instanceof Error && e.message ? e.message : t("roomEdit.failed") }); }
+    catch (e) { setMsg({ ok: false, text: errorText(e, t, "roomEdit.failed") }); }
   };
   const setStatus = (status: string) => run(() => api(`/api/rooms/${room.id}/status`, { body: { status, ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString() } : {}) } }));
   const setDnd = (on: boolean) => run(() => api(`/api/rooms/${room.id}/status`, { body: on ? { status: "BLOCKED", blockReason: "DND" } : { status: "DIRTY" } }));
@@ -74,7 +75,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
           {room.allowedStatuses.map((s) => {
             const style = STATUS_STYLES[s];
             return s === "OUT_OF_ORDER" ? null : (
-              <TwoTapButton key={s} onConfirm={() => setStatus(s)}><span className={`mr-1 inline-block h-2.5 w-2.5 rounded-full border ${style.chip}`} aria-hidden />{t("roomEdit.statusSet", { status: t(`status.${s}` as TKey) })}</TwoTapButton>
+              <TwoTapButton key={s} onConfirm={() => setStatus(s)}><span className={`me-1 inline-block h-2.5 w-2.5 rounded-full border ${style.chip}`} aria-hidden />{t("roomEdit.statusSet", { status: t(`status.${s}` as TKey) })}</TwoTapButton>
             );
           })}
         </div>
@@ -118,7 +119,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
           <ul className="space-y-2">
             {room.traces.map((x) => (
               <li key={x.id} className="rounded-lg bg-white p-2 text-sm">
-                <div className={`break-words ${x.status === "DONE" ? "text-graphite/50 line-through" : ""}`}><span className="mr-1 text-xs font-semibold">{t(`lists.dept${x.dept}` as TKey)}:</span>{x.text}</div>
+                <div className={`break-words ${x.status === "DONE" ? "text-graphite/50 line-through" : ""}`}><span className="me-1 text-xs font-semibold">{t(`lists.dept${x.dept}` as TKey)}:</span>{x.text}</div>
                 <div className="mt-1 flex flex-wrap gap-2">
                   <TwoTapButton onConfirm={() => traceDone(x.id, x.status !== "DONE")}>{x.status === "DONE" ? t("roomEdit.traceReopen") : t("roomEdit.traceDone")}</TwoTapButton>
                   <button type="button" className="min-h-11 rounded-lg border border-charcoal/20 bg-white px-3 text-sm" onClick={() => setEditing({ kind: "trace", id: x.id, text: x.text })}>{t("roomEdit.traceEdit")}</button>
@@ -157,7 +158,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
         {room.logbook.length === 0 ? <p className="text-sm text-graphite/60">{t("roomEdit.logbookEmpty")}</p> : (
           <ul className="space-y-0.5 text-xs text-graphite">
             {room.logbook.map((l) => (
-              <li key={l.id}>{new Date(l.at).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Berlin" })} · {ACTION_LABEL[l.action] ?? l.action}{l.from && l.to ? ` ${l.from} → ${l.to}` : ""}{l.by ? ` · ${l.by}` : ""}</li>
+              <li key={l.id}>{fmt.time(l.at)} · {ACTION_LABEL[l.action] ? t(ACTION_LABEL[l.action]) : l.action}{l.from && l.to ? ` ${l.from} → ${l.to}` : ""}{l.by ? ` · ${l.by}` : ""}</li>
             ))}
           </ul>
         )}

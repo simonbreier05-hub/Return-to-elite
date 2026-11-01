@@ -349,6 +349,10 @@ model Notification {
   targetUserId String? // optional: nur diese Person (z. B. Zimmer verschoben); null = alle der Rolle
   roomId       String?
   message      String
+  // Prompt K1 (additiv): Textschlüssel + Werte, damit der Client die Meldung in der Sprache des Lesers zeigt.
+  // `message` bleibt Klartext (Fallback). Werte nie mit Gastnamen.
+  messageKey   String?
+  messageVars  String? // JSON {"n":"305","floor":3}
   dedupeKey    String? // prevents the escalation ticker from re-firing the same alert
   acknowledged Boolean   @default(false)
   createdAt    DateTime  @default(now())
@@ -357,6 +361,20 @@ model Notification {
 model Setting {
   key   String @id
   value String
+}
+
+// Prompt K1: Laufzeit-Übersetzungen der Oberflächentexte (nur Sprachen ohne eigene Datei). Nur UI-Texte aus
+// translations.ts — nie Personen-, Gast- oder Freitextdaten. Je Sprache und Schlüssel einmal; ändert sich der
+// deutsche Quelltext (sourceHash), wird neu übersetzt.
+model UiTranslation {
+  lang       String
+  key        String
+  sourceHash String
+  text       String
+  provider   String
+  createdAt  DateTime @default(now())
+
+  @@id([lang, key])
 }
 
 // ─────────────────────────────────────────────────────────────────────────

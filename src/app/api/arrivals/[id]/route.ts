@@ -21,10 +21,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
 
   const parsed = PatchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid payload." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid payload.", code: "INVALID_INPUT" }, { status: 400 });
 
   const existing = await prisma.arrival.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "Arrival not found." }, { status: 404 });
+  if (!existing) return NextResponse.json({ error: "Arrival not found.", code: "ARRIVAL_NOT_FOUND" }, { status: 404 });
 
   const arrival = await prisma.arrival.update({
     where: { id },

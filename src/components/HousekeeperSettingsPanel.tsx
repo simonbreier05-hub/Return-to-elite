@@ -41,30 +41,30 @@ export default function HousekeeperSettingsPanel() {
       {saved && <p className="mb-2 text-xs text-status-clean">{t("hk.saved")}</p>}
 
       <div className="overflow-x-auto">
-        <table className="w-full text-left text-sm">
+        <table className="w-full text-start text-sm">
           <thead className="text-xs text-graphite/60">
-            <tr><th className="pr-3">{t("hk.colName")}</th><th className="pr-3">{t("hk.colType")}</th><th className="pr-3">{t("hk.colLevel")}</th>
-              <th className="pr-3">{t("hk.colHome")}</th><th className="pr-3">{t("hk.colTarget")}</th><th>{t("hk.colActive")}</th></tr>
+            <tr><th className="pe-3">{t("hk.colName")}</th><th className="pe-3">{t("hk.colType")}</th><th className="pe-3">{t("hk.colLevel")}</th>
+              <th className="pe-3">{t("hk.colHome")}</th><th className="pe-3">{t("hk.colTarget")}</th><th>{t("hk.colActive")}</th></tr>
           </thead>
           <tbody>
             {hks.map((h) => (
               <tr key={h.id} className="border-t border-charcoal/5">
-                <td className="py-2 pr-3 font-medium">{h.name}</td>
-                <td className="pr-3">
+                <td className="py-2 pe-3 font-medium">{h.name}</td>
+                <td className="pe-3">
                   <select className={input} value={h.hkType} onChange={(e) => patchHk(h.id, { hkType: e.target.value })}>
                     {(["VOLLZEIT", "TEILZEIT", "AZUBI"] as const).map((x) => <option key={x} value={x}>{t(`hk.${x}` as TKey)}</option>)}
                   </select>
                 </td>
-                <td className="pr-3">
+                <td className="pe-3">
                   <select className={input} value={h.hkLevel} title={t("hk.levelHint")} onChange={(e) => patchHk(h.id, { hkLevel: Number(e.target.value) })}>
                     {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </td>
-                <td className="pr-3">
+                <td className="pe-3">
                   <input className={`${input} w-20`} defaultValue={h.homeFloors} placeholder={t("hk.homeHint")} title={t("hk.homeHint")} inputMode="numeric"
                     onBlur={(e) => { const f = e.target.value.split(",").map((x) => parseInt(x, 10)).filter((n) => n >= 1 && n <= 7).slice(0, 2); patchHk(h.id, { homeFloors: f }); }} />
                 </td>
-                <td className="pr-3">
+                <td className="pe-3">
                   <input className={`${input} w-20`} type="number" step="0.5" min={0} defaultValue={h.dailyTarget ?? ""}
                     onBlur={(e) => patchHk(h.id, { dailyTarget: e.target.value === "" ? null : Number(e.target.value) })} />
                 </td>
@@ -80,13 +80,13 @@ export default function HousekeeperSettingsPanel() {
         {SETTING_KEYS.map((k) => (
           <label key={k} className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
             <span>{t(`hk.setting.${k}` as TKey)}</span>
-            <input className={`${input} w-24 text-right`} type="number" step="0.1" value={settings[k] ?? ""}
+            <input className={`${input} w-24 text-end`} type="number" step="0.1" value={settings[k] ?? ""}
               onChange={(e) => setSettings((s) => ({ ...s, [k]: Number(e.target.value) }))} onBlur={() => patchSetting({ [k]: settings[k] })} />
           </label>
         ))}
         <label className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
           <span>{t("hk.setting.linenCycleDays")}</span>
-          <input className={`${input} w-24 text-right`} type="number" step="1" min={1} max={30} value={linenCycleDays}
+          <input className={`${input} w-24 text-end`} type="number" step="1" min={1} max={30} value={linenCycleDays}
             onChange={(e) => setLinenCycleDays(Number(e.target.value))}
             onBlur={() => { if (Number.isInteger(linenCycleDays) && linenCycleDays >= 1 && linenCycleDays <= 30) void patchSetting({ linenCycleDays }); }} />
         </label>
@@ -98,7 +98,7 @@ export default function HousekeeperSettingsPanel() {
         <div className="grid gap-3 sm:grid-cols-2">
           {Object.keys({ ...typeSeen, ...typeMap }).sort().map((code) => (
             <label key={code} className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
-              <span><span className="font-medium">{code}</span>{typeSeen[code] ? <span className="ml-2 text-xs text-graphite/60">{t("hk.roomTypesRooms", { n: typeSeen[code] })}</span> : null}</span>
+              <span><span className="font-medium">{code}</span>{typeSeen[code] ? <span className="ms-2 text-xs text-graphite/60">{t("hk.roomTypesRooms", { n: typeSeen[code] })}</span> : null}</span>
               <select className={`${input} w-44`} value={typeMap[code] ?? ""}
                 onChange={async (e) => { const next = { ...typeMap, [code]: e.target.value }; if (!e.target.value) delete next[code]; setTypeMap(next); await patchSetting({ roomTypeMap: next }); load(); }}>
                 <option value="">{t("hk.roomTypesUnmapped")}</option>
@@ -115,7 +115,7 @@ export default function HousekeeperSettingsPanel() {
         {WEIGHT_KEYS.map((k) => (
           <label key={k} className="flex items-center justify-between gap-3 rounded-xl border border-charcoal/15 bg-white p-3 text-sm">
             <span>{t(`hk.weight.${k}` as TKey)}</span>
-            <input className={`${input} w-24 text-right`} type="number" min={0} value={weights[k] ?? ""}
+            <input className={`${input} w-24 text-end`} type="number" min={0} value={weights[k] ?? ""}
               onChange={(e) => setWeights((w) => ({ ...w, [k]: Number(e.target.value) }))} onBlur={() => patchSetting({ autoplanWeights: { [k]: weights[k] } })} />
           </label>
         ))}

@@ -22,15 +22,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const { id } = await params;
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid room task status." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid room task status.", code: "INVALID_STATUS" }, { status: 400 });
 
   const existing = await prisma.roomTask.findUnique({ where: { id } });
-  if (!existing) return NextResponse.json({ error: "Room task not found." }, { status: 404 });
+  if (!existing) return NextResponse.json({ error: "Room task not found.", code: "TASK_NOT_FOUND" }, { status: 404 });
   if (existing.status === "DONE") {
-    return NextResponse.json({ error: "Room task is already done." }, { status: 409 });
+    return NextResponse.json({ error: "Room task is already done.", code: "TASK_ALREADY_DONE" }, { status: 409 });
   }
   if (parsed.data.status !== "DONE") {
-    return NextResponse.json({ error: "A room task can only be marked DONE." }, { status: 409 });
+    return NextResponse.json({ error: "A room task can only be marked DONE.", code: "INVALID_STATUS" }, { status: 409 });
   }
 
   const roomTask = await prisma.roomTask.update({

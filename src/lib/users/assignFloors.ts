@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { serializeAssignedFloors } from "@/lib/floors";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * Persist a floor assignment for one supervisor. Caller
@@ -34,7 +35,8 @@ export async function assignFloors({
   // Der Supervisor erfährt, dass sich seine Liste (Etagen) geändert hat — außer er hat es selbst getan.
   if (updated.id !== actorId) {
     const notification = await prisma.notification.create({ data: { type: "FLOORS_ASSIGNED", level: "info", targetRole: "supervisor", targetUserId: updated.id,
-      message: floors.length ? `Deine Etagen wurden geändert: Etage ${floors.join(", ")}.` : "Dir sind keine Etagen mehr zugeteilt." } });
+      message: floors.length ? `Deine Etagen wurden geändert: Etage ${floors.join(", ")}.` : "Dir sind keine Etagen mehr zugeteilt.",
+      ...(floors.length ? keyed("notify.floorsChanged", { floors: floors.join(", ") }) : keyed("notify.floorsNone")) } });
     broadcast("notification:new", { notification });
   }
   return updated;

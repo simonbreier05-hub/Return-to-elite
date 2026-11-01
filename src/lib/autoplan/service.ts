@@ -15,6 +15,7 @@ import { proposePlan } from "./propose";
 import { buildResult } from "./result";
 import { suggestionSignature, suggestRedistribution, type Move, type Suggestion } from "./redistribute";
 import type { Assignment, PlanInput, PlanResult } from "./types";
+import { keyed } from "@/lib/i18n/notificationText";
 
 export interface ProposalPayload { input: PlanInput; result: PlanResult; generatedAt: string }
 
@@ -185,7 +186,7 @@ export async function checkRedistribution(date: string): Promise<{ created: numb
       data: { date, kind: s.kind, moves: JSON.stringify(s.moves), reason: JSON.stringify({ key: s.kind, params: s.params }), signature: s.sig },
     });
     const n = await prisma.notification.create({
-      data: { type: "REDISTRIBUTION", level: "warning", targetRole: "supervisor", message: `Neuer Umverteilungsvorschlag: ${s.moves.length} Zimmer.`, dedupeKey: `REDIST:${row.id}` },
+      data: { type: "REDISTRIBUTION", level: "warning", targetRole: "supervisor", message: `Neuer Umverteilungsvorschlag: ${s.moves.length} Zimmer.`, ...keyed("notify.redistribution", { n: s.moves.length }), dedupeKey: `REDIST:${row.id}` },
     });
     broadcast("notification:new", { notification: n });
     broadcast("redistribution:new", { id: row.id, kind: s.kind });

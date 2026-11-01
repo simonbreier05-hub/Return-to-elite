@@ -35,7 +35,7 @@ export async function POST(req: NextRequest) {
 
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: "Invalid assignment payload.", details: parsed.error.flatten() }, { status: 400 });
+    return NextResponse.json({ error: "Invalid assignment payload.", code: "INVALID_INPUT", details: parsed.error.flatten() }, { status: 400 });
   }
 
   const { assignments, deferredRoomIds = [] } = parsed.data;
@@ -43,12 +43,12 @@ export async function POST(req: NextRequest) {
   const roomIds = assignments.flatMap((a) => a.roomIds);
 
   if (new Set(roomIds).size !== roomIds.length) {
-    return NextResponse.json({ error: "A room may only be assigned to one attendant." }, { status: 400 });
+    return NextResponse.json({ error: "A room may only be assigned to one attendant.", code: "INVALID_ASSIGNEE" }, { status: 400 });
   }
 
   const attendants = await prisma.user.findMany({ where: { id: { in: attendantIds } } });
   if (attendants.length !== attendantIds.length || attendants.some((a) => a.role !== "room_attendant")) {
-    return NextResponse.json({ error: "Every attendantId must reference a room attendant." }, { status: 400 });
+    return NextResponse.json({ error: "Every attendantId must reference a room attendant.", code: "INVALID_ASSIGNEE" }, { status: 400 });
   }
 
   // Fresh, short "shout across the floor" numbers for today's roster —
@@ -59,7 +59,7 @@ export async function POST(req: NextRequest) {
 
   const knownRooms = await prisma.room.count({ where: { id: { in: roomIds } } });
   if (knownRooms !== roomIds.length) {
-    return NextResponse.json({ error: "One or more rooms no longer exist." }, { status: 404 });
+    return NextResponse.json({ error: "One or more rooms no longer exist.", code: "ROOM_NOT_FOUND" }, { status: 404 });
   }
 
   // A room can't be both assigned today and pushed to tomorrow at once.

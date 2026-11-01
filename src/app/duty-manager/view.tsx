@@ -15,6 +15,7 @@ import type { DayNumberRow, DayNumbers } from "@/lib/dayplan/dayNumbers";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 
 interface Room {
@@ -88,7 +89,7 @@ export default function DutyManagerView() {
   }, []);
 
   useEffect(() => {
-    load().catch((e) => setError((e as Error).message));
+    load().catch((e) => setError(errorText(e, t)));
   }, [load]);
 
   const refetchSoon = useCoalescedRefetch(() => load().catch(() => {}), 2000);
@@ -240,7 +241,7 @@ export default function DutyManagerView() {
               setTaskRoom(null);
               setPickedNumber("");
             } catch (e) {
-              setError((e as Error).message);
+              setError(errorText(e, t));
             }
           }}
         />

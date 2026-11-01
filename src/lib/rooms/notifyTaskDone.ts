@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { parseAssignedFloors } from "@/lib/floors";
+import { keyed } from "@/lib/i18n/notificationText";
 
 /**
  * Hausmann-Aufgabe erledigt (oder wieder geöffnet): die zuständigen Supervisoren (Etage des Zimmers) werden gemeldet;
@@ -15,6 +16,7 @@ export async function notifyTaskDone(opts: { room: { id: string; number: string;
     const notification = await prisma.notification.create({ data: {
       type: done ? "HOUSEMAN_TASK_DONE" : "HOUSEMAN_TASK_REOPENED", level: "info", targetRole: "supervisor", targetUserId: s.id, roomId: room.id,
       message: `Zimmer ${room.number} (Etage ${room.floor}): Hausmann-Aufgabe ${done ? "erledigt" : "wieder geöffnet"}.`,
+      ...keyed(done ? "notify.houseTaskDone" : "notify.houseTaskReopened", { n: room.number, floor: room.floor }),
     } });
     broadcast("notification:new", { notification });
     n++;

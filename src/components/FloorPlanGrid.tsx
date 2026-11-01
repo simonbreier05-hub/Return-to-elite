@@ -1,6 +1,7 @@
 "use client";
 
 import Collapsible from "@/components/Collapsible";
+import { useLocale } from "@/lib/i18n/LocaleContext";
 import { DAY_CATEGORY_STYLES } from "@/components/status";
 import { RoomFlagIcons } from "@/components/RoomFlags";
 import { IconSuitcase, IconMoon, IconBan, IconLaundry, IconBellSlash } from "@/components/icons";
@@ -178,6 +179,7 @@ export default function FloorPlanGrid({
   getRoomMeta: (room: RoomFlags) => RoomMeta;
   onRoomClick?: (room: RoomFlags) => void;
 }) {
+  const { t } = useLocale();
   const roomsByFloor = new Map<number, RoomFlags[]>();
   for (const r of plan.rooms) {
     if (!roomsByFloor.has(r.floor)) roomsByFloor.set(r.floor, []);
@@ -210,11 +212,11 @@ export default function FloorPlanGrid({
             defaultOpen={i === 0}
             summary={
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 className="font-serif text-2xl">Floor {floor}</h3>
-                <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">{rooms.length} rooms</span>
+                <h3 className="font-serif text-2xl">{t("shared.floor", { n: floor })}</h3>
+                <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">{t("shared.roomsCount", { n: rooms.length })}</span>
                 {primaryHsk && (
                   <span className="rounded-full bg-charcoal px-2.5 py-0.5 text-[0.68rem] font-semibold text-ivory">
-                    HSK ★ near {primaryHsk.nearRoom}
+                    {t("shared.hskNear", { n: primaryHsk.nearRoom ?? "" })}
                   </span>
                 )}
               </div>
@@ -224,23 +226,23 @@ export default function FloorPlanGrid({
               <div className="mb-3 grid gap-2 sm:grid-cols-2">
                 <div className="rounded-lg border border-charcoal/10 bg-white p-3">
                   <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
-                    Aus dem Lift geradeaus
+                    {t("shared.liftStraight")}
                   </div>
                   {wayfinding.straight.map((leg, idx) => (
                     <div key={idx} className="text-sm">
                       # {leg.range} <span className="text-graphite/50">{leg.side}</span>
-                      {leg.note && <span className="ml-1 text-xs text-amber-700">{leg.note}</span>}
+                      {leg.note && <span className="ms-1 text-xs text-amber-700">{leg.note}</span>}
                     </div>
                   ))}
                 </div>
                 <div className="rounded-lg border border-charcoal/10 bg-white p-3">
                   <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
-                    Aus dem Lift rechts
+                    {t("shared.liftRight")}
                   </div>
                   {wayfinding.right.map((leg, idx) => (
                     <div key={idx} className="text-sm">
                       # {leg.range} <span className="text-graphite/50">{leg.side}</span>
-                      {leg.note && <span className="ml-1 text-xs text-amber-700">{leg.note}</span>}
+                      {leg.note && <span className="ms-1 text-xs text-amber-700">{leg.note}</span>}
                     </div>
                   ))}
                 </div>
@@ -257,17 +259,18 @@ export default function FloorPlanGrid({
                   }`}
                 >
                   {FACILITY_ICON[f.type] ?? "•"} {f.label}
-                  {f.nearRoom && ` (near ${f.nearRoom})`}
+                  {f.nearRoom && ` (${t("shared.near", { n: f.nearRoom })})`}
                   {f.isPrimaryHsk && " ★"}
                 </span>
               ))}
             </div>
 
-            <div className="grid gap-3 sm:grid-cols-2">
+            {/* Grundriss nie spiegeln (auch nicht auf Persisch/Arabisch): feste Links-nach-rechts-Anordnung. */}
+            <div dir="ltr" className="grid gap-3 sm:grid-cols-2">
               {[...sections.entries()].map(([section, secRooms]) => (
                 <div key={section} className="overflow-x-auto rounded-lg border border-charcoal/10 bg-white p-3">
                   <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
-                    Section {section}
+                    {t("shared.section", { s: section })}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
                     {secRooms.map((r) => {
@@ -301,7 +304,7 @@ export default function FloorPlanGrid({
                           {meta.unassignedActionable && (
                             <span
                               aria-hidden
-                              className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-dashed border-status-dirty bg-white"
+                              className="absolute -end-1 -top-1 h-3 w-3 rounded-full border-2 border-dashed border-status-dirty bg-white"
                             />
                           )}
                         </button>

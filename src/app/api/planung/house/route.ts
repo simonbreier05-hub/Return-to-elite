@@ -7,6 +7,6 @@ export async function GET(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const date = req.nextUrl.searchParams.get("date");
-  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Ungültiges Datum." }, { status: 400 });
+  if (date && !/^\d{4}-\d{2}-\d{2}$/.test(date)) return NextResponse.json({ error: "Ungültiges Datum.", code: "INVALID_DATE" }, { status: 400 });
   return NextResponse.json(await getHouseData(date));
 }

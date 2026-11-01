@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   try {
     const { proposalId, assignment, ...opts } = parsed.data;
     return NextResponse.json(await confirmProposal(proposalId, assignment, auth.session, opts));

@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { keyed } from "@/lib/i18n/notificationText";
 
 const Body = z.object({
   assignments: z.array(z.object({ traceId: z.string().min(1), userId: z.string().min(1).nullable() }).strict()).max(500),
@@ -17,9 +18,9 @@ export async function PUT(req: NextRequest) {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Angaben.", code: "INVALID_INPUT" }, { status: 400 });
   const users = new Set((await prisma.user.findMany({ where: { role: "houseman" }, select: { id: true } })).map((u) => u.id));
-  if (parsed.data.assignments.some((a) => a.userId && !users.has(a.userId))) return NextResponse.json({ error: "Unbekannter Hausmann." }, { status: 400 });
+  if (parsed.data.assignments.some((a) => a.userId && !users.has(a.userId))) return NextResponse.json({ error: "Unbekannter Hausmann.", code: "USER_NOT_FOUND" }, { status: 400 });
   let changed = 0;
   const gained = new Map<string, number>();
   for (const a of parsed.data.assignments) {
@@ -32,7 +33,7 @@ export async function PUT(req: NextRequest) {
   // Spätere Änderung nach der Bestätigung: nur die betroffenen Hausmänner erfahren es
   for (const [userId, n] of gained) {
     if (userId === auth.session.userId) continue;
-    const notification = await prisma.notification.create({ data: { type: "HOUSEMAN_TASKS_ASSIGNED", level: "info", targetRole: "houseman", targetUserId: userId, message: `Dir ${n === 1 ? "wurde 1 Aufgabe" : `wurden ${n} Aufgaben`} zugeteilt.` } });
+    const notification = await prisma.notification.create({ data: { type: "HOUSEMAN_TASKS_ASSIGNED", level: "info", targetRole: "houseman", targetUserId: userId, message: `Dir ${n === 1 ? "wurde 1 Aufgabe" : `wurden ${n} Aufgaben`} zugeteilt.`, ...keyed("notify.housemanAssigned", { n }) } });
     broadcast("notification:new", { notification });
   }
   if (changed) {

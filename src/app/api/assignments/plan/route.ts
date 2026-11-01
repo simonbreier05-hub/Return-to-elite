@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const parsed = Body.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Invalid plan options." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Invalid plan options.", code: "INVALID_INPUT" }, { status: 400 });
   if (!(await hubDay()).ready) return NextResponse.json({ error: HUB_MISSING_MESSAGE, hubMissing: true }, { status: 409 });
   const opts = parsed.data ?? {};
 

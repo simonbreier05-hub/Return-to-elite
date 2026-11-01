@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     // Pfad statt Wert: nie Inhalt zurückspiegeln.
     const where = parsed.error.issues.slice(0, 3).map((i) => i.path.join(".")).join(", ");
-    return NextResponse.json({ error: `Ungültige oder nicht erlaubte Felder: ${where}.` }, { status: 400 });
+    return NextResponse.json({ error: `Ungültige oder nicht erlaubte Felder: ${where}.`, code: "INVALID_INPUT" }, { status: 400 });
   }
   const v = parsed.data;
   const known = new Set((await prisma.room.findMany({ select: { number: true } })).map((r) => r.number));

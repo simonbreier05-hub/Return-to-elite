@@ -19,9 +19,9 @@ export async function POST(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "targetType, targetId und action (pause|resume) erforderlich." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "targetType, targetId und action (pause|resume) erforderlich.", code: "INVALID_INPUT" }, { status: 400 });
   const { targetType, targetId, action, reason } = parsed.data;
   const result = await setPause(auth.session, targetType, targetId, action, reason ?? null);
-  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: result.status });
   return NextResponse.json({ paused: result.paused, pause: result.pause });
 }

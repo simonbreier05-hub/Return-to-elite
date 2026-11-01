@@ -10,7 +10,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   const a = await chatAuth();
   if (!a.ok) return a.response;
   const { id } = await params;
-  if (!(await accessibleChannel(a.s, id))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal." }, { status: 403 });
+  if (!(await accessibleChannel(a.s, id))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal.", code: "CHANNEL_FORBIDDEN" }, { status: 403 });
   const beforeRaw = req.nextUrl.searchParams.get("before");
   const before = beforeRaw && !Number.isNaN(Date.parse(beforeRaw)) ? new Date(beforeRaw) : undefined;
   return NextResponse.json(await listMessages(id, before));
@@ -24,13 +24,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!a.ok) return a.response;
   const { id } = await params;
   const ch = await accessibleChannel(a.s, id);
-  if (!ch || !(await directStillAllowed(a.s, ch))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal." }, { status: 403 });
+  if (!ch || !(await directStillAllowed(a.s, ch))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal.", code: "CHANNEL_FORBIDDEN" }, { status: 403 });
   const parsed = Body.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Ungültige Nachricht." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Ungültige Nachricht.", code: "TEXT_REQUIRED" }, { status: 400 });
   const clean = sanitizeBody(parsed.data.body);
-  if (!clean.ok) return NextResponse.json({ error: clean.error === "TOO_LONG" ? "Nachricht ist zu lang." : "Nachricht ist leer." }, { status: 400 });
+  if (!clean.ok) return NextResponse.json({ error: clean.error === "TOO_LONG" ? "Nachricht ist zu lang." : "Nachricht ist leer.", code: clean.error === "TOO_LONG" ? "TEXT_TOO_LONG" : "TEXT_REQUIRED" }, { status: 400 });
   const limit = checkChatRateLimit(a.s.userId);
-  if (!limit.ok) return NextResponse.json({ error: "Zu viele Nachrichten — bitte kurz warten." }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
+  if (!limit.ok) return NextResponse.json({ error: "Zu viele Nachrichten — bitte kurz warten.", code: "RATE_LIMITED" }, { status: 429, headers: { "Retry-After": String(limit.retryAfterSeconds) } });
   const message = await postMessage(a.s, ch, clean.body, !!parsed.data.urgent);
   return NextResponse.json({ message }, { status: 201 });
 }

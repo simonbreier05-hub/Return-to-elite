@@ -5,12 +5,15 @@ import { api } from "./api";
 import { useSocket } from "./useSocket";
 import WindowPanel from "./WindowPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 
 interface Notification {
   id: string;
   type: string;
   level: string;
   message: string;
+  messageKey?: string | null;
+  messageVars?: string | null;
   targetRole: string;
   targetUserId?: string | null;
   acknowledged: boolean;
@@ -20,9 +23,9 @@ interface Notification {
 /** Alert *levels* — kept in the same muted register as AppShell's own bell
  * dropdown, so the two never disagree about what "urgent" looks like. */
 const LEVEL_STYLES: Record<string, string> = {
-  info: "border-l-navy-line",
-  warning: "border-l-gold",
-  critical: "border-l-status-out-of-order",
+  info: "border-s-navy-line",
+  warning: "border-s-gold",
+  critical: "border-s-status-out-of-order",
 };
 
 /**
@@ -39,7 +42,7 @@ const LEVEL_STYLES: Record<string, string> = {
  * "notification:new" has to be filtered here too).
  */
 export default function NotificationsPanel({ targetRole }: { targetRole: string }) {
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const load = () =>
@@ -84,14 +87,14 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`rounded-lg border border-charcoal/5 border-l-4 bg-ivory p-2.5 text-sm ${LEVEL_STYLES[n.level] ?? ""} ${
+            className={`rounded-lg border border-charcoal/5 border-s-4 bg-ivory p-2.5 text-sm ${LEVEL_STYLES[n.level] ?? ""} ${
               n.acknowledged ? "opacity-50" : ""
             }`}
           >
             <div className="text-[0.68rem] uppercase tracking-wider text-graphite/60">
-              {n.type.replace(/_/g, " ")} · {new Date(n.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
             </div>
-            <div className="mt-0.5">{n.message}</div>
+            <div className="mt-0.5">{notificationText(n, t)}</div>
           </div>
         ))}
       </div>

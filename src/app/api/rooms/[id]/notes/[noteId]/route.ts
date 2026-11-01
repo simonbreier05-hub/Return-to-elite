@@ -19,14 +19,14 @@ export async function PATCH(
   const { id, noteId } = await params;
 
   const parsed = PatchSchema.safeParse(await req.json().catch(() => null));
-  if (!parsed.success) return NextResponse.json({ error: "Valid status required." }, { status: 400 });
+  if (!parsed.success) return NextResponse.json({ error: "Valid status required.", code: "INVALID_STATUS" }, { status: 400 });
 
   const existing = await prisma.roomNote.findUnique({ where: { id: noteId } });
-  if (!existing || existing.roomId !== id) return NextResponse.json({ error: "Note not found." }, { status: 404 });
+  if (!existing || existing.roomId !== id) return NextResponse.json({ error: "Note not found.", code: "NOTE_NOT_FOUND" }, { status: 404 });
 
   // Den Text ändern dürfen nur Supervisor/Duty Manager (Status abhaken darf jeder angemeldete Mitarbeiter wie bisher)
   if (parsed.data.body !== undefined && auth.session.role !== "supervisor" && auth.session.role !== "duty_manager") {
-    return NextResponse.json({ error: "Nur Supervisor oder Duty Manager dürfen eine Notiz ändern." }, { status: 403 });
+    return NextResponse.json({ error: "Nur Supervisor oder Duty Manager dürfen eine Notiz ändern.", code: "NO_PERMISSION" }, { status: 403 });
   }
   const note = await prisma.roomNote.update({
     where: { id: noteId },
