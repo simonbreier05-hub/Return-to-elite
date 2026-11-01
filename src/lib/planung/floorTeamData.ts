@@ -8,10 +8,11 @@ import { assignFloors } from "@/lib/users/assignFloors";
 import { loadDay } from "@/lib/autoplan/load";
 import { getSettings } from "@/lib/settings";
 import { PLAN_FLOORS } from "./team";
+import { activePatterns, recordFloorDeviations } from "@/lib/learning/store";
 import { supervisorBadges, type HouseSupervisor } from "./model";
 import {
   floorDiff, resolveSuggestions, roomBand,
-  type FloorAssign, type FloorLoad, type Person, type Suggestion, type TeamRole, type WorkDay,
+  type FloorAssign, type FloorLoad, type FloorReason, type Person, type Suggestion, type TeamRole, type WorkDay,
 } from "./floorTeam";
 
 /**
@@ -126,7 +127,14 @@ export async function getFloorTeamState(date: string): Promise<FloorTeamState> {
   const rules = { window: settings.floorSuggestWindow, minDays: settings.floorSuggestMinDays, demandingShare: settings.floorDemandingWarnShare, maxFloors: settings.autoplanMaxFloors };
   const persons: Person[] = people.map((p) => ({ id: p.id, role: p.role, roomsLo: p.roomsLo ?? 0, roomsHi: p.roomsHi ?? 0, level: p.level ?? 0 }));
   const history = await loadHistory(persons, date);
-  const suggestions = resolveSuggestions(persons, history, loads, assign, { window: rules.window, minDays: rules.minDays, maxFloors: 2 });
+  // H3: gelernte Etagen („Frau X wird immer von Etage 3 auf 2 getauscht") fließen als Vorschlag mit Grund ein
+  const learned: Record<string, FloorReason[]> = {};
+  for (const pt of await activePatterns(date)) {
+    if (pt.kind !== "FLOOR" || !pt.personId || !pt.floor) continue;
+    if (!persons.some((x) => x.id === pt.personId)) continue;
+    (learned[pt.personId] ??= []).push({ floor: pt.floor, days: pt.days, of: pt.of, lastSeen: pt.lastDate, learned: true });
+  }
+  const suggestions = resolveSuggestions(persons, history, loads, assign, { window: rules.window, minDays: rules.minDays, maxFloors: 2 }, learned);
   return { date, people, loads, assign, suggestions, rules };
 }
 
@@ -137,6 +145,7 @@ export async function getFloorTeamState(date: string): Promise<FloorTeamState> {
 export async function saveFloorTeam(date: string, assign: FloorAssign, actorId: string) {
   const team = await savedTeam(date);
   if (!team) throw new Error("Bitte zuerst das Team speichern.");
+  const proposed = (await getFloorTeamState(date)).suggestions; // Systemvorschlag vor dem Speichern (für das Lernen)
   const allowed = new Set([...team.hk, ...team.sup, ...team.hm]);
   for (const [id, floors] of Object.entries(assign)) {
     if (!allowed.has(id)) throw new Error("Nur heute anwesende Personen können Etagen bekommen.");
@@ -175,6 +184,8 @@ export async function saveFloorTeam(date: string, assign: FloorAssign, actorId: 
     await assignFloors({ user: { id: s.id, name: s.name }, floors: [], actorId });
     await audit({ action: "FLOOR_TEAM_ASSIGNED", userId: actorId, meta: { date, personId: s.id, role: "supervisor", before: prev, after: [] } });
   }
+  // H3: Abweichung Vorschlag → Entscheidung festhalten (ohne Namen)
+  await recordFloorDeviations(date, proposed, after, team.hk.length).catch(() => 0);
   broadcast("planning:floors", { date });
   return { changed: changes.length };
 }

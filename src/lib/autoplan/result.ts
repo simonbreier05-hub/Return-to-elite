@@ -54,6 +54,7 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     const list: string[] = [];
     if (k < 0) { reasons[r.id] = ["Offen — bitte selbst zuteilen"]; return; }
     const h = input.housekeepers[k];
+    if (r.learnedReason && (r.preferHk === h.id || (r.minLevel && h.level >= r.minLevel))) list.push(r.learnedReason);
     if (r.kind === "TURN") list.push("Same-Day-Turn: zuerst in der Route");
     if (r.demanding.length) list.push(`${r.demanding.map((d) => DEMANDING_LABEL[d]).join(", ")}: Stufe ${h.level}`);
     if (h.todayFloors?.includes(r.floor)) list.push(`Etage ${r.floor} laut Etagenzuweisung`);

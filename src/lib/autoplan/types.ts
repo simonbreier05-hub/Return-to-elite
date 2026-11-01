@@ -25,6 +25,12 @@ export interface PlanRoom {
   state: RoomState;
   /** Feste (manuelle/heutige) Zuteilung: der Vorschlag verschiebt das Zimmer nie. */
   fixedTo: string | null;
+  /** H3 gelernt: Zimmer ging an den letzten Tagen immer an diese Person (weich, Gewicht `learned`). */
+  preferHk?: string;
+  /** H3 gelernt: Zimmer ging immer an mindestens diese Stufe (weich). */
+  minLevel?: number;
+  /** H3: Begründung für die Anzeige, z. B. „gelernt: an 4 von 5 Planungstagen so geändert". */
+  learnedReason?: string;
 }
 
 export interface PlanHousekeeper {

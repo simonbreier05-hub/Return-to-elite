@@ -8,6 +8,7 @@ import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, P
 import type { SettingsShape } from "@/lib/domain";
 import { roomBand } from "@/lib/planung/floorTeam";
 import { parseAssignedFloors } from "@/lib/floors";
+import { activePatterns } from "@/lib/learning/store";
 
 /** Zimmertypen, die als "Suite" (anspruchsvoll) gelten — offene Frage 3 im Interview: alle Suiten oder nur höhere? */
 export const SUITE_TYPES = ["JUNIOR_SUITE", "SUITE", "PENTHOUSE"] as const;
@@ -24,6 +25,8 @@ export interface DayData {
   settings: SettingsShape;
   weights: Awaited<ReturnType<typeof getAutoplanWeights>>;
   fullTimeTarget: number;
+  /** H3: gelernte Muster, die eine harte Regel verletzen würden — nur als Hinweis, nicht angewendet. */
+  learnedNotes: string[];
   /** DB-Zustand der Zimmer, um vor dem Anwenden zu prüfen, ob inzwischen etwas begonnen wurde. */
   roomState: Record<string, { number: string; state: RoomState; assignedToId: string | null; assignedOn: string | null }>;
 }
@@ -122,7 +125,33 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!opts.attendantIds || opts.attendantIds.includes(u.id)),
   }));
-  return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState };
+  const learnedNotes = await applyLearned(date, rooms, hks);
+  return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState, learnedNotes };
+}
+
+/**
+ * H3: gelernte Zimmer-Muster als weiche Präferenz eintragen. Harte Regeln gewinnen: ein Muster, das ein anspruchsvolles
+ * Zimmer an Stufe 1 geben würde, wird nicht angewendet und nur als Hinweis gezeigt.
+ */
+async function applyLearned(date: string, rooms: PlanRoom[], hks: { id: string; name: string; level: number }[]): Promise<string[]> {
+  const notes: string[] = [];
+  const patterns = await activePatterns(date).catch(() => []);
+  const byNumber = new Map(rooms.map((r) => [r.number, r]));
+  const hkBy = new Map(hks.map((h) => [h.id, h]));
+  for (const p of patterns) {
+    const r = p.roomNumber ? byNumber.get(p.roomNumber) : undefined;
+    if (!r || r.fixedTo) continue;
+    const why = `gelernt: an ${p.days} von ${p.of} Planungstagen so geändert`;
+    if (p.kind === "ROOM_PERSON" && p.target) {
+      const h = hkBy.get(p.target);
+      if (!h) continue;
+      if (h.level < 2 && r.demanding.length) { notes.push(`Gelerntes Muster für Zimmer ${r.number} nicht angewendet: Stufe-1-Regel geht vor.`); continue; }
+      r.preferHk = p.target; r.learnedReason = why;
+    } else if (p.kind === "ROOM_LEVEL" && p.minLevel) {
+      r.minLevel = Math.max(r.minLevel ?? 0, p.minLevel); r.learnedReason = why;
+    }
+  }
+  return notes;
 }
 
 export function morningInput(d: DayData): PlanInput {

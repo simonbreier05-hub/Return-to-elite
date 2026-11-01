@@ -7,6 +7,7 @@ import { assignDailyNumbers } from "@/lib/assignment/dailyNumbers";
 import { moveRoomBetweenAttendants } from "@/lib/rooms/moveRoomBetweenAttendants";
 import { berlinDate } from "@/lib/dayplan/time";
 import { loadDay, loadLive, morningInput, type DayData } from "./load";
+import { recordRoomDeviations } from "@/lib/learning/store";
 import { proposePlan } from "./propose";
 import { buildResult } from "./result";
 import { suggestionSignature, suggestRedistribution, type Move, type Suggestion } from "./redistribute";
@@ -22,6 +23,7 @@ export async function proposeForDate(date: string, userId: string, attendantIds?
   const input = morningInput(d);
   if (!input.housekeepers.length) throw new Error("Keine anwesenden Housekeeper ausgewählt.");
   const result = proposePlan(input);
+  for (const message of d.learnedNotes) result.warnings.push({ code: "LEARNED_SKIPPED", severity: "INFO", message });
   await prisma.autoPlanProposal.updateMany({ where: { date, status: "DRAFT" }, data: { status: "SUPERSEDED" } });
   const payload: ProposalPayload = { input, result, generatedAt: new Date().toISOString() };
   const row = await prisma.autoPlanProposal.create({ data: { date, createdById: userId, payload: JSON.stringify(payload) } });
@@ -81,6 +83,8 @@ export async function confirmProposal(proposalId: string, final: Assignment, ses
     prisma.autoPlanProposal.updateMany({ where: { date: row.date, status: "CONFIRMED" }, data: { status: "SUPERSEDED" } }),
     prisma.autoPlanProposal.update({ where: { id: row.id }, data: { status: "CONFIRMED", confirmedAt: new Date(), confirmedById: session.userId, deviations: JSON.stringify(deviations.map((d) => ({ ...d, at: new Date().toISOString() }))) } }),
   ]);
+  // H3: Abweichungen fürs Lernen (Zimmer verschoben/zurückgestellt), ohne Namen
+  await recordRoomDeviations(row.date, deviations, input.housekeepers.length).catch(() => 0);
   await audit({ action: "AUTOPLAN_CONFIRMED", userId: session.userId, meta: { date: row.date, rooms: input.rooms.length, changed: deviations.length, changedRooms: deviations.map((d) => d.room) } });
   broadcast("assignments:applied", { by: session.name, totalRooms: input.rooms.length, attendantIds: withRooms });
   void roomById;

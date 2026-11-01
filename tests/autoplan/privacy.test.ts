@@ -10,7 +10,7 @@ const FIELD = /\b(hkLevel|hkType|homeFloors|dailyTarget)\b/;
 // Dateien, die diese Felder bewusst kennen (alle hinter requireRole(["supervisor"]) bzw. reine Rechenlogik)
 const ALLOWED = [
   "lib/autoplan/", "app/api/autoplan/", "app/api/housekeepers/", "app/api/redistribution/", "app/api/internal/redistribution-check/",
-  "lib/planung/teamData", "lib/planung/floorTeamData", "app/api/planung/team/", "app/api/planung/floors/", "components/planung/TeamStep", "components/AutoPlanPanel", "components/HousekeeperSettingsPanel", "components/RedistributionCards", "app/settings/view.tsx",
+  "lib/planung/teamData", "lib/planung/floorTeamData", "lib/learning/", "app/api/planung/team/", "app/api/planung/floors/", "components/planung/TeamStep", "components/AutoPlanPanel", "components/HousekeeperSettingsPanel", "components/RedistributionCards", "app/settings/view.tsx",
 ];
 
 describe("Beschäftigtendaten (Typ, Stufe)", () => {

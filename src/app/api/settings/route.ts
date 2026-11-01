@@ -61,6 +61,13 @@ const Body = z.object({
   floorSuggestWindow: z.number().int().min(1).max(30).optional(),
   floorSuggestMinDays: z.number().int().min(1).max(30).optional(),
   floorDemandingWarnShare: z.number().min(0).max(1).optional(),
+  learnWindow: z.number().int().min(1).max(30).optional(),
+  learnMinDays: z.number().int().min(1).max(30).optional(),
+  learnExpireDays: z.number().int().min(1).max(90).optional(),
+  learnStaffDropShare: z.number().min(0.05).max(1).optional(),
+  workdataMinSamples: z.number().int().min(1).max(50).optional(),
+  workdataRetentionDays: z.number().int().min(7).max(365).optional(),
+  shiftMinutes: z.number().int().min(60).max(720).optional(),
   /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
   autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
   /** Priority weights, by their name in PRIORITY_WEIGHTS. Zero is allowed — it

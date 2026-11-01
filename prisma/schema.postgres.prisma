@@ -507,3 +507,23 @@ model RedistributionSuggestion {
 
   @@index([date, status])
 }
+
+// H3: Abweichung Systemvorschlag → endgültiger Plan (Lernen aus Planungsänderungen, docs/lernen.md).
+// Keine Gastdaten, keine Namen, keine Trace-Texte. kind: FLOOR_CHANGED | ROOM_MOVED | ROOM_DEFERRED.
+// weight 0 = Tag mit außergewöhnlicher Lage (z. B. > 30 % weniger Personal) — zählt nicht fürs Lernen.
+model PlanDeviation {
+  id         String   @id @default(cuid())
+  date       String // Planungstag "YYYY-MM-DD"
+  kind       String
+  personId   String? // betroffene Person (ID)
+  floor      Int?
+  roomNumber String?
+  before     String? // Vorschlag (kurz, z. B. Etage "3", Person-ID, Stufe "2")
+  after      String? // Entscheidung
+  reason     String? // optional, Einzeltap-Auswahl (Code, kein Freitext)
+  weight     Float    @default(1)
+  createdAt  DateTime @default(now())
+
+  @@index([date])
+  @@index([kind, date])
+}

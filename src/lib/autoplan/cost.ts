@@ -18,7 +18,7 @@ export interface Compiled {
   today: Set<number>[];
 }
 
-export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "rooms" | "assignedFloor";
+export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "rooms" | "assignedFloor" | "learned";
 export interface CostOptions {
   /** Nur die Regeln (Etagen, Interconnecting, Stammetage, Sprünge) — für Umverteilung nach Restzeit. */
   rulesOnly?: boolean;
@@ -59,7 +59,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   const H = hks.length;
   const credits = new Float64Array(H), dep = new Int32Array(H), stay = new Int32Array(H), linen = new Int32Array(H), dem = new Int32Array(H);
   const mask = new Int32Array(H), last = new Int32Array(H).fill(-1), count = new Int32Array(H);
-  let homeMis = 0, todayMis = 0, jumps = 0, unassigned = 0;
+  let homeMis = 0, todayMis = 0, jumps = 0, unassigned = 0, learnedMis = 0;
 
   for (const i of c.order) {
     const a = assign[i];
@@ -67,6 +67,8 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     const r = c.rooms[i];
     credits[a] += r.credits;
     count[a]++;
+    if (r.preferHk && c.hkIdx.has(r.preferHk) && hks[a].id !== r.preferHk) learnedMis++;
+    if (r.minLevel && hks[a].level < r.minLevel) learnedMis++;
     const today = c.today[a];
     if (today.size && !today.has(r.floor)) todayMis++;
     if (r.kind === "STAYOVER") { if (r.laundry) linen[a]++; else stay[a]++; } else dep[a]++;
@@ -82,7 +84,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     last[a] = i;
   }
 
-  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, rooms: 0, assignedFloor: 0 };
+  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, rooms: 0, assignedFloor: 0, learned: 0 };
   for (let h = 0; h < H; h++) {
     const extra = popcount(mask[h]) - maxFloors;
     if (extra > 0) parts.extraFloor += extra * w.extraFloor;
@@ -91,6 +93,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   parts.homeFloor = homeMis * w.homeFloor;
   parts.jump = jumps * w.jump;
   parts.assignedFloor = todayMis * (w.assignedFloor ?? 0);
+  parts.learned = learnedMis * (w.learned ?? 0);
   parts.unassigned = unassigned * UNASSIGNED_PENALTY;
 
   if (!opts.rulesOnly) {

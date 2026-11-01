@@ -272,6 +272,16 @@ export const DEFAULT_SETTINGS = {
   floorSuggestMinDays: 3,
   // Warnung „Stufe 1 auf anspruchsvoller Etage": ab diesem Anteil anspruchsvoller Zimmer (VIP, Suite, Allergiker, viele Traces).
   floorDemandingWarnShare: 0.3,
+  // H3 Lernen aus Planungsänderungen (src/lib/learning/patterns.ts): Muster ab learnMinDays der letzten learnWindow Planungstage,
+  // Auslaufen nach learnExpireDays Planungstagen ohne Beobachtung, Tage mit > learnStaffDropShare weniger Personal zählen nicht.
+  learnWindow: 5,
+  learnMinDays: 3,
+  learnExpireDays: 10,
+  learnStaffDropShare: 0.3,
+  // H3 Arbeitsdaten (src/lib/workdata/): Mindestanzahl Messwerte, Aufbewahrung in Tagen, Schichtlänge in Minuten.
+  workdataMinSamples: 5,
+  workdataRetentionDays: 90,
+  shiftMinutes: 450,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 

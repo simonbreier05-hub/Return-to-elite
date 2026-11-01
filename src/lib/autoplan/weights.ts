@@ -13,6 +13,7 @@ export const AUTOPLAN_WEIGHTS = {
   jump: 2, // je Flügel-/Nummernsprung
   rooms: 20, // H1: quadratische Abweichung vom Zimmer-Zielband (Hauptziel, vor den Credits)
   assignedFloor: 6, // H1: je Zimmer abseits der heute eingeteilten Etagen (Etagenzuweisung)
+  learned: 10, // H3: je Zimmer gegen ein gelerntes Muster (Person / Mindeststufe) — weich, harte Regeln gewinnen
 } as const;
 
 export type AutoplanWeights = { -readonly [K in keyof typeof AUTOPLAN_WEIGHTS]: number };

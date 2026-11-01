@@ -145,7 +145,7 @@ export default function FloorTeamStep(p: FloorTeamProps) {
                             ))}
                             {sr.map((s) => {
                               const x = byId.get(s.userId)!;
-                              const why = t("planungTool.ftReason", { days: s.reason.days, of: s.reason.of, floor: f });
+                              const why = t(s.reason.learned ? "planungTool.ftReasonLearned" : "planungTool.ftReason", { days: s.reason.days, of: s.reason.of, floor: f });
                               return (
                                 <li key={`s-${s.userId}`} className="inline-flex flex-wrap items-center gap-1 rounded-2xl border border-dashed border-brass-light/60 bg-brass-light/10 p-1 pl-3 text-sm text-brass-ink">
                                   <span><span aria-hidden>✦ </span>{t("planungTool.ftSuggestion")}: {label(x)}<span className="block text-xs">{why}</span></span>

@@ -18,7 +18,7 @@ export const FLOOR_MAX_SOFT = 2;
 /** Ein tatsächlicher Einsatztag einer Person: Etagen, auf denen sie mindestens ein Zimmer abgeschlossen hat. */
 export interface WorkDay { date: string; floors: number[] }
 
-export interface FloorReason { floor: number; days: number; of: number; lastSeen: string }
+export interface FloorReason { floor: number; days: number; of: number; lastSeen: string; /** H3: aus Planungsänderungen gelernt statt aus Einsätzen. */ learned?: boolean }
 
 export interface SuggestRules { window: number; minDays: number; maxFloors?: number }
 
@@ -79,6 +79,8 @@ const mid = (p: Person) => (p.roomsLo + p.roomsHi) / 2;
  */
 export function resolveSuggestions(
   people: Person[], history: Record<string, WorkDay[]>, loads: FloorLoad[], manual: FloorAssign, rules: SuggestRules,
+  /** H3: gelernte Etagen je Person (haben Vorrang vor der Einsatz-Historie, max. 2 Etagen bleibt). */
+  learned: Record<string, FloorReason[]> = {},
 ): Suggestion[] {
   const loadBy = new Map(loads.map((l) => [l.floor, l]));
   const byId = new Map(people.map((p) => [p.id, p]));
@@ -95,7 +97,9 @@ export function resolveSuggestions(
   const cands: (Suggestion & { split: number })[] = [];
   for (const p of people) {
     if ((manual[p.id] ?? []).length) continue; // manuell zugeteilt → kein Vorschlag
-    const reasons = suggestFromHistory(history[p.id] ?? [], rules);
+    const fromLearned = (learned[p.id] ?? []).map((x) => ({ ...x, learned: true }));
+    const fromHistory = suggestFromHistory(history[p.id] ?? [], rules).filter((x) => !fromLearned.some((l) => l.floor === x.floor));
+    const reasons = [...fromLearned, ...fromHistory].slice(0, rules.maxFloors ?? FLOOR_MAX_SOFT);
     for (const r of reasons) cands.push({ userId: p.id, floor: r.floor, reason: r, split: reasons.length });
   }
   cands.sort((a, b) => b.reason.days - a.reason.days || b.reason.lastSeen.localeCompare(a.reason.lastSeen) || a.floor - b.floor || a.userId.localeCompare(b.userId));
