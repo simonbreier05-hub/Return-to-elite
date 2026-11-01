@@ -259,7 +259,7 @@ export const DEFAULT_SETTINGS = {
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag
   // H1 (Antwort Simon 01.11.2026): Zimmerzahl ist das Hauptziel, Credits nur noch Gegenprobe.
   // Vollzeit: Stufe 3 = 13, Stufe 2 = 10–11, Stufe 1 = 6–8 Zimmer. Teilzeit: Stufe 3 = 9, Stufe 2 = 7.
-  // Teilzeit Stufe 1 (5–6) und Azubi (= Stufe-1-Band) sind Annahmen, bis Simon sie bestätigt.
+  // Teilzeit Stufe 1 = 5–6, Azubi = Stufe-1-Band 6–8 (von Simon bestätigt 01.11.2026).
   roomsVz3Min: 13, roomsVz3Max: 13,
   roomsVz2Min: 10, roomsVz2Max: 11,
   roomsVz1Min: 6, roomsVz1Max: 8,
