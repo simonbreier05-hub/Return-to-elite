@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "i18n:review": "tsx scripts/i18n.ts review",
     "i18n:import": "tsx scripts/i18n.ts import",
-    "i18n:missing": "tsx scripts/i18n.ts missing"
+    "i18n:missing": "tsx scripts/i18n.ts missing",
+    "check:colors": "node scripts/check-no-hardcoded-colors.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
