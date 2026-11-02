@@ -1,0 +1,134 @@
+/*
+ * Glas-Klassen und Bewegung des neuen Designs (docs/design/glass-spec.md, Abschnitt 3 und 11).
+ * Kein backdrop-filter, kein Blur, höchstens ein Schatten je Karte.
+ * In @layer components, damit Tailwind-Klassen (z. B. rounded-md) sie überschreiben können.
+ */
+@layer components {
+  /* Glas-Karte: Verlauf + Rand als Verlauf über ein Pseudoelement + ein weicher Schatten.
+     isolation: eigener Stapel, damit der warme Lichtreflex (.glass-warm) hinter dem Inhalt liegt. */
+  .glass {
+    position: relative;
+    isolation: isolate;
+    background: var(--glass-card);
+    border-radius: var(--glass-radius-lg);
+    box-shadow: var(--glass-shadow);
+  }
+  .glass::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: var(--glass-edge);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+  /* Ausgewählte Zeile/Kachel: anderer Fill, gleicher Rand */
+  .glass.glass-selected,
+  .glass-selected {
+    background: var(--glass-selected);
+  }
+  /* Ton „attention“ (KpiTile): warmer Lichtreflex hinter dem Inhalt */
+  .glass-warm::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    background: var(--glass-warm);
+    pointer-events: none;
+  }
+  /* Nur der Glas-Verlauf, ohne Rand/Schatten (FilterChip „default“) */
+  .glass-fill {
+    background: var(--glass-card);
+  }
+  /* Symbolscheibe (KPI, Listenzeile, Aktionsfläche) */
+  .glass-disc {
+    background: var(--glass-disc);
+    border: 1px solid var(--color-border-subtle);
+    border-radius: var(--radius-pill);
+  }
+  .bg-champagne {
+    background: var(--champagne);
+  }
+  .bg-atmosphere {
+    background: var(--atmosphere);
+  }
+  .bg-sky {
+    background: var(--sky);
+  }
+  /* Auswahlmarkierung einer Zeile: 6×68 px, Radius 4, Champagner, Glow, am Anfang der Zeile (RTL-fest) */
+  .selection-marker {
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    width: 6px;
+    height: 68px;
+    max-height: calc(100% - 8px);
+    transform: translateY(-50%);
+    border-radius: 4px;
+    background: var(--champagne);
+    box-shadow: var(--glow-marker);
+    pointer-events: none;
+  }
+  .selection-marker-compact {
+    width: 5px;
+    height: 56px;
+    border-radius: 3px;
+  }
+}
+
+/* Bewegung (Abschnitt 11): nur opacity/transform, 150–220 ms, ease-out, keine Dauerschleifen.
+   Füllmodus „backwards“ statt „both“: nach dem Einblenden bleibt kein transform stehen
+   (sonst landen fixed-Fenster im Inhalt an der falschen Stelle, vgl. .animate-rise). */
+@keyframes sc-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes sc-sheet-up {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes sc-slide-in-end {
+  from {
+    transform: translateX(var(--sc-slide-from, 100%));
+  }
+}
+.animate-in-up {
+  animation: sc-in-up 200ms ease-out backwards;
+  animation-delay: calc(var(--i, 0) * 40ms);
+}
+.animate-sheet-up {
+  animation: sc-sheet-up 220ms ease-out backwards;
+}
+.animate-slide-in-end {
+  animation: sc-slide-in-end 220ms ease-out backwards;
+}
+[dir="rtl"] .animate-slide-in-end {
+  --sc-slide-from: -100%;
+}
+/* Kurzes Eindrücken beim Antippen */
+.press {
+  transition: transform 150ms ease-out;
+}
+.press:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-in-up,
+  .animate-sheet-up,
+  .animate-slide-in-end {
+    animation: none !important;
+  }
+  .press,
+  .press:active:not(:disabled):not([aria-disabled="true"]) {
+    transition: none !important;
+    transform: none !important;
+  }
+}

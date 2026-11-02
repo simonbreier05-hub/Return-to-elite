@@ -1,0 +1,162 @@
+/*
+ * Design „Glas & Premium“ (D0) — Token aus docs/design/glass-spec.md, Abschnitt 2–5.
+ *
+ * Wird von src/app/globals.css importiert. Nur NEUE Namen: die alte Palette
+ * (ivory/navy/gold …) und ihre Klassen bleiben unverändert, bis D1–D6 eine Seite
+ * umstellen.
+ *
+ * Zwei Arten von Token:
+ * 1. Farben, Schriften und die neuen Radien `tile`/`pill` stehen im Tailwind-Theme
+ *    (`@theme static`). Daraus entstehen Klassen wie `bg-surface-card`,
+ *    `text-text-muted`, `border-border-subtle`, `rounded-pill`, `font-glass-serif`.
+ *    `static` = die Variablen stehen immer in :root, auch wenn keine Klasse sie
+ *    nutzt (glass.css liest sie direkt).
+ * 2. Radien sm/md/lg/xl und der Karten-Schatten haben in Tailwind schon Standardwerte,
+ *    die heutige Seiten benutzen (`rounded-lg`, `shadow-card`). Die neuen Werte gelten
+ *    deshalb nur innerhalb von `.theme-glass` — dort liefert `rounded-lg` 25 px, außerhalb
+ *    bleibt alles wie es war. Neue Seiten (D1–D6) legen `.theme-glass` um ihren Inhalt.
+ */
+
+@theme static {
+  /* Abschnitt 2 — Farben (Namen 1:1 aus der Spezifikation) */
+  --color-bg-canvas: #061421;
+  --color-bg-sidebar: #0a1928;
+  --color-surface-card: #142536;
+  --color-surface-card-raised: #192a3b;
+  --color-surface-selected: rgba(212, 172, 126, 0.16);
+  --color-surface-progress-track: rgba(255, 255, 255, 0.12);
+  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-default: rgba(212, 172, 126, 0.32);
+  --color-border-accent: #ebd0ab;
+  --color-text-primary: #f8f7f6;
+  --color-text-secondary: #c9d1db;
+  --color-text-muted: #8f9baa;
+  --color-text-on-accent: #0a1928;
+  --color-accent-default: #d4ac7e;
+  --color-accent-text: #e3bb8e;
+  --color-accent-subtle-bg: rgba(212, 172, 126, 0.16);
+  --color-status-success-fg: #7cc49a;
+  --color-status-success-bg: rgba(124, 196, 154, 0.16);
+  --color-status-warning-fg: #e8b04b;
+  --color-status-warning-bg: rgba(232, 176, 75, 0.16);
+  --color-status-danger-fg: #ee8277;
+  --color-status-danger-bg: rgba(238, 130, 119, 0.16);
+  --color-status-info-fg: #8db4e0;
+  --color-status-info-bg: rgba(141, 180, 224, 0.16);
+  --color-pill-gold-bg: rgba(198, 170, 135, 0.486);
+  --color-pill-gold-border: rgba(230, 189, 136, 0.369);
+  --color-pill-neutral-bg: rgba(173, 176, 178, 0.243);
+  --color-pill-neutral-border: rgba(255, 255, 255, 0.047);
+
+  /* Abschnitt 4 — neue Radien ohne Tailwind-Standard (gelten überall) */
+  --radius-tile: 22px;
+  --radius-pill: 999px;
+
+  /* Abschnitt 3 — Schatten als Klassen `shadow-glass`, `shadow-marker` */
+  --shadow-glass: 0 5px 16px rgba(0, 0, 0, 0.086);
+  --shadow-marker: 1px 0 12px rgba(255, 205, 119, 0.667);
+
+  /* Abschnitt 5 — Schriften (lokal, siehe glass-fonts.css) */
+  --font-glass-serif: "SC Lora", Georgia, "Times New Roman", serif;
+  --font-glass-sans: "SC Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
+:root {
+  /* Abschnitt 3 — Verläufe */
+  --glass-card: linear-gradient(180deg, #354353 0%, #142536 18%, #192a3b 70%, #303e50 92%, #50535a 100%);
+  --glass-edge: linear-gradient(180deg, rgba(244, 240, 233, 0.859) 0%, rgba(187, 197, 208, 0.188) 25%, rgba(177, 189, 197, 0.133) 65%, rgba(245, 206, 157, 0.851) 100%);
+  --glass-selected: linear-gradient(180deg, rgba(182, 166, 146, 0.471) 0%, rgba(109, 104, 99, 0.396) 50%, rgba(191, 156, 118, 0.6) 100%);
+  --glass-warm: linear-gradient(180deg, rgba(231, 190, 151, 0.302) 0%, rgba(147, 110, 73, 0.161) 50%, rgba(220, 165, 111, 0.4) 100%);
+  --glass-disc: linear-gradient(180deg, rgba(165, 173, 180, 0.4) 0%, rgba(111, 121, 134, 0.259) 60%, rgba(85, 102, 117, 0.439) 100%);
+  --champagne: linear-gradient(180deg, #f5dab4 0%, #d4ac7e 55%, #e3bb8e 100%);
+  --atmosphere: linear-gradient(90deg, #061421 0%, #23303f 60%, #25313f 100%);
+  --sky: radial-gradient(ellipse at center, #606575 0%, rgba(72, 86, 110, 0.533) 70%, rgba(72, 86, 110, 0) 100%);
+  --glow-marker: 1px 0 12px rgba(255, 205, 119, 0.667);
+  /* Karten-Schatten unter eigenem Namen, damit .glass auch außerhalb von .theme-glass stimmt */
+  --glass-shadow: 0 5px 16px rgba(0, 0, 0, 0.086);
+
+  /* Abschnitt 4 — Abstände und Größen (Abstände = Tailwind-Stufen 1/2/3/4/6/8/10) */
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-2xl: 32px;
+  --space-3xl: 40px;
+  --size-touch-min: 48px;
+  --size-row-height: 80px;
+  --size-row-height-compact: 72px;
+  --size-button-height: 64px;
+  --size-sidebar-wide: 264px;
+  --size-sidebar-rail: 80px;
+  /* Glas-Radien unter eigenem Namen (für glass.css, gelten überall) */
+  --glass-radius-sm: 15px;
+  --glass-radius-md: 18px;
+  --glass-radius-lg: 25px;
+  --glass-radius-xl: 32px;
+}
+
+/* Neue Werte der Tailwind-Standardnamen nur im neuen Design (siehe Kopfkommentar). */
+.theme-glass {
+  --radius-sm: var(--glass-radius-sm);
+  --radius-md: var(--glass-radius-md);
+  --radius-lg: var(--glass-radius-lg);
+  --radius-xl: var(--glass-radius-xl);
+  --shadow-card: var(--glass-shadow);
+  font-family: var(--font-glass-sans);
+  color: var(--color-text-primary);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Abschnitt 5 — Typografie. Jede Klasse setzt Schrift, Gewicht, Größe und Zeilenhöhe. */
+@utility text-display {
+  font-family: var(--font-glass-serif);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 48px;
+}
+@utility text-title-28 {
+  font-family: var(--font-glass-serif);
+  font-weight: 700;
+  font-size: 28px;
+  line-height: 34px;
+}
+@utility text-title-22 {
+  font-family: var(--font-glass-serif);
+  font-weight: 700;
+  font-size: 22px;
+  line-height: 28px;
+}
+@utility text-number {
+  font-family: var(--font-glass-serif);
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 36px;
+}
+@utility text-body-18 {
+  font-family: var(--font-glass-sans);
+  font-weight: 500;
+  font-size: 18px;
+  line-height: 26px;
+}
+@utility text-body-16 {
+  font-family: var(--font-glass-sans);
+  font-weight: 400;
+  font-size: 16px;
+  line-height: 24px;
+}
+@utility text-label {
+  font-family: var(--font-glass-sans);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+}
+/* Abschnittstitel: Label/14 in Großbuchstaben, Laufweite +6 % */
+@utility text-section {
+  font-family: var(--font-glass-sans);
+  font-weight: 500;
+  font-size: 14px;
+  line-height: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
