@@ -132,3 +132,16 @@
     transform: none !important;
   }
 }
+
+/* Kopf-Foto (Spezifikation Abschnitt 3): links/rechts weich ausgeblendet, nach unten in den Himmel auslaufend. */
+.header-photo-mask {
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 89%, transparent 100%), linear-gradient(180deg, #000 45%, transparent 100%);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(90deg, transparent 0, #000 12%, #000 89%, transparent 100%), linear-gradient(180deg, #000 45%, transparent 100%);
+  mask-composite: intersect;
+}
+/* Foto unten in der Seitenleiste (nur breit): oben und unten weich ausgeblendet. */
+.sidebar-photo-mask {
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 35%, #000 60%, transparent 100%);
+  mask-image: linear-gradient(180deg, transparent 0, #000 35%, #000 60%, transparent 100%);
+}

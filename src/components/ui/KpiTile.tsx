@@ -17,7 +17,7 @@ export function KpiTile({ label, value, icon, tone = "default", className, ...ac
   return (
     <Interactive
       {...action}
-      className={cx("glass flex w-full items-center gap-4 rounded-(--radius-tile) px-6 py-4", tone === "attention" && "glass-warm", className)}
+      className={cx("glass flex w-full items-center gap-4 rounded-(--radius-tile) px-5 py-4", tone === "attention" && "glass-warm", className)}
     >
       <span className="glass-disc flex size-14 shrink-0 items-center justify-center text-text-secondary">
         <Glyph name={icon} size={28} />
