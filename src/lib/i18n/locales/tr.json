@@ -1574,6 +1574,18 @@
     "ui.tile.stayover": "Konaklayan",
     "ui.tile.dnd": "DND",
     "ui.tile.unassigned": "Henüz atanmadı",
-    "ui.credits": "Credits"
+    "ui.credits": "Credits",
+    "nav.overview": "Genel bakış",
+    "nav.rooms": "Odalar",
+    "nav.house": "Otel",
+    "nav.tasks": "Görevler",
+    "nav.excursions": "Geziler",
+    "nav.messages": "Mesajlar",
+    "nav.more": "Daha fazla",
+    "nav.mainMenu": "Ana menü",
+    "appShell.greetingMorning": "Günaydın, {{name}}",
+    "appShell.greetingDay": "İyi günler, {{name}}",
+    "appShell.greetingEvening": "İyi akşamlar, {{name}}",
+    "appShell.profile": "Profil"
   }
 }

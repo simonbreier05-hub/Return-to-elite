@@ -1574,6 +1574,18 @@
     "ui.tile.stayover": "स्टेओवर",
     "ui.tile.dnd": "DND",
     "ui.tile.unassigned": "अभी आवंटित नहीं",
-    "ui.credits": "Credits"
+    "ui.credits": "Credits",
+    "nav.overview": "अवलोकन",
+    "nav.rooms": "कमरे",
+    "nav.house": "होटल",
+    "nav.tasks": "कार्य",
+    "nav.excursions": "भ्रमण",
+    "nav.messages": "संदेश",
+    "nav.more": "और",
+    "nav.mainMenu": "मुख्य मेनू",
+    "appShell.greetingMorning": "सुप्रभात, {{name}}",
+    "appShell.greetingDay": "नमस्ते, {{name}}",
+    "appShell.greetingEvening": "शुभ संध्या, {{name}}",
+    "appShell.profile": "प्रोफ़ाइल"
   }
 }
