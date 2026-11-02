@@ -1,5 +1,14 @@
 {
   "_hinweis": "Dateien, die ein Design-Paket (D1–D6) auf „Glas & Premium“ umgestellt hat. 'warn' = harte Farben werden gemeldet, aber noch nicht blockiert; nach der Abnahme eines Pakets wandern seine Dateien nach 'strict'. src/components/ui/** ist immer strict.",
-  "strict": [],
+  "strict": [
+    "src/components/AppShell.tsx",
+    "src/components/shell/DetailContainer.tsx",
+    "src/components/shell/GlassDialog.tsx",
+    "src/components/shell/GlassIconButton.tsx",
+    "src/components/shell/HeaderPhoto.tsx",
+    "src/components/shell/Overlay.tsx",
+    "src/components/shell/ShellNav.tsx",
+    "src/app/dev/shell/ShellDemo.tsx"
+  ],
   "warn": []
 }
