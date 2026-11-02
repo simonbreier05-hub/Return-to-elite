@@ -1,4 +1,8 @@
 @import "tailwindcss";
+/* Neues Design „Glas & Premium“ (D0): nur neue Namen, alte Palette unten bleibt unverändert. */
+@import "../styles/glass-fonts.css";
+@import "../styles/glass-tokens.css";
+@import "../styles/glass.css";
 
 /*
  * StayClean — visual language, tuned to the house.

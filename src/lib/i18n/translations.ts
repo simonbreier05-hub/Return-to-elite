@@ -1663,6 +1663,37 @@ const en = {
     basisShort: "Based on {{n}} rooms on {{days}} working days.",
     basis: "Based on {{n}} rooms on {{days}} working days (since {{since}}).",
   },
+  /** Bausteine des neuen Designs (src/lib/ui, src/components/ui) — Paket D0 */
+  ui: {
+    status: {
+      open: "Open",
+      cleaning: "Cleaning",
+      done: "Done",
+      paused: "Paused",
+      dnd: "DND",
+      defect: "Defect",
+      rework: "Rework",
+    },
+    marker: {
+      priority: "Priority",
+      dnd: "DND",
+      defect: "Defect",
+      laundry: "Linen change",
+      arrival: "Arrival",
+      vip: "VIP",
+      pause: "Paused",
+    },
+    tile: {
+      empty: "Vacant",
+      occupied: "Occupied",
+      departure: "Departure",
+      arrival: "Arrival",
+      stayover: "Stayover",
+      dnd: "DND",
+      unassigned: "Not assigned yet",
+    },
+    credits: "Credits",
+  },
 } as const;
 
 const de = {
@@ -3316,6 +3347,37 @@ const de = {
     cat_DEPARTURE: "Abreise",
     basisShort: "Auf Basis von {{n}} Zimmern an {{days}} Arbeitstagen.",
     basis: "Auf Basis von {{n}} Zimmern an {{days}} Arbeitstagen (seit {{since}}).",
+  },
+  /** Bausteine des neuen Designs (src/lib/ui, src/components/ui) — Paket D0 */
+  ui: {
+    status: {
+      open: "Offen",
+      cleaning: "In Reinigung",
+      done: "Erledigt",
+      paused: "Pausiert",
+      dnd: "DND",
+      defect: "Mangel",
+      rework: "Nachbessern",
+    },
+    marker: {
+      priority: "Priorität",
+      dnd: "DND",
+      defect: "Mangel",
+      laundry: "Wäschewechsel",
+      arrival: "Anreise",
+      vip: "VIP",
+      pause: "Pause",
+    },
+    tile: {
+      empty: "Leer",
+      occupied: "Belegt",
+      departure: "Abreise",
+      arrival: "Anreise",
+      stayover: "Bleiber",
+      dnd: "DND",
+      unassigned: "Zuteilung offen",
+    },
+    credits: "Credits",
   },
 } satisfies Dict;
 

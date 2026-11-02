@@ -21,7 +21,8 @@
     "test:watch": "vitest",
     "i18n:review": "tsx scripts/i18n.ts review",
     "i18n:import": "tsx scripts/i18n.ts import",
-    "i18n:missing": "tsx scripts/i18n.ts missing"
+    "i18n:missing": "tsx scripts/i18n.ts missing",
+    "check:colors": "node scripts/check-no-hardcoded-colors.mjs"
   },
   "dependencies": {
     "@prisma/client": "^6.5.0",
@@ -34,6 +35,7 @@
     "bcryptjs": "^3.0.2",
     "exceljs": "^4.4.0",
     "jose": "^6.0.10",
+    "lucide-react": "1.59.0",
     "next": "^15.3.2",
     "papaparse": "^5.7.0",
     "pdf-lib": "^1.17.1",
