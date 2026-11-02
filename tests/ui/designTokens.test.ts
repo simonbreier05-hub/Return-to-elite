@@ -82,3 +82,20 @@ describe("Design „Glas & Premium“ — Token und Regeln", () => {
     expect(g).toMatch(/--color-navy: #133457;/);
   });
 });
+
+describe("Kopf-Foto (Spezifikation Abschnitt 1/3/12)", () => {
+  it("liegt als WebP ≤ 150 KB vor und die Größe stimmt mit branding.ts überein", async () => {
+    const { HEADER_PHOTO_URL, HEADER_PHOTO_SIZE } = await import("@/lib/branding");
+    expect(HEADER_PHOTO_URL).toMatch(/\.webp$/);
+    const file = path.join(ROOT, "public", HEADER_PHOTO_URL!);
+    const buf = readFileSync(file);
+    expect(buf.length).toBeLessThanOrEqual(150 * 1024);
+    expect(buf.subarray(0, 4).toString()).toBe("RIFF");
+    expect(buf.subarray(8, 12).toString()).toBe("WEBP");
+    // VP8-Kopf: Breite/Höhe (14 Bit) ab Byte 26
+    if (buf.subarray(12, 16).toString() === "VP8 ") {
+      expect(buf.readUInt16LE(26) & 0x3fff).toBe(HEADER_PHOTO_SIZE.width);
+      expect(buf.readUInt16LE(28) & 0x3fff).toBe(HEADER_PHOTO_SIZE.height);
+    }
+  });
+});
