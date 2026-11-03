@@ -11,7 +11,7 @@ import { hhmm } from "@/lib/i18n/format";
 export interface PauseInfo { reason: string | null; since: string; byName: string | null; byRole?: string | null }
 
 const time = (iso: string) => hhmm(iso);
-const reasonKey = (r: string) => `work.reason${r}` as TKey;
+export const reasonKey = (r: string) => `work.reason${r}` as TKey;
 
 /** Kleines Kennzeichen „⏸ Pausiert · Grund“ für Listen (Zimmerzeilen, Hausmann-Liste, Arbeitsaufträge). */
 export function PauseBadge({ pause, showBy = false }: { pause: PauseInfo | null | undefined; showBy?: boolean }) {
@@ -25,6 +25,31 @@ export function PauseBadge({ pause, showBy = false }: { pause: PauseInfo | null 
       {showBy && pause.byName && <span className="font-normal">· {t("work.pausedBy", { name: pause.byName })}</span>}
     </span>
   );
+}
+
+/**
+ * Pausieren/Fortsetzen über POST /api/work/pause — eine Logik für den alten `PauseControl` und den Glas-Hub (D2).
+ * `onChanged` bekommt die neue Pause (oder null nach Fortsetzen).
+ */
+export function usePauseAction(targetType: PauseTarget, targetId: string, onChanged?: (pause: PauseInfo | null) => void) {
+  const { t } = useLocale();
+  const [asking, setAsking] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const send = async (action: "pause" | "resume", reason?: PauseReason | null) => {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      const res = await api<{ paused: boolean; pause: PauseInfo | null }>("/api/work/pause", { body: { targetType, targetId, action, reason: reason ?? null } });
+      setAsking(false);
+      onChanged?.(res.paused ? res.pause : null);
+    } catch (e) {
+      setError(errorText(e, t, "work.failed"));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return { asking, setAsking, busy, error, send };
 }
 
 /**
@@ -42,24 +67,8 @@ export default function PauseControl({ targetType, targetId, pause, canPause, on
   showBadge?: boolean;
 }) {
   const { t } = useLocale();
-  const [asking, setAsking] = useState(false);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { asking, setAsking, busy, error, send } = usePauseAction(targetType, targetId, onChanged);
   const h = size === "lg" ? "h-14 text-lg" : "h-12 text-sm";
-
-  const send = async (action: "pause" | "resume", reason?: PauseReason | null) => {
-    if (busy) return;
-    setBusy(true); setError(null);
-    try {
-      const res = await api<{ paused: boolean; pause: PauseInfo | null }>("/api/work/pause", { body: { targetType, targetId, action, reason: reason ?? null } });
-      setAsking(false);
-      onChanged?.(res.paused ? res.pause : null);
-    } catch (e) {
-      setError(errorText(e, t, "work.failed"));
-    } finally {
-      setBusy(false);
-    }
-  };
 
   if (pause) {
     return (

@@ -22,35 +22,16 @@ export interface ThreadNote {
 
 
 /**
- * The room-note thread: full history, per-note OPEN/DONE toggle, and a
- * composer to add a new note. Shared by the attendant card's inline expand,
- * the supervisor RoomDrawer, and the global RoomDetailModal — it only needs
- * a roomId and the notes already known to the caller, and reports additions
- * / status changes back via callbacks so each parent can patch its own
- * board state however it already does. It fetches the full thread itself
- * (the board list API only ever sends the latest 3 notes per room).
- *
- * Mit `task` (Arbeits-Bildschirme: Housekeeper, Hausmann, Technik, Supervisor-Modal) schreibt der Verlauf standardmäßig
- * Nachrichten an alle Beteiligten — sofern der Server sagt, dass diese Person beteiligt ist (`canMessage`). Nachrichten stehen
- * im selben Verlauf, klar gekennzeichnet mit Autor, Rolle und Zeit.
+ * Daten und Aktionen des Notiz-/Nachrichten-Verlaufs (laden, schreiben, erledigt/offen) — eine Logik für den
+ * alten `NoteThread` und den Glas-Verlauf des Housekeeper-Hubs (D2). Nur Darstellung unterscheidet sich.
  */
-export default function NoteThread({
-  roomId,
-  initialNotes,
-  onNoteAdded,
-  onNoteUpdated,
-  compact = false,
-  task,
-}: {
+export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated, task }: {
   roomId: string;
   initialNotes: ThreadNote[];
   onNoteAdded?: (note: ThreadNote) => void;
   onNoteUpdated?: (note: ThreadNote) => void;
-  compact?: boolean;
   task?: { type: PauseTarget; id: string };
 }) {
-  const { t } = useLocale();
-  const roleLabel = (r: string) => (r === "guest" ? t("shared.guest") : `role.${r}` in SOURCE_DICTS.de ? t(`role.${r}` as TKey) : r.replace(/_/g, " "));
   const [notes, setNotes] = useState<ThreadNote[]>(Array.isArray(initialNotes) ? initialNotes : []);
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
@@ -102,6 +83,48 @@ export default function NoteThread({
       setTogglingId(null);
     }
   };
+
+  return { notes, noteBody, setNoteBody, savingNote, togglingId, canMessage, asMessage, setAsMessage, outOfScope, messageMode, addNote, toggleStatus };
+}
+
+/** Rollenname für die Kopfzeile einer Notiz (Gast, bekannte Rolle oder Rohwert). */
+export function useRoleLabel() {
+  const { t } = useLocale();
+  return (r: string) => (r === "guest" ? t("shared.guest") : `role.${r}` in SOURCE_DICTS.de ? t(`role.${r}` as TKey) : r.replace(/_/g, " "));
+}
+
+/**
+ * The room-note thread: full history, per-note OPEN/DONE toggle, and a
+ * composer to add a new note. Shared by the attendant card's inline expand,
+ * the supervisor RoomDrawer, and the global RoomDetailModal — it only needs
+ * a roomId and the notes already known to the caller, and reports additions
+ * / status changes back via callbacks so each parent can patch its own
+ * board state however it already does. It fetches the full thread itself
+ * (the board list API only ever sends the latest 3 notes per room).
+ *
+ * Mit `task` (Arbeits-Bildschirme: Housekeeper, Hausmann, Technik, Supervisor-Modal) schreibt der Verlauf standardmäßig
+ * Nachrichten an alle Beteiligten — sofern der Server sagt, dass diese Person beteiligt ist (`canMessage`). Nachrichten stehen
+ * im selben Verlauf, klar gekennzeichnet mit Autor, Rolle und Zeit.
+ */
+export default function NoteThread({
+  roomId,
+  initialNotes,
+  onNoteAdded,
+  onNoteUpdated,
+  compact = false,
+  task,
+}: {
+  roomId: string;
+  initialNotes: ThreadNote[];
+  onNoteAdded?: (note: ThreadNote) => void;
+  onNoteUpdated?: (note: ThreadNote) => void;
+  compact?: boolean;
+  task?: { type: PauseTarget; id: string };
+}) {
+  const { t } = useLocale();
+  const roleLabel = useRoleLabel();
+  const { notes, noteBody, setNoteBody, savingNote, togglingId, canMessage, asMessage, setAsMessage, outOfScope, messageMode, addNote, toggleStatus } =
+    useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated, task });
 
   const pad = compact ? "p-1.5" : "p-2";
   const textSize = compact ? "text-xs" : "text-sm";
