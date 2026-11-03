@@ -82,7 +82,7 @@ export function HkHub(p: HkHubProps) {
   const allDone = p.items.length > 0 && p.items.every((i) => i.group === "DONE" || i.group === "OTHER");
 
   const kpiTiles: { key: string; label: string; value: number; icon: "bed-single" | "check" | "refresh" | "circle"; warm: boolean }[] = [
-    { key: "total", label: phone ? t("nav.rooms") : t("hkHub.kpiRooms"), value: p.kpis.total, icon: "bed-single", warm: false },
+    { key: "total", label: bp === "wide" ? t("hkHub.kpiRooms") : t("nav.rooms"), value: p.kpis.total, icon: "bed-single", warm: false },
     { key: "done", label: t("hkHub.kpiDone"), value: p.kpis.done, icon: "check", warm: false },
     { key: "inProgress", label: t("hkHub.kpiInProgress"), value: p.kpis.inProgress, icon: "refresh", warm: p.kpis.inProgress > 0 },
     { key: "open", label: t("hkHub.kpiOpen"), value: p.kpis.open, icon: "circle", warm: p.kpis.open > 0 },

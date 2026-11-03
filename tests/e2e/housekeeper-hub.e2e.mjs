@@ -56,7 +56,7 @@ for (const [w, h] of SIZES) {
   check(statusText, `${w}px: jeder Status als Text oder aria-label`);
   const third = await page.getByRole("heading", { name: "Nächste Zimmer" }).isVisible().catch(() => false);
   check(third === (w >= 1600), `${w}px: dritte Spalte „Nächste Zimmer“ ${w >= 1600 ? "sichtbar" : "verborgen"}`);
-  const kpiLabel = mode === "phone" ? "Zimmer" : "Meine Zimmer"; // Handy: kurzes Label wie Figma `41:1899`
+  const kpiLabel = mode === "wide" ? "Meine Zimmer" : "Zimmer"; // unter 1280 kurzes Label wie Figma `41:1899` (Kachel zu schmal)
   const kpiVisible = await page.getByText(kpiLabel, { exact: true }).first().isVisible();
   check(kpiVisible, `${w}px: Kennzahl „${kpiLabel}“ sichtbar`);
 
