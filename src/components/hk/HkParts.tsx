@@ -239,7 +239,7 @@ export function HkMyWorkData() {
 }
 
 /** Rahmen eines Glas-Fensters in der Mitte mit Titel und Schließen. */
-function HkWindow({ title, subtitle, onClose, dirty, children }: { title: string; subtitle?: string; onClose: () => void; dirty?: boolean; children: React.ReactNode }) {
+export function HkWindow({ title, subtitle, onClose, dirty, children }: { title: string; subtitle?: string; onClose: () => void; dirty?: boolean; children: React.ReactNode }) {
   const { t } = useLocale();
   const id = useId();
   return (

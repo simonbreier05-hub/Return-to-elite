@@ -96,7 +96,7 @@ describe("Hausmann-Traces", () => {
 describe("Kein Neuladen nach einer Zuteilung", () => {
   const read = (p: string) => readFileSync(p, "utf8");
   it("Zuteil-Oberflächen navigieren nie und bauen sich nicht neu auf (kein router.*, location, reload, key-Wechsel)", () => {
-    for (const f of ["src/components/DragDropBoard.tsx", "src/components/PlanningFloorPlanPanel.tsx", "src/components/AssignmentFloorPlan.tsx", "src/components/planung/PlanEditorWindow.tsx"]) {
+    for (const f of ["src/components/DragDropBoard.tsx", "src/components/PlanningFloorPlanPanel.tsx", "src/components/AssignmentFloorPlan.tsx", "src/components/supervisor/GlassPlanningBoard.tsx", "src/components/usePlanningFloorPlan.ts", "src/components/planung/PlanEditorWindow.tsx"]) {
       const src = read(f);
       expect(src, f).not.toMatch(/router\.(push|replace|refresh)|location\.(reload|assign|href\s*=)|window\.location/);
       expect(src, f).not.toMatch(/<PlanningFloorPlanPanel[^>]*\bkey=/);
