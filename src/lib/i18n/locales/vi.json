@@ -1574,6 +1574,18 @@
     "ui.tile.stayover": "Phòng ở tiếp",
     "ui.tile.dnd": "DND",
     "ui.tile.unassigned": "Chưa phân công",
-    "ui.credits": "Credits"
+    "ui.credits": "Credits",
+    "nav.overview": "Tổng quan",
+    "nav.rooms": "Phòng",
+    "nav.house": "Toàn khách sạn",
+    "nav.tasks": "Công việc",
+    "nav.excursions": "Tham quan",
+    "nav.messages": "Tin nhắn",
+    "nav.more": "Thêm",
+    "nav.mainMenu": "Menu chính",
+    "appShell.greetingMorning": "Chào buổi sáng, {{name}}",
+    "appShell.greetingDay": "Chào buổi chiều, {{name}}",
+    "appShell.greetingEvening": "Chào buổi tối, {{name}}",
+    "appShell.profile": "Hồ sơ"
   }
 }

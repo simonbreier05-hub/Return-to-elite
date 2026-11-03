@@ -1574,6 +1574,18 @@
     "ui.tile.stayover": "Fermata",
     "ui.tile.dnd": "DND",
     "ui.tile.unassigned": "Non ancora assegnata",
-    "ui.credits": "Credits"
+    "ui.credits": "Credits",
+    "nav.overview": "Panoramica",
+    "nav.rooms": "Camere",
+    "nav.house": "Hotel",
+    "nav.tasks": "Attività",
+    "nav.excursions": "Escursioni",
+    "nav.messages": "Messaggi",
+    "nav.more": "Altro",
+    "nav.mainMenu": "Menu principale",
+    "appShell.greetingMorning": "Buongiorno, {{name}}",
+    "appShell.greetingDay": "Buon pomeriggio, {{name}}",
+    "appShell.greetingEvening": "Buonasera, {{name}}",
+    "appShell.profile": "Profilo"
   }
 }

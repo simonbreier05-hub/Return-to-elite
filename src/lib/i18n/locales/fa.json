@@ -1574,6 +1574,18 @@
     "ui.tile.stayover": "ماندگار",
     "ui.tile.dnd": "DND",
     "ui.tile.unassigned": "هنوز تخصیص نیافته",
-    "ui.credits": "Credits"
+    "ui.credits": "Credits",
+    "nav.overview": "نمای کلی",
+    "nav.rooms": "اتاق‌ها",
+    "nav.house": "هتل",
+    "nav.tasks": "وظایف",
+    "nav.excursions": "گشت‌ها",
+    "nav.messages": "پیام‌ها",
+    "nav.more": "بیشتر",
+    "nav.mainMenu": "منوی اصلی",
+    "appShell.greetingMorning": "صبح بخیر، {{name}}",
+    "appShell.greetingDay": "روز بخیر، {{name}}",
+    "appShell.greetingEvening": "عصر بخیر، {{name}}",
+    "appShell.profile": "پروفایل"
   }
 }

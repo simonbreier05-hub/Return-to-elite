@@ -1,13 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
-import Image from "next/image";
 import { api } from "./api";
 import { useSocket } from "./useSocket";
-import { STATUS_STYLES } from "./status";
-import { STATUS_LABELS } from "@/lib/domain";
 import NoteCountBadge from "./NoteCountBadge";
 import { RoomFlagIcons } from "./RoomFlags";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
@@ -17,9 +13,17 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
-import LiveClock from "./LiveClock";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
+import { roleHome, type Role } from "@/lib/domain";
+import { firstName, greetingKey, initials } from "@/lib/ui/greeting";
+import { STATUS_UI, uiStatusForRoom } from "@/lib/ui/status";
+import { Pill } from "./ui/Pill";
+import { Button } from "./ui/Button";
+import { cx, FOCUS_RING, Glyph } from "./ui/primitives";
+import { GlassIconButton } from "./shell/GlassIconButton";
+import { HeaderPhoto } from "./shell/HeaderPhoto";
+import { Rail, Sidebar, TabBar } from "./shell/ShellNav";
 
 interface Notification {
   id: string;
@@ -34,53 +38,95 @@ interface Notification {
   createdAt: string;
 }
 
-/** Alert *levels* — a separate semantic system from room status colours,
- * kept in the same muted register so it never reads as a room-status hue. */
+/** Meldungs-Stufen — eigenes System, nie mit Zimmerstatus verwechselbar; immer mit Typ-Text daneben. */
 const LEVEL_STYLES: Record<string, string> = {
-  info: "border-s-navy-line",
-  warning: "border-s-gold",
-  critical: "border-s-status-out-of-order",
+  info: "border-s-status-info-fg",
+  warning: "border-s-status-warning-fg",
+  critical: "border-s-status-danger-fg",
 };
 
+/** Schließt ein Aufklapp-Feld bei Klick daneben. */
+function useOutsideClose(open: boolean, close: () => void) {
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) close();
+    };
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("touchstart", onDown);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [open, close]);
+  return ref;
+}
+
+/** Datum + Uhrzeit Berlin für den Kopf, minutengenau; erst nach dem Mounten (Server und Browser gleich). */
+function HeaderDate() {
+  const { fmt } = useLocale();
+  const [now, setNow] = useState<Date | null>(null);
+  useEffect(() => {
+    setNow(new Date());
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  if (!now) return <span className="text-label block h-5" aria-hidden />;
+  const date = fmt.date(now, { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+  return (
+    <p className="text-label text-text-secondary" role="timer">
+      {date} · {fmt.time(now)}
+    </p>
+  );
+}
+
 /**
- * Shared shell: elegant header, live notification bell (Socket.IO), logout.
- * Tablet-first: 48px+ touch targets throughout.
+ * App-Rahmen „Glas & Premium“ (Design D1, docs/design/glass-spec.md Abschnitt 10):
+ * - ab 1280 px schwebende Seitenleiste 264 px, 640–1279 px Icon-Leiste 80 px, darunter Tab-Leiste unten;
+ *   Menü nur aus `src/lib/nav.ts`.
+ * - Kopf mit Datum, Begrüßung (bzw. Titel + Zurück auf Unterseiten), Suche, Glocke, Avatar; Kopf-Foto
+ *   aus `src/lib/branding.ts`.
  *
- * `title` is a translation key (e.g. "nav.myRooms"), not literal text — the
- * page.tsx wrappers that render this are server components and cannot call
- * useLocale() themselves, so the key travels down and is resolved here.
- *
- * `backHref` shows a back chevron to that parent screen. Role dashboards
- * leave it unset — they are the home screen, so there is nothing to go back to.
+ * `title` ist ein Übersetzungsschlüssel (die page.tsx sind Server-Komponenten). `backHref` zeigt einen
+ * Zurück-Knopf zur Elternseite; Rollen-Startseiten lassen ihn weg und zeigen die Begrüßung.
+ * `legacy` (Standard): der Seiteninhalt ist noch im alten hellen Design und bekommt eine helle Fläche,
+ * bis D2–D5 die Seite umstellen und `legacy={false}` setzen.
  */
 export default function AppShell({
   title,
   userName,
   role,
   backHref,
+  subtitle,
+  legacy = true,
   children,
 }: {
   title: TKey;
   userName: string;
   role: string;
   backHref?: string;
+  /** Untertitel unter der Begrüßung; Standard ist der Seitentitel. */
+  subtitle?: string;
+  legacy?: boolean;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const { t, fmt } = useLocale();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [open, setOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
   const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
+  const [greetingAt, setGreetingAt] = useState<Date | null>(null);
+  useEffect(() => setGreetingAt(new Date()), []);
 
-  // Global room quick search — lives here so it's reachable from every
-  // dashboard, without each page needing its own copy.
+  // Globale Zimmer-Schnellsuche — im Rahmen, damit sie von jeder Seite erreichbar ist.
   const [query, setQuery] = useState("");
   const [matches, setMatches] = useState<SearchedRoom[]>([]);
   const [searchOpen, setSearchOpen] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState<SearchedRoom | null>(null);
 
-  // Quick role switching, dev only. The endpoint 404s when it is disabled, so
-  // nothing renders on a locked-down deployment.
+  // Rollenwechsel nur im Testmodus. Der Endpunkt antwortet sonst mit 404, dann erscheint nichts.
   useEffect(() => {
     fetch("/api/auth/dev-login")
       .then((r) => (r.ok ? r.json() : { enabled: false }))
@@ -91,10 +137,7 @@ export default function AppShell({
   const switchTo = async (email: string) => {
     if (!email) return;
     await api("/api/auth/dev-login", { body: { email } });
-    // A hard navigation, not router.push: the App Router caches rendered
-    // segments per client, and after an identity change that cache still
-    // belongs to the previous user. Reloading drops it along with any state
-    // the old role's views were holding.
+    // Harte Navigation: der App-Router-Cache gehört nach dem Identitätswechsel noch dem alten Nutzer.
     window.location.assign("/");
   };
 
@@ -113,12 +156,12 @@ export default function AppShell({
       setMatches([]);
       return;
     }
-    const t = setTimeout(() => {
+    const timer = setTimeout(() => {
       api<{ rooms: SearchedRoom[] }>(`/api/rooms?q=${encodeURIComponent(q)}`)
         .then((d) => setMatches(d.rooms))
         .catch(() => setMatches([]));
     }, 280);
-    return () => clearTimeout(t);
+    return () => clearTimeout(timer);
   }, [query]);
 
   const openRoom = (room: SearchedRoom) => {
@@ -136,11 +179,8 @@ export default function AppShell({
   };
 
   useSocket({
-    // The payload carries the full notification, so prepend it instead of
-    // refetching the list on every alert. Socket events reach every connected
-    // client, so the role filter that /api/notifications applies server-side
-    // has to be repeated here — otherwise front office would see supervisor
-    // alerts. The server remains the authority; this only decides display.
+    // Socket-Ereignisse erreichen jeden Client — den Rollenfilter von /api/notifications hier wiederholen.
+    // Der Server bleibt maßgeblich; das hier entscheidet nur die Anzeige.
     "notification:new": (p: { notification: Notification }) => {
       const n = p?.notification;
       if (!n) return;
@@ -151,6 +191,10 @@ export default function AppShell({
   });
 
   useEscapeKey(() => setOpen(false), open);
+  useEscapeKey(() => setProfileOpen(false), profileOpen);
+  useEscapeKey(() => setSearchOpen(false), searchOpen);
+  const searchRef = useOutsideClose(searchOpen, () => setSearchOpen(false));
+  const profileRef = useOutsideClose(profileOpen, () => setProfileOpen(false));
 
   const unread = notifications.filter((n) => !n.acknowledged).length;
 
@@ -166,173 +210,209 @@ export default function AppShell({
   };
 
   const roleKey = `role.${role}` as TKey;
+  const home = roleHome(role as Role) ?? "/";
+  const myInitials = initials(userName);
+
+  /** Profil: Name, Rolle, Sprache, Abmelden (Seitenleiste unten und Avatar-Menü). */
+  const profileBlock = (
+    <>
+      <div className="flex items-center gap-3">
+        <span aria-hidden="true" className="bg-champagne text-body-18 flex size-10 shrink-0 items-center justify-center rounded-pill text-text-on-accent">
+          {myInitials}
+        </span>
+        <span className="flex min-w-0 flex-col">
+          <span className="text-body-16 truncate text-text-primary">{userName}</span>
+          <span className="text-label truncate text-text-muted">{t(roleKey)}</span>
+        </span>
+      </div>
+      <div className="flex items-center gap-2">
+        <LanguageButton className="h-12! border-border-subtle! bg-surface-card-raised! text-text-primary! hover:bg-surface-card!" />
+        <LanguageQualityBadge className="hidden 2xl:inline" />
+        <button
+          type="button"
+          onClick={logout}
+          className={cx("press glass-fill text-body-16 flex min-h-(--size-touch-min) flex-1 items-center justify-center gap-2 rounded-(--glass-radius-md) border border-border-subtle px-4 text-text-primary", FOCUS_RING)}
+        >
+          <Glyph name="log-out" size={20} className="rtl:-scale-x-100" />
+          {t("common.signOut")}
+        </button>
+      </div>
+    </>
+  );
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* A slim navy edge — the house's own accent, kept to this one line —
-          over a light, paper-toned bar carrying the real crest. Border
-          rather than a second sticky element, so scrolling never risks a
-          gap or a stacking mismatch between the two. */}
-      <header className="sticky top-0 z-40 border-t-[3px] border-navy bg-linen text-charcoal shadow-lift">
-        <div className="mx-auto flex h-[4.5rem] max-w-7xl items-center justify-between px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3.5">
-            {backHref && (
-              <button
-                onClick={() => router.push(backHref)}
-                className="-ms-2 flex h-12 min-w-11 shrink-0 items-center justify-center gap-1 rounded-full px-2 text-sm font-medium text-navy transition hover:bg-parchment sm:pe-3"
-                aria-label={t("appShell.back")}
-                title={t("appShell.back")}
-              >
-                <svg className="h-5 w-5 rtl:-scale-x-100" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.8}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                </svg>
-                <span className="hidden sm:inline">{t("appShell.back")}</span>
-              </button>
-            )}
-            <Image src="/brand/crest.png" alt="" width={34} height={27} className={`h-[1.7rem] w-auto shrink-0 ${backHref ? "hidden sm:block" : ""}`} priority />
-            <div className="flex min-w-0 items-baseline gap-4">
-              <div className="min-w-0 leading-tight">
-                <p className="text-[0.62rem] uppercase tracking-[0.24em] text-gold-soft">{t("appShell.hotelBerlin")}</p>
-                <p className="truncate font-serif text-xl tracking-[0.01em] text-navy">{t(title)}</p>
+    <ChatProvider>
+      <div className="theme-glass bg-atmosphere min-h-dvh">
+        <Sidebar role={role} home={home} profile={profileBlock} />
+        <Rail
+          role={role}
+          home={home}
+          monogram="S"
+          footer={<GlassIconButton icon="user" label={t("appShell.profile")} onClick={() => setProfileOpen(true)} expanded={profileOpen} />}
+        />
+
+        <div className="relative min-h-dvh sm:ps-[calc(var(--size-sidebar-rail)+8px)] xl:ps-[calc(var(--size-sidebar-wide)+8px)]">
+          <HeaderPhoto />
+
+          <header className="relative z-20 px-4 pt-6 sm:px-6">
+            {/* Zeile 1: Datum bzw. Zurück links, Aktionen rechts. Zeile 2: Begrüßung/Titel über die volle Breite (auch auf dem Handy einzeilig). */}
+            <div className="flex min-h-(--size-touch-min) items-start justify-between gap-4">
+              {backHref ? (
+                <button
+                  onClick={() => router.push(backHref)}
+                  className={cx("press -ms-2 flex h-12 min-w-11 shrink-0 items-center justify-center gap-1 rounded-pill px-2 text-body-16 text-text-secondary sm:pe-3", FOCUS_RING)}
+                  aria-label={t("appShell.back")}
+                  title={t("appShell.back")}
+                >
+                  <Glyph name="arrow-left" size={22} className="rtl:-scale-x-100" />
+                  <span className="hidden sm:inline">{t("appShell.back")}</span>
+                </button>
+              ) : (
+                <HeaderDate />
+              )}
+            <div className="flex shrink-0 items-center gap-2">
+              <div ref={searchRef} className="relative">
+                <GlassIconButton icon="search" label={t("appShell.findRoom")} onClick={() => setSearchOpen((o) => !o)} expanded={searchOpen} />
+                {searchOpen && (
+                  <div className="glass animate-in-up absolute end-0 top-14 z-50 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-2 rounded-(--glass-radius-md) p-3">
+                    <input
+                      autoFocus
+                      value={query}
+                      onChange={(e) => setQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === "Enter" && searchEnter()}
+                      placeholder={t("appShell.findRoom")}
+                      aria-label={t("appShell.findRoom")}
+                      inputMode="numeric"
+                      className={cx("text-body-16 min-h-(--size-touch-min) w-full rounded-(--glass-radius-md) border border-border-subtle bg-surface-progress-track px-4 text-text-primary placeholder:text-text-muted", FOCUS_RING)}
+                    />
+                    {matches.slice(0, 8).map((r) => {
+                      const s = STATUS_UI[uiStatusForRoom(r.status)];
+                      return (
+                        <button
+                          key={r.id}
+                          onClick={() => openRoom(r)}
+                          className={cx("press flex min-h-(--size-touch-min) w-full items-center justify-between gap-2 rounded-(--glass-radius-sm) px-3 text-start hover:bg-surface-selected", FOCUS_RING)}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <span className="text-title-22 text-text-primary">{r.number}</span>
+                            <RoomFlagIcons occupancy={r.occupancy} isCheckoutToday={r.isCheckoutToday} iconClassName="h-2.5 w-2.5" />
+                            <NoteCountBadge openCount={r.openNotesCount} totalCount={r.notes.length} />
+                          </span>
+                          <Pill tone={s.tone}>
+                            <Glyph name={s.icon} size={16} className="me-1" />
+                            {t(`status.${r.status}` as TKey)}
+                          </Pill>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <LiveClock />
-            <Link
-              href="/floor-plan"
-              className="hidden h-10 items-center rounded-sm border border-charcoal/15 px-3 text-xs font-medium uppercase tracking-wider text-charcoal/85 transition hover:bg-parchment sm:flex"
-              title={t("appShell.floorPlanTitle")}
-            >
-              🗺️ {t("appShell.floorPlan")}
-            </Link>
-            <div className="relative hidden md:block">
-              <input
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
-                  setSearchOpen(true);
-                }}
-                onFocus={() => setSearchOpen(true)}
-                onBlur={() => setTimeout(() => setSearchOpen(false), 150)}
-                onKeyDown={(e) => e.key === "Enter" && searchEnter()}
-                placeholder={t("appShell.findRoom")}
-                aria-label={t("appShell.findRoom")}
-                className="h-11 w-40 rounded-sm border border-charcoal/15 bg-parchment/60 px-3 text-sm text-charcoal outline-none transition-all placeholder:text-charcoal/40 focus:w-56 focus:border-gold"
+              <GlassIconButton
+                icon="bell"
+                label={unread > 0 ? `${t("appShell.notifications")} (${unread})` : t("appShell.notifications")}
+                onClick={() => setOpen((o) => !o)}
+                dot={unread > 0}
+                expanded={open}
               />
-              {searchOpen && matches.length > 0 && (
-                <div className="absolute start-0 top-12 z-50 w-64 overflow-hidden rounded-xl border border-charcoal/10 bg-linen text-charcoal shadow-2xl">
-                  {matches.slice(0, 8).map((r) => (
-                    <button
-                      key={r.id}
-                      onClick={() => openRoom(r)}
-                      className="flex w-full items-center justify-between gap-2 px-3 py-2 text-sm hover:bg-parchment"
-                    >
-                      <span className="flex items-center gap-1.5">
-                        <span className="font-serif">{r.number}</span>
-                        <RoomFlagIcons occupancy={r.occupancy} isCheckoutToday={r.isCheckoutToday} iconClassName="h-2.5 w-2.5" />
-                        <NoteCountBadge openCount={r.openNotesCount} totalCount={r.notes.length} />
-                      </span>
-                      <span className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.68rem] ${STATUS_STYLES[r.status].chip}`}>
-                        {STATUS_LABELS[r.status]}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              )}
+              <div ref={profileRef} className="relative">
+                <button
+                  type="button"
+                  onClick={() => setProfileOpen((o) => !o)}
+                  aria-label={`${t("appShell.profile")}: ${userName}`}
+                  title={userName}
+                  aria-expanded={profileOpen}
+                  className={cx("press bg-champagne text-body-18 flex size-(--size-touch-min) items-center justify-center rounded-pill text-text-on-accent", FOCUS_RING)}
+                >
+                  {myInitials}
+                </button>
+                {profileOpen && (
+                  <div className="glass animate-in-up absolute end-0 top-14 z-50 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 rounded-(--glass-radius-md) p-4">
+                    {profileBlock}
+                    {devUsers && (
+                      <select
+                        aria-label={t("appShell.devSwitchLabel")}
+                        value=""
+                        onChange={(e) => switchTo(e.target.value)}
+                        className={cx("text-body-16 min-h-(--size-touch-min) rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-3 text-text-primary", FOCUS_RING)}
+                        title={t("appShell.devSwitchTitle")}
+                      >
+                        <option value="">{t("common.switchRole")}</option>
+                        {devUsers.map((u) => (
+                          <option key={u.email} value={u.email}>
+                            {u.name} · {t(`role.${u.role}` as TKey)}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-            <div className="hidden items-center gap-1.5 sm:inline-flex">
-              <LanguageButton />
-              <LanguageQualityBadge className="hidden lg:inline" />
             </div>
-            {devUsers && (
-              <select
-                aria-label={t("appShell.devSwitchLabel")}
-                value=""
-                onChange={(e) => switchTo(e.target.value)}
-                className="hidden h-12 max-w-[11rem] rounded-sm border border-charcoal/15 bg-parchment/60 px-3 text-sm text-charcoal outline-none focus:border-gold md:block"
-                title={t("appShell.devSwitchTitle")}
-              >
-                <option value="">{t("common.switchRole")}</option>
-                {devUsers.map((u) => (
-                  <option key={u.email} value={u.email}>
-                    {u.name} · {t(`role.${u.role}` as TKey)}
-                  </option>
-                ))}
-              </select>
+            {backHref ? (
+              <h1 className="text-title-28 sm:text-display -mt-2 truncate text-text-primary">{t(title)}</h1>
+            ) : (
+              <div className="-mt-2">
+                <h1 className="text-title-28 sm:text-display text-text-primary">
+                  {greetingAt ? t(greetingKey(greetingAt), { name: firstName(userName) }) : t(title)}
+                </h1>
+                <p className="text-body-16 text-text-secondary">{subtitle ?? t(title)}</p>
+              </div>
             )}
-            <button
-              onClick={() => setOpen((o) => !o)}
-              className="relative flex h-12 w-12 items-center justify-center rounded-full hover:bg-parchment"
-              aria-label={t("appShell.notifications")}
-            >
-              <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M14.857 17.082a23.848 23.848 0 005.454-1.31A8.967 8.967 0 0118 9.75v-.7V9A6 6 0 006 9v.75a8.967 8.967 0 01-2.312 6.022c1.733.64 3.56 1.085 5.455 1.31m5.714 0a24.255 24.255 0 01-5.714 0m5.714 0a3 3 0 11-5.714 0" />
-              </svg>
-              {unread > 0 && (
-                <span className="absolute end-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-status-out-of-order px-1 text-xs font-bold text-linen">
-                  {unread}
-                </span>
-              )}
-            </button>
-            <div className="hidden text-end sm:block">
-              <div className="text-sm font-medium">{userName}</div>
-              <div className="text-[0.68rem] uppercase tracking-[0.16em] text-gold-soft">{t(roleKey)}</div>
-            </div>
-            <button
-              onClick={logout}
-              className="ms-2 h-12 rounded-sm border border-charcoal/15 px-4 text-sm transition hover:bg-parchment hover:border-charcoal/25"
-            >
-              {t("common.signOut")}
-            </button>
-          </div>
-        </div>
-      </header>
+          </header>
 
-      {open && (
-        <div className="fixed inset-x-2 top-20 z-50 mx-auto max-w-lg animate-sheet rounded-2xl border border-charcoal/10 bg-linen shadow-2xl sm:end-6 sm:start-auto sm:w-[26rem]">
-          <div className="flex items-center justify-between border-b border-charcoal/10 px-4 py-3">
-            <span className="font-serif text-lg text-navy">{t("appShell.notifications")}</span>
-            <div className="flex items-center gap-2">
-              <div className="sm:hidden">
-                <LanguageButton />
-              </div>
-              <button onClick={ackAll} className="h-10 rounded-sm px-3 text-sm text-gold-soft hover:bg-parchment">
-                {t("appShell.markAllRead")}
-              </button>
-              <CloseButton onClick={() => setOpen(false)} />
-            </div>
-          </div>
-          <div className="max-h-96 overflow-y-auto p-2">
-            {notifications.length === 0 && <p className="p-4 text-sm text-graphite/70">{t("appShell.noNotifications")}</p>}
-            {notifications.map((n, i) => (
-              <div
-                key={n.id}
-                style={{ "--stagger-i": i } as React.CSSProperties}
-                className={`mb-2 animate-stagger rounded-lg border border-charcoal/5 border-s-4 bg-ivory p-3 ${LEVEL_STYLES[n.level] ?? ""} ${
-                  n.acknowledged ? "opacity-50" : ""
-                }`}
-              >
-                <div className="text-xs uppercase tracking-wider text-graphite/70">
-                  {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
+          {open && (
+            <div role="dialog" aria-label={t("appShell.notifications")} className="theme-glass glass animate-in-up fixed inset-x-2 top-24 z-50 mx-auto max-w-lg rounded-(--glass-radius-lg) sm:start-auto sm:end-6 sm:w-[26rem]">
+              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
+                <span className="text-title-22 text-text-primary">{t("appShell.notifications")}</span>
+                <div className="ms-auto flex items-center gap-2">
+                  <Button variant="secondary" className="min-h-11! whitespace-nowrap px-3! text-label!" onClick={ackAll}>
+                    {t("appShell.markAllRead")}
+                  </Button>
+                  <CloseButton onClick={() => setOpen(false)} className="border-border-subtle! bg-surface-card-raised! text-text-primary! hover:bg-surface-card!" />
                 </div>
-                <div className="mt-1 text-sm">{notificationText(n, t)}</div>
               </div>
-            ))}
-          </div>
+              <div className="max-h-96 overflow-y-auto p-2">
+                {notifications.length === 0 && <p className="text-body-16 p-4 text-text-muted">{t("appShell.noNotifications")}</p>}
+                {notifications.map((n, i) => (
+                  <div
+                    key={n.id}
+                    style={{ "--i": i } as React.CSSProperties}
+                    className={cx("animate-in-up mb-2 rounded-(--glass-radius-sm) border-s-4 bg-surface-card-raised p-3", LEVEL_STYLES[n.level], n.acknowledged && "opacity-65")}
+                  >
+                    <div className="text-label text-text-muted">
+                      {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
+                    </div>
+                    <div className="text-body-16 mt-1 text-text-primary">{notificationText(n, t)}</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
+
+          <main className="relative z-10 mx-auto w-full max-w-7xl px-3 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
+            <ErrorBoundary>
+              {legacy ? (
+                // Alter Seiteninhalt (helle Palette) bis zur Umstellung in D2–D5 auf heller Fläche — sonst wäre Navy-Text auf Dunkel unlesbar.
+                <div className="rounded-(--glass-radius-lg) bg-ivory p-3 font-sans text-charcoal sm:p-6">
+                  <LanguageSuggestion />
+                  {children}
+                </div>
+              ) : (
+                <>
+                  <LanguageSuggestion />
+                  {children}
+                </>
+              )}
+            </ErrorBoundary>
+          </main>
         </div>
-      )}
 
-      {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
-
-      <div className="h-px w-full bg-gradient-to-r from-gold-line/70 via-gold-line/20 to-transparent" />
-      <div className="px-3 sm:px-6"><LanguageSuggestion /></div>
-
-      <main className="mx-auto w-full max-w-7xl flex-1 px-3 py-6 sm:px-6">
-        <ErrorBoundary>
-          <ChatProvider>{children}</ChatProvider>
-        </ErrorBoundary>
-      </main>
-    </div>
+        <TabBar role={role} />
+      </div>
+    </ChatProvider>
   );
 }
