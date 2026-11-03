@@ -1,8 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import HubMoreMenu from "@/components/HubMoreMenu";
-import Link from "next/link";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
@@ -13,10 +11,13 @@ import TodayAtAGlance from "@/components/TodayAtAGlance";
 import { glanceKpis } from "@/lib/dayplan/glance";
 import type { DayNumberRow, DayNumbers } from "@/lib/dayplan/dayNumbers";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { FLOORS, type RoomStatus, type RoomTaskType } from "@/lib/domain";
+import { FLOORS, HOTEL, type RoomStatus, type RoomTaskType } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { DutyHouse } from "@/components/dutymanager/DutyHouse";
+import { LegacySurface } from "@/components/supervisor/SupervisorParts";
+import { Banner, Button, Field, GlassCard } from "@/components/ui";
 
 interface Room {
   id: string;
@@ -70,15 +71,19 @@ export default function DutyManagerView() {
   const [hub, setHub] = useState<HubState | null>(null);
   const [numbers, setNumbers] = useState<DayNumbers | null>(null);
   const [dayRows, setDayRows] = useState<DayNumberRow[]>([]);
+  // Planstatus: dieselbe Quelle wie das Planungstool (`/api/import/status` → `plan`); schlägt der Abruf fehl, steht keine Aussage da.
+  const [plan, setPlan] = useState<{ confirmed: boolean; listsChanged: boolean } | null>(null);
 
   const load = useCallback(async () => {
-    const [roomsData, workOrdersData, roomTasksData, supervisorsData, numbersData] = await Promise.all([
+    const [roomsData, workOrdersData, roomTasksData, supervisorsData, numbersData, importStatus] = await Promise.all([
       api<{ rooms: Room[]; hub?: HubState }>("/api/rooms"),
       api<{ workOrders: WorkOrder[] }>("/api/workorders"),
       api<{ roomTasks: RoomTask[] }>("/api/roomtasks"),
       api<{ supervisors: Supervisor[] }>("/api/users/supervisors"),
       api<{ numbers: DayNumbers | null; rows?: DayNumberRow[] }>("/api/day-numbers"),
+      api<{ plan?: { confirmed: boolean; listsChanged: boolean } }>("/api/import/status").catch(() => null),
     ]);
+    setPlan(importStatus?.plan ?? null);
     setNumbers(numbersData.numbers);
     setDayRows(numbersData.rows ?? []);
     setRooms(roomsData.rooms);
@@ -137,34 +142,8 @@ export default function DutyManagerView() {
   };
 
   return (
-    <div className="animate-rise">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl leading-none">{t("dutyManager.title")}</h2>
-          <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">{t("dutyManager.subtitle")}</p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <HubMoreMenu>
-            <Link href="/settings" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
-              {t("supervisor.settingsLink")}
-            </Link>
-          </HubMoreMenu>
-          <Link
-            href="/planung"
-            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
-          >
-            {t("dutyManager.planningLink")}
-          </Link>
-        </div>
-      </div>
-
-      <HubMissingNotice hub={hub} planner />
-      {error && (
-        <div className="mb-3 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-4 py-2 text-sm text-status-out-of-order">
-          {error}
-        </div>
-      )}
+    <div className="animate-rise flex flex-col gap-4 sm:gap-6">
+      {error && <Banner tone="warning" title={error} />}
 
       <ErrorBoundary>
         <TodayAtAGlance
@@ -189,46 +168,61 @@ export default function DutyManagerView() {
               ],
             },
           }}
+          glass={(open) => (
+            <DutyHouse
+              numbers={numbers}
+              kpis={kpis}
+              rooms={rooms}
+              unassignedFloors={unassignedFloors.length}
+              plan={plan}
+              open={open}
+              notices={
+                <>
+                  <HubMissingNotice hub={hub} planner glass />
+                  {HOTEL.unconfirmedFloors.length > 0 && (
+                    <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
+                  )}
+                </>
+              }
+            />
+          )}
         />
       </ErrorBoundary>
 
-      <WindowPanel title={t("dutyManager.liveListsTitle")}>
-        <LiveListsPanel />
-      </WindowPanel>
+      <LegacySurface title={t("dutyManager.liveListsTitle")}>
+        <WindowPanel title={t("dutyManager.liveListsTitle")}>
+          <LiveListsPanel />
+        </WindowPanel>
+      </LegacySurface>
 
-      <WindowPanel title={t("dutyManager.houseTasksTitle")} right={<span className="text-xs text-graphite/60">{openTasks.length}</span>}>
-        <div className="mb-4 flex flex-wrap items-end gap-2">
-          <div>
-            <label className="mb-1 block text-xs font-medium uppercase tracking-wider text-graphite/60">
-              {t("dutyManager.pickRoomLabel")}
-            </label>
-            <input
-              value={pickedNumber}
-              onChange={(e) => setPickedNumber(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && pickRoom()}
-              list="duty-manager-room-numbers"
-              placeholder={t("dutyManager.pickRoomPlaceholder")}
-              className="h-12 w-40 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold"
-            />
-            <datalist id="duty-manager-room-numbers">
-              {rooms.map((r) => (
-                <option key={r.id} value={r.number} />
-              ))}
-            </datalist>
-          </div>
-          <button
-            onClick={pickRoom}
-            disabled={!pickedNumber.trim()}
-            className="h-12 rounded-lg bg-navy px-4 text-sm font-semibold text-ivory disabled:opacity-40"
-          >
-            {t("dutyManager.createTaskBtn")}
-          </button>
-          <p className="text-xs text-graphite/60">{t("dutyManager.pickRoomHint")}</p>
+      <GlassCard as="section" aria-labelledby="dm-tasks-title" className="flex flex-col gap-4">
+        <div className="flex items-baseline justify-between gap-3">
+          <h2 id="dm-tasks-title" className="text-title-22 text-text-primary">{t("dutyManager.houseTasksTitle")}</h2>
+          <span className="text-label text-accent-text">{openTasks.length}</span>
         </div>
-
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <Field
+            label={t("dutyManager.pickRoomLabel")}
+            value={pickedNumber}
+            onChange={(e) => setPickedNumber(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && pickRoom()}
+            list="duty-manager-room-numbers"
+            placeholder={t("dutyManager.pickRoomPlaceholder")}
+            hint={t("dutyManager.pickRoomHint")}
+            className="sm:w-64"
+          />
+          <datalist id="duty-manager-room-numbers">
+            {rooms.map((r) => (
+              <option key={r.id} value={r.number} />
+            ))}
+          </datalist>
+          <Button onClick={pickRoom} disabled={!pickedNumber.trim()} className="sm:mb-7">
+            {t("dutyManager.createTaskBtn")}
+          </Button>
+        </div>
         {/* Offene/erledigte Aufgaben stehen nur noch in den Live-Listen → „Hausmann-Liste“ (keine zweite Liste hier). */}
-        {created && <p role="status" className="text-sm text-status-clean">{t("dutyManager.taskCreated", { n: created })}</p>}
-      </WindowPanel>
+        {created && <p role="status" className="text-body-16 text-status-success-fg">{t("dutyManager.taskCreated", { n: created })}</p>}
+      </GlassCard>
 
       {taskRoom && (
         <RoomTaskModal

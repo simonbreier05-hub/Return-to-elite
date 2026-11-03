@@ -20,6 +20,7 @@ export interface GlanceSource {
   floors?: number[] | null;
 }
 
+export type GlanceKey = Key;
 type Key = DayTileKey | "arrivals" | "departures" | "dnd" | "dndBlocked" | "progress" | "openDefects" | "openHouseTasks" | "extra";
 
 /**
@@ -28,7 +29,7 @@ type Key = DayTileKey | "arrivals" | "departures" | "dnd" | "dndBlocked" | "prog
  * Jede Kachel ist antippbar und öffnet dieselbe Detailansicht (`GlanceDetailSheet`), Zimmer darin öffnen das Zimmer-Detail.
  * `variant="supervisor"`: statt der DND-Kachel „DND/Blockiert“ und zusätzlich „Tagesfortschritt“; Duty Manager unverändert.
  */
-export default function TodayAtAGlance({ title, numbers, kpis, source, variant = "dutyManager", extraKpi, onChanged, children }: {
+export default function TodayAtAGlance({ title, numbers, kpis, source, variant = "dutyManager", extraKpi, onChanged, children, glass }: {
   title?: string;
   numbers: DayNumbers | null;
   kpis: GlanceKpis | null;
@@ -39,6 +40,11 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
   onChanged?: () => void;
   /** Unter der Leiste, z. B. die Hauszahlen als Orientierung. */
   children?: ReactNode;
+  /**
+   * Design „Glas & Premium“ (D4): statt der alten Kachelleiste zeichnet der Aufrufer die Oberfläche selbst und öffnet über
+   * `open(key)` dieselben Detailansichten (Inhalt, Zahlen und Zimmer-Detail unverändert).
+   */
+  glass?: (open: (key: GlanceKey) => void) => ReactNode;
 }) {
   const { t } = useLocale();
   const detail = useGlanceDetail<Key>();
@@ -115,6 +121,14 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
   }
 
   const sup = variant === "supervisor";
+  if (glass) {
+    return (
+      <>
+        {glass(detail.open)}
+        <GlanceDetailHost state={detail} content={content} onChanged={onChanged} />
+      </>
+    );
+  }
   return (
     <section aria-label={title ?? t("dutyManager.dashboardTitle")} className="mb-6">
       <h3 className="mb-2 font-serif text-xl">{title ?? t("dutyManager.dashboardTitle")}</h3>

@@ -1697,6 +1697,14 @@ const en = {
     basis: "Based on {{n}} rooms on {{days}} working days (since {{since}}).",
   },
   /** Bausteine des neuen Designs (src/lib/ui, src/components/ui) — Paket D0 */
+  dmHub: {
+    floorsTitle: "Progress by floor",
+    planTitle: "Plan status",
+    planConfirmed: "Plan confirmed",
+    planOpen: "Plan not confirmed yet",
+    occupiedRooms: "{{n}} of {{total}} rooms occupied",
+    noFloorRooms: "No rooms in the floor plan",
+  },
   supHub: {
     subtitle: "{{n}} housekeepers on duty",
     kpiOpen: "Open rooms",
@@ -3454,6 +3462,14 @@ const de = {
     basis: "Auf Basis von {{n}} Zimmern an {{days}} Arbeitstagen (seit {{since}}).",
   },
   /** Bausteine des neuen Designs (src/lib/ui, src/components/ui) — Paket D0 */
+  dmHub: {
+    floorsTitle: "Fortschritt je Etage",
+    planTitle: "Planstatus",
+    planConfirmed: "Plan bestätigt",
+    planOpen: "Plan noch nicht bestätigt",
+    occupiedRooms: "{{n}} von {{total}} Zimmern belegt",
+    noFloorRooms: "Keine Zimmer im Grundriss",
+  },
   supHub: {
     subtitle: "{{n}} Housekeeper im Dienst",
     kpiOpen: "Offene Zimmer",

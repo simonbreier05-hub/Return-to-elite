@@ -7,7 +7,7 @@ export default async function DutyManagerPage() {
   // same pattern as /settings.
   const session = await requirePage(["duty_manager"]);
   return (
-    <AppShell title="nav.dutyManager" userName={session.name} role={session.role}>
+    <AppShell title="nav.dutyManager" userName={session.name} role={session.role} legacy={false}>
       <DutyManagerView />
     </AppShell>
   );
