@@ -12,6 +12,7 @@ import { ChatProvider } from "./chat/ChatContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
+import { GlassMode } from "./shell/GlassMode";
 import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
@@ -402,10 +403,10 @@ export default function AppShell({
                   {children}
                 </div>
               ) : (
-                <>
+                <GlassMode>
                   <LanguageSuggestion glass />
                   {children}
-                </>
+                </GlassMode>
               )}
             </ErrorBoundary>
           </main>

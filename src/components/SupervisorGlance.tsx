@@ -11,6 +11,8 @@ import type { DayNumberRow, DayNumbers } from "@/lib/dayplan/dayNumbers";
 import { glanceKpis } from "@/lib/dayplan/glance";
 import { floorBreakdown } from "@/lib/dayplan/glanceDetails";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
 
 type GlanceRoom = GlanceSource["rooms"][number] & { statusSince?: string };
 interface Data { numbers: DayNumbers | null; rows?: DayNumberRow[]; mine: { floors: number[]; numbers: DayNumbers | null } | null }
@@ -60,6 +62,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
   const kpis = useMemo(() => glanceKpis({ rooms, workOrders: orders, roomTasks: tasks, floors: ownFloors }), [rooms, orders, tasks, ownFloors]);
   const source: GlanceSource = { rooms, rows: data?.rows ?? [], workOrders: orders, roomTasks: tasks, floors: ownFloors };
   const detail = useGlanceDetail<"house" | "queue">();
+  const glass = useGlassMode();
   if (!data) return null;
 
   const changed = () => { void load(); onChanged?.(); };
@@ -96,8 +99,8 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
     <div className="mt-3 space-y-3">
       {data.numbers && (
         <button type="button" onClick={() => detail.open("house")} aria-label={t("glance.houseTitle")}
-          className="min-h-11 rounded-2xl text-start transition hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
-          <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-graphite/55">{t("glance.houseTitle")} <span className="font-normal normal-case tracking-normal">· {t("glance.houseHint")} · {t("glance.houseTileHint")}</span></p>
+          className={glass ? cx("press block min-h-(--size-touch-min) w-full rounded-(--glass-radius-md) text-start", FOCUS_RING) : "min-h-11 rounded-2xl text-start transition hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"}>
+          <p className={glass ? "text-label mb-2 text-text-muted" : "mb-1 text-xs font-semibold uppercase tracking-wider text-graphite/55"}>{t("glance.houseTitle")} <span className="font-normal normal-case tracking-normal">· {t("glance.houseHint")} · {t("glance.houseTileHint")}</span></p>
           <DayNumberTiles numbers={data.numbers} compact />
         </button>
       )}
@@ -118,9 +121,9 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
   }
   if (!data.mine.floors.length) {
     return (
-      <section className="mb-6" aria-label={t("dutyManager.dashboardTitle")}>
-        <h3 className="mb-2 font-serif text-xl">{t("dutyManager.dashboardTitle")}</h3>
-        <p role="status" className="rounded-xl border border-gold-line/60 bg-parchment p-3 text-sm">{t("glance.noFloors")}</p>
+      <section className={glass ? "glass flex flex-col gap-3 rounded-(--glass-radius-lg) p-4 sm:p-6" : "mb-6"} aria-label={t("dutyManager.dashboardTitle")}>
+        <h3 className={glass ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>{t("dutyManager.dashboardTitle")}</h3>
+        <p role="status" className={glass ? "text-body-16 rounded-(--glass-radius-md) bg-accent-subtle-bg p-3 text-text-primary" : "rounded-xl border border-gold-line/60 bg-parchment p-3 text-sm"}>{t("glance.noFloors")}</p>
         {houseAndQueue}
       </section>
     );

@@ -1644,6 +1644,7 @@
     "supHub.pickAttendant": "خانه‌دار برای اتاق {{number}}",
     "supHub.leaveOpen": "بدون تخصیص بگذار",
     "supHub.sessionRooms": "در این دور تخصیص یافته (برای حذف لمس کنید)",
-    "supHub.removeRoom": "حذف {{number}}"
+    "supHub.removeRoom": "حذف {{number}}",
+    "supHub.staffHere": "خانه‌دار در اتاق"
   }
 }

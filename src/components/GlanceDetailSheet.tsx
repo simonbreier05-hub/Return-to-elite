@@ -5,6 +5,10 @@ import { createPortal } from "react-dom";
 import Modal from "@/components/Modal";
 import LiveRoomModal from "@/components/lists/LiveRoomModal";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { HkWindow } from "@/components/hk/HkParts";
+import { ProgressBar } from "@/components/ui/ProgressBar";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
 
 /**
  * Das eine Detail-Muster hinter jeder Kachel der Startscreens (Supervisor + Duty Manager): `Modal` (Bottom-Sheet auf dem
@@ -43,6 +47,49 @@ export function GlanceDetailHost({ state, content, onChanged }: {
 
 export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { content: DetailContent; onClose: () => void; onOpenRoom: (ref: string) => void }) {
   const { t } = useLocale();
+  const glass = useGlassMode();
+  if (glass) {
+    return (
+      <HkWindow title={content.title} subtitle={content.subtitle} onClose={onClose}>
+        {content.header}
+        <div className="flex flex-col gap-5">
+          {content.sections.map((section, i) => (
+            <section key={section.title ?? i} className="flex flex-col gap-2">
+              {section.title && <h3 className="text-section text-text-muted">{section.title} <span className="text-accent-text">{section.items.length}</span></h3>}
+              {section.items.length === 0 ? (
+                <p className="text-body-16 text-text-muted">{section.empty ?? t("glance.empty")}</p>
+              ) : (
+                <ul className="flex flex-col gap-2">
+                  {section.items.map((item) => {
+                    const tone = item.tone === "accent" ? "bg-accent-subtle-bg" : item.tone === "ok" ? "bg-status-success-bg" : "bg-surface-card-raised";
+                    const body = (
+                      <>
+                        <span className="text-title-22 block text-text-primary">{item.title}</span>
+                        {item.meta && <span className="text-label block text-text-secondary">{item.meta}</span>}
+                      </>
+                    );
+                    return (
+                      <li key={item.key} className={cx("flex flex-wrap items-center gap-x-3 gap-y-2 rounded-(--glass-radius-sm) px-4 py-2", tone)}>
+                        {item.roomRef ? (
+                          <button type="button" onClick={() => onOpenRoom(item.roomRef!)} aria-label={t("glance.openRoom", { n: item.title })}
+                            className={cx("press min-h-(--size-touch-min) flex-1 text-start", FOCUS_RING)}>
+                            {body}
+                          </button>
+                        ) : (
+                          <div className="min-h-(--size-touch-min) flex-1 py-1">{body}</div>
+                        )}
+                        {item.actions && <div className="flex w-full flex-wrap gap-2 sm:w-auto sm:shrink-0">{item.actions}</div>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </section>
+          ))}
+        </div>
+      </HkWindow>
+    );
+  }
   return (
     <Modal title={content.title} subtitle={content.subtitle} onClose={onClose}>
       {content.header}
@@ -87,6 +134,19 @@ export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { co
 
 /** Einheitliche Kachel der Startscreens: ganze Fläche antippbar (≥ 44 px), optional mit Untertitel und Fortschrittsbalken. */
 export function GlanceTile({ label, value, sub, accent, bar, onClick }: { label: string; value: string | number; sub?: string; accent?: boolean; bar?: number; onClick: () => void }) {
+  const glass = useGlassMode();
+  if (glass) {
+    // Wie `KpiTile`: Glas, warmer Lichtreflex bei Handlungsbedarf; Wert immer mit Bezeichnung (nie nur Farbe).
+    return (
+      <button type="button" onClick={onClick}
+        className={cx("press glass flex min-h-(--size-touch-min) w-full flex-col items-start gap-1 rounded-(--radius-tile) px-5 py-4 text-start", accent && "glass-warm", FOCUS_RING)}>
+        <span className="text-body-16 text-text-secondary">{label}</span>
+        <span className="text-number text-text-primary">{value}</span>
+        {sub && <span className="text-label text-text-muted">{sub}</span>}
+        {bar != null && <ProgressBar className="mt-1" value={Math.max(0, Math.min(100, bar))} max={100} label={`${label}: ${bar}%`} />}
+      </button>
+    );
+  }
   return (
     <button type="button" onClick={onClick}
       className={`min-h-11 w-full rounded-2xl border p-4 text-start shadow-sm transition hover:border-gold-line active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { cx, FOCUS_RING, Glyph } from "@/components/ui/primitives";
 
 /**
  * A click-to-open sub-level for one floor (or any grouped section). Starts
@@ -30,6 +32,19 @@ export default function Collapsible({
   const [inner, setInner] = useState(defaultOpen);
   const open = openProp ?? inner;
   const setOpen = (fn: (o: boolean) => boolean) => { const next = fn(open); if (openProp === undefined) setInner(next); onToggle?.(next); };
+  const glass = useGlassMode();
+  if (glass) {
+    return (
+      <div className="mb-2 overflow-hidden rounded-(--glass-radius-md) bg-surface-card-raised">
+        <button type="button" onClick={() => setOpen((o) => !o)} aria-expanded={open}
+          className={cx("press flex min-h-(--size-touch-min) w-full items-center justify-between gap-2 px-4 py-3 text-start text-text-primary", FOCUS_RING)}>
+          <span className="min-w-0 flex-1">{summary}</span>
+          <Glyph name="chevron-down" size={20} className={cx("text-text-secondary transition-transform duration-150", open && "rotate-180")} />
+        </button>
+        {open && <div className="animate-in-up border-t border-border-subtle px-4 pt-3 pb-4">{children}</div>}
+      </div>
+    );
+  }
   return (
     <div className="mb-2 overflow-hidden rounded-xl border border-charcoal/10 bg-linen/50">
       <button

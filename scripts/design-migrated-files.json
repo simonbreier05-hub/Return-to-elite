@@ -21,6 +21,18 @@
     "src/components/supervisor/SupervisorParts.tsx",
     "src/components/supervisor/GlassRedistribution.tsx",
     "src/components/supervisor/GlassPlanningBoard.tsx",
-    "src/components/AssignmentFloorPlan.tsx"
+    "src/components/AssignmentFloorPlan.tsx",
+    "src/components/shell/GlassMode.tsx",
+    "src/components/Collapsible.tsx",
+    "src/components/DayNumberTiles.tsx",
+    "src/components/GlanceDetailSheet.tsx",
+    "src/components/TodayAtAGlance.tsx",
+    "src/components/SupervisorGlance.tsx",
+    "src/components/PriorityBanner.tsx",
+    "src/components/SupervisorFeed.tsx",
+    "src/components/RoomTaskModal.tsx",
+    "src/components/DragDropBoard.tsx",
+    "src/components/LiveListBoards.tsx",
+    "src/components/lists/SupervisorList.tsx"
   ]
 }

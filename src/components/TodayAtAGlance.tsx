@@ -7,6 +7,7 @@ import { rowsOnFloors, type DayNumberRow, type DayNumbers } from "@/lib/dayplan/
 import { dndBlockedSummary, type GlanceKpis, type GlanceRoom } from "@/lib/dayplan/glance";
 import { dayTileRows, type DayTileKey } from "@/lib/dayplan/glanceDetails";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useGlassMode } from "@/components/shell/GlassMode";
 import type { TKey } from "@/lib/i18n/translations";
 
 /** Daten hinter den Kacheln (dieselben, aus denen die Zahlen kommen) — für die Detailansicht. */
@@ -115,10 +116,11 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
   }
 
   const sup = variant === "supervisor";
+  const glass = useGlassMode();
   return (
-    <section aria-label={title ?? t("dutyManager.dashboardTitle")} className="mb-6">
-      <h3 className="mb-2 font-serif text-xl">{title ?? t("dutyManager.dashboardTitle")}</h3>
-      {source && <p className="mb-2 text-xs text-graphite/60">{t("glance.tapHint")}</p>}
+    <section aria-label={title ?? t("dutyManager.dashboardTitle")} className={glass ? "glass flex flex-col gap-1 rounded-(--glass-radius-lg) p-4 sm:p-6" : "mb-6"}>
+      <h3 className={glass ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>{title ?? t("dutyManager.dashboardTitle")}</h3>
+      {source && <p className={glass ? "text-label mb-3 text-text-muted" : "mb-2 text-xs text-graphite/60"}>{t("glance.tapHint")}</p>}
       {numbers && <DayNumberTiles className="mb-3" numbers={numbers} onTile={source ? detail.open : undefined} />}
       {kpis && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">

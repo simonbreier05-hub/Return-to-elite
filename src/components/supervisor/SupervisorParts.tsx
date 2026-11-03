@@ -1,10 +1,13 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useId, type ReactNode } from "react";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { hhmm } from "@/lib/i18n/format";
+import { withoutLeadingSymbol } from "@/lib/ui/hkHub";
 import { Button, GlassCard, Pill } from "@/components/ui";
-import { cx, FOCUS_RING } from "@/components/ui/primitives";
+import { cx, FOCUS_RING, Glyph, TONE_FG } from "@/components/ui/primitives";
+import { ROOM_STATUS_UI, STATUS_UI } from "@/lib/ui/status";
+import type { RoomStatus } from "@/lib/domain";
 
 export interface ReleaseRoom {
   id: string;
@@ -43,7 +46,7 @@ export function ReleaseQueueCard({
         </h2>
         {rooms.length > 1 && (
           <Button icon="check" onClick={onReleaseAll} disabled={bulkBusy}>
-            {bulkBusy ? t("supervisor.releasing") : t("supervisor.releaseAll", { count: rooms.length })}
+            {bulkBusy ? t("supervisor.releasing") : withoutLeadingSymbol(t("supervisor.releaseAll", { count: rooms.length }))}
           </Button>
         )}
       </div>
@@ -66,10 +69,10 @@ export function ReleaseQueueCard({
               </button>
               <div className="flex gap-2">
                 <Button icon="check" className="min-h-12! px-4!" onClick={() => onRelease(r.id)} disabled={busy}>
-                  {busy ? "…" : t("supervisor.inspectRelease")}
+                  {busy ? "…" : withoutLeadingSymbol(t("supervisor.inspectRelease"))}
                 </Button>
                 <Button variant="secondary" icon="refresh" className="min-h-12! px-4!" onClick={() => onRework(r.id)} disabled={busy}>
-                  {t("supervisor.reworkBtn")}
+                  {withoutLeadingSymbol(t("supervisor.reworkBtn"))}
                 </Button>
               </div>
             </li>
@@ -81,13 +84,76 @@ export function ReleaseQueueCard({
 }
 
 /**
- * Bereich mit Bausteinen, die noch im alten hellen Design sind (z. B. „Das ist jetzt wichtig“, Live-Board, Listen,
- * Umverteilung) — auf heller Fläche, damit alter dunkler Text lesbar bleibt (wie `AppShell legacy`). Inhalt unverändert.
+ * Zimmer im Live-Board (Status-Raster, D3b): Nummer + Status-Symbol (Ton aus `ROOM_STATUS_UI`), darunter Bereich bzw.
+ * Sperrgrund; kleine Marker für VIP, Gast-DND, Kraft im Zimmer und offene Notizen. Alles steht zusätzlich im Vorlesetext.
  */
-export function LegacySurface({ title, children, className }: { title?: string; children: ReactNode; className?: string }) {
+export function StatusTile({
+  number, status, statusLabel, sub, vip, guestDnd, here, notes, busy, label, onClick,
+}: {
+  number: string; status: RoomStatus; statusLabel: string; sub?: string; vip?: boolean; guestDnd?: boolean;
+  here?: boolean; notes?: number; busy?: boolean; label: string; onClick: () => void;
+}) {
+  const ui = STATUS_UI[ROOM_STATUS_UI[status]];
   return (
-    <section aria-label={title} className={cx("rounded-(--glass-radius-lg) bg-ivory p-3 font-sans text-charcoal sm:p-6", className)}>
-      {children}
-    </section>
+    <button
+      type="button"
+      onClick={onClick}
+      aria-label={label}
+      className={cx("press glass relative flex h-[76px] w-full flex-col items-center justify-center gap-0.5 rounded-(--glass-radius-sm) px-1", busy && "opacity-60", FOCUS_RING)}
+    >
+      <span className="text-body-16 text-text-primary">{number}</span>
+      <span className="flex items-center gap-1">
+        <Glyph name={ui.icon} size={18} className={TONE_FG[ui.tone]} />
+        <span className="sr-only">{statusLabel}</span>
+      </span>
+      {sub && <span className="text-label max-w-full truncate text-text-muted">{sub}</span>}
+      <span aria-hidden="true" className="absolute start-1 top-1 flex gap-0.5">
+        {vip && <Glyph name="star" size={14} className="text-accent-text" />}
+        {here && <Glyph name="user" size={14} className="text-text-secondary" />}
+      </span>
+      <span aria-hidden="true" className="absolute end-1 top-1 flex gap-0.5">
+        {guestDnd && <Glyph name="moon" size={14} className="text-status-danger-fg" />}
+        {(notes ?? 0) > 0 && <Glyph name="message" size={14} className="text-status-info-fg" />}
+      </span>
+    </button>
+  );
+}
+
+/** Legende des Status-Rasters: Symbol + Wort je Status, dazu die Marker (nie nur Farbe). */
+export function StatusLegend({ statuses, labelOf, markerLabels }: { statuses: RoomStatus[]; labelOf: (s: RoomStatus) => string; markerLabels: { vip: string; here: string; guestDnd: string; notes: string } }) {
+  const item = (icon: Parameters<typeof Glyph>[0]["name"], tone: string, text: string) => (
+    <li key={text} className="flex items-center gap-1.5"><Glyph name={icon} size={16} className={tone} />{text}</li>
+  );
+  return (
+    <ul className="text-label flex flex-wrap gap-x-4 gap-y-2 text-text-secondary">
+      {statuses.map((s) => {
+        const ui = STATUS_UI[ROOM_STATUS_UI[s]];
+        return item(ui.icon, TONE_FG[ui.tone], labelOf(s));
+      })}
+      {item("star", "text-accent-text", markerLabels.vip)}
+      {item("user", "text-text-secondary", markerLabels.here)}
+      {item("moon", "text-status-danger-fg", markerLabels.guestDnd)}
+      {item("message", "text-status-info-fg", markerLabels.notes)}
+    </ul>
+  );
+}
+
+/** Auswahlfeld im Glas-Stil (wie `Field`: Label darüber, Höhe ≥ 48, Token-Farben). */
+export function GlassSelect({ label, value, onChange, options }: { label: string; value: string; onChange: (v: string) => void; options: { value: string; label: string }[] }) {
+  const id = useId();
+  return (
+    <div className="flex min-w-0 flex-col gap-2">
+      <label htmlFor={id} className="text-label text-text-muted">{label}</label>
+      <select
+        id={id}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className={cx("text-body-16 min-h-(--size-touch-min) w-full rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-4 text-text-primary", FOCUS_RING)}
+      >
+        {options.map((o) => (
+          <option key={o.value} value={o.value}>{o.label}</option>
+        ))}
+      </select>
+    </div>
   );
 }

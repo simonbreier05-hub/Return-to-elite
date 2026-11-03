@@ -14,7 +14,6 @@ import { Banner, FilterChip, GlassCard, Glyph } from "@/components/ui";
 import { cx, FOCUS_RING } from "@/components/ui/primitives";
 import { GlassRedistribution } from "@/components/supervisor/GlassRedistribution";
 import { GlassPlanningBoard } from "@/components/supervisor/GlassPlanningBoard";
-import { LegacySurface } from "@/components/supervisor/SupervisorParts";
 
 interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[]; hub?: HubState }
 
@@ -77,9 +76,7 @@ export default function AssignmentFloorPlan() {
       </GlassCard>
 
       {day.hub?.ready !== false && (
-        <LegacySurface title={t("supHub.moreTools")}>
-          <LiveListBoards date={day.today} />
-        </LegacySurface>
+        <LiveListBoards date={day.today} />
       )}
     </div>
   );

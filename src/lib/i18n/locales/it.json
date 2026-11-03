@@ -1644,6 +1644,7 @@
     "supHub.pickAttendant": "Addetta per la camera {{number}}",
     "supHub.leaveOpen": "Lascia non assegnata",
     "supHub.sessionRooms": "Assegnate in questo giro (tocca per togliere)",
-    "supHub.removeRoom": "Togli {{number}}"
+    "supHub.removeRoom": "Togli {{number}}",
+    "supHub.staffHere": "Addetta in camera"
   }
 }

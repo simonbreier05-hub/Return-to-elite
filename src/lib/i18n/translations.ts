@@ -1735,6 +1735,7 @@ const en = {
     leaveOpen: "Leave unassigned",
     sessionRooms: "Assigned in this round (tap to remove)",
     removeRoom: "Remove {{number}}",
+    staffHere: "Housekeeper in the room",
   },
   ui: {
     status: {
@@ -3492,6 +3493,7 @@ const de = {
     leaveOpen: "Offen lassen",
     sessionRooms: "In dieser Runde zugeteilt (antippen entfernt)",
     removeRoom: "{{number}} entfernen",
+    staffHere: "Kraft im Zimmer",
   },
   ui: {
     status: {
