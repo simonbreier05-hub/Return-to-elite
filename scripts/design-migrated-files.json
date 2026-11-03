@@ -10,5 +10,10 @@
     "src/components/shell/ShellNav.tsx",
     "src/app/dev/shell/ShellDemo.tsx"
   ],
-  "warn": []
+  "warn": [
+    "src/app/attendant/view.tsx",
+    "src/components/hk/HkHub.tsx",
+    "src/components/hk/HkRoomDetail.tsx",
+    "src/components/hk/HkParts.tsx"
+  ]
 }

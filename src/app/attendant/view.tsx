@@ -1,34 +1,32 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import HubMoreMenu from "@/components/HubMoreMenu";
-import { ApiError, NetworkError, api } from "@/components/api";
+import { NetworkError, api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useOfflineQueue } from "@/components/useOfflineQueue";
-import OfflineBar from "@/components/OfflineBar";
-import Modal from "@/components/Modal";
-import Collapsible from "@/components/Collapsible";
-import MyWorkData from "@/components/lists/MyWorkData";
-import MyFloorsToday from "@/components/lists/MyFloorsToday";
 import DragReorderList from "@/components/DragReorderList";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { type ThreadNote } from "@/components/NoteThread";
-import PriorityBanner from "@/components/PriorityBanner";
-import NotificationsPanel from "@/components/NotificationsPanel";
-import NoteCountBadge from "@/components/NoteCountBadge";
-import PauseControl, { type PauseInfo } from "@/components/PauseControl";
-import RoomDetailModal, { type RoomDetailActions } from "@/components/RoomDetailModal";
-import RoomRowView, { type ListRoom } from "@/components/lists/RoomRowView";
-import RoomDayInfo from "@/components/lists/RoomDayInfo";
-import { IconBellSlash } from "@/components/icons";
-import { BLOCK_REASONS, DEFECT_CATEGORIES, type NoteStatus, type RoomStatus } from "@/lib/domain";
+import { type PauseInfo, reasonKey } from "@/components/PauseControl";
+import { type ListRoom } from "@/components/lists/RoomRowView";
+import { useMyFloors } from "@/components/lists/MyFloorsToday";
+import { type HubState } from "@/components/HubMissingNotice";
+import { DetailContainer } from "@/components/shell/DetailContainer";
+import { useBreakpoint } from "@/components/shell/useBreakpoint";
+import { Banner, Button } from "@/components/ui";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
+import { HkHub, type HkListItem } from "@/components/hk/HkHub";
+import { HkRoomDetail, TextAction, type HkDetailData } from "@/components/hk/HkRoomDetail";
+import { HkBlockDialog, HkDefectDialog, HkMyWorkData, HkNoteThread, HkNotifications, HkOfflineBar, HkPauseControl } from "@/components/hk/HkParts";
+import { type NoteStatus, type RoomStatus } from "@/lib/domain";
 import { chunkByFloor, routeLoadLabel, TYPICAL_DAILY_ROOMS } from "@/lib/assignment/routeOrder";
 import { ACTION_TARGET, floorProgress, hkGroupOf, orderRoute, primaryActionFor, type HkAction, type HkGroup } from "@/lib/rooms/hkGroups";
+import { hkKpis, withoutLeadingSymbol as plain, type HkRoomView } from "@/lib/ui/hkHub";
+import type { IconName } from "@/lib/ui/icons";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
-import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import { hhmm } from "@/lib/i18n/format";
 
 interface Note {
@@ -84,18 +82,18 @@ interface Priority {
 const ACTION_LABEL: Record<Exclude<HkAction, null | "DND">, TKey> = {
   START: "attendant.startCleaning", FINISH: "attendant.markClean", UNBLOCK: "attendant.unblockAndStart", RESUME: "work.resume",
 };
-const GROUP_TITLE: Record<HkGroup, TKey> = { NOW: "hkHub.groupNow", NEXT: "hkHub.groupNext", DONE: "hkHub.groupDone", OTHER: "hkHub.groupOther" };
+const ACTION_ICON: Record<Exclude<HkAction, null | "DND">, IconName> = { START: "play", FINISH: "check", UNBLOCK: "play", RESUME: "play" };
 const time = (iso: string) => hhmm(iso);
 
 /**
- * Housekeeper-Hub „Meine Zimmer“ — eine Ansicht statt „Meine Liste“ + „Meine Zimmer“: der ruhige Listen-Look (Art, Wäsche,
- * VIP, Gast-Kurzname, Traces, Credits, Fortschritt) mit den Funktionen von „Meine Zimmer“ (Ein-Tipp-Start/Fertig, Gruppen
- * nach Status, empfohlene Route mit Ziehen zum Sortieren, Prioritätssprung, DND-Hinweis). Jedes Zimmer öffnet das gemeinsame
- * Zimmer-Detail-Modal; dort auch Pausieren (mit Grund), Fortsetzen, Zurückspulen und Nachrichten.
- * Daten: /api/rooms?mine=1 + /api/lists/housekeeper + /api/priority, live per Socket.IO. Unvollständige Antworten crashen nicht.
+ * Housekeeper-Hub (D2, Design „Glas & Premium“): Kennzahlen, Zimmerliste nach Gruppen (Jetzt dran / Als Nächstes mit
+ * empfohlener Route und Ziehen zum Sortieren / Erledigt / heute keine Reinigung), Detail per `DetailContainer`
+ * (Panel ≥ 1280, Einschub 640–1279, Sheet < 640) mit Hauptknopf, Pausieren, Zurückspulen, Mangel/„Nicht möglich“ und Verlauf.
+ * Daten: /api/rooms?mine=1 + /api/lists/housekeeper + /api/priority, live per Socket.IO (Schlüssel = Zimmer-Id).
+ * Aktionen und Endpunkte wie vor D2 — nur die Darstellung ist neu. Unvollständige Antworten crashen nicht.
  */
 export default function AttendantView() {
-  const { t } = useLocale();
+  const { t, intl } = useLocale();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [list, setList] = useState<HkList | null>(null);
   const [priorities, setPriorities] = useState<Record<string, Priority>>({});
@@ -240,18 +238,26 @@ export default function AttendantView() {
     if (to) void setStatus(room, to as RoomStatus);
   };
 
-  /** Zeile im Listen-Look: Tagesdaten aus der Liste, Status/Pause/Notizen live aus dem Board. */
-  const asListRoom = (r: Room): ListRoom => {
-    const d = dayById.get(r.id);
-    return {
-      id: r.id, number: r.number, floor: r.floor, status: r.status,
-      kind: d?.kind ?? null, laundry: !!d?.laundry, vip: !!d?.vip || (r.arrivals ?? []).some((a) => a.vip), eta: d?.eta ?? null,
-      guest: d?.guest ?? null, pax: d?.pax ?? null, dnd: !!d?.dnd || isDnd(r), credits: d?.credits ?? 0,
-      traces: Array.isArray(d?.traces) ? d!.traces : [], pause: r.pause ?? null,
-    };
-  };
-
   const score = useCallback((id: string) => priorities[id]?.score ?? 0, [priorities]);
+  const reasonsOf = useCallback((id: string) => priorities[id]?.reasons ?? [], [priorities]);
+
+  /** Anzeige-Daten eines Zimmers: Status/Pause/DND live aus dem Board, Art/Gast/Zeit aus der Tagesliste, Dringlichkeit aus der Priorität. */
+  const viewOf = useCallback((r: Room): HkRoomView => {
+    const d = dayById.get(r.id);
+    const reasons = reasonsOf(r.id);
+    return {
+      id: r.id, number: r.number, status: r.status, kind: d?.kind ?? null,
+      vip: !!d?.vip || (r.arrivals ?? []).some((a) => a.vip),
+      laundry: !!d?.laundry,
+      dnd: !!d?.dnd || !!r.guestDndActive,
+      paused: !!r.pause,
+      defects: (r.defects ?? []).filter((x) => x.workOrder?.status !== "RESOLVED").length,
+      eta: d?.eta ?? (r.arrivals ?? []).find((a) => a.eta)?.eta ?? null,
+      early: (r.arrivals ?? []).some((a) => a.neededNow) || reasons.some((x) => x.signal === "needed_now" || x.signal === "early_check_in"),
+      urgent: reasons.some((x) => x.signal === "needed_now" || x.signal === "vip"),
+    };
+  }, [dayById, reasonsOf]);
+
   const groups = useMemo(() => {
     const by: Record<HkGroup, Room[]> = { NOW: [], NEXT: [], DONE: [], OTHER: [] };
     for (const r of rooms) by[hkGroupOf(r.status)].push(r);
@@ -263,24 +269,35 @@ export default function AttendantView() {
   // Fortschritt wie in „Meine Liste“ (Zimmer + Credits aus der Tagesliste); ohne Liste aus den Zimmern selbst.
   const progress = list?.progress ?? { done: groups.DONE.length, total: rooms.length - groups.OTHER.length, creditsDone: 0, creditsTotal: 0 };
   const perFloor = useMemo(() => floorProgress(rooms), [rooms]);
-  const pct = progress.total ? Math.round((progress.done / progress.total) * 100) : 0;
+  const kpis = hkKpis(rooms.map((r) => r.status), list?.progress);
+  const floors = useMyFloors();
 
-  /** „Was ist jetzt wichtig“: Gast/Front Office wartet (needed-now/VIP) bzw. lange gesperrt — Prioritätssprung zum dringendsten. */
-  const urgent = useMemo(
-    () => rooms.filter((r) => hkGroupOf(r.status) !== "DONE" && priorities[r.id]?.reasons?.some((rs) => rs.signal === "needed_now" || rs.signal === "vip"))
-      .sort((a, b) => score(b.id) - score(a.id)),
-    [rooms, priorities, score]
+  /** Reihenfolge: Jetzt dran, Als Nächstes (Route), Erledigt, heute keine Reinigung — Schlüssel = Zimmer-Id (kein Springen bei Live-Updates). */
+  const items: HkListItem[] = useMemo(
+    () =>
+      (["NOW", "NEXT", "DONE", "OTHER"] as HkGroup[]).flatMap((g) =>
+        groups[g].map((r) => {
+          const d = dayById.get(r.id);
+          return { view: viewOf(r), group: g, guest: d?.guest ?? null, lang: d?.lang ?? null, pax: d?.pax ?? null, flash: flash.has(r.number) };
+        }),
+      ),
+    [groups, dayById, viewOf, flash],
   );
+
   const agingBlocked = useMemo(
     () => rooms.filter((r) => r.status === "BLOCKED" && priorities[r.id]?.reasons?.some((rs) => rs.signal === "blocked_age")),
     [rooms, priorities]
   );
-  const jumpTo = (room: Room | undefined) => {
-    if (!room) return;
-    document.querySelector(`[data-room="${room.number}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-    setDetailRoomId(room.id);
-  };
-  const topOpen = [...groups.NOW, ...groups.NEXT].sort((a, b) => score(b.id) - score(a.id))[0];
+
+  // Ab 1280 px steht das Detail neben der Liste: beim ersten Laden das oberste offene Zimmer zeigen (wie im Entwurf).
+  const bp = useBreakpoint();
+  const autoSelected = useRef(false);
+  useEffect(() => {
+    if (autoSelected.current || bp !== "wide" || detailRoomId) return;
+    const first = groups.NOW[0] ?? groups.NEXT[0];
+    if (first) { autoSelected.current = true; setDetailRoomId(first.id); }
+  }, [bp, groups, detailRoomId]);
+  const select = (id: string) => { autoSelected.current = true; setDetailRoomId(id); };
 
   /** Ein Abschnitt der Route wurde per Ziehen umsortiert — in die ganze offene Reihenfolge zurücksetzen und speichern. */
   const reorderChunk = async (chunkIndex: number, newChunkItems: Room[]) => {
@@ -298,347 +315,209 @@ export default function AttendantView() {
 
   const detailRoom = rooms.find((r) => r.id === detailRoomId) ?? null;
 
-  /**
-   * Alles, was die Zeile nicht zeigt — warum priorisiert, der Hauptschritt, Pausieren/Fortsetzen, Zurückspulen,
-   * Sperre/Mangel und der Verlauf (Notizen + Nachrichten) — für das gemeinsame RoomDetailModal.
-   */
-  const buildDetailActions = (room: Room): RoomDetailActions => {
-    const action = actionFor(room);
-    const canBlock = ["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status);
+  const detailData = (room: Room): HkDetailData => {
+    const d = dayById.get(room.id);
+    const p = priorities[room.id];
     return {
-      primary: action && action !== "DND" && action !== "RESUME" ? { label: t(ACTION_LABEL[action]), onClick: () => runAction(room, action) } : null,
-      busy: busyRoomId === room.id,
-      priority: priorities[room.id],
-      extra: (
-        <>
-          {action === "DND" && <p className="rounded-xl border border-status-out-of-order/40 bg-status-out-of-order/10 px-3 py-3 text-center text-sm font-medium text-status-out-of-order">{t("attendant.guestDndActive")}</p>}
-          <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} size="lg" showBadge={false}
-            onChanged={(p) => { setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, pause: p } : r))); refreshRoomsSoon(); }} />
-          {room.rewind && (
-            <button type="button" onClick={() => rewind(room)} disabled={busyRoomId === room.id}
-              className="min-h-11 w-full rounded-xl border border-charcoal/20 bg-white px-3 text-sm font-medium disabled:opacity-50">
-              ↶ {t("work.rewind", { status: t(`status.${room.rewind.to}` as TKey) })}
-              <span className="ms-1 text-xs font-normal text-graphite/60">· {t("work.rewindUntil", { time: time(room.rewind.until) })}</span>
-            </button>
-          )}
-        </>
-      ),
-      onBlock: canBlock && !room.pause ? () => { setDetailRoomId(null); setModal({ kind: "block", room }); } : undefined,
-      onReportDefect: () => { setDetailRoomId(null); setModal({ kind: "defect", room }); },
-      onNoteAdded: (note: ThreadNote) =>
-        setRooms((prev) =>
-          prev.map((r) => (r.id === room.id ? { ...r, notes: [note, ...(r.notes ?? [])].slice(0, 3), openNotesCount: (r.openNotesCount ?? 0) + 1 } : r))
-        ),
-      onNoteUpdated: (note: ThreadNote) => {
-        setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, notes: (r.notes ?? []).map((n) => (n.id === note.id ? note : n)) } : r)));
-        refreshRoomsSoon();
-      },
+      view: viewOf(room),
+      statusKey: `status.${room.status}` as TKey,
+      blockReasonKey: room.blockReason ? (`blockReason.${room.blockReason}` as TKey) : null,
+      guest: d?.guest ?? null,
+      lang: d?.lang ?? null,
+      pax: d?.pax ?? null,
+      credits: d?.credits,
+      traces: Array.isArray(d?.traces) ? d!.traces : [],
+      hints: Array.isArray(d?.hints) ? d!.hints : [],
+      reworkNote: room.status === "PICKUP" ? room.reworkNote ?? null : null,
+      defects: (room.defects ?? []).map((x) => ({
+        id: x.id,
+        label: `${t(`defectCategory.${x.category}` as TKey)}: ${x.note}${x.workOrder ? ` · ${t(`workOrderStatus.${x.workOrder.status}` as TKey)}` : ""}`,
+      })),
+      guestRequests: (room.guestRequests ?? []).map((g) => ({ id: g.id, label: `${t(`guestRequestKind.${g.kind}` as TKey)} · ${t(`guestRequestStatus.${g.status}` as TKey)} · ${hhmm(g.createdAt)}` })),
+      priority: p ?? null,
+      pauseText: room.pause
+        ? [room.pause.reason ? t(reasonKey(room.pause.reason)) : null, t("work.pausedSince", { time: time(room.pause.since) }), room.pause.byName ? t("work.pausedBy", { name: room.pause.byName }) : null].filter(Boolean).join(" · ")
+        : null,
     };
   };
 
-  const row = (room: Room, prefix?: React.ReactNode) => {
-    const action = actionFor(room);
-    const busy = busyRoomId === room.id;
+  const detail = (() => {
+    const room = detailRoom;
+    const action = room ? actionFor(room) : null;
+    const busy = !!room && busyRoomId === room.id;
+    const canBlock = !!room && ["DIRTY", "IN_PROGRESS", "PICKUP"].includes(room.status) && !room.pause;
+    const label = action && action !== "DND" ? plain(t(ACTION_LABEL[action])) : null;
     return (
-      <RoomRowView key={room.id} room={asListRoom(room)} highlight={flash.has(room.number)} prefix={prefix}
-        onOpen={() => setDetailRoomId(room.id)}
-        badges={<>
-          {room.guestDndActive && <IconBellSlash className="h-4 w-4 shrink-0 text-status-out-of-order" aria-label="DND" />}
-          {room.status === "INSPECTED" && <span title={t("status.INSPECTED")} aria-hidden>🔒</span>}
-          <NoteCountBadge openCount={room.openNotesCount ?? 0} totalCount={(room.notes ?? []).length} />
-        </>}
-        action={action === "DND"
-          ? <p className="rounded-xl border border-status-out-of-order/40 bg-status-out-of-order/10 px-3 py-2 text-center text-sm font-medium text-status-out-of-order">{t("attendant.guestDndActive")}</p>
-          : action && (
-            <button type="button" onClick={() => runAction(room, action)} disabled={busy}
-              className={`h-14 w-full rounded-xl text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50 ${action === "FINISH" ? "bg-status-clean" : "bg-status-in-progress"}`}>
-              {busy ? "…" : action === "RESUME" ? `▶ ${t("work.resume")}` : t(ACTION_LABEL[action])}
-            </button>
-          )}
-      />
-    );
-  };
-
-  const section = (g: HkGroup, body: React.ReactNode, count: number) => (
-    <section key={g} aria-label={t(GROUP_TITLE[g])} className="mb-5">
-      <h3 className="mb-2 flex items-baseline gap-2 font-serif text-2xl">{t(GROUP_TITLE[g])}<span className="font-sans text-xs text-graphite/60">· {count}</span></h3>
-      {body}
-    </section>
-  );
-
-  return (
-    <div className="animate-rise">
-      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
-      <div className="mb-4">
-        <h2 className="font-serif text-4xl leading-none">{t("attendant.myRooms")}</h2>
-        <div className="rule-gold my-2 w-40" />
-        <MyFloorsToday />
-        <p className="text-sm font-medium" aria-live="polite">
-          {t("hkHub.progressRooms", { done: progress.done, total: progress.total })}
-          {progress.creditsTotal > 0 && <> · {t("lists.credits", { done: progress.creditsDone.toString().replace(".", ","), total: progress.creditsTotal.toString().replace(".", ",") })}</>}
-        </p>
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-charcoal/10" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={t("hkHub.progressRooms", { done: progress.done, total: progress.total })}>
-          <div className="h-full rounded-full bg-gold transition-[width] duration-500" style={{ width: `${pct}%` }} />
-        </div>
-        {perFloor.length > 0 && (
-          <ul className="mt-2 flex flex-wrap gap-1.5" aria-label={t("hkHub.perFloor")}>
-            {perFloor.map((f) => (
-              <li key={f.floor} className={`rounded-full border px-2.5 py-1 text-xs ${f.released === f.total ? "border-status-clean/40 bg-status-clean/10" : "border-charcoal/15 bg-white"}`}>
-                <span className="font-semibold">{t("attendant.floor", { floor: f.floor })}</span> · {t("hkHub.floorReleased", { done: f.released, total: f.total })}
-              </li>
-            ))}
-          </ul>
+      <DetailContainer
+        // Ab 1280: Panel so hoch, dass der Hauptknopf ohne Scrollen sichtbar ist (Inhalt scrollt im Panel)
+        className="xl:max-h-[calc(100dvh-17rem)]"
+        open={!!room}
+        onClose={() => { autoSelected.current = true; setDetailRoomId(null); }}
+        title={room ? t("hkHub.roomTitle", { n: room.number }) : ""}
+        footer={room && label && action ? (
+          <Button icon={ACTION_ICON[action as Exclude<HkAction, null | "DND">]} block disabled={busy} onClick={() => runAction(room, action)}>
+            {busy ? "…" : label}
+          </Button>
+        ) : undefined}
+      >
+        {room && (
+          <ErrorBoundary>
+            <HkRoomDetail
+              data={detailData(room)}
+              pause={
+                <HkPauseControl
+                  key={room.id}
+                  targetType="ROOM"
+                  targetId={room.id}
+                  canPause={room.status === "IN_PROGRESS" && !room.pause}
+                  onChanged={(p: PauseInfo | null) => { setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, pause: p } : r))); refreshRoomsSoon(); }}
+                />
+              }
+              actions={
+                <>
+                  {canBlock && <TextAction icon="moon" onClick={() => { setDetailRoomId(null); setModal({ kind: "block", room }); }}>{plain(t("attendant.blockedAction"))}</TextAction>}
+                  <TextAction icon="wrench" onClick={() => { setDetailRoomId(null); setModal({ kind: "defect", room }); }}>{plain(t("attendant.defectAction"))}</TextAction>
+                  {room.rewind && (
+                    <TextAction icon="refresh" disabled={busy} onClick={() => rewind(room)}>
+                      {t("work.rewind", { status: t(`status.${room.rewind.to}` as TKey) })} · {t("work.rewindUntil", { time: time(room.rewind.until) })}
+                    </TextAction>
+                  )}
+                </>
+              }
+              thread={
+                <HkNoteThread
+                  key={`${room.id}:${(room.notes ?? []).map((n) => `${n.id}${n.status}`).join()}`}
+                  roomId={room.id}
+                  initialNotes={room.notes ?? []}
+                  task={{ type: "ROOM", id: room.id }}
+                  onNoteAdded={(note: ThreadNote) =>
+                    setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, notes: [note, ...(r.notes ?? [])].slice(0, 3), openNotesCount: (r.openNotesCount ?? 0) + 1 } : r)))
+                  }
+                  onNoteUpdated={(note: ThreadNote) => {
+                    setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, notes: (r.notes ?? []).map((n) => (n.id === note.id ? note : n)) } : r)));
+                    refreshRoomsSoon();
+                  }}
+                />
+              }
+            />
+          </ErrorBoundary>
         )}
-      </div>
-      <HubMissingNotice hub={hub} planner={false} />
+      </DetailContainer>
+    );
+  })();
 
-      <PriorityBanner
-        items={[
-          { count: urgent.length, label: t("priority.urgentRooms"), icon: "warning", tone: "urgent", onClick: () => jumpTo(urgent[0]) },
-          { count: agingBlocked.length, label: t("priority.blockedNeedsRecheck"), icon: "ban", tone: "urgent", onClick: () => jumpTo(agingBlocked[0]) },
-        ]}
-      />
-      {topOpen && score(topOpen.id) > 0 && (
-        <button type="button" onClick={() => jumpTo(topOpen)} className="mb-4 min-h-11 rounded-full border border-gold-line bg-parchment px-4 text-sm font-medium">
-          ⇢ {t("hkHub.jump", { n: topOpen.number })}
+  const notices = (
+    <>
+      <HkOfflineBar state={offline} />
+      {hub && !hub.ready && (
+        <Banner
+          tone="info"
+          icon="calendar-days"
+          title={t("hubDay.missingTitle", { date: new Date(`${hub.date}T12:00:00Z`).toLocaleDateString(intl, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }) })}
+          detail={t("hubDay.missingAttendant")}
+        />
+      )}
+      {error && (
+        <div role="alert">
+          <Banner tone="warning" icon="triangle-alert" title={error} />
+        </div>
+      )}
+      {agingBlocked.length > 0 && (
+        <button type="button" onClick={() => select(agingBlocked[0].id)} className={cx("press rounded-(--glass-radius-md) text-start", FOCUS_RING)}>
+          <Banner tone="warning" icon="moon" title={t("hkHub.withCount", { label: t("priority.blockedNeedsRecheck"), n: agingBlocked.length })} detail={agingBlocked.map((r) => r.number).join(", ")} />
         </button>
       )}
+    </>
+  );
 
-      <NotificationsPanel targetRole="room_attendant" />
-      <OfflineBar state={offline} />
+  const reorderToggle = groups.NEXT.length > 1 ? (
+    <button
+      type="button"
+      aria-pressed={reordering}
+      onClick={() => setReordering((v) => !v)}
+      className={cx("text-label min-h-(--size-touch-min) rounded-pill px-4 text-accent-text underline underline-offset-4", FOCUS_RING)}
+    >
+      {reordering ? t("hkHub.reorderDone") : t("hkHub.reorder")}
+    </button>
+  ) : undefined;
 
-      {error && (
-        <div role="alert" className="mb-4 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-sm text-status-out-of-order">
-          {error}
-        </div>
-      )}
-
-      <ErrorBoundary>
-        {rooms.length === 0 ? (
-          <p className="rounded-2xl border border-charcoal/10 bg-linen p-8 text-center text-graphite/60 shadow-card">{t("attendant.noRoomsAssigned")}</p>
-        ) : (
-          <>
-            {groups.NOW.length > 0 && section("NOW", <ol className="space-y-2">{groups.NOW.map((r) => row(r))}</ol>, groups.NOW.length)}
-
-            {section("NEXT", (
-              <>
-                <div className="mb-2 flex flex-wrap items-center gap-2">
-                  <span className={`rounded-full px-2.5 py-0.5 text-[0.68rem] font-semibold uppercase tracking-wider ${routeLoad === "heavy" ? "bg-gold/15 text-gold-soft" : routeLoad === "typical" ? "bg-status-clean/10 text-status-clean" : "bg-parchment text-graphite/70"}`}>
-                    {routeLoad === "heavy"
-                      ? t("attendant.aboveTypical", { low: TYPICAL_DAILY_ROOMS.low, high: TYPICAL_DAILY_ROOMS.high })
-                      : t("attendant.typicalDay", { low: TYPICAL_DAILY_ROOMS.low, high: TYPICAL_DAILY_ROOMS.high })}
-                  </span>
-                  {groups.NEXT.length > 1 && (
-                    <button type="button" aria-pressed={reordering} onClick={() => setReordering((v) => !v)}
-                      className={`min-h-11 rounded-lg border px-3 text-sm font-medium ${reordering ? "border-gold-line bg-parchment" : "border-charcoal/15 bg-white"}`}>
-                      {reordering ? t("hkHub.reorderDone") : t("hkHub.reorder")}
-                    </button>
-                  )}
+  const reorderContent = reordering ? (
+    <div className="flex flex-col gap-3">
+      <p className="text-label text-text-muted">{t("attendant.routeExplain")}</p>
+      {routeChunks.map((chunk, chunkIdx) => {
+        const startIndex = routeChunks.slice(0, chunkIdx).reduce((n, c) => n + c.items.length, 0);
+        return (
+          <div key={`${chunk.floor}-${chunkIdx}`} className="flex flex-col gap-2">
+            <p className="text-section text-text-muted">
+              {t("attendant.floorStops", { floor: chunk.floor, from: startIndex + 1, to: startIndex + chunk.items.length })}
+            </p>
+            <DragReorderList items={chunk.items} getId={(r) => r.id} onReorder={(next) => reorderChunk(chunkIdx, next)} className="flex flex-col gap-2"
+              renderItem={(room, i, handle) => (
+                <div className="flex min-h-(--size-touch-min) items-center gap-3 rounded-(--glass-radius-sm) bg-surface-card-raised px-2 py-2">
+                  <button {...handle} type="button" onClick={(e) => e.stopPropagation()} aria-label={t("attendant.dragToReorder", { number: room.number })}
+                    className={cx("flex size-12 shrink-0 cursor-grab touch-none items-center justify-center rounded-(--glass-radius-sm) text-text-secondary active:cursor-grabbing", FOCUS_RING)}>
+                    <span aria-hidden="true" className="text-title-22 leading-none">⋮⋮</span>
+                  </button>
+                  <span className="glass-disc text-label flex size-8 shrink-0 items-center justify-center text-text-primary">{startIndex + i + 1}</span>
+                  <span className="text-title-22 text-text-primary">{room.number}</span>
+                  <span className="text-label text-text-secondary">{t(`status.${room.status}` as TKey)}</span>
                 </div>
-                {groups.NEXT.length === 0 ? <p className="text-sm text-graphite/60">{t("hkHub.empty")}</p> : reordering ? (
-                  <div className="space-y-2">
-                    <p className="text-xs text-graphite/60">{t("attendant.routeExplain")}</p>
-                    {routeChunks.map((chunk, chunkIdx) => {
-                      const startIndex = routeChunks.slice(0, chunkIdx).reduce((n, c) => n + c.items.length, 0);
-                      return (
-                        <div key={`${chunk.floor}-${chunkIdx}`}>
-                          <p className="mb-1 text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">
-                            {t("attendant.floorStops", { floor: chunk.floor, from: startIndex + 1, to: startIndex + chunk.items.length })}
-                          </p>
-                          <DragReorderList items={chunk.items} getId={(r) => r.id} onReorder={(next) => reorderChunk(chunkIdx, next)} className="space-y-1.5"
-                            renderItem={(room, i, handle) => (
-                              <div className="flex items-center gap-2 rounded-lg border border-charcoal/10 bg-white px-2.5 py-2">
-                                <button {...handle} type="button" onClick={(e) => e.stopPropagation()} aria-label={t("attendant.dragToReorder", { number: room.number })}
-                                  className="flex h-11 w-11 shrink-0 cursor-grab touch-none items-center justify-center rounded-md text-graphite/40 hover:bg-parchment active:cursor-grabbing">
-                                  <svg width="14" height="14" viewBox="0 0 14 14" fill="currentColor" aria-hidden>
-                                    <circle cx="4" cy="3" r="1.3" /><circle cx="10" cy="3" r="1.3" /><circle cx="4" cy="7" r="1.3" />
-                                    <circle cx="10" cy="7" r="1.3" /><circle cx="4" cy="11" r="1.3" /><circle cx="10" cy="11" r="1.3" />
-                                  </svg>
-                                </button>
-                                <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory tabular-nums">{startIndex + i + 1}</span>
-                                <span className="font-serif text-lg">{room.number}</span>
-                                <span className="text-xs text-graphite/60">{t(`status.${room.status}` as TKey)}</span>
-                              </div>
-                            )} />
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <ol className="space-y-2">
-                    {groups.NEXT.map((r, i) => row(r, <span aria-label={t("hkHub.stop", { n: i + 1 })} className="flex h-7 w-7 shrink-0 items-center justify-center self-center rounded-full bg-navy text-xs font-semibold text-ivory tabular-nums">{i + 1}</span>))}
-                  </ol>
-                )}
-              </>
-            ), groups.NEXT.length)}
+              )} />
+          </div>
+        );
+      })}
+    </div>
+  ) : undefined;
 
-            {groups.DONE.length > 0 && (
-              <Collapsible defaultOpen={false} summary={<span className="font-serif text-2xl">{t("hkHub.groupDone")} <span className="font-sans text-xs text-graphite/60">· {groups.DONE.length}</span></span>}>
-                <ol className="space-y-2">{groups.DONE.map((r) => row(r))}</ol>
-              </Collapsible>
-            )}
-            {groups.OTHER.length > 0 && (
-              <Collapsible defaultOpen={false} summary={<span className="font-serif text-2xl">{t("hkHub.groupOther")} <span className="font-sans text-xs text-graphite/60">· {groups.OTHER.length}</span></span>}>
-                <ol className="space-y-2">{groups.OTHER.map((r) => row(r))}</ol>
-              </Collapsible>
-            )}
+  return (
+    <>
+      <HkHub
+        items={items}
+        kpis={kpis}
+        progress={progress}
+        floors={floors}
+        perFloor={perFloor}
+        routeLoadText={routeLoad === "heavy"
+          ? t("attendant.aboveTypical", { low: TYPICAL_DAILY_ROOMS.low, high: TYPICAL_DAILY_ROOMS.high })
+          : t("attendant.typicalDay", { low: TYPICAL_DAILY_ROOMS.low, high: TYPICAL_DAILY_ROOMS.high })}
+        selectedId={detailRoomId}
+        onSelect={select}
+        detail={detail}
+        detailOpen={!!detailRoom}
+        notices={notices}
+        hubMissing={!!hub && !hub.ready}
+        reorderToggle={reorderToggle}
+        reorderContent={reorderContent}
+        below={
+          <>
+            <HkNotifications compact={bp === "phone"} />
+            <HkMyWorkData />
           </>
-        )}
-      </ErrorBoundary>
-      <MyWorkData />
-
-      {/* Modal rendert selbst per Portal in <body> (die Seite liegt in einem animierten Container) — gilt auch für Sperre/Mangel unten. */}
-      {detailRoom && (
-        <ErrorBoundary>
-          <RoomDetailModal
-            room={detailRoom}
-            onClose={() => setDetailRoomId(null)}
-            actions={buildDetailActions(detailRoom)}
-            summary={<RoomDayInfo day={dayById.get(detailRoom.id) ? { ...asListRoom(detailRoom) } : null} traces={dayById.get(detailRoom.id)?.traces} />}
-            task={{ type: "ROOM", id: detailRoom.id }}
-          />
-        </ErrorBoundary>
-      )}
+        }
+      />
 
       {modal?.kind === "block" && (
-        <BlockModal
-          room={modal.room}
+        <HkBlockDialog
+          room={modal.room.number}
           onClose={() => setModal(null)}
-          onSubmit={async (reason) => {
+          onSubmit={(reason) => {
             const room = modal.room;
             setModal(null);
-            await setStatus(room, "BLOCKED", { blockReason: reason });
+            void setStatus(room, "BLOCKED", { blockReason: reason });
           }}
         />
       )}
       {modal?.kind === "defect" && (
-        <DefectModal
-          room={modal.room}
+        <HkDefectDialog
+          room={modal.room.number}
           onClose={() => setModal(null)}
-          onDone={() => {
+          onSubmit={async (fd) => {
+            await api(`/api/rooms/${modal.room.id}/defects`, { formData: fd });
             setModal(null);
             void loadRooms();
           }}
         />
       )}
-    </div>
+    </>
   );
 }
-
-function BlockModal({
-  room,
-  onClose,
-  onSubmit,
-}: {
-  room: { number: string };
-  onClose: () => void;
-  onSubmit: (reason: string) => void;
-}) {
-  const { t } = useLocale();
-  const labels: Record<string, TKey> = {
-    DND: "attendant.blockReasonDnd",
-    GUEST_IN_ROOM: "attendant.blockReasonGuest",
-    DOUBLE_LOCKED: "attendant.blockReasonLocked",
-    REFUSED: "attendant.blockReasonRefused",
-  };
-  return (
-    <Modal
-      title={t("attendant.blockModalTitle", { number: room.number })}
-      subtitle={t("attendant.blockModalSubtitle")}
-      onClose={onClose}
-    >
-      <div className="grid gap-2">
-        {BLOCK_REASONS.map((r) => (
-          <button
-            key={r}
-            onClick={() => onSubmit(r)}
-            className="h-14 rounded-xl border-2 border-status-blocked/60 text-base font-medium text-status-blocked hover:bg-status-blocked/10"
-          >
-            {t(labels[r])}
-          </button>
-        ))}
-      </div>
-    </Modal>
-  );
-}
-
-function DefectModal({
-  room,
-  onClose,
-  onDone,
-}: {
-  room: { id: string; number: string };
-  onClose: () => void;
-  onDone: () => void;
-}) {
-  const { t } = useLocale();
-  const [category, setCategory] = useState<string>("PLUMBING");
-  const [note, setNote] = useState("");
-  const [photo, setPhoto] = useState<File | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async () => {
-    if (busy) return;
-    setBusy(true);
-    setError(null);
-    try {
-      const fd = new FormData();
-      fd.set("category", category);
-      fd.set("note", note);
-      if (photo) fd.set("photo", photo);
-      await api(`/api/rooms/${room.id}/defects`, { formData: fd });
-      onDone();
-    } catch (e) {
-      setError(errorText(e, t));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <Modal title={t("attendant.defectModalTitle", { number: room.number })} subtitle={t("attendant.defectModalSubtitle")} onClose={onClose} dirty={!!note.trim() || !!photo}>
-      <label className="mb-1 block text-sm font-medium">{t("attendant.category")}</label>
-      <div className="mb-3 grid grid-cols-2 gap-2">
-        {DEFECT_CATEGORIES.map((c) => (
-          <button
-            key={c}
-            onClick={() => setCategory(c)}
-            className={`h-11 rounded-lg border text-sm ${
-              category === c ? "border-gold bg-parchment font-semibold" : "border-charcoal/15"
-            }`}
-          >
-            {t(`defectCategory.${c}` as TKey)}
-          </button>
-        ))}
-      </div>
-      <label className="mb-1 block text-sm font-medium">{t("attendant.description")}</label>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={3}
-        className="mb-3 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-        placeholder={t("attendant.descriptionPlaceholder")}
-      />
-      <label className="mb-1 block text-sm font-medium">
-        {t("attendant.photoOptional")} ({t("common.optional")})
-      </label>
-      <input
-        type="file"
-        accept="image/*"
-        capture="environment"
-        onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
-        className="mb-4 w-full text-sm"
-      />
-      {error && <p className="mb-2 text-sm text-status-out-of-order">{error}</p>}
-      <button
-        onClick={submit}
-        disabled={busy || !note.trim()}
-        className="h-14 w-full rounded-xl bg-status-defect text-lg font-semibold text-linen disabled:opacity-40"
-      >
-        {busy ? t("attendant.sending") : t("attendant.sendToEngineering")}
-      </button>
-    </Modal>
-  );
-}
-
