@@ -278,7 +278,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
               ))}
             </div>
 
-            <div className={`pl-rise mt-4 hidden min-h-[8.5rem] md:flex flex-1 flex-col items-center justify-center gap-2 rounded-[18px] border-2 border-dashed p-4 text-center transition-colors ${over ? "border-brass-light bg-night-600" : "border-line-2"}`} style={{ ["--i" as string]: 6 }}>
+            <div className={`pl-rise mt-4 hidden min-h-[8.5rem] md:flex flex-1 flex-col items-center justify-center gap-2 rounded-(--glass-radius-md) border-2 border-dashed p-4 text-center transition-colors ${over ? "border-accent-default bg-accent-subtle-bg" : "border-border-default"}`} style={{ ["--i" as string]: 6 }}>
               <div className="font-serif text-xl font-semibold">{t("planungTool.dropTitle")}</div>
               <div className="text-xs text-pl-muted">{t("planungTool.dropHint")}</div>
               <button type="button" onClick={() => input.current?.click()} className="min-h-11 rounded-full border border-line-2 px-5 text-sm font-medium hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.chooseFiles")}</button>

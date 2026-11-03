@@ -27,14 +27,14 @@ export default function PlausibilityBanner({ refreshKey }: { refreshKey?: string
     setBusy(false);
   };
   return (
-    <div role="alert" className="mb-4 rounded-xl border border-brass-light bg-night-800 p-3 text-sm">
-      <div className="font-medium text-brass-ink">{t("planungTool.plausTitle")}</div>
-      <ul className="mt-1.5 list-disc space-y-0.5 ps-5 text-pl-text">
+    <div role="alert" className="glass glass-warm mb-4 rounded-(--glass-radius-md) p-4">
+      <div className="text-body-18 text-status-warning-fg">{t("planungTool.plausTitle")}</div>
+      <ul className="mt-1.5 list-disc space-y-0.5 ps-5 text-label text-text-primary">
         {state.findings.map((f, i) => <li key={i}>{f.message}</li>)}
       </ul>
-      <p className="mt-1.5 text-xs text-pl-muted">{t("planungTool.plausHint")}</p>
+      <p className="text-label mt-1.5 text-text-muted">{t("planungTool.plausHint")}</p>
       <button type="button" disabled={busy} onClick={() => void ack()}
-        className="mt-2 min-h-11 rounded-full border border-line-2 px-4 text-xs font-medium text-pl-text hover:border-brass-light disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+        className="glass press text-label mt-2 min-h-(--size-touch-min) rounded-pill px-5 text-text-primary disabled:opacity-50 focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-accent-default">
         {t("planungTool.plausAck")}
       </button>
     </div>

@@ -14,7 +14,7 @@ export default function PlanungShell({ top, house, panel, actions }: { top: Reac
       <aside className="flex min-h-screen flex-col bg-night-700 px-4 pb-36 pt-4 md:min-h-[28rem] md:border-s md:border-line-1 md:px-6 md:pb-10 md:pt-10 lg:px-8">
         {top}
         {panel}
-        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line-1 bg-night-700/95 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 backdrop-blur md:static md:z-auto md:mt-6 md:border-0 md:bg-transparent md:p-0 md:backdrop-blur-none">
+        <div className="fixed inset-x-0 bottom-0 z-20 border-t border-line-1 bg-night-700 px-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] pt-3 md:static md:z-auto md:mt-6 md:border-0 md:bg-transparent md:p-0">
           {actions}
         </div>
       </aside>
