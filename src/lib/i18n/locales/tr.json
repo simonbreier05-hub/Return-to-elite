@@ -1586,6 +1586,27 @@
     "appShell.greetingMorning": "Günaydın, {{name}}",
     "appShell.greetingDay": "İyi günler, {{name}}",
     "appShell.greetingEvening": "İyi akşamlar, {{name}}",
-    "appShell.profile": "Profil"
+    "appShell.profile": "Profil",
+    "hkHub.subtitle": "Bugünkü odaların.",
+    "hkHub.kindTurn": "Turn",
+    "hkHub.filter": "Filtre",
+    "hkHub.filterAll": "Tümü",
+    "hkHub.withCount": "{{label}} ({{n}})",
+    "hkHub.kpiRooms": "Odalarım",
+    "hkHub.kpiDone": "Bitti",
+    "hkHub.kpiInProgress": "Devam ediyor",
+    "hkHub.kpiOpen": "Açık",
+    "hkHub.earlyTitle": "Erken girişler ({{n}})",
+    "hkHub.earlyDetail": "Oda {{rooms}} – {{time}}'a kadar hazır",
+    "hkHub.earlyRooms": "Oda {{rooms}}",
+    "hkHub.earlyArrival": "Erken giriş ({{time}})",
+    "hkHub.arrivalAt": "Giriş {{time}}",
+    "hkHub.roomTitle": "Oda {{n}}",
+    "hkHub.myProgress": "İlerlemem",
+    "hkHub.percent": "%{{n}}",
+    "hkHub.nextRooms": "Sıradaki odalar",
+    "hkHub.paxShort": "{{n}} kişi",
+    "hkHub.selectHint": "Ayrıntılar için bir odaya dokun.",
+    "hkHub.allDone": "Hepsi bitti – teşekkürler!"
   }
 }

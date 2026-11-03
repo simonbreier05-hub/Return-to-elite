@@ -1586,6 +1586,27 @@
     "appShell.greetingMorning": "صبح بخیر، {{name}}",
     "appShell.greetingDay": "روز بخیر، {{name}}",
     "appShell.greetingEvening": "عصر بخیر، {{name}}",
-    "appShell.profile": "پروفایل"
+    "appShell.profile": "پروفایل",
+    "hkHub.subtitle": "اتاق‌های امروز شما.",
+    "hkHub.kindTurn": "Turn",
+    "hkHub.filter": "فیلتر",
+    "hkHub.filterAll": "همه",
+    "hkHub.withCount": "{{label}} ({{n}})",
+    "hkHub.kpiRooms": "اتاق‌های من",
+    "hkHub.kpiDone": "انجام شد",
+    "hkHub.kpiInProgress": "در حال انجام",
+    "hkHub.kpiOpen": "باز",
+    "hkHub.earlyTitle": "ورودهای زودهنگام ({{n}})",
+    "hkHub.earlyDetail": "اتاق {{rooms}} – تا {{time}} آماده",
+    "hkHub.earlyRooms": "اتاق {{rooms}}",
+    "hkHub.earlyArrival": "ورود زودهنگام ({{time}})",
+    "hkHub.arrivalAt": "ورود {{time}}",
+    "hkHub.roomTitle": "اتاق {{n}}",
+    "hkHub.myProgress": "پیشرفت من",
+    "hkHub.percent": "{{n}}٪",
+    "hkHub.nextRooms": "اتاق‌های بعدی",
+    "hkHub.paxShort": "{{n}} نفر",
+    "hkHub.selectHint": "برای جزئیات روی اتاق بزنید.",
+    "hkHub.allDone": "همه انجام شد – ممنون!"
   }
 }

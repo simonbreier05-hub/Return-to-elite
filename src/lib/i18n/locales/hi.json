@@ -1586,6 +1586,27 @@
     "appShell.greetingMorning": "सुप्रभात, {{name}}",
     "appShell.greetingDay": "नमस्ते, {{name}}",
     "appShell.greetingEvening": "शुभ संध्या, {{name}}",
-    "appShell.profile": "प्रोफ़ाइल"
+    "appShell.profile": "प्रोफ़ाइल",
+    "hkHub.subtitle": "आज के आपके कमरे।",
+    "hkHub.kindTurn": "Turn",
+    "hkHub.filter": "फ़िल्टर",
+    "hkHub.filterAll": "सभी",
+    "hkHub.withCount": "{{label}} ({{n}})",
+    "hkHub.kpiRooms": "मेरे कमरे",
+    "hkHub.kpiDone": "पूरे",
+    "hkHub.kpiInProgress": "चल रहे",
+    "hkHub.kpiOpen": "बाकी",
+    "hkHub.earlyTitle": "जल्दी चेक-इन ({{n}})",
+    "hkHub.earlyDetail": "कमरा {{rooms}} – {{time}} तक तैयार",
+    "hkHub.earlyRooms": "कमरा {{rooms}}",
+    "hkHub.earlyArrival": "जल्दी चेक-इन ({{time}})",
+    "hkHub.arrivalAt": "चेक-इन {{time}}",
+    "hkHub.roomTitle": "कमरा {{n}}",
+    "hkHub.myProgress": "मेरी प्रगति",
+    "hkHub.percent": "{{n}}%",
+    "hkHub.nextRooms": "अगले कमरे",
+    "hkHub.paxShort": "{{n}} व्यक्ति",
+    "hkHub.selectHint": "विवरण देखने के लिए कमरे पर टैप करें।",
+    "hkHub.allDone": "सब पूरा – धन्यवाद!"
   }
 }
