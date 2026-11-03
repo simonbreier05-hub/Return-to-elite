@@ -13,9 +13,11 @@ export default async function FloorPlanPage() {
     "concierge",
     "engineering",
   ]);
+  const canAssign = session.role === "supervisor" || session.role === "duty_manager";
+  // Zuteilungsansicht ist im Design „Glas & Premium“ (D3); der reine Orientierungs-Grundriss der übrigen Rollen noch nicht.
   return (
-    <AppShell title="appShell.floorPlan" userName={session.name} role={session.role} backHref={roleHome(session.role)}>
-      <FloorPlanView canAssign={session.role === "supervisor" || session.role === "duty_manager"} />
+    <AppShell title="appShell.floorPlan" userName={session.name} role={session.role} backHref={roleHome(session.role)} legacy={!canAssign}>
+      <FloorPlanView canAssign={canAssign} />
     </AppShell>
   );
 }

@@ -5,7 +5,7 @@ import SupervisorView from "./view";
 export default async function SupervisorPage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="nav.liveBoard" userName={session.name} role={session.role}>
+    <AppShell title="nav.liveBoard" userName={session.name} role={session.role} legacy={false}>
       <SupervisorView isDutyManager={session.role === "duty_manager"} />
     </AppShell>
   );

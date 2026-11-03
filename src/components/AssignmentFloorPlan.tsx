@@ -1,25 +1,33 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
-import PlanningFloorPlanPanel from "@/components/PlanningFloorPlanPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
-import RedistributionCards from "@/components/RedistributionCards";
 import LiveListBoards from "@/components/LiveListBoards";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
+import { useBreakpoint } from "@/components/shell/useBreakpoint";
+import Link from "next/link";
+import { Banner, FilterChip, GlassCard, Glyph } from "@/components/ui";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
+import { GlassRedistribution } from "@/components/supervisor/GlassRedistribution";
+import { GlassPlanningBoard } from "@/components/supervisor/GlassPlanningBoard";
+import { LegacySurface } from "@/components/supervisor/SupervisorParts";
 
 interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[]; hub?: HubState }
 
 /**
- * Die einzige Zuteilungsansicht (nur Supervisor/Duty Manager): Grundriss oder Liste je Zimmermädchen, beide Zuteilungsmodi.
+ * Die einzige Zuteilungsansicht (nur Supervisor/Duty Manager) — „Tagesplanung“ im Design „Glas & Premium“ (Figma `31:1118`):
+ * Grundriss je Etage oder Liste je Zimmermädchen, beide Zuteilungsmodi (Zwei-Tap), Mehrfachauswahl, Ziehen zwischen Kräften.
  * Liest und schreibt dieselbe Wahrheit wie alle anderen Ansichten (Room.assignedToId); Änderungen melden die Betroffenen
  * über notifyReassignment (Server), und alle offenen Ansichten laden live nach.
+ * Unter 640 px nur ein Hinweis (Entscheidung Simon: Tagesplanung nur am Tablet quer/Desktop).
  */
 export default function AssignmentFloorPlan() {
   const { t } = useLocale();
+  const bp = useBreakpoint();
   const [error, setError] = useState<string | null>(null);
   const [day, setDay] = useState<DayInfo | null>(null);
   const [version, setVersion] = useState(0);
@@ -34,26 +42,45 @@ export default function AssignmentFloorPlan() {
     catch (e) { setError(errorText(e, t)); }
   };
 
-  if (!day) return null;
+  const attendants = useMemo(() => day?.attendants ?? [], [day]);
+
+  if (bp === "phone") {
+    return (
+      <div className="theme-glass flex flex-col gap-4">
+        <Banner tone="info" icon="calendar-days" title={t("supHub.tabletOnlyTitle")} detail={t("supHub.tabletOnlyDetail")} />
+        <Link href="/" className={cx("press glass text-body-18 inline-flex min-h-(--size-button-height) w-full items-center justify-center gap-3 rounded-(--glass-radius-md) px-8 text-text-primary", FOCUS_RING)}>
+          <Glyph name="arrow-left" size={24} className="rtl:-scale-x-100" />
+          {t("supHub.toOverview")}
+        </Link>
+      </div>
+    );
+  }
+  if (!day || !bp) return null;
   return (
-    <div>
+    <div className="theme-glass flex flex-col gap-4 sm:gap-6">
       <HubMissingNotice hub={day.hub} planner />
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card" aria-label={t("planning.presentTitle")}>
-        <h3 className="font-serif text-xl">{t("planning.presentTitle")}</h3>
-        <p className="mb-2 text-xs text-graphite/60">{t("planning.presentHint")}</p>
+      <GlassRedistribution />
+      <GlassPlanningBoard reloadToken={version} onShiftAttendants={attendants} />
+
+      <GlassCard as="section" aria-labelledby="plan-present-title" className="flex flex-col gap-3">
+        <h2 id="plan-present-title" className="text-title-22 text-text-primary">{t("planning.presentTitle")}</h2>
+        <p className="text-body-16 text-text-muted">{t("planning.presentHint")}</p>
         <div className="flex flex-wrap gap-2">
           {day.roster.map((h) => (
-            <button key={h.id} type="button" aria-pressed={!h.absent} onClick={() => void toggle(h.id, !h.absent)}
-              className={`min-h-11 rounded-full border px-4 text-sm ${h.absent ? "border-status-out-of-order/40 bg-status-out-of-order/10 text-status-out-of-order line-through" : "border-charcoal/15 bg-white"}`}>
-              {h.name}{h.absent ? ` · ${t("planning.presentOff")}` : ""}
-            </button>
+            <FilterChip key={h.id} active={!h.absent} onClick={() => void toggle(h.id, !h.absent)} className="px-5!">
+              <span className={h.absent ? "line-through" : undefined}>{h.name}</span>
+              {h.absent ? ` · ${t("planning.presentOff")}` : ""}
+            </FilterChip>
           ))}
         </div>
-        {error && <p role="alert" className="mt-2 text-sm text-status-out-of-order">{error}</p>}
-      </section>
-      <RedistributionCards />
-      {day.hub?.ready !== false && <LiveListBoards date={day.today} />}
-      <PlanningFloorPlanPanel reloadToken={version} onShiftAttendants={day.attendants} actionableRoomIds={day.actionableRoomIds} />
+        {error && <p role="alert" className="text-body-16 text-status-danger-fg">{error}</p>}
+      </GlassCard>
+
+      {day.hub?.ready !== false && (
+        <LegacySurface title={t("supHub.moreTools")}>
+          <LiveListBoards date={day.today} />
+        </LegacySurface>
+      )}
     </div>
   );
 }

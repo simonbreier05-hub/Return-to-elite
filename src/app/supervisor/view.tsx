@@ -1,28 +1,29 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
-import RedistributionCards from "@/components/RedistributionCards";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
-import Modal from "@/components/Modal";
 import Collapsible from "@/components/Collapsible";
-import NoteThread, { type ThreadNote } from "@/components/NoteThread";
+import type { ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
 import NoteCountBadge from "@/components/NoteCountBadge";
 import { RoomFlagIcons } from "@/components/RoomFlags";
-import HousekeeperRoster from "@/components/HousekeeperRoster";
 import SupervisorList from "@/components/lists/SupervisorList";
-import CloseButton from "@/components/CloseButton";
-import { useEscapeKey } from "@/components/useEscapeKey";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import SupervisorGlance from "@/components/SupervisorGlance";
 import SupervisorFeed from "@/components/SupervisorFeed";
-import HubMoreMenu from "@/components/HubMoreMenu";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { StatusIcon } from "@/components/icons";
-import { STATUS_STYLES, NOTE_STATUS_STYLES } from "@/components/status";
+import { STATUS_STYLES } from "@/components/status";
+import { DetailContainer } from "@/components/shell/DetailContainer";
+import { HkNoteThread } from "@/components/hk/HkParts";
+import { Banner } from "@/components/ui";
+import { SupervisorHub, type HubTile } from "@/components/supervisor/SupervisorHub";
+import { OooDialog, ReworkDialog, SupervisorRoomDetail } from "@/components/supervisor/SupervisorRoomDetail";
+import { LegacySurface, ReleaseQueueCard } from "@/components/supervisor/SupervisorParts";
+import { GlassRedistribution } from "@/components/supervisor/GlassRedistribution";
 import {
   BLOCK_REASON_SHORT,
   HOTEL,
@@ -34,7 +35,17 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
-import { hhmm, dateTime } from "@/lib/i18n/format";
+import { TILE_UI } from "@/lib/ui/room-tile";
+import {
+  roomCreditOf,
+  roomGroups,
+  rosterEntries,
+  SUP_KPI_STATUS,
+  supervisorKpis,
+  tileStateOf,
+  type CreditSettings,
+  type SupKpi,
+} from "@/lib/ui/supervisorHub";
 
 interface Note {
   id: string;
@@ -112,6 +123,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   // scoped) and for a supervisor with no floors assigned yet (fails open).
   const [floorScope, setFloorScope] = useState<number[] | null>(null);
   const [hub, setHub] = useState<HubState | null>(null);
+  const router = useRouter();
+  // „Team heute“ (D3): gewählte Kraft; Credits je Zimmer wie im Grundriss (Einstellungen + Wäschewechsel aus dem Tagesplan).
+  const [selectedAttendantId, setSelectedAttendantId] = useState<string | null>(null);
+  const [creditSettings, setCreditSettings] = useState<CreditSettings | null>(null);
+  const [laundryIds, setLaundryIds] = useState<Set<string>>(new Set());
 
   const load = useCallback(async () => {
     const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null; hub?: HubState }>("/api/rooms");
@@ -121,9 +137,21 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     setFloorScope(data.floorScope);
   }, []);
 
+  // Nur Anzeige (Credits in „Team heute“): dieselben Quellen wie der Grundriss, Fehler lassen die Credits leer (0).
+  const loadCredits = useCallback(async () => {
+    const [settings, day] = await Promise.all([
+      api<{ roomTypeCredits: Record<string, number>; planningCredits: { tidyCredit: number } }>("/api/settings").catch(() => null),
+      api<{ numbers: { laundryDue: { ids: string[] } | null } | null }>("/api/day-numbers").catch(() => null),
+    ]);
+    if (settings) setCreditSettings({ roomTypeCredits: settings.roomTypeCredits, tidyCredit: settings.planningCredits?.tidyCredit ?? 0.5 });
+    if (day) setLaundryIds(new Set(day.numbers?.laundryDue?.ids ?? []));
+  }, []);
+
   useEffect(() => {
     load();
-  }, [load]);
+    void loadCredits();
+  }, [load, loadCredits]);
+  const creditsSoon = useCoalescedRefetch(loadCredits, 4000);
 
   // Arrivals are nested inside the room payload and cannot be patched from an
   // arrival event alone, so those fall back to a coalesced refetch.
@@ -131,7 +159,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
   useSocket({
     // Tagesplan im Planungshub berechnet/geändert → Board neu laden (auch der erste Plan des Tages).
-    "dayplan:updated": () => refetchSoon(),
+    "dayplan:updated": () => { refetchSoon(); creditsSoon(); },
     // Patch the changed room in place. The broadcast carries only scalar room
     // fields plus assignedTo, so spreading it preserves the nested arrivals,
     // notes and defects already held in state.
@@ -290,109 +318,93 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     }
   };
 
-  return (
-    <div className="animate-rise">
-      <RedistributionCards />
+  // ── D3: Anzeige-Daten für die Glas-Übersicht (nur Darstellung, Regeln in src/lib/ui/supervisorHub.ts) ──
+  const kpis = useMemo(() => supervisorKpis(rooms), [rooms]);
+  const creditOf = useCallback(
+    (roomId: string) => {
+      const r = roomById.get(roomId);
+      return r ? roomCreditOf(r, laundryIds.has(r.id), creditSettings) : 0;
+    },
+    [roomById, laundryIds, creditSettings]
+  );
+  // „Team heute“ = Kräfte mit heutigen Zimmern (ohne Zimmer: nichts zu zeigen; Zuteilen nur im Grundriss).
+  const roster = useMemo(() => rosterEntries(attendants, rooms, creditOf).filter((r) => r.total > 0), [attendants, rooms, creditOf]);
+  const activeAttendantId = roster.some((r) => r.id === selectedAttendantId) ? selectedAttendantId : null;
+  const groups = useMemo(
+    () =>
+      activeAttendantId
+        ? roomGroups(rooms, activeAttendantId).map(({ group, rooms: list }) => ({
+            group,
+            tiles: list.map((r): HubTile => ({ id: r.id, number: r.number, state: tileStateOf(r), hint: t(`status.${r.status}` as TKey) })),
+          }))
+        : [],
+    [rooms, activeAttendantId, t]
+  );
+  const onKpi = (k: SupKpi) => focusStatus(SUP_KPI_STATUS[k] as RoomStatus);
+
+  const notices = (
+    <>
+      <GlassRedistribution />
       <HubMissingNotice hub={hub} planner />
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl leading-none">{t("supervisor.liveBoard")}</h2>
-          <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
-          {floorScope && (
-            <p className="mt-1 text-xs font-medium text-navy">
-              {t("supervisor.floorScopeNotice", { floors: floorScope.join(", ") })}
-            </p>
-          )}
-          {HOTEL.unconfirmedFloors.length > 0 && (
-            <p className="mt-1 text-xs font-medium text-gold-soft">
-              {t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })}
-            </p>
-          )}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <HubMoreMenu extraBadge={guestDndCount > 0 ? <span aria-hidden>🔕</span> : undefined}>
-            <Link href="/supervisor/handover" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
-              {t("supervisor.handoverLink")}
-            </Link>
-            <Link href="/supervisor/guest-access" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
-              {t("supervisor.guestAccessLink")}
-            </Link>
-            <Link href="/supervisor/guest-requests" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
-              {guestDndCount > 0 && "🔕 "}
-              {t("supervisor.guestRequestsLink")}
-            </Link>
-            <Link href="/supervisor/workdata" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
-              {t("workdata.linkLabel")}
-            </Link>
-            {isDutyManager && (
-              <Link href="/settings" className="flex h-12 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line">
-                {t("supervisor.settingsLink")}
-              </Link>
-            )}
-          </HubMoreMenu>
-          <Link
-            href="/supervisor/service"
-            className="flex h-14 items-center rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
-          >
-            {t("service.title")}
-          </Link>
-          <Link
-            href="/planung"
-            className="flex h-14 items-center rounded-xl bg-navy px-6 text-sm font-semibold tracking-wide text-ivory transition hover:bg-navy-line"
-          >
-            {t("supervisor.morningPlanningLink")}
-          </Link>
-        </div>
-      </div>
-
-      <ErrorBoundary>
-        <SupervisorGlance
-          rooms={rooms}
-          onChanged={load}
-          releaseQueue={{
-            rooms: releaseQueue,
-            backlog: releaseQueue.length >= RELEASE_QUEUE_BACKLOG,
-            busyRoomId,
-            bulkBusy,
-            onRelease: (id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); },
-            onRework: (id) => { const room = roomById.get(id); if (room) setDialog({ kind: "rework", room }); },
-            onReleaseAll: () => void releaseAll(),
-          }}
-        />
-      </ErrorBoundary>
-
-      <PriorityBanner
-        items={[
-          {
-            count: releaseQueue.length,
-            label: t("priority.releaseQueue"),
-            icon: "clock",
-            tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
-            onClick: () => focusStatus("CLEAN"),
-          },
-          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
-        ]}
-      >
-        <ErrorBoundary>
-          <SupervisorFeed />
-        </ErrorBoundary>
-      </PriorityBanner>
-
-      {ticker && <div className="mb-3 rounded-lg border border-gold/40 bg-parchment px-4 py-2 text-sm">⚡ {ticker}</div>}
+      {ticker && <Banner tone="accent" icon="zap" title={ticker} />}
       {error && (
-        <div className="mb-3 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-4 py-2 text-sm text-status-out-of-order">
-          {error}
+        <div role="alert">
+          <Banner tone="warning" title={error} />
         </div>
       )}
+      {bulkResult && <Banner tone="info" icon="check" title={bulkResult} />}
+    </>
+  );
 
-      {bulkResult && (
-        <div className="mb-3 rounded-lg border border-status-clean/30 bg-status-clean/10 px-4 py-2 text-sm text-status-clean">
-          {bulkResult}
-        </div>
+  const release = (
+    <ReleaseQueueCard
+      rooms={releaseQueue.map((r) => ({
+        id: r.id,
+        number: r.number,
+        waitingMin: Math.round((Date.now() - new Date(r.statusSince).getTime()) / 60000),
+        arrival: r.arrivals[0] ?? null,
+      }))}
+      busyRoomId={busyRoomId}
+      bulkBusy={bulkBusy}
+      onRelease={(id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); }}
+      onRework={(id) => { const room = roomById.get(id); if (room) setDialog({ kind: "rework", room }); }}
+      onReleaseAll={() => void releaseAll()}
+      onOpen={setSelectedId}
+    />
+  );
+
+  // Bausteine, die noch im alten Design sind (Inhalt und Verhalten unverändert) — auf heller Fläche.
+  const below = (
+    <>
+      {/* Dauerhafte Hinweise (Etagen-Bereich, Etage 5 geschätzt) unter „Team heute“, damit Kennzahlen und Team oben stehen (Figma) */}
+      {floorScope && <Banner tone="info" icon="info" title={t("supervisor.floorScopeNotice", { floors: floorScope.join(", ") })} />}
+      {HOTEL.unconfirmedFloors.length > 0 && (
+        <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
       )}
-
-      <div className="grid gap-4 xl:grid-cols-[1fr_20rem]">
+      <LegacySurface>
+        <ErrorBoundary>
+          <SupervisorGlance rooms={rooms} onChanged={load} />
+        </ErrorBoundary>
+        <PriorityBanner
+          items={[
+            {
+              count: releaseQueue.length,
+              label: t("priority.releaseQueue"),
+              icon: "clock",
+              tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
+              onClick: () => focusStatus("CLEAN"),
+            },
+            { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
+          ]}
+        >
+          <ErrorBoundary>
+            <SupervisorFeed />
+          </ErrorBoundary>
+        </PriorityBanner>
+      </LegacySurface>
+      <LegacySurface>
+        <h2 className="mb-3 font-serif text-2xl">{t("supervisor.liveBoard")}</h2>
+        <p className="mb-3 text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
         <div ref={gridRef}>
           {/* Finding one room among 145 tiles should not mean scrolling. */}
           <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-charcoal/10 bg-linen p-3 shadow-card">
@@ -539,100 +551,74 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             </Collapsible>
           ))}
         </div>
+      </LegacySurface>
+      <LegacySurface>
+        <SupervisorList />
+      </LegacySurface>
+    </>
+  );
 
-        <div className="space-y-4">
-          <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-            <h3 className="mb-2 font-serif text-xl">{t("supervisor.releaseQueueTitle")}</h3>
-            {releaseQueue.length === 0 && <p className="text-sm text-graphite/60">{t("supervisor.nothingWaiting")}</p>}
+  const detailRoom = selected
+    ? {
+        ...selected,
+        assignedLabel: selected.assignedTo ? attendantLabel(selected.assignedTo) : null,
+      }
+    : null;
 
-            {releaseQueue.length > 1 && (
-              <button
-                onClick={() => releaseAll()}
-                disabled={bulkBusy}
-                className="mb-3 h-14 w-full rounded-xl bg-status-inspected text-base font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-              >
-                {bulkBusy ? t("supervisor.releasing") : t("supervisor.releaseAll", { count: releaseQueue.length })}
-              </button>
+  return (
+    <div className="theme-glass">
+      <SupervisorHub
+        kpis={kpis}
+        onKpi={onKpi}
+        roster={roster}
+        selectedAttendantId={activeAttendantId}
+        onSelectAttendant={(id) => setSelectedAttendantId((cur) => (cur === id ? null : id))}
+        groups={groups}
+        selectedRoomId={selectedId}
+        onOpenRoom={setSelectedId}
+        onMoveRooms={() => router.push("/floor-plan")}
+        notices={notices}
+        release={release}
+        below={below}
+        detailOpen={!!detailRoom}
+        detail={
+          <DetailContainer open={!!detailRoom} onClose={() => setSelectedId(null)} title={detailRoom ? t("hkHub.roomTitle", { n: detailRoom.number }) : ""}>
+            {detailRoom && (
+              <SupervisorRoomDetail
+                key={detailRoom.id}
+                room={detailRoom}
+                busy={busyRoomId === detailRoom.id}
+                isDutyManager={isDutyManager}
+                onAct={(status) => void act(detailRoom, status)}
+                onOpenDialog={(kind) => setDialog({ kind, room: detailRoom })}
+                thread={
+                  <HkNoteThread
+                    roomId={detailRoom.id}
+                    initialNotes={detailRoom.notes}
+                    onNoteAdded={(note: ThreadNote) =>
+                      setRooms((prev) =>
+                        prev.map((r) =>
+                          r.id === note.roomId ? { ...r, notes: [note as Note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
+                        )
+                      )
+                    }
+                    onNoteUpdated={(note: ThreadNote) => {
+                      setRooms((prev) =>
+                        prev.map((r) => (r.id === note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === note.id ? (note as Note) : n)) } : r))
+                      );
+                      refetchSoon();
+                    }}
+                  />
+                }
+              />
             )}
-            <div className="space-y-2">
-              {releaseQueue.map((room) => {
-                const busy = busyRoomId === room.id;
-                return (
-                  <div key={room.id} className="rounded-xl border border-status-clean/30 bg-status-clean/10 p-3">
-                    <div className="flex items-center justify-between">
-                      <span className="font-serif text-xl">{room.number}</span>
-                      <span className="text-xs text-graphite/60">
-                        {t("supervisor.waitingMin", { minutes: Math.round((Date.now() - new Date(room.statusSince).getTime()) / 60000) })}
-                      </span>
-                    </div>
-                    {room.arrivals[0] && (
-                      <p className="mt-1 text-xs text-graphite/70">
-                        {room.arrivals[0].vip && "★ VIP · "}
-                        {room.arrivals[0].guestName}
-                        {room.arrivals[0].eta &&
-                          ` · ETA ${hhmm(room.arrivals[0].eta)}`}
-                      </p>
-                    )}
-                    <div className="mt-2 grid grid-cols-2 gap-2">
-                      <button
-                        onClick={() => act(room, "INSPECTED")}
-                        disabled={busy}
-                        className="h-12 rounded-lg bg-status-inspected text-sm font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-                      >
-                        {busy ? "…" : t("supervisor.inspectRelease")}
-                      </button>
-                      <button
-                        onClick={() => setDialog({ kind: "rework", room })}
-                        disabled={busy}
-                        className="h-12 rounded-lg border-2 border-status-pickup text-sm font-semibold text-status-pickup transition active:scale-[0.98] disabled:opacity-50"
-                      >
-                        {t("supervisor.reworkBtn")}
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <SupervisorList />
-
-          <div className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-            <h3 className="mb-2 font-serif text-xl">{t("roster.title")}</h3>
-            <HousekeeperRoster attendants={attendants} rooms={rooms} onMoved={load} />
-          </div>
-        </div>
-      </div>
-
-      {selected && (
-        <RoomDrawer
-          room={selected}
-          attendants={attendants}
-          isDutyManager={isDutyManager}
-          busy={busyRoomId === selected.id}
-          onClose={() => setSelectedId(null)}
-          onAct={act}
-          onOpenDialog={(kind) => setDialog({ kind, room: selected })}
-          onNoteAdded={(note) =>
-            setRooms((prev) =>
-              prev.map((r) =>
-                r.id === note.roomId ? { ...r, notes: [note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
-              )
-            )
-          }
-          onNoteUpdated={(note) => {
-            setRooms((prev) =>
-              prev.map((r) => (r.id === note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === note.id ? note : n)) } : r))
-            );
-            refetchSoon();
-          }}
-          onAssigned={(room) => setRooms((prev) => prev.map((r) => (r.id === room.id ? { ...r, ...room } : r)))}
-        />
-      )}
+          </DetailContainer>
+        }
+      />
 
       {dialog?.kind === "rework" && (
-        <ReworkModal
-          room={dialog.room}
+        <ReworkDialog
+          number={dialog.room.number}
           onClose={() => setDialog(null)}
           onSubmit={async (note) => {
             setDialog(null);
@@ -641,8 +627,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         />
       )}
       {dialog?.kind === "ooo" && (
-        <OooModal
-          room={dialog.room}
+        <OooDialog
+          number={dialog.room.number}
           onClose={() => setDialog(null)}
           onSubmit={async (until) => {
             setDialog(null);
@@ -660,284 +646,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           }}
         />
       )}
-    </div>
-  );
-}
-
-/** Rework reasons a supervisor reaches for most often — one tap instead of typing. */
-const REWORK_PRESETS: TKey[] = ["shared.reworkPreset1", "shared.reworkPreset2", "shared.reworkPreset3", "shared.reworkPreset4", "shared.reworkPreset5", "shared.reworkPreset6"];
-
-function ReworkModal({
-  room,
-  onClose,
-  onSubmit,
-}: {
-  room: Room;
-  onClose: () => void;
-  onSubmit: (note: string) => void;
-}) {
-  const { t } = useLocale();
-  const [note, setNote] = useState("");
-  const add = (preset: string) => setNote((n) => (n ? `${n}, ${preset.toLowerCase()}` : preset));
-
-  return (
-    <Modal
-      title={t("supervisor.reworkModalTitle", { number: room.number })}
-      subtitle={t("supervisor.reworkModalSubtitle")}
-      onClose={onClose}
-    >
-      <div className="mb-3 flex flex-wrap gap-2">
-        {REWORK_PRESETS.map((k) => t(k)).map((p) => (
-          <button
-            key={p}
-            onClick={() => add(p)}
-            className="h-11 rounded-full border border-charcoal/20 px-3 text-sm hover:border-gold hover:bg-parchment"
-          >
-            + {p}
-          </button>
-        ))}
-      </div>
-      <textarea
-        value={note}
-        onChange={(e) => setNote(e.target.value)}
-        rows={3}
-        autoFocus
-        placeholder={t("supervisor.reworkPlaceholder")}
-        className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
-      />
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
-          {t("common.cancel")}
-        </button>
-        <button
-          onClick={() => onSubmit(note.trim())}
-          disabled={!note.trim()}
-          className="h-14 rounded-xl bg-status-pickup text-base font-semibold text-linen disabled:opacity-40"
-        >
-          {t("supervisor.sendBack")}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-const OOO_PRESET_HOURS = [4, 12, 24, 48, 72, 168];
-
-function OooModal({ room, onClose, onSubmit }: { room: Room; onClose: () => void; onSubmit: (until: Date) => void }) {
-  const { t } = useLocale();
-  const [hours, setHours] = useState<number>(48);
-  const until = new Date(Date.now() + hours * 3600_000);
-  const presetLabel = (h: number) => (h < 24 ? `${h} h` : h % 24 === 0 ? `${h / 24} d` : `${h} h`);
-
-  return (
-    <Modal
-      title={t("supervisor.oooModalTitle", { number: room.number })}
-      subtitle={t("supervisor.oooModalSubtitle")}
-      onClose={onClose}
-    >
-      <div className="mb-3 grid grid-cols-3 gap-2">
-        {OOO_PRESET_HOURS.map((h) => (
-          <button
-            key={h}
-            onClick={() => setHours(h)}
-            className={`h-14 rounded-xl border text-sm font-medium ${
-              hours === h ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
-            }`}
-          >
-            {presetLabel(h)}
-          </button>
-        ))}
-      </div>
-      <label className="mb-1 block text-sm font-medium">{t("supervisor.customHours")}</label>
-      <input
-        type="number"
-        min={1}
-        value={hours}
-        onChange={(e) => setHours(Math.max(1, Number(e.target.value) || 1))}
-        className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 text-base outline-none focus:border-gold"
-      />
-      <p className="mb-4 rounded-lg bg-ivory p-3 text-sm text-graphite/70">
-        {t("supervisor.backInInventory")} <strong>{dateTime(until)}</strong>
-      </p>
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
-          {t("common.cancel")}
-        </button>
-        <button onClick={() => onSubmit(until)} className="h-14 rounded-xl bg-status-out-of-order text-base font-semibold text-linen">
-          {t("supervisor.setOutOfOrder")}
-        </button>
-      </div>
-    </Modal>
-  );
-}
-
-function RoomDrawer({
-  room,
-  attendants,
-  isDutyManager,
-  busy,
-  onClose,
-  onAct,
-  onOpenDialog,
-  onNoteAdded,
-  onNoteUpdated,
-  onAssigned,
-}: {
-  room: Room;
-  attendants: Attendant[];
-  isDutyManager: boolean;
-  busy: boolean;
-  onClose: () => void;
-  onAct: (room: Room, status: RoomStatus, extra?: Record<string, unknown>) => Promise<void>;
-  onOpenDialog: (kind: "rework" | "ooo" | "roomTask") => void;
-  onNoteAdded: (note: ThreadNote) => void;
-  onNoteUpdated: (note: ThreadNote) => void;
-  onAssigned: (room: Room) => void;
-}) {
-  const { t } = useLocale();
-  const style = STATUS_STYLES[room.status];
-
-
-  useEscapeKey(onClose);
-
-  return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/40" onClick={onClose}>
-      <div className="h-full w-full max-w-md overflow-y-auto bg-white p-5 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-4 flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-serif text-4xl">{room.number}</h3>
-              <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} />
-              <NoteCountBadge openCount={room.openNotesCount} totalCount={room.notes.length} />
-            </div>
-            <p className="text-xs uppercase tracking-wider text-graphite/50">
-              {t("supervisor.floorN", { floor: room.floor })} · {room.section} · {t(`roomType.${room.type}` as TKey)}
-            </p>
-          </div>
-          <CloseButton onClick={onClose} />
-        </div>
-
-        <span className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium ${style.chip}`}>
-          <StatusIcon iconKey={style.iconKey} className="h-4 w-4 shrink-0" />
-          {t(`status.${room.status}` as TKey)}
-          {room.blockReason && ` · ${t(`blockReason.${room.blockReason as BlockReason}` as TKey)}`}
-        </span>
-        {room.oooUntil && (
-          <p className="mt-1 text-xs text-graphite/60">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}</p>
-        )}
-        {room.reworkNote && room.status === "PICKUP" && (
-          <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">
-            {t("attendant.reworkNote")} {room.reworkNote}
-          </p>
-        )}
-
-        <div className="mt-4 grid grid-cols-2 gap-2">
-          {room.status === "CLEAN" && (
-            <>
-              <button
-                onClick={() => onAct(room, "INSPECTED")}
-                disabled={busy}
-                className="col-span-2 h-14 rounded-xl bg-status-inspected text-lg font-semibold text-linen disabled:opacity-50"
-              >
-                {busy ? t("supervisor.releasing") : t("supervisor.inspectRelease")}
-              </button>
-              <button
-                onClick={() => onOpenDialog("rework")}
-                disabled={busy}
-                className="col-span-2 h-12 rounded-xl border-2 border-status-pickup font-medium text-status-pickup disabled:opacity-50"
-              >
-                {t("supervisor.sendBackRework")}
-              </button>
-            </>
-          )}
-          {room.status === "INSPECTED" && (
-            <button
-              onClick={() => onAct(room, "DIRTY")}
-              disabled={busy}
-              className="col-span-2 h-12 rounded-xl border-2 border-status-dirty font-medium text-status-dirty disabled:opacity-50"
-            >
-              {t("supervisor.setDirtyCheckout")}
-            </button>
-          )}
-          {["OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(room.status) ? (
-            <button
-              onClick={() => onAct(room, "DIRTY")}
-              disabled={busy}
-              className="col-span-2 h-12 rounded-xl border-2 border-charcoal/30 font-medium disabled:opacity-50"
-            >
-              {t("supervisor.returnToInventory")}
-            </button>
-          ) : (
-            <>
-              <button
-                onClick={() => onOpenDialog("ooo")}
-                disabled={busy}
-                className="h-12 rounded-xl border-2 border-status-out-of-order/60 text-sm font-medium text-status-out-of-order disabled:opacity-50"
-              >
-                {t("supervisor.setOoo")}
-              </button>
-              <button
-                onClick={() => onAct(room, "OUT_OF_SERVICE")}
-                disabled={busy}
-                className="h-12 rounded-xl border-2 border-charcoal/25 text-sm font-medium text-graphite disabled:opacity-50"
-              >
-                {t("supervisor.setOos")}
-              </button>
-            </>
-          )}
-        </div>
-
-        <div className="mt-4">
-          <label className="mb-1 block text-sm font-medium">{t("supervisor.assignedAttendant")}</label>
-          <p className="flex min-h-12 items-center rounded-lg border border-charcoal/10 bg-parchment/40 px-3 text-sm">
-            {room.assignedTo ? attendantLabel(room.assignedTo as Attendant) : t("supervisor.unassignedOption")}
-          </p>
-          <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
-        </div>
-
-        <div className="mt-4">
-          <button
-            onClick={() => onOpenDialog("roomTask")}
-            className="h-12 w-full rounded-xl border-2 border-charcoal/20 text-sm font-medium transition hover:border-gold-line"
-          >
-            {t("supervisor.houseTaskBtn")}
-          </button>
-        </div>
-
-        {room.arrivals.length > 0 && (
-          <div className="mt-4">
-            <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.expectedArrivals")}</h4>
-            {room.arrivals.map((a, i) => (
-              <p key={i} className="text-sm">
-                {a.vip && "★ "}{a.guestName}
-                {a.eta && ` · ETA ${hhmm(a.eta)}`}
-                {a.neededNow && ` ${t("supervisor.neededNowFlag")}`}
-              </p>
-            ))}
-          </div>
-        )}
-
-        {room.defects.length > 0 && (
-          <div className="mt-4">
-            <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.defectsTitle")}</h4>
-            {room.defects.map((d) => (
-              <p key={d.id} className="text-sm">
-                🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
-                {d.workOrder && <span className="ms-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
-              </p>
-            ))}
-          </div>
-        )}
-
-        <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
-          <NoteThread roomId={room.id} initialNotes={room.notes} onNoteAdded={onNoteAdded} onNoteUpdated={onNoteUpdated} />
-        </div>
-
-        {isDutyManager && (
-          <p className="mt-6 text-center text-xs text-graphite/50">{t("supervisor.dutyManagerAudit")}</p>
-        )}
-      </div>
     </div>
   );
 }

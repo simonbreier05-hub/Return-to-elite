@@ -1,5 +1,6 @@
+import { MARKER_UI, type MarkerKind } from "@/lib/ui/markers";
 import { TILE_UI, type TileState } from "@/lib/ui/room-tile";
-import { cx, Glyph, Interactive, TILE_FG, type InteractiveProps } from "./primitives";
+import { cx, Glyph, Interactive, TILE_FG, TONE_FG, type InteractiveProps } from "./primitives";
 
 export interface FloorTileProps extends Omit<InteractiveProps, "aria-label" | "aria-current"> {
   room: string;
@@ -12,13 +13,19 @@ export interface FloorTileProps extends Omit<InteractiveProps, "aria-label" | "a
   unassignedLabel?: string;
   /** Mehrfachauswahl im Grundriss (z. B. „Mehrere Zimmer wählen“). */
   selected?: boolean;
+  /** Kleiner Marker oben rechts (z. B. Wäschewechsel fällig). Bedeutung steht zusätzlich in `markerLabel`. */
+  marker?: MarkerKind;
+  /** Übersetzter Text zum Marker (`t(MARKER_UI[marker].labelKey)`) — Teil des Vorlesetexts. */
+  markerLabel?: string;
+  /** Weitere Angaben fürs Vorlesen (z. B. zugeteilte Kraft). */
+  hint?: string;
   className?: string;
 }
 
 /** Zimmerkachel im Grundriss (64×60): Zustand per Symbol + Farbe, Goldrahmen „Zuteilung offen“. Figma `29:554`. */
-export function FloorTile({ room, state, stateLabel, unassigned, unassignedLabel, selected, className, ...action }: FloorTileProps) {
+export function FloorTile({ room, state, stateLabel, unassigned, unassignedLabel, selected, marker, markerLabel, hint, className, ...action }: FloorTileProps) {
   const t = TILE_UI[state];
-  const label = [room, stateLabel, unassigned ? unassignedLabel : null].filter(Boolean).join(", ");
+  const label = [room, stateLabel, unassigned ? unassignedLabel : null, marker ? markerLabel : null, hint].filter(Boolean).join(", ");
   return (
     <Interactive
       {...action}
@@ -33,6 +40,7 @@ export function FloorTile({ room, state, stateLabel, unassigned, unassignedLabel
     >
       <span className="text-label text-text-primary">{room}</span>
       <Glyph name={t.icon} size={20} className={TILE_FG[t.tone]} />
+      {marker && <Glyph name={MARKER_UI[marker].icon} size={14} className={cx("absolute end-1 top-1", TONE_FG[MARKER_UI[marker].tone])} />}
       {unassigned && <span aria-hidden="true" className="pointer-events-none absolute -inset-px rounded-(--glass-radius-sm) border-2 border-accent-default" />}
     </Interactive>
   );

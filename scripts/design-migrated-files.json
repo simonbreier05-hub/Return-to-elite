@@ -14,6 +14,13 @@
     "src/app/attendant/view.tsx",
     "src/components/hk/HkHub.tsx",
     "src/components/hk/HkRoomDetail.tsx",
-    "src/components/hk/HkParts.tsx"
+    "src/components/hk/HkParts.tsx",
+    "src/app/supervisor/view.tsx",
+    "src/components/supervisor/SupervisorHub.tsx",
+    "src/components/supervisor/SupervisorRoomDetail.tsx",
+    "src/components/supervisor/SupervisorParts.tsx",
+    "src/components/supervisor/GlassRedistribution.tsx",
+    "src/components/supervisor/GlassPlanningBoard.tsx",
+    "src/components/AssignmentFloorPlan.tsx"
   ]
 }
