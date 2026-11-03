@@ -403,7 +403,7 @@ export default function AppShell({
                 </div>
               ) : (
                 <>
-                  <LanguageSuggestion />
+                  <LanguageSuggestion glass />
                   {children}
                 </>
               )}

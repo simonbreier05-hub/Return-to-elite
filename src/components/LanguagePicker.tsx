@@ -6,6 +6,8 @@ import Modal from "./Modal";
 import { useLocale, type LanguageQuality } from "@/lib/i18n/LocaleContext";
 import { ALL_LANGUAGE_CODES, autonym, languageNameIn, languageTier, PRIORITY_LANGUAGES } from "@/lib/i18n/languages";
 import type { TKey } from "@/lib/i18n/translations";
+import { Button } from "@/components/ui/Button";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
 
 /** Kleinschreibung ohne Akzente/Diakritika, für die Suche. */
 export const fold = (s: string) => s.normalize("NFD").replace(/\p{M}/gu, "").replace(/đ/g, "d").toLowerCase();
@@ -126,7 +128,7 @@ export default function LanguageButton({ className = "" }: { className?: string 
 }
 
 /** Beim ersten Login: Vorschlag aus der Browser-Sprache (nur wenn der Nutzer noch nie gewählt hat). */
-export function LanguageSuggestion() {
+export function LanguageSuggestion({ glass = false }: { glass?: boolean }) {
   const { suggestion, setLocale, dismissSuggestion, locale, t } = useLocale();
   const [picker, setPicker] = useState(false);
   if (!suggestion && !picker) return null;
@@ -134,10 +136,32 @@ export function LanguageSuggestion() {
   if (!suggestion) return null;
   const sugName = autonym(suggestion);
   const sameAsCurrent = suggestion === locale;
+  const text = sameAsCurrent ? t("language.suggestConfirm", { lang: sugName }) : t("language.suggest", { lang: sugName });
+  if (glass) {
+    // Glas-Seiten (D2–D6): eigene Karte mit Token-Farben — die alte cremefarbene Leiste erbte dort hellen Text (kaum lesbar).
+    return (
+      <div role="status" className="glass mb-4 flex flex-col gap-3 rounded-(--glass-radius-md) p-4 sm:flex-row sm:flex-wrap sm:items-center">
+        <span className="text-body-16 min-w-0 flex-1 text-text-primary">{text}</span>
+        <div className="flex flex-wrap gap-2">
+          <Button className="min-h-12! px-5!" onClick={() => setLocale(suggestion)}>
+            {sameAsCurrent ? t("language.keep", { lang: sugName }) : t("language.useIt", { lang: sugName })}
+          </Button>
+          {!sameAsCurrent && (
+            <Button variant="secondary" className="min-h-12! px-5!" onClick={dismissSuggestion}>
+              {t("language.stay", { lang: autonym(locale) })}
+            </Button>
+          )}
+          <button type="button" onClick={() => setPicker(true)} className={cx("text-body-16 min-h-12 rounded-(--glass-radius-sm) px-3 text-accent-text underline underline-offset-4", FOCUS_RING)}>
+            {t("language.other")}
+          </button>
+        </div>
+      </div>
+    );
+  }
   return (
     <div role="status" className="mx-auto mt-3 flex w-full max-w-7xl flex-wrap items-center gap-2 rounded-xl border border-gold-line/40 bg-parchment px-4 py-3 text-sm">
       <span className="min-w-0 flex-1">
-        {sameAsCurrent ? t("language.suggestConfirm", { lang: sugName }) : t("language.suggest", { lang: sugName })}
+        {text}
       </span>
       <button type="button" onClick={() => setLocale(suggestion)} className="tap h-11 rounded-lg bg-navy px-4 font-semibold text-ivory">
         {sameAsCurrent ? t("language.keep", { lang: sugName }) : t("language.useIt", { lang: sugName })}

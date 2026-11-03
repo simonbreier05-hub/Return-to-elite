@@ -139,6 +139,7 @@
 - Credits in „Team heute“ = dieselbe Rechnung wie der Grundriss (`roomCreditOf` → `computeRoomCredit`, Wäsche nur aus `/api/day-numbers`), nie eine eigene Credit-Regel.
 - Tagesplanung (D3): Logik des Zuteilungs-Grundrisses nur in `usePlanningFloorPlan` (`src/components/`); `PlanningFloorPlanPanel` (Planungstool/Entwurf, altes Design) und `GlassPlanningBoard` (`/floor-plan`, Glas) nutzen beide den Hook — nie Zuteil-Wege kopieren. Unter 640 px zeigt `/floor-plan` für Supervisor/DM nur den Hinweis „Planung am Tablet oder Desktop“.
 - Umverteilung: Logik in `useRedistribution` (`RedistributionCards.tsx`); Glas-Variante `GlassRedistribution` kennzeichnet Systemvorschläge mit Pille „Vorschlag“ (Accent).
+- Sprach-Vorschlag: auf Glas-Seiten `LanguageSuggestion glass` (Token-Karte), die cremefarbene Leiste nur auf `legacy`-Flächen.
 - Noch nicht umgestellte Teile auf Glas-Seiten (Heute auf einen Blick, Feed, Live-Board-Raster, Supervisor-Liste, Liste je Zimmermädchen, LiveListBoards, RoomTaskModal) liegen in `LegacySurface` (helle Fläche) — beim Umstellen dort herausnehmen.
 - `FloorTile` hat optional `marker` (z. B. Wäschewechsel) und `hint` (Vorlesetext, z. B. Kraft); Goldrahmen-Text kommt aus `TILE_UNASSIGNED_KEY`.
 - Browser-Nachweis D3: `scripts/e2e-supervisor-setup.ts` (erfundener Tag, nur SQLite) + `tests/e2e/supervisor.e2e.mjs` — gegen `next build`/`npm start` laufen lassen; der Dev-Server wirft dabei sporadisch „clientReferenceManifest“-Fehler (Next.js).
