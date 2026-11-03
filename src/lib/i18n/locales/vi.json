@@ -1586,6 +1586,27 @@
     "appShell.greetingMorning": "Chào buổi sáng, {{name}}",
     "appShell.greetingDay": "Chào buổi chiều, {{name}}",
     "appShell.greetingEvening": "Chào buổi tối, {{name}}",
-    "appShell.profile": "Hồ sơ"
+    "appShell.profile": "Hồ sơ",
+    "hkHub.subtitle": "Các phòng của bạn hôm nay.",
+    "hkHub.kindTurn": "Turn",
+    "hkHub.filter": "Bộ lọc",
+    "hkHub.filterAll": "Tất cả",
+    "hkHub.withCount": "{{label}} ({{n}})",
+    "hkHub.kpiRooms": "Phòng của tôi",
+    "hkHub.kpiDone": "Đã xong",
+    "hkHub.kpiInProgress": "Đang làm",
+    "hkHub.kpiOpen": "Chưa làm",
+    "hkHub.earlyTitle": "Check-in sớm ({{n}})",
+    "hkHub.earlyDetail": "Phòng {{rooms}} – xong trước {{time}}",
+    "hkHub.earlyRooms": "Phòng {{rooms}}",
+    "hkHub.earlyArrival": "Check-in sớm ({{time}})",
+    "hkHub.arrivalAt": "Check-in {{time}}",
+    "hkHub.roomTitle": "Phòng {{n}}",
+    "hkHub.myProgress": "Tiến độ của tôi",
+    "hkHub.percent": "{{n}}%",
+    "hkHub.nextRooms": "Phòng tiếp theo",
+    "hkHub.paxShort": "{{n}} người",
+    "hkHub.selectHint": "Chạm vào phòng để xem chi tiết.",
+    "hkHub.allDone": "Đã xong hết – cảm ơn!"
   }
 }

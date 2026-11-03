@@ -35,7 +35,11 @@ describe("Fenster auf Mobilgeräten", () => {
 
   it("ausgefülltes Mangel-Fenster wird nicht durch Hintergrund-Tipp verworfen", () => {
     expect(read("components/Modal.tsx")).toMatch(/if \(!dirty\) close\(\)/);
-    expect(read("app/attendant/view.tsx")).toMatch(/defectModalTitle[^\n]*dirty=\{/);
+    // Seit D2 ist das Mangel-Fenster ein Glas-Fenster (`HkDefectDialog` auf `shell/Overlay`, Portal an <body>).
+    const hk = read("components/hk/HkParts.tsx");
+    expect(hk).toMatch(/defectModalTitle[^\n]*dirty=\{/);
+    expect(hk).toMatch(/dismissOnBackdrop=\{!dirty\}/);
+    expect(read("app/attendant/view.tsx")).toMatch(/<HkDefectDialog/);
   });
 
   it("Bild-Vollansicht rendert ebenfalls per Portal", () => {

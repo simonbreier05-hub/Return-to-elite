@@ -5,7 +5,7 @@ import AttendantView from "./view";
 export default async function AttendantPage() {
   const session = await requirePage(["room_attendant"]);
   return (
-    <AppShell title="nav.myRooms" userName={session.name} role={session.role}>
+    <AppShell title="hkHub.subtitle" userName={session.name} role={session.role} legacy={false}>
       <AttendantView />
     </AppShell>
   );

@@ -1,6 +1,7 @@
 /**
  * Playwright-Nachweis: Housekeeper öffnet ein Zimmer, setzt DND (Blockiert → „Bitte nicht stören“), nimmt es zurück
- * (Entsperren & starten) und meldet einen Mangel — auf 390 px (iPhone) und 768 px (iPad).
+ * (Entsperren & starten), pausiert/setzt fort, meldet fertig und meldet einen Mangel — auf 390 px (Handy, Sheet),
+ * 800 px (Tablet hoch, Einschub) und 1280 px (Tablet quer, Detail-Panel in der Seite). Seit D2 im Glas-Design.
  *
  * Kein Teil von `npm test` (braucht laufenden Server + Testdaten):
  *   cp .env.example .env && npx prisma db push && npm run db:seed   (Zimmer setzt der Test selbst: scripts/e2e-housekeeper-setup.ts)
@@ -54,10 +55,19 @@ async function run(viewport, tag) {
   if (!login.ok()) throw new Error(`Login fehlgeschlagen: ${login.status()}`);
   await page.goto(`${BASE}/attendant`, { waitUntil: "networkidle" });
 
+  const wide = viewport.width >= 1280;
+  /** Zimmer antippen → Detail: unter 1280 Fenster (Sheet/Einschub), ab 1280 Panel in der Seite. */
   const openRoom = async () => {
-    await page.getByRole("button", { name: new RegExp(`\\b${ROOM}\\b`) }).first().click();
-    return expectDialogVisible(page, `${tag} Zimmerfenster`);
+    await page.locator(`main [data-room="${ROOM}"] button`).first().click();
+    if (!wide) return expectDialogVisible(page, `${tag} Zimmerfenster`);
+    const panel = page.locator("aside", { has: page.locator("[data-testid=hk-detail]") });
+    await panel.waitFor({ state: "visible", timeout: 5000 });
+    return panel;
   };
+  /** Status der Zeile als Text (Tablet) oder als aria-label des Symbols (Handy) — nie nur Farbe. */
+  const rowShows = (label) => page.locator(`main [data-room="${ROOM}"]`).evaluate((li, l) => li.innerText.includes(l) || !!li.querySelector(`[aria-label="${l}"]`), label);
+  const closeDetail = async () => { await page.keyboard.press("Escape"); await page.waitForTimeout(400); };
+  const waitStatus = () => page.waitForResponse((r) => r.url().includes("/status") && r.request().method() === "POST", { timeout: 5000 });
 
   // 1) DND setzen
   let d = await openRoom();
@@ -67,15 +77,40 @@ async function run(viewport, tag) {
   await d.getByRole("button", { name: /Bitte nicht stören|Do Not Disturb/ }).click();
   await page.getByRole("dialog").waitFor({ state: "detached" });
   await page.waitForResponse((r) => r.url().includes("/status") || r.url().includes("/api/rooms"), { timeout: 5000 }).catch(() => {});
+  await page.waitForTimeout(600);
+  if (!(await rowShows("DND"))) throw new Error(`${tag}: Zeile zeigt nach DND nicht „DND“`);
 
-  // 2) DND zurücknehmen
+  // 2) DND zurücknehmen (Hauptknopf „Entsperren & starten“ → In Reinigung)
   d = await openRoom();
+  let st = waitStatus();
   await d.getByRole("button", { name: /Entsperren & starten|Unblock & start/ }).click();
+  if (!(await st).ok()) throw new Error(`${tag}: Entsperren fehlgeschlagen`);
   await page.waitForTimeout(800);
-  await page.keyboard.press("Escape");
-  await page.waitForTimeout(400);
 
-  // 3) Mangel melden (Hintergrund-Tipp mit Text darf nicht verwerfen)
+  // 3) Pausieren (mit Grund) und Fortsetzen — Zeile zeigt „Pausiert“
+  await d.getByRole("button", { name: /^Pausieren|^Pause/ }).click();
+  const paused = page.waitForResponse((r) => r.url().includes("/api/work/pause"));
+  await d.getByRole("group").getByRole("button").first().click();
+  if (!(await paused).ok()) throw new Error(`${tag}: Pausieren fehlgeschlagen`);
+  await page.waitForTimeout(800);
+  if (!(await rowShows("Pausiert")))
+    throw new Error(`${tag}: Zeile zeigt „Pausiert“ nicht`);
+  await page.screenshot({ path: path.join(SHOT_DIR, `${tag}-paused.png`) });
+  const resumed = page.waitForResponse((r) => r.url().includes("/api/work/pause"));
+  await d.getByRole("button", { name: /Fortsetzen|Resume/ }).click();
+  if (!(await resumed).ok()) throw new Error(`${tag}: Fortsetzen fehlgeschlagen`);
+  await page.waitForTimeout(800);
+
+  // 4) Fertig melden (→ Erledigt)
+  st = waitStatus();
+  await d.getByRole("button", { name: /Als rein markieren|Mark clean/ }).click();
+  if (!(await st).ok()) throw new Error(`${tag}: Fertig melden fehlgeschlagen`);
+  await page.waitForTimeout(800);
+  if (!(await rowShows("Erledigt")))
+    throw new Error(`${tag}: Zeile zeigt „Erledigt“ nicht`);
+  await closeDetail();
+
+  // 5) Mangel melden (Hintergrund-Tipp mit Text darf nicht verwerfen)
   d = await openRoom();
   await d.getByRole("button", { name: /Mangel…|Defect…/ }).click();
   d = await expectDialogVisible(page, `${tag} Mangel-Fenster`);
@@ -91,11 +126,11 @@ async function run(viewport, tag) {
 
   await browser.close();
   if (errors.length) throw new Error(`${tag}: Fehler: ${errors.join(" | ")}`);
-  console.log(`✓ ${tag}: DND setzen/zurücknehmen + Mangel melden — Fenster sichtbar`);
+  console.log(`✓ ${tag}: DND setzen/zurücknehmen, Pause/Fortsetzen, fertig melden, Mangel melden — Fenster sichtbar`);
 }
 
 let failed = false;
-for (const [vp, tag] of [[{ width: 390, height: 844 }, "iphone-390"], [{ width: 768, height: 1024 }, "ipad-768"]]) {
+for (const [vp, tag] of [[{ width: 390, height: 844 }, "phone-390"], [{ width: 800, height: 1280 }, "tablet-800"], [{ width: 1280, height: 800 }, "tablet-1280"]]) {
   // Testdaten je Gerät neu setzen (122 ist nach dem ersten Durchlauf „in Arbeit“).
   execSync("npx tsx scripts/e2e-housekeeper-setup.ts", { stdio: "ignore" });
   try { await run(vp, tag); } catch (e) { failed = true; console.error(`✗ ${e.message}`); }

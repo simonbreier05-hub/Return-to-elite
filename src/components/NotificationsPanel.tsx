@@ -7,7 +7,7 @@ import WindowPanel from "./WindowPanel";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 
-interface Notification {
+export interface RoleNotification {
   id: string;
   type: string;
   level: string;
@@ -28,6 +28,39 @@ const LEVEL_STYLES: Record<string, string> = {
   critical: "border-s-status-out-of-order",
 };
 
+/** Meldungen der eigenen Rolle: laden, live ergänzen (`notification:new`), alle als gelesen markieren — für Panel und Glas-Hub (D2). */
+export function useRoleNotifications(targetRole: string) {
+  const [notifications, setNotifications] = useState<RoleNotification[]>([]);
+
+  const load = () =>
+    api<{ notifications: RoleNotification[] }>("/api/notifications")
+      .then((d) => setNotifications(d.notifications))
+      .catch(() => {});
+
+  useEffect(() => {
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useSocket({
+    "notification:new": (p: { notification: RoleNotification }) => {
+      const n = p?.notification;
+      if (!n || n.targetRole !== targetRole) return;
+      if (n.targetUserId) { load(); return; } // an eine Person gerichtet: der Server entscheidet, ob es meine ist
+      setNotifications((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50)));
+    },
+  });
+
+  const unread = notifications.filter((n) => !n.acknowledged).length;
+
+  const ackAll = async () => {
+    await api("/api/notifications", { method: "PATCH", body: { all: true } });
+    load();
+  };
+
+  return { notifications, unread, ackAll };
+}
+
 /**
  * A fixed, always-visible notifications area for a role's own hub —
  * distinct from AppShell's header bell, which is a dropdown opened on
@@ -43,33 +76,7 @@ const LEVEL_STYLES: Record<string, string> = {
  */
 export default function NotificationsPanel({ targetRole }: { targetRole: string }) {
   const { t, fmt } = useLocale();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-
-  const load = () =>
-    api<{ notifications: Notification[] }>("/api/notifications")
-      .then((d) => setNotifications(d.notifications))
-      .catch(() => {});
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useSocket({
-    "notification:new": (p: { notification: Notification }) => {
-      const n = p?.notification;
-      if (!n || n.targetRole !== targetRole) return;
-      if (n.targetUserId) { load(); return; } // an eine Person gerichtet: der Server entscheidet, ob es meine ist
-      setNotifications((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50)));
-    },
-  });
-
-  const unread = notifications.filter((n) => !n.acknowledged).length;
-
-  const ackAll = async () => {
-    await api("/api/notifications", { method: "PATCH", body: { all: true } });
-    load();
-  };
+  const { notifications, unread, ackAll } = useRoleNotifications(targetRole);
 
   return (
     <WindowPanel

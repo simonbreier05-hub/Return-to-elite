@@ -1586,6 +1586,27 @@
     "appShell.greetingMorning": "Buongiorno, {{name}}",
     "appShell.greetingDay": "Buon pomeriggio, {{name}}",
     "appShell.greetingEvening": "Buonasera, {{name}}",
-    "appShell.profile": "Profilo"
+    "appShell.profile": "Profilo",
+    "hkHub.subtitle": "Le tue camere di oggi.",
+    "hkHub.kindTurn": "Turn",
+    "hkHub.filter": "Filtro",
+    "hkHub.filterAll": "Tutte",
+    "hkHub.withCount": "{{label}} ({{n}})",
+    "hkHub.kpiRooms": "Le mie camere",
+    "hkHub.kpiDone": "Fatte",
+    "hkHub.kpiInProgress": "In corso",
+    "hkHub.kpiOpen": "Aperte",
+    "hkHub.earlyTitle": "Arrivi anticipati ({{n}})",
+    "hkHub.earlyDetail": "Cam. {{rooms}} – pronte entro le {{time}}",
+    "hkHub.earlyRooms": "Cam. {{rooms}}",
+    "hkHub.earlyArrival": "Arrivo anticipato ({{time}})",
+    "hkHub.arrivalAt": "Arrivo {{time}}",
+    "hkHub.roomTitle": "Camera {{n}}",
+    "hkHub.myProgress": "I miei progressi",
+    "hkHub.percent": "{{n}}%",
+    "hkHub.nextRooms": "Prossime camere",
+    "hkHub.paxShort": "{{n}} pers.",
+    "hkHub.selectHint": "Tocca una camera per i dettagli.",
+    "hkHub.allDone": "Tutto fatto – grazie!"
   }
 }

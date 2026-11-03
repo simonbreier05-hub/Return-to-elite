@@ -8,8 +8,8 @@ import type { TKey } from "@/lib/i18n/translations";
 import { CATEGORIES, type PersonStats } from "@/lib/workdata/stats";
 
 /** H3: Housekeeper sehen nur ihre eigenen Arbeitsdaten (lädt erst beim Aufklappen). */
-export default function MyWorkData() {
-  const { t } = useLocale();
+/** Eigene Arbeitsdaten, erst beim ersten Öffnen geladen — für die alte Klappe und den Glas-Hub (D2). */
+export function useMyWorkData() {
   const [s, setS] = useState<PersonStats | null>(null);
   const [loaded, setLoaded] = useState(false);
   const load = (open: boolean) => {
@@ -17,6 +17,12 @@ export default function MyWorkData() {
     setLoaded(true);
     api<{ stats: PersonStats }>("/api/workdata/me").then((d) => setS(d.stats)).catch(() => setS(null));
   };
+  return { stats: s, loaded, load };
+}
+
+export default function MyWorkData() {
+  const { t } = useLocale();
+  const { stats: s, loaded, load } = useMyWorkData();
   return (
     <div className="mt-4">
       <Collapsible summary={<span className="text-sm font-medium">{t("workdata.mine")}</span>} onToggle={load}>

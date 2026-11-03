@@ -31,6 +31,8 @@ export interface RoomRow {
   eta: string | null;
   /** „Herr Dr. Krüger" / „Mr. Smith" / nur „Krüger" — nie Vornamen, nie Alter. */
   guest: string | null;
+  /** Sprache des Aufenthalts (`Stay.language`, z. B. „de“, „en“) — nur das Kürzel, für den Sprach-Chip (D2). */
+  lang: string | null;
   pax: number | null;
   dnd: boolean;
   credits: number;
@@ -98,6 +100,7 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       id: r.id, number: r.number, floor: r.floor, status: r.status, routeOrder: r.routeOrder, assignedToId: r.assignedToId, assignedOn: r.assignedOn,
       occupancy: r.occupancy, blockReason: r.blockReason, kind, laundry: !!p?.laundryDue, vip: !!(p?.vip || stay?.vip), eta: p?.eta ?? null,
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
+      lang: stay?.language ?? null,
       pax: stay ? stay.adults + stay.children : null,
       dnd: dnd.has(r.id) || r.blockReason === "DND",
       credits: kind === "ARRIVAL" || !kind ? 0 : Math.round(((typeCredits[r.type as RoomType] ?? 1) * factor) * 100) / 100,
