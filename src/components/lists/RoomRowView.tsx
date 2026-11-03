@@ -14,6 +14,8 @@ export interface ListRoom {
   id: string; number: string; floor: number; status: string;
   kind: "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | null;
   laundry: boolean; vip: boolean; eta: string | null; guest: string | null; pax: number | null; dnd: boolean; credits: number;
+  /** Sprache des Aufenthalts (z. B. „en“) — Sprach-Chip im Housekeeper-Hub (D2). */
+  lang?: string | null;
   traces: ListTrace[];
   /** Zimmertyp, offene Mängel und Gästewunsch — nur in Supervisor-/Duty-Manager-Listen gefüllt. */
   type?: string; defects?: number; wish?: string | null;
