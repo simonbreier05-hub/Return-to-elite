@@ -49,21 +49,21 @@ export default function HouseMap({
     <section aria-labelledby="house-title" className="relative">
       <div className="mb-4 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
         <div>
-          <div className="text-[12px] font-medium uppercase tracking-[2px] text-brass-ink">StayClean · {dateLabel}</div>
-          <h2 id="house-title" className="font-serif text-4xl font-semibold leading-none sm:text-5xl">{t("planungTool.houseToday")}</h2>
+          <div className="text-section text-accent-text">StayClean · {dateLabel}</div>
+          <h2 id="house-title" className="text-display text-text-primary">{t("planungTool.houseToday")}</h2>
         </div>
         <dl className="flex gap-6 text-center">
           {([["kpiOccupied", totals.occupied, false], ["kpiDepartures", totals.departures, true], ["kpiArrivals", totals.arrivals, false]] as const).map(([k, n, accent]) => (
             <div key={k}>
-              <dd className={`font-serif text-4xl font-semibold leading-none ${accent ? "text-brass-ink" : ""}`}>{kpi(n)}</dd>
-              <dt className="mt-1 text-xs text-pl-muted">{t(`planungTool.${k}` as "planungTool.kpiOccupied")}</dt>
+              <dd className={`text-number ${accent ? "text-accent-text" : "text-text-primary"}`}>{kpi(n)}</dd>
+              <dt className="mt-1 text-label text-pl-muted">{t(`planungTool.${k}` as "planungTool.kpiOccupied")}</dt>
             </div>
           ))}
         </dl>
       </div>
 
       {/* Haus-Bild nie spiegeln (RTL): Etagen, Kacheln und Pfeiltasten bleiben links-nach-rechts. */}
-      <div dir="ltr" className="relative overflow-hidden rounded-[22px] border border-line-1 bg-night-800 p-3 sm:p-5">
+      <div dir="ltr" className="relative overflow-hidden glass rounded-(--glass-radius-lg) p-3 sm:p-5">
         {beamKey > 0 && (
           <div key={beamKey} aria-hidden className="pl-beam pointer-events-none absolute inset-x-0 top-0 z-10 h-10 bg-gradient-to-b from-transparent via-brass-light/35 to-transparent" />
         )}
@@ -94,7 +94,7 @@ export default function HouseMap({
                 <div className="ms-auto lg:ms-0"><FloorOccupancy stats={stats} hasData={house.hasData} index={row} animateKey={animateKey}
                   textOccupied={t("planungTool.occupiedOf", { n: stats.occupied, total: stats.total })} textNoData={t("planungTool.noData")} /></div>
                 <div
-                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${sup ? `${BADGE_TONE[sup.tone]} text-ink` : "border-[1.5px] border-dashed border-line-2"}`}
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${sup ? `${BADGE_TONE[sup.tone]} text-text-on-accent` : "border-[1.5px] border-dashed border-line-2"}`}
                   role="img" aria-label={sup ? t("planungTool.supervisorOf", { letter: sup.letter }) : t("planungTool.noSupervisor")}
                 >
                   {sup && <span key={sup.letter} className="pl-pop">{sup.letter}</span>}
@@ -104,7 +104,7 @@ export default function HouseMap({
           })}
         </div>
 
-        <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-1 pt-3 text-xs text-pl-muted" aria-label={t("lists.legendTitle")}>
+        <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-1 pt-3 text-label text-pl-muted" aria-label={t("lists.legendTitle")}>
           {(["DEPARTURE", "TURN", "STAYOVER", "ARRIVAL", "EMPTY"] as const).map((k) => (
             <li key={k} className="flex items-center gap-1.5">
               <span aria-hidden className={`inline-block h-3 w-3 rounded-[3px] ${TILE_CLASS[k]}`} />
@@ -115,7 +115,7 @@ export default function HouseMap({
       </div>
 
       {sel && (
-        <p role="status" className="mt-3 rounded-full border border-line-1 bg-night-600 px-4 py-2 text-sm">
+        <p role="status" className="glass text-body-16 mt-3 rounded-pill px-4 py-2">
           <strong>{sel.tile.number}</strong> · {t("planungTool.colFloor")} {sel.floor} · {t(`shared.tile${sel.tile.kind}`)}
           {sel.tile.vip ? ` · ${t("shared.vip")}` : ""}{sel.tile.laundry ? ` · ${t("shared.laundry")}` : ""}{sel.tile.eta ? ` · ${sel.tile.eta}` : ""}
           {sel.tile.openTraces ? ` · ${sel.tile.openTraces} Traces` : ""}

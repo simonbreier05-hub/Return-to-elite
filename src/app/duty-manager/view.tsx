@@ -16,7 +16,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import { DutyHouse } from "@/components/dutymanager/DutyHouse";
-import { LegacySurface } from "@/components/supervisor/SupervisorParts";
+import { GlassMode } from "@/components/shell/GlassMode";
 import { Banner, Button, Field, GlassCard } from "@/components/ui";
 
 interface Room {
@@ -189,11 +189,15 @@ export default function DutyManagerView() {
         />
       </ErrorBoundary>
 
-      <LegacySurface title={t("dutyManager.liveListsTitle")}>
-        <WindowPanel title={t("dutyManager.liveListsTitle")}>
-          <LiveListsPanel />
-        </WindowPanel>
-      </LegacySurface>
+      {/* Live-Listen (ServiceOverview, RoomRowView, LiveRoomModal …) sind noch nicht umgestellt: bewusst ohne Glas-Modus auf
+          heller Fläche, damit alter dunkler Text lesbar bleibt (LegacySurface wurde mit D3b entfernt). Umstellung = eigenes Paket. */}
+      <GlassMode on={false}>
+        <section aria-label={t("dutyManager.liveListsTitle")} className="rounded-(--glass-radius-lg) bg-ivory p-3 font-sans text-charcoal sm:p-6">
+          <WindowPanel title={t("dutyManager.liveListsTitle")}>
+            <LiveListsPanel />
+          </WindowPanel>
+        </section>
+      </GlassMode>
 
       <GlassCard as="section" aria-labelledby="dm-tasks-title" className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-3">

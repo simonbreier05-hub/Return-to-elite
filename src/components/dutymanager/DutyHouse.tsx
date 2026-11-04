@@ -74,7 +74,7 @@ export function DutyHouse({ numbers, kpis, rooms, unassignedFloors, plan, open, 
     { key: "extra", label: t("dutyManager.unassignedFloorsKpi"), value: unassignedFloors, icon: "triangle-alert", attention: unassignedFloors > 0 },
   ];
 
-  const grid = cx("grid gap-3 sm:gap-4", phone ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-4");
+  const grid = cx("grid gap-3 sm:gap-4", phone ? "grid-cols-2" : "grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4");
 
   const planStatus = plan && (
     <div className="flex flex-wrap items-center gap-3">

@@ -33,7 +33,7 @@ export default function Stepper({
                   aria-current={st === "current" ? "step" : undefined}
                   aria-label={`${labels[s]}${st === "done" ? " ✓" : ""}`}
                   title={labels[s]}
-                  className={`relative flex h-11 w-11 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light focus-visible:ring-offset-2 focus-visible:ring-offset-night-700 ${
+                  className={`relative flex h-12 w-12 items-center justify-center rounded-full border-2 text-sm font-semibold transition-colors duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light focus-visible:ring-offset-2 focus-visible:ring-offset-night-700 ${
                     st === "current" ? "border-pl-text bg-pl-text text-night-900"
                     : st === "done" ? "border-brass-light bg-brass-light text-night-900"
                     : "border-line-2 text-pl-muted"

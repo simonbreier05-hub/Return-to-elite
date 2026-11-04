@@ -9,7 +9,7 @@ export interface FloorSup { id: string; name: string; badge: HouseSupervisor }
 
 const TONE = { 1: "bg-badge-1", 2: "bg-badge-2", 3: "bg-badge-3" } as const;
 const Badge = ({ b, size = "h-9 w-9" }: { b: HouseSupervisor; size?: string }) => (
-  <span aria-hidden className={`flex ${size} shrink-0 items-center justify-center rounded-full text-sm font-bold text-ink ${TONE[b.tone]}`}>{b.letter}</span>
+  <span aria-hidden className={`flex ${size} shrink-0 items-center justify-center rounded-full text-sm font-bold text-text-on-accent ${TONE[b.tone]}`}>{b.letter}</span>
 );
 
 /**
@@ -24,7 +24,7 @@ export default function FloorStep({
   const byId = new Map(sups.map((s) => [s.id, s]));
   return (
     <div className="mt-3">
-      <p className="pl-rise mb-4 max-w-md text-[15px] text-pl-muted" style={{ ["--i" as string]: 1 }}>{t("planungTool.floorsIntro")}</p>
+      <p className="pl-rise mb-4 max-w-md text-body-16 text-pl-muted" style={{ ["--i" as string]: 1 }}>{t("planungTool.floorsIntro")}</p>
       <ul className="space-y-2.5">
         {FLOOR_ORDER.map((f, row) => {
           const fl = house.floors.find((x) => x.floor === f);
@@ -46,7 +46,7 @@ export default function FloorStep({
               <div role="group" aria-label={pickLabel} className="mt-2.5 hidden flex-wrap gap-2 md:flex">
                 {sups.map((s) => (
                   <button key={s.id} type="button" aria-pressed={assign[f] === s.id} onClick={() => onPick(f, s.id)}
-                    className={`inline-flex min-h-11 items-center gap-2 rounded-full border py-1 ps-1 pe-4 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light ${assign[f] === s.id ? "border-brass-light bg-night-800 font-semibold" : "border-line-1 hover:border-line-2"}`}>
+                    className={`inline-flex min-h-12 items-center gap-2 rounded-full border py-1 ps-1 pe-4 text-sm transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light ${assign[f] === s.id ? "border-brass-light bg-night-800 font-semibold" : "border-line-1 hover:border-line-2"}`}>
                     <Badge b={s.badge} size="h-8 w-8" />{s.name}
                   </button>
                 ))}
@@ -56,7 +56,7 @@ export default function FloorStep({
                 aria-label={`${pickLabel}: ${cur ? cur.name : t("planungTool.floorNone")}. ${t("planungTool.tapToChange")}`}
                 className="mt-2.5 flex min-h-14 w-full items-center gap-3 rounded-full border border-line-2 bg-night-800 px-3 text-start focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:hidden">
                 {cur ? <Badge b={cur.badge} size="h-10 w-10" /> : <span aria-hidden className="flex h-10 w-10 shrink-0 rounded-full border-[1.5px] border-dashed border-line-2" />}
-                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{cur ? cur.name : t("planungTool.floorNone")}</span><span className="block text-xs text-pl-muted">{t("planungTool.tapToChange")}</span></span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold">{cur ? cur.name : t("planungTool.floorNone")}</span><span className="block text-label text-pl-muted">{t("planungTool.tapToChange")}</span></span>
                 <span aria-hidden className="text-pl-muted">⇄</span>
               </button>
             </li>

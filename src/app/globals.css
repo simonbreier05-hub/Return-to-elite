@@ -288,26 +288,33 @@ body {
  * ─────────────────────────────────────────────────────────────────────── */
 .planung-root { --pl-ease: cubic-bezier(0.2, 0.8, 0.2, 1); }
 
-/* Mobil-Design C (unter 768 px): helle Variante derselben Tokens. Ab 768 px gilt die dunkle Desktop-Aufteilung. */
-@media (max-width: 767px) {
-  .planung-root {
-    --color-night-900: #f7f3ea; /* creme */
-    --color-night-800: #ffffff;
-    --color-night-700: #f7f3ea;
-    --color-night-600: #ffffff;
-    --color-line-1: #e7dfcb;
-    --color-line-2: #cfc3a3;
-    --color-pl-text: #0e2238; /* ink */
-    --color-pl-muted: #56667a;
-    --color-brass-light: #a9843f; /* Füllung/Rahmen; Text nimmt brass-ink */
-    --color-brass-ink: #7f6125;
-    --color-btn: #133457;
-    --color-btn-text: #f7f3ea;
-    --color-tile-empty: #e3dcc8;
-    --color-badge-1: #d9bf86;
-    --color-badge-2: #7da2c4;
-    --color-badge-3: #3c6290;
-  }
+/*
+ * D4 „Glas & Premium“: die alten Planungs-Token (Navy/Messing, Mobil-Creme „Variante C“) zeigen im Planungstool
+ * auf die Glas-Token (docs/design/glass-spec.md, Abschnitt 2) — auf allen Breiten dunkel, keine eigenen Farbwerte.
+ * Schrift: Lora statt Cormorant (`font-serif`).
+ */
+.planung-root {
+  --color-night-900: var(--color-bg-canvas);
+  --color-night-800: var(--color-surface-card-raised);
+  --color-night-700: var(--color-bg-sidebar);
+  --color-night-600: var(--color-surface-card);
+  --color-line-1: var(--color-border-subtle);
+  --color-line-2: var(--color-border-default);
+  --color-pl-text: var(--color-text-primary);
+  --color-pl-muted: var(--color-text-secondary);
+  --color-brass-light: var(--color-accent-default);
+  --color-brass-ink: var(--color-accent-text);
+  --color-btn: var(--color-accent-default);
+  --color-btn-text: var(--color-text-on-accent);
+  --color-tile-departure: var(--color-accent-default);
+  --color-tile-turn: var(--color-text-primary);
+  --color-tile-stayover: var(--color-status-info-fg);
+  --color-tile-arrival: var(--color-accent-default);
+  --color-tile-empty: var(--color-surface-card-raised);
+  --color-badge-1: var(--color-border-accent);
+  --color-badge-2: var(--color-status-info-fg);
+  --color-badge-3: var(--color-text-secondary);
+  --font-serif: var(--font-glass-serif);
 }
 
 /* Gefächerte Ergebniskarten (Plan erstellen, einmalig) */

@@ -2,14 +2,29 @@
 
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { PLAN_PHASES, type PhaseState, type PlanCounts, type PlanPhase } from "@/lib/planung/team";
+import type { IconName } from "@/lib/ui/icons";
+import type { Tone } from "@/lib/ui/tone";
+import { Banner, Button, ListRow, Pill, ProgressBar } from "@/components/ui";
+import { Glyph } from "@/components/ui/primitives";
 
 const PH_LABEL: Record<PlanPhase, "planungTool.phMerge" | "planungTool.phPropose" | "planungTool.phRooms" | "planungTool.phSupervisors" | "planungTool.phHouseman"> = {
   merge: "planungTool.phMerge", propose: "planungTool.phPropose", rooms: "planungTool.phRooms", supervisors: "planungTool.phSupervisors", houseman: "planungTool.phHouseman",
 };
 
+/** Zustand einer Statuszeile: Symbol + Ton + Zeichen (Status nie nur über Farbe). */
+const PH_UI: Record<PhaseState, { icon: IconName; tone: Tone; mark: string }> = {
+  waiting: { icon: "circle", tone: "neutral", mark: "" },
+  running: { icon: "refresh", tone: "accent", mark: "…" },
+  done: { icon: "check", tone: "success", mark: "✓" },
+  error: { icon: "x", tone: "danger", mark: "✖" },
+};
+
+const FOCUS = "focus-visible:outline-2 focus-visible:outline-solid focus-visible:outline-offset-2 focus-visible:outline-accent-default";
+
 /**
- * Schritt „Plan": Statusliste mit dem echten Fortschritt (jede Zeile wechselt erst, wenn die Berechnung sie liefert),
- * danach drei gefächerte Karten (Entwurf), Warnungen aus dem Vorschlag und der Hinweis „Nichts ist live".
+ * Schritt „Plan" (Design „Glas & Premium“, Figma `34:1410`): Statusliste mit dem echten Fortschritt (jede Zeile wechselt
+ * erst, wenn die Berechnung sie liefert), danach drei gefächerte Karten (Entwurf), Zusammenfassung mit Fortschrittsbalken,
+ * Kräfte als Listenzeilen, Warnungen aus dem Vorschlag und der Hinweis „Nichts ist live". Reine Darstellung.
  */
 export default function PlanStep({
   states, counts, warnings, error, started, summary, hkRows, onEdit, onToggleHk, onOpen, confirmed,
@@ -34,80 +49,87 @@ export default function PlanStep({
   ] : [];
   return (
     <div className="mt-3">
-      <p className="pl-rise mb-4 max-w-md text-[15px] text-pl-muted" style={{ ["--i" as string]: 1 }}>{t("planungTool.planIntro")}</p>
+      <p className="pl-rise text-body-16 mb-4 max-w-md text-text-secondary" style={{ ["--i" as string]: 1 }}>{t("planungTool.planIntro")}</p>
       {started && (
-        <ul className="space-y-1.5" aria-label={t("planungTool.progressLabel")}>
+        <ul className="flex flex-col gap-2" aria-label={t("planungTool.progressLabel")}>
           {PLAN_PHASES.map((p) => {
             const s = states[p];
+            const ui = PH_UI[s];
             return (
-              <li key={p} data-state={s} className="flex min-h-11 items-center gap-3 rounded-full border border-line-1 bg-night-600 px-4 text-sm" role="status">
-                <span aria-hidden className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  {s === "running" && <span className="pl-spin inline-block h-4 w-4 rounded-full border-2 border-line-2 border-t-brass-light" />}
-                  {s === "done" && <svg key="d" className="pl-pop h-5 w-5 text-brass-ink" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10.5l4 4 8-9" /></svg>}
-                  {s === "error" && <span className="text-badge-3">✖</span>}
-                  {s === "waiting" && <span className="inline-block h-2 w-2 rounded-full bg-line-2" />}
+              <li key={p} data-state={s} role="status" className="glass flex min-h-12 items-center gap-3 rounded-(--glass-radius-sm) px-4 py-2">
+                <span aria-hidden className="flex size-6 shrink-0 items-center justify-center">
+                  {s === "running"
+                    ? <span className="pl-spin inline-block size-5 rounded-full border-2 border-border-subtle border-t-accent-default" />
+                    : <Glyph name={ui.icon} size={20} className={s === "done" ? "pl-pop text-status-success-fg" : s === "error" ? "text-status-danger-fg" : "text-text-muted"} />}
                 </span>
-                <span className={s === "waiting" ? "text-pl-muted" : "font-medium"}>{t(PH_LABEL[p])}</span>
-                <span className="ms-auto text-xs text-pl-muted">{s === "done" ? "✓" : s === "running" ? "…" : s === "error" ? "✖" : ""}</span>
+                <span className={s === "waiting" ? "text-body-16 text-text-muted" : "text-body-18 text-text-primary"}>{t(PH_LABEL[p])}</span>
+                {ui.mark && <Pill tone={ui.tone} className="ms-auto">{ui.mark}</Pill>}
               </li>
             );
           })}
         </ul>
       )}
-      {error && <p role="alert" className="mt-3 rounded-[14px] border border-line-2 bg-night-600 p-3 text-sm"><span aria-hidden>✖ </span>{t("planungTool.planFailed")} {error}</p>}
+      {error && <div role="alert" className="mt-3"><Banner tone="warning" icon="triangle-alert" title={t("planungTool.planFailed")} detail={error} /></div>}
       {counts && (
         <>
-          <div className="relative mx-auto mt-6 h-32 max-w-md" role="list" aria-label={t("planungTool.draft")}>
+          <div className="relative mx-auto mt-6 h-36 max-w-md" role="list" aria-label={t("planungTool.draft")}>
             {cards.map((c, i) => (
               <div key={i} role="listitem" className="pl-fan absolute bottom-0 start-[34%] w-[32%]"
                 style={{ ["--i" as string]: i, transform: `translateX(${(i - 1) * 104}%) translateY(${i === 1 ? 0 : 8}px) rotate(${c.rot}deg)`, zIndex: i === 1 ? 2 : 1 }}>
                 <button type="button" onClick={() => onOpen(c.tab)} aria-label={`${c.text} — ${t("planungTool.openDetails")}`}
-                  className="block min-h-11 w-full rounded-[18px] border border-line-2 bg-night-600 p-3 text-start shadow-lg hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
-                  <div className="font-serif text-base font-semibold leading-tight">{c.text}</div>
-                  <div className="mt-1.5 inline-block rounded-full border border-line-2 px-2 text-[11px] text-pl-muted">{t("planungTool.draft")} ›</div>
+                  className={`glass press block min-h-12 w-full rounded-(--glass-radius-md) p-3 text-start ${FOCUS}`}>
+                  <div className="text-body-18 leading-tight text-text-primary">{c.text}</div>
+                  <Pill tone="accent" className="mt-2">{t("planungTool.draft")} ›</Pill>
                 </button>
               </div>
             ))}
           </div>
           {summary && (
-            <section className="mt-5" aria-label={t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })}>
+            <section className="glass mt-6 flex flex-col gap-3 rounded-(--glass-radius-lg) p-4 sm:p-5" aria-label={t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })}>
               <div className="flex flex-wrap items-center gap-2">
-                <div className="font-serif text-xl font-semibold">{t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })}</div>
-                {summary.open > 0 && <button type="button" onClick={() => onOpen("rooms", "plan")} className="min-h-11 rounded-full border border-line-2 bg-night-600 px-3 text-xs font-semibold text-brass-ink hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">⚠ {t("planungTool.openBadge", { n: summary.open })} ›</button>}
-                {confirmed && <span className="rounded-full border border-line-2 px-2.5 py-0.5 text-xs font-semibold">✓ {t("planungTool.confirmedTitle")}</span>}
+                <h2 className="text-title-22 me-auto text-text-primary">{t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })}</h2>
+                {summary.open > 0 && (
+                  <button type="button" onClick={() => onOpen("rooms", "plan")} className={`press inline-flex min-h-12 items-center rounded-pill ${FOCUS}`}>
+                    <Pill tone="warning">⚠ {t("planungTool.openBadge", { n: summary.open })} ›</Pill>
+                  </button>
+                )}
+                {confirmed && <Pill tone="success">✓ {t("planungTool.confirmedTitle")}</Pill>}
               </div>
-              <ul className="mt-2 space-y-1.5">
-                {hkRows.map((h) => (
-                  <li key={h.id} className="flex min-h-11 items-center gap-2 rounded-full border border-line-1 bg-night-600 px-4 text-sm">
-                    {h.excluded ? <span className="text-pl-muted line-through">{h.name}</span> : (
-                      <button type="button" onClick={() => onOpen("rooms", "list")} className="min-h-11 text-start font-medium underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{h.name} ›</button>
-                    )}
-                    <span className="ms-auto text-xs text-pl-muted">
-                      {h.excluded ? t("planungTool.skippedNote") : `${h.rooms} ${t("planungTool.roomsShort")} · ${fmt(h.credits)} / ${fmt(h.lo)}–${fmt(h.hi)}`}
-                    </span>
-                    <button type="button" onClick={() => onToggleHk(h.id)} className="min-h-11 rounded-full px-2 text-xs underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
-                      {h.excluded ? t("planungTool.unskipHk") : t("planungTool.skipHk")}
-                    </button>
-                  </li>
-                ))}
+              <ProgressBar value={summary.assigned} max={summary.total} label={t("planungTool.draftSummary", { assigned: summary.assigned, total: summary.total })} />
+              <ul className="flex flex-col">
+                {hkRows.map((h) => {
+                  const meta = `${h.rooms} ${t("planungTool.roomsShort")} · ${fmt(h.credits)} / ${fmt(h.lo)}–${fmt(h.hi)}`;
+                  return (
+                    <li key={h.id} className="flex items-center gap-2">
+                      {h.excluded
+                        ? <ListRow icon="user" title={h.name} subtitle={t("planungTool.skippedNote")} state="done" className="min-w-0 flex-1" />
+                        : <ListRow icon="user" title={`${h.name} ›`} meta={meta} onClick={() => onOpen("rooms", "list")} className="min-w-0 flex-1" />}
+                      <button type="button" onClick={() => onToggleHk(h.id)} className={`press text-label min-h-12 shrink-0 rounded-pill px-3 text-accent-text underline-offset-2 hover:underline ${FOCUS}`}>
+                        {h.excluded ? t("planungTool.unskipHk") : t("planungTool.skipHk")}
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <button type="button" onClick={onEdit} className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
-                  {summary.open > 0 ? t("planungTool.openAssign") : t("planungTool.editDraft")}
-                </button>
-                <button type="button" onClick={() => onOpen("overview")} className="inline-flex min-h-11 items-center rounded-full border border-line-2 px-5 text-sm font-medium hover:border-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
-                  {t("service.title")}
-                </button>
+              <div className="flex flex-wrap gap-3">
+                <Button variant="secondary" onClick={onEdit}>{summary.open > 0 ? t("planungTool.openAssign") : t("planungTool.editDraft")}</Button>
+                <Button variant="secondary" onClick={() => onOpen("overview")}>{t("service.title")}</Button>
               </div>
             </section>
           )}
           <section className="mt-5" aria-labelledby="plan-warn">
-            <h2 id="plan-warn" className="mb-1.5 text-xs font-medium uppercase tracking-[2px] text-pl-muted">{t("planungTool.warningsTitle")}</h2>
-            {warnings.length === 0 ? <p className="text-sm text-pl-muted">{t("planungTool.noWarnings")}</p> : (
-              <ul className="space-y-1 text-sm">{warnings.map((w, i) => <li key={i} className={w.severity === "INFO" ? "text-pl-muted" : "text-brass-ink"}><span aria-hidden>{w.severity === "INFO" ? "ℹ" : "⚠"}</span> {w.message}</li>)}</ul>
+            <h2 id="plan-warn" className="text-section mb-2 text-text-muted">{t("planungTool.warningsTitle")}</h2>
+            {warnings.length === 0 ? <p className="text-body-16 text-text-secondary">{t("planungTool.noWarnings")}</p> : (
+              <ul className="text-body-16 flex flex-col gap-1">
+                {warnings.map((w, i) => (
+                  <li key={i} className={`flex items-start gap-2 ${w.severity === "INFO" ? "text-text-secondary" : "text-status-warning-fg"}`}>
+                    <Glyph name={w.severity === "INFO" ? "info" : "triangle-alert"} size={20} className="mt-0.5 shrink-0" /> <span>{w.message}</span>
+                  </li>
+                ))}
+              </ul>
             )}
           </section>
-          {!confirmed && <p className="mt-4 rounded-[14px] border border-line-2 bg-night-600 p-3 text-sm font-medium">{t("planungTool.notLive")}</p>}
+          {!confirmed && <Banner tone="accent" icon="info" title={t("planungTool.notLive")} className="mt-4" />}
         </>
       )}
     </div>

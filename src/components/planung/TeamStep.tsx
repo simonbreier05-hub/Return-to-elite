@@ -11,11 +11,11 @@ type Group = keyof TeamSelection;
 function Chip({ name, line, on, onToggle }: { name: string; line?: string; on: boolean; onToggle: () => void }) {
   return (
     <button type="button" aria-pressed={on} onClick={onToggle}
-      className={`flex min-h-11 w-full items-center gap-3 rounded-full border py-1.5 ps-1.5 pe-3 text-start transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:w-auto ${on ? "border-brass-light bg-night-800" : "border-line-1 hover:border-line-2"}`}>
+      className={`flex min-h-12 w-full items-center gap-3 rounded-full border py-1.5 ps-1.5 pe-3 text-start transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light md:w-auto ${on ? "border-brass-light bg-night-800" : "border-line-1 hover:border-line-2"}`}>
       <span aria-hidden className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold transition-colors duration-200 ${on ? "bg-brass-light text-btn-text" : "bg-line-1 text-pl-text"}`}>{name.trim().charAt(0).toUpperCase() || "?"}</span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-sm font-semibold">{name}</span>
-        {line && <span className="block truncate text-xs text-pl-muted">{line}</span>}
+        {line && <span className="block truncate text-label text-pl-muted">{line}</span>}
       </span>
       <span aria-hidden className="flex h-6 w-6 shrink-0 items-center justify-center">
         {on && <svg key="on" className="pl-pop h-5 w-5 text-brass-ink" viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"><path d="M4 10.5l4 4 8-9" /></svg>}
@@ -44,13 +44,13 @@ export default function TeamStep({
 
   return (
     <div className="mt-3">
-      <p className="pl-rise mb-4 max-w-md text-[15px] text-pl-muted" style={{ ["--i" as string]: 1 }}>{previous ? t("planungTool.teamPrev") : t("planungTool.teamIntro")}</p>
+      <p className="pl-rise mb-4 max-w-md text-body-16 text-pl-muted" style={{ ["--i" as string]: 1 }}>{previous ? t("planungTool.teamPrev") : t("planungTool.teamIntro")}</p>
       <div role="group" data-swipe aria-label={t("planungTool.step2")} className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-2 md:mx-0 md:block md:space-y-3 md:overflow-visible md:px-0">
         {groups.map((g, gi) => (
           <section key={g.key} aria-labelledby={`grp-${g.key}`} className="pl-rise max-h-[46vh] min-w-[86%] snap-center overflow-y-auto rounded-[18px] border border-line-1 bg-night-600 p-3 md:max-h-none md:min-w-0 md:overflow-visible" style={{ ["--i" as string]: gi + 2 }}>
             <div className="mb-2 flex items-baseline justify-between">
-              <h2 id={`grp-${g.key}`} className="text-xs font-medium uppercase tracking-[2px] text-pl-muted">{g.title}</h2>
-              <span className="text-xs text-pl-muted">{t("planungTool.selectedN", { n: sel[g.key].length })}</span>
+              <h2 id={`grp-${g.key}`} className="text-label font-medium uppercase tracking-[2px] text-pl-muted">{g.title}</h2>
+              <span className="text-label text-pl-muted">{t("planungTool.selectedN", { n: sel[g.key].length })}</span>
             </div>
             {g.items.length === 0 ? <p className="text-sm text-pl-muted">–</p> : (
               <div className="flex flex-col gap-2 md:flex-row md:flex-wrap">
@@ -60,7 +60,7 @@ export default function TeamStep({
           </section>
         ))}
       </div>
-      <p className="mb-3 mt-1 text-center text-[11px] text-pl-muted md:hidden" aria-hidden>{t("planungTool.swipeHint")} →</p>
+      <p className="mb-3 mt-1 text-center text-label text-pl-muted md:hidden" aria-hidden>{t("planungTool.swipeHint")} →</p>
       <div className="pl-rise mt-3 rounded-[18px] border border-line-1 bg-night-600 p-4" style={{ ["--i" as string]: 5 }}>
         <CapacityBar need={verdict.need} have={verdict.have} needLabel={t("planungTool.needLabel")} haveLabel={t("planungTool.haveLabel")} ok={verdict.ok}
           verdict={verdict.ok ? t("planungTool.verdictOk") : t("planungTool.verdictShort", { n: verdict.missing })} />

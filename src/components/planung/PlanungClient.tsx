@@ -21,9 +21,10 @@ import HouseMap from "./HouseMap";
 import PlanungShell from "./PlanungShell";
 import PlanEditorWindow, { type EditorTab } from "./PlanEditorWindow";
 import PlanConfirmDialog from "./PlanConfirmDialog";
-import Modal from "@/components/Modal";
+import { GlassDialog } from "@/components/shell/GlassDialog";
+import { GlassMode } from "@/components/shell/GlassMode";
+import { Button } from "@/components/ui";
 import PlanStep from "./PlanStep";
-import PrimaryButton from "./PrimaryButton";
 import ProgressRing from "./ProgressRing";
 import StepSegments from "./StepSegments";
 import TeamStep from "./TeamStep";
@@ -144,7 +145,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const itemFor = (ty: ImportType): ImportItem | undefined => [...items].reverse().find((i) => i.type === ty && i.phase !== "discarded");
   const unknown = items.filter((i) => i.phase === "read" && !i.type);
   const failed = items.filter((i) => i.phase === "error" && !i.type);
-  const btn = "min-h-11 rounded-full px-3 text-xs focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light";
+  const btn = "min-h-12 rounded-full px-3 text-label focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light";
   const retryButton = (it: ImportItem) => (it.result || it.file) && (
     <button type="button" onClick={() => void retry(it)} className={`mt-1.5 border border-line-2 font-medium text-pl-text hover:border-brass-light ${btn}`}>{t("planungTool.retry")}</button>
   );
@@ -189,26 +190,26 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     <>
       <div className="mb-8 hidden md:block">
         <Stepper current={step} reached={reached} labels={labels} onSelect={goStep} ariaLabel={t("planungTool.stepsLabel")} />
-        <div className="mt-3 flex items-center justify-between text-xs text-pl-muted">
-          <Link href="/supervisor" className="-ms-3 inline-flex min-h-11 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span>{t("planungTool.leave")}</Link>
+        <div className="mt-3 flex items-center justify-between text-label text-pl-muted">
+          <Link href="/supervisor" className="-ms-3 inline-flex min-h-12 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span>{t("planungTool.leave")}</Link>
           <span>{t("planungTool.stepOf", { n: step })} · <LiveClock tone="pl" /></span>
-          <Link href="/supervisor" className="rounded-full px-3 py-2 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
+          <Link href="/supervisor" className="inline-flex min-h-12 items-center rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
         </div>
       </div>
 
       <PlausibilityBanner refreshKey={`${JSON.stringify(status ?? {})}|${merging}`} />
       <div key={step} className="flex flex-1 flex-col" onDragOver={(e) => { if (step === 1) { e.preventDefault(); setOver(true); } }} onDragLeave={() => setOver(false)}
         onDrop={(e) => { if (step === 1) { e.preventDefault(); setOver(false); addFiles(e.dataTransfer.files); } }}>
-        <h1 className="pl-rise font-serif text-4xl font-semibold leading-tight sm:text-[2.6rem]" style={{ ["--i" as string]: 0 }}>
+        <h1 className="pl-rise text-title-28 md:text-display text-text-primary" style={{ ["--i" as string]: 0 }}>
           {step === 1 ? t("planungTool.s1Title") : labels[step]}
         </h1>
 
         {step === 1 ? (
           <>
-            <p className="pl-rise mb-5 mt-2 hidden max-w-md text-[15px] text-pl-muted md:block" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1Intro")}</p>
-            <p className="pl-rise mb-1 mt-2 max-w-md text-[15px] text-pl-muted md:hidden" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1IntroMobile")}</p>
+            <p className="pl-rise mb-5 mt-2 hidden max-w-md text-body-16 text-pl-muted md:block" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1Intro")}</p>
+            <p className="pl-rise mb-1 mt-2 max-w-md text-body-16 text-pl-muted md:hidden" style={{ ["--i" as string]: 1 }}>{t("planungTool.s1IntroMobile")}</p>
             <PurgeBanner refreshKey={JSON.stringify(status ?? {})} />
-            <ProgressRing done={doneCount} total={SLOTS.length} pulse={!reading && !merging} disabled={reading || merging} label={t("planungTool.progressLabel")} onClick={main}
+            <ProgressRing done={doneCount} total={SLOTS.length} disabled={reading || merging} label={t("planungTool.progressLabel")} onClick={main}
               hint={mode === "next" ? t("planungTool.nextTeam") : mode === "apply" ? t("planungTool.applyLists") : items.length ? t("planungTool.filesOfN", { done: doneCount, total: SLOTS.length }) : t("planungTool.ringStart")} />
             <div className="space-y-2.5">
               {SLOTS.map((ty, idx) => {
@@ -226,11 +227,11 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
                 return (
                   <FileDropCard key={ty} index={idx + 2} title={title} subtitle={sub} status={st} statusLabel={statusLabel(st)} resultText={resultText} issues={issues}>
                     {pv?.dateFormat.via === "ambiguous" && pv.dateFormat.readings && it && (
-                      <div className="mt-2 rounded-xl border border-line-2 bg-night-800 p-2 text-xs">
+                      <div className="mt-2 rounded-xl border border-line-2 bg-night-800 p-2 text-label">
                         <div className="mb-1.5">{t("planungTool.dateUnclear")}</div>
                         <div className="flex flex-wrap gap-2">
                           {(Object.keys(pv.dateFormat.readings) as DateFormatId[]).map((f) => (
-                            <button key={f} type="button" onClick={() => reparse(it, ty, f)} className="min-h-11 rounded-full border border-line-2 px-3 hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
+                            <button key={f} type="button" onClick={() => reparse(it, ty, f)} className="min-h-12 rounded-full border border-line-2 px-3 hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">
                               {t("importPage.dateReading", { format: t(`importPage.format${f}` as "importPage.formatMDY"), min: pv.dateFormat.readings![f].min, max: pv.dateFormat.readings![f].max })}
                             </button>
                           ))}
@@ -239,13 +240,13 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
                     )}
                     {it?.phase === "error" && retryButton(it)}
                     {isStale && (
-                      <button type="button" onClick={() => void session.acceptStale(ty)} className="mt-1.5 min-h-11 rounded-full border border-line-2 px-4 text-xs hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.useAnyway")}</button>
+                      <button type="button" onClick={() => void session.acceptStale(ty)} className="mt-1.5 min-h-12 rounded-full border border-line-2 px-4 text-label hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.useAnyway")}</button>
                     )}
                     {it && (it.phase === "read" || it.phase === "error") && (
-                      <button type="button" onClick={() => discard(it)} className="mt-1.5 min-h-11 rounded-full px-1 text-xs text-pl-muted underline-offset-2 hover:text-pl-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.discard")}</button>
+                      <button type="button" onClick={() => discard(it)} className="mt-1.5 min-h-12 rounded-full px-1 text-label text-pl-muted underline-offset-2 hover:text-pl-text hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.discard")}</button>
                     )}
                     {status?.[ty] && (!it || it.phase === "applied") && (confirmDel === ty ? (
-                      <div className="mt-2 rounded-xl border border-line-2 bg-night-800 p-2 text-xs" role="group" aria-label={t("planungTool.deleteConfirm")}>
+                      <div className="mt-2 rounded-xl border border-line-2 bg-night-800 p-2 text-label" role="group" aria-label={t("planungTool.deleteConfirm")}>
                         <div className="mb-1 font-medium text-pl-text">{t("planungTool.deleteConfirm")}</div>
                         {planHint?.confirmed && <p className="mb-1.5 text-brass-ink">{t("planungTool.deletePlanNote")}</p>}
                         {delError?.type === ty && <p role="alert" className="mb-1.5 text-brass-ink">{delError.text}</p>}
@@ -267,7 +268,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
               ))}
               {unknown.map((it) => (
                 <FileDropCard key={it.id} title={it.name} subtitle={t("planungTool.unknownType")} status="read" statusLabel={t("planungTool.stRead")}>
-                  <select defaultValue="" onChange={(e) => e.target.value && reparse(it, e.target.value as ImportType)} className="mt-2 h-11 rounded-full border border-line-2 bg-night-800 px-3 text-sm" aria-label={t("planungTool.unknownType")}>
+                  <select defaultValue="" onChange={(e) => e.target.value && reparse(it, e.target.value as ImportType)} className="mt-2 h-12 rounded-full border border-line-2 bg-night-800 px-3 text-sm" aria-label={t("planungTool.unknownType")}>
                     <option value="" disabled>{t("planungTool.chooseType")}</option>
                     {SLOTS.map((ty) => <option key={ty} value={ty}>{slotText(ty).title}</option>)}
                   </select>
@@ -279,26 +280,26 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
             </div>
 
             <div className={`pl-rise mt-4 hidden min-h-[8.5rem] md:flex flex-1 flex-col items-center justify-center gap-2 rounded-(--glass-radius-md) border-2 border-dashed p-4 text-center transition-colors ${over ? "border-accent-default bg-accent-subtle-bg" : "border-border-default"}`} style={{ ["--i" as string]: 6 }}>
-              <div className="font-serif text-xl font-semibold">{t("planungTool.dropTitle")}</div>
-              <div className="text-xs text-pl-muted">{t("planungTool.dropHint")}</div>
-              <button type="button" onClick={() => input.current?.click()} className="min-h-11 rounded-full border border-line-2 px-5 text-sm font-medium hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.chooseFiles")}</button>
+              <div className="text-title-22">{t("planungTool.dropTitle")}</div>
+              <div className="text-label text-pl-muted">{t("planungTool.dropHint")}</div>
+              <button type="button" onClick={() => input.current?.click()} className="min-h-12 rounded-full border border-line-2 px-5 text-sm font-medium hover:border-brass-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.chooseFiles")}</button>
               <input ref={input} type="file" multiple accept=".pdf,.xlsx,.csv,.txt" className="hidden" aria-label={t("planungTool.chooseFiles")}
                 onChange={(e) => { if (e.target.files) addFiles(e.target.files); e.target.value = ""; }} />
             </div>
-            {items.some((i) => i.phase === "applied") && <p className="mt-3 text-xs text-pl-muted">{t("planungTool.deleteFiles")}</p>}
-            {changedNote > 0 && <p role="status" className="mt-2 text-xs text-brass-ink">{t("planungTool.changedRooms", { n: changedNote })}</p>}
+            {items.some((i) => i.phase === "applied") && <p className="mt-3 text-label text-pl-muted">{t("planungTool.deleteFiles")}</p>}
+            {changedNote > 0 && <p role="status" className="mt-2 text-label text-brass-ink">{t("planungTool.changedRooms", { n: changedNote })}</p>}
             {mergeError && (
-              <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-xs text-brass-ink">
+              <div role="alert" className="mt-2 flex flex-wrap items-center gap-2 text-label text-brass-ink">
                 <span>{t("planungTool.mergeFailed")} {mergeError}</span>
                 <button type="button" onClick={() => void mergeNow()} className={`border border-line-2 font-medium text-pl-text hover:border-brass-light ${btn}`}>{t("planungTool.retry")}</button>
               </div>
             )}
             {planHint?.listsChanged && (
-              <p role="status" className="mt-2 text-xs text-brass-ink">
-                {t("planungTool.planChanged")} <Link href="/supervisor/planning" className="inline-flex min-h-11 items-center underline underline-offset-2">{t("planungTool.planChangedLink")}</Link>
+              <p role="status" className="mt-2 text-label text-brass-ink">
+                {t("planungTool.planChanged")} <Link href="/supervisor/planning" className="inline-flex min-h-12 items-center underline underline-offset-2">{t("planungTool.planChangedLink")}</Link>
               </p>
             )}
-            {!listsReady(appliedMap) && items.length > 0 && !reading && <p className="mt-2 text-xs text-pl-muted">{t("planungTool.needDepartures")}</p>}
+            {!listsReady(appliedMap) && items.length > 0 && !reading && <p className="mt-2 text-label text-pl-muted">{t("planungTool.needDepartures")}</p>}
           </>
         ) : step === 2 ? (
           <TeamStep state={team.state} sel={team.sel} onToggle={team.toggle} verdict={team.verdict} missing={team.missing} loading={team.loading} previous={team.state?.source === "previous"} />
@@ -330,17 +331,15 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     : step === 2 ? team.saving || team.loading || !team.state?.hasPlan || team.missing.length > 0
     : step === 3 ? floorTeam.saving || floorTeam.loading || !floorTeam.state || floorTeam.openFloors.length > 0
     : plan.running;
-  const mainPulse = !mainDisabled && (step === 1 ? mode !== "read" || items.length === 0 : step === 4 ? !plan.running : true);
   const mainClick = step === 1 ? main : step === 2 ? () => void next2() : step === 3 ? () => void next3() : plan.confirmed ? () => router.push("/floor-plan") : plan.done ? () => setConfirmOpen(true) : startPlan;
 
   const actions = (
     <>
       <div className="flex items-center justify-between gap-3">
-        <button type="button" disabled={step === 1} onClick={() => goStep((step - 1) as StepId)}
-          className="inline-flex h-14 items-center rounded-full border border-line-2 px-7 text-base text-pl-muted transition-colors enabled:hover:border-pl-text enabled:hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light disabled:cursor-not-allowed disabled:opacity-50">
+        <Button variant="secondary" disabled={step === 1} onClick={() => goStep((step - 1) as StepId)} className="shrink-0 px-6">
           {t("planungTool.back")}
-        </button>
-        <PrimaryButton onClick={mainClick} pulse={mainPulse} disabled={mainDisabled} className="min-w-0 flex-1 lg:flex-none">{mainLabel}</PrimaryButton>
+        </Button>
+        <Button onClick={mainClick} disabled={mainDisabled} className="min-w-0 flex-1 px-4 text-center lg:flex-none">{mainLabel}</Button>
       </div>
       <div aria-live="polite" className="sr-only">{merging ? t("planungTool.applying") : plan.running ? t("planungTool.planRunning") : ""}</div>
     </>
@@ -356,19 +355,13 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
           housemen={(team.state?.members.hm ?? []).filter((m) => team.sel.hm.includes(m.id)).map((m) => ({ id: m.id, name: m.name }))}
           hmEdits={hmEdits} onHmEdit={(id, uid) => setHmEdits((e) => ({ ...e, [id]: uid }))} onAssign={plan.assign} onAssignMany={plan.assignMany} onClose={() => setEditor(null)} />
       )}
-      {skipAsk && (
-        <Modal title={t("planungTool.skipAskTitle", { name: skipAsk.name })} onClose={() => setSkipAsk(null)}>
-          <p className="mb-4 text-sm text-graphite/80">{t("planungTool.skipAskBody", { name: skipAsk.name, n: skipAsk.rooms })}</p>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => void confirmSkip()} className="h-12 rounded-xl bg-navy px-6 text-sm font-medium text-white hover:bg-navy-line">{t("planungTool.skipAskConfirm")}</button>
-            <button type="button" onClick={() => setSkipAsk(null)} className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("common.cancel")}</button>
-          </div>
-        </Modal>
-      )}
+      <GlassDialog open={!!skipAsk} title={skipAsk ? t("planungTool.skipAskTitle", { name: skipAsk.name }) : ""}
+        message={skipAsk ? t("planungTool.skipAskBody", { name: skipAsk.name, n: skipAsk.rooms }) : undefined}
+        confirmLabel={t("planungTool.skipAskConfirm")} onConfirm={() => void confirmSkip()} onCancel={() => setSkipAsk(null)} />
       {undo && !plan.confirmed && (
-        <div role="status" className="fixed bottom-24 start-4 end-4 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-full border border-line-2 bg-night-600 px-4 py-2 text-sm text-pl-text shadow-lg">
+        <div role="status" className="glass text-body-16 fixed bottom-28 start-4 end-4 z-40 mx-auto flex max-w-md items-center justify-between gap-3 rounded-pill px-5 py-2 text-text-primary">
           <span>{t("planungTool.skippedBar", { name: undo.name })}</span>
-          <button type="button" onClick={() => { const u = undo; setUndo(null); void plan.toggleHk(u.id); }} className="min-h-11 rounded-full px-3 font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.undoSkip")}</button>
+          <button type="button" onClick={() => { const u = undo; setUndo(null); void plan.toggleHk(u.id); }} className="min-h-12 rounded-full px-3 font-semibold underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.undoSkip")}</button>
         </div>
       )}
       {confirmOpen && plan.view && plan.draft && (
@@ -381,7 +374,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   return (
     <>
       {overlays}
-      <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date, intl)} />} panel={panel} />
+      <PlanungShell top={top} actions={actions} house={<HouseMap house={houseView} animateKey={animateKey} highlight={highlight} beamKey={plan.beamKey} dateLabel={dateLabel(house.date, intl)} />} panel={<GlassMode>{panel}</GlassMode>} />
     </>
   );
 }

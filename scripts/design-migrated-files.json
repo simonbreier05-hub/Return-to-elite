@@ -36,6 +36,16 @@
     "src/components/RoomTaskModal.tsx",
     "src/components/DragDropBoard.tsx",
     "src/components/LiveListBoards.tsx",
-    "src/components/lists/SupervisorList.tsx"
+    "src/components/lists/SupervisorList.tsx",
+    "src/components/planung/PlanungShell.tsx",
+    "src/components/planung/PlanStep.tsx",
+    "src/components/planung/PlanConfirmDialog.tsx",
+    "src/components/planung/CapacityBar.tsx",
+    "src/components/planung/FileDropCard.tsx",
+    "src/components/planung/PlausibilityBanner.tsx",
+    "src/components/planung/HouseMap.tsx",
+    "src/components/planung/ProgressRing.tsx",
+    "src/components/planung/PlanungClient.tsx",
+    "src/components/PurgeBanner.tsx"
   ]
 }

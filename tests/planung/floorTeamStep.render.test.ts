@@ -63,10 +63,10 @@ describe("Schritt 3 „Etagenzuweisung\" für das ganze Team", () => {
     expect(o).toContain("Anna Test gewählt: jetzt Etage(n) antippen.");
     expect(o).toContain('aria-label="Anna Test auf Etage 3 einteilen"');
   });
-  it("Tap-Flächen ≥ 44 px und nur die Personal-Leiste scrollt waagrecht", () => {
+  it("Tap-Flächen ≥ 48 px (Glas-Design) und nur die Personal-Leiste scrollt waagrecht", () => {
     const src = readFileSync(path.join(process.cwd(), "src/components/planung/FloorTeamStep.tsx"), "utf8");
     const buttons = src.match(/<button[\s\S]*?className=\{?[`"][^`"]*/g) ?? [];
-    for (const b of buttons) expect(b, b.slice(0, 80)).toMatch(/min-h-11|min-h-14/);
+    for (const b of buttons) expect(b, b.slice(0, 80)).toMatch(/min-h-12|min-h-14/);
     expect(src.match(/overflow-x-auto/g)).toHaveLength(1);
   });
 });

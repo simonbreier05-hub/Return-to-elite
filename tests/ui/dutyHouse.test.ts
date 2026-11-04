@@ -64,3 +64,25 @@ describe("DutyHouse (Render)", () => {
     expect(none).not.toContain("Planstatus");
   });
 });
+
+describe("Duty Manager Haus: Etage 5 und Zahlen (D4-Abschluss)", () => {
+  it("Etage 5 zählt nur vorhandene Zimmer (513 ff.) — 501–512 werden nie ergänzt", () => {
+    const rooms = [513, 514, 515].map((n, i) => ({ floor: 5, number: String(n), status: i === 0 ? "INSPECTED" : "DIRTY" }));
+    const f5 = floorProgress(rooms).find((f) => f.floor === 5)!;
+    expect(f5).toMatchObject({ rooms: 3, done: 1, total: 3, percent: 33 });
+  });
+  it("eigene Etagenliste wird in ihrer Reihenfolge übernommen", () => {
+    expect(floorProgress([], [3, 1]).map((f) => f.floor)).toEqual([3, 1]);
+  });
+  it("Etagen arabisch, Planstatus als Text (nicht nur Farbe), bestätigter Plan und geänderte Listen", () => {
+    const out = renderToStaticMarkup(
+      h(LocaleProvider, null, h(DutyHouse, { numbers, kpis, rooms: [], unassignedFloors: 0, plan: { confirmed: true, listsChanged: true }, open: () => {} })),
+    );
+    expect(out).toContain("Etage 5");
+    expect(out).not.toMatch(/Etage (I|II|III|IV|V)\b/);
+    expect(out).not.toContain("Plan noch nicht bestätigt");
+    expect(out).toMatch(/Plan bestätigt/);
+    expect(out).toContain("geändert");
+    expect(out).not.toMatch(/#[0-9a-fA-F]{6}\b|rgba?\(/);
+  });
+});

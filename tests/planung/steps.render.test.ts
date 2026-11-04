@@ -86,7 +86,7 @@ describe("Schritt Etagen", () => {
 describe("Schritt Plan", () => {
   const plan = (counts: { roomLists: number; supervisorLists: number; hausmannLists: number } | null, extra = {}) =>
     html(h(PlanStep, { states: phaseStates(counts ? 5 : 1, !counts, null), counts, warnings: [], error: null, started: true, ...extra }));
-  it("Entwurf: „X von Y zugeteilt“, Zähler offener Zimmer, Kräfte mit Credits und „Nicht einplanen“ (je Tippfläche ≥ 44 px)", () => {
+  it("Entwurf: „X von Y zugeteilt“, Zähler offener Zimmer, Kräfte mit Credits und „Nicht einplanen“ (je Tippfläche ≥ 48 px)", () => {
     const counts = { roomLists: 3, supervisorLists: 1, hausmannLists: 1 };
     const out = plan(counts, {
       summary: { assigned: 28, total: 30, open: 2 }, onEdit: () => {}, onToggleHk: () => {}, confirmed: null,
@@ -99,7 +99,7 @@ describe("Schritt Plan", () => {
     expect(out).toContain("Nicht einplanen");
     expect(out).toContain("Einplanen");
     expect(out).toContain("Nicht eingeplant");
-    expect((out.match(/min-h-11/g) ?? []).length).toBeGreaterThanOrEqual(3);
+    expect((out.match(/min-h-12/g) ?? []).length).toBeGreaterThanOrEqual(3);
   });
   it("Karten, Kraft-Zeilen und „offen“ sind anklickbare Knöpfe (≥ 44 px) mit Hinweis auf die Details", () => {
     const out = plan({ roomLists: 4, supervisorLists: 2, hausmannLists: 1 }, {
@@ -159,9 +159,10 @@ describe("Rollenrechte und Bewegung", () => {
     expect(css).not.toMatch(/\.pl-fan[^}]*infinite/);
     expect(css).toMatch(/prefers-reduced-motion: reduce\)[\s\S]*\.planung-root \*[\s\S]*animation: none !important/);
   });
-  it("Tap-Flächen: Chips und Hauptbutton mindestens 44 px", () => {
-    expect(read("src/components/planung/TeamStep.tsx")).toContain("min-h-11");
-    expect(read("src/components/planung/PrimaryButton.tsx")).toContain("h-14");
+  it("Tap-Flächen: Chips mindestens 48 px, Hauptbutton = Glas-Baustein Button (64 px)", () => {
+    expect(read("src/components/planung/TeamStep.tsx")).toContain("min-h-12");
+    expect(read("src/components/ui/Button.tsx")).toContain("min-h-(--size-button-height)");
+    expect(read("src/components/planung/PlanungClient.tsx")).toMatch(/<Button onClick=\{mainClick\}/);
     expect(read("src/components/planung/FloorStep.tsx")).toContain("min-h-14");
   });
 });

@@ -57,7 +57,7 @@ export default function PlanEditorWindow({
       <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-charcoal/10 bg-linen px-4 py-3">
         <div className="min-w-0">
           <h2 className="truncate font-serif text-2xl leading-tight">{t("planungTool.editorTitle")}</h2>
-          <p className="text-xs text-graphite/70">{t("planungTool.editorHint")}</p>
+          <p className="text-label text-graphite/70">{t("planungTool.editorHint")}</p>
         </div>
         <CloseButton onClick={onClose} label={t("planungTool.backToPlan")} />
       </div>
