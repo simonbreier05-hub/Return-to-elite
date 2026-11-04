@@ -1650,6 +1650,7 @@
     "supHub.pickAttendant": "कमरा {{number}} के लिए हाउसकीपर",
     "supHub.leaveOpen": "बिना आवंटन छोड़ें",
     "supHub.sessionRooms": "इस राउंड में आवंटित (हटाने के लिए टैप करें)",
-    "supHub.removeRoom": "{{number}} हटाएँ"
+    "supHub.removeRoom": "{{number}} हटाएँ",
+    "supHub.staffHere": "हाउसकीपर कमरे में"
   }
 }

@@ -1650,6 +1650,7 @@
     "supHub.pickAttendant": "{{number}} numaralı oda için kat görevlisi",
     "supHub.leaveOpen": "Atanmamış bırak",
     "supHub.sessionRooms": "Bu turda atananlar (kaldırmak için dokunun)",
-    "supHub.removeRoom": "{{number}} kaldır"
+    "supHub.removeRoom": "{{number}} kaldır",
+    "supHub.staffHere": "Görevli odada"
   }
 }

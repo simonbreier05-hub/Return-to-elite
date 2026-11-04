@@ -24,6 +24,18 @@
     "src/components/AssignmentFloorPlan.tsx",
     "src/app/duty-manager/view.tsx",
     "src/components/dutymanager/DutyHouse.tsx",
-    "src/lib/ui/dutyHouse.ts"
+    "src/lib/ui/dutyHouse.ts",
+    "src/components/shell/GlassMode.tsx",
+    "src/components/Collapsible.tsx",
+    "src/components/DayNumberTiles.tsx",
+    "src/components/GlanceDetailSheet.tsx",
+    "src/components/TodayAtAGlance.tsx",
+    "src/components/SupervisorGlance.tsx",
+    "src/components/PriorityBanner.tsx",
+    "src/components/SupervisorFeed.tsx",
+    "src/components/RoomTaskModal.tsx",
+    "src/components/DragDropBoard.tsx",
+    "src/components/LiveListBoards.tsx",
+    "src/components/lists/SupervisorList.tsx"
   ]
 }

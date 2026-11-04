@@ -39,10 +39,12 @@ const common = async (page, w, label) => {
   check(overflow <= 0, `${label} ${w}px: keine waagrechte Scroll-Leiste (${overflow})`);
   const blur = await page.evaluate(() => [...document.querySelectorAll("main *")].filter((e) => getComputedStyle(e).backdropFilter !== "none").length);
   check(blur === 0, `${label} ${w}px: kein backdrop-filter (${blur})`);
-  // Nur Glas-Bereiche prüfen (alte Bausteine auf heller Fläche sind noch nicht umgestellt)
+  // D3b: keine helle Altfläche mehr auf Übersicht/Tagesplanung
+  const legacy = await page.evaluate(() => document.querySelectorAll("main .bg-ivory, main .bg-parchment, main .bg-linen").length);
+  check(legacy === 0, `${label} ${w}px: keine helle Altfläche (${legacy})`);
   const small = await page.evaluate(() =>
-    [...document.querySelectorAll(".theme-glass button, .theme-glass a")]
-      .filter((b) => !b.closest(".bg-ivory") && b.getClientRects().length > 0)
+    [...document.querySelectorAll("main button, main a")]
+      .filter((b) => b.getClientRects().length > 0)
       .map((b) => ({ t: (b.textContent || b.getAttribute("aria-label") || "").trim().slice(0, 24), h: Math.round(b.getBoundingClientRect().height), w: Math.round(b.getBoundingClientRect().width) }))
       .filter((b) => b.h < 48 || b.w < 44),
   );

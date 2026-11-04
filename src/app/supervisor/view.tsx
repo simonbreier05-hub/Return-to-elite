@@ -8,21 +8,17 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Collapsible from "@/components/Collapsible";
 import type { ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
-import NoteCountBadge from "@/components/NoteCountBadge";
-import { RoomFlagIcons } from "@/components/RoomFlags";
 import SupervisorList from "@/components/lists/SupervisorList";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import SupervisorGlance from "@/components/SupervisorGlance";
 import SupervisorFeed from "@/components/SupervisorFeed";
 import ErrorBoundary from "@/components/ErrorBoundary";
-import { StatusIcon } from "@/components/icons";
-import { STATUS_STYLES } from "@/components/status";
 import { DetailContainer } from "@/components/shell/DetailContainer";
 import { HkNoteThread } from "@/components/hk/HkParts";
-import { Banner } from "@/components/ui";
+import { Banner, Field, FilterChip, GlassCard, Glyph } from "@/components/ui";
 import { SupervisorHub, type HubTile } from "@/components/supervisor/SupervisorHub";
 import { OooDialog, ReworkDialog, SupervisorRoomDetail } from "@/components/supervisor/SupervisorRoomDetail";
-import { LegacySurface, ReleaseQueueCard } from "@/components/supervisor/SupervisorParts";
+import { GlassSelect, ReleaseQueueCard, StatusLegend, StatusTile } from "@/components/supervisor/SupervisorParts";
 import { GlassRedistribution } from "@/components/supervisor/GlassRedistribution";
 import {
   BLOCK_REASON_SHORT,
@@ -36,6 +32,7 @@ import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import { TILE_UI } from "@/lib/ui/room-tile";
+import { withoutLeadingSymbol } from "@/lib/ui/hkHub";
 import {
   roomCreditOf,
   roomGroups,
@@ -373,7 +370,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     />
   );
 
-  // Bausteine, die noch im alten Design sind (Inhalt und Verhalten unverändert) — auf heller Fläche.
+  // Weitere Bereiche unter „Team heute“ (D3b: alle im Glas-Design, Inhalt und Verhalten unverändert).
   const below = (
     <>
       {/* Dauerhafte Hinweise (Etagen-Bereich, Etage 5 geschätzt) unter „Team heute“, damit Kennzahlen und Team oben stehen (Figma) */}
@@ -381,180 +378,126 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       {HOTEL.unconfirmedFloors.length > 0 && (
         <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
       )}
-      <LegacySurface>
+      <ErrorBoundary>
+        <SupervisorGlance rooms={rooms} onChanged={load} />
+      </ErrorBoundary>
+      <PriorityBanner
+        items={[
+          {
+            count: releaseQueue.length,
+            label: t("priority.releaseQueue"),
+            icon: "clock",
+            tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
+            onClick: () => focusStatus("CLEAN"),
+          },
+          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
+        ]}
+      >
         <ErrorBoundary>
-          <SupervisorGlance rooms={rooms} onChanged={load} />
+          <SupervisorFeed />
         </ErrorBoundary>
-        <PriorityBanner
-          items={[
-            {
-              count: releaseQueue.length,
-              label: t("priority.releaseQueue"),
-              icon: "clock",
-              tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
-              onClick: () => focusStatus("CLEAN"),
-            },
-            { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
-          ]}
-        >
-          <ErrorBoundary>
-            <SupervisorFeed />
-          </ErrorBoundary>
-        </PriorityBanner>
-      </LegacySurface>
-      <LegacySurface>
-        <h2 className="mb-3 font-serif text-2xl">{t("supervisor.liveBoard")}</h2>
-        <p className="mb-3 text-sm text-graphite/70">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
-        <div ref={gridRef}>
-          {/* Finding one room among 145 tiles should not mean scrolling. */}
-          <div className="mb-3 flex flex-wrap items-center gap-2 rounded-2xl border border-charcoal/10 bg-linen p-3 shadow-card">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder={t("supervisor.searchPlaceholder")}
-              className="h-12 min-w-[14rem] flex-1 rounded-xl border border-charcoal/15 bg-white px-4 outline-none focus:border-gold"
-            />
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as RoomStatus | "ALL")}
-              aria-label={t("supervisor.filterByStatus")}
-              className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
-            >
-              <option value="ALL">{t("supervisor.allStatuses")}</option>
-              {LEGEND.map((s) => (
-                <option key={s} value={s}>
-                  {t(`status.${s}` as TKey)}
-                </option>
-              ))}
-            </select>
-            <select
-              value={String(floorFilter)}
-              onChange={(e) => setFloorFilter(e.target.value === "ALL" ? "ALL" : Number(e.target.value))}
-              aria-label={t("supervisor.filterByFloor")}
-              className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
-            >
-              <option value="ALL">{t("supervisor.allFloors")}</option>
-              {[...new Set(rooms.map((r) => r.floor))]
-                .sort((a, b) => a - b)
-                .map((f) => (
-                  <option key={f} value={f}>
-                    {t("supervisor.floorN", { floor: f })}
-                  </option>
-                ))}
-            </select>
-            <select
-              value={attendantFilter}
-              onChange={(e) => setAttendantFilter(e.target.value)}
-              aria-label={t("supervisor.filterByAttendant")}
-              className="h-12 rounded-xl border border-charcoal/15 bg-white px-3"
-            >
-              <option value="ALL">{t("supervisor.anyone")}</option>
-              <option value="NONE">{t("supervisor.unassigned")}</option>
-              {attendants.map((a) => (
-                <option key={a.id} value={a.id}>
-                  {attendantLabel(a)}
-                </option>
-              ))}
-            </select>
-            <button
-              onClick={() => setGuestDndOnly((v) => !v)}
-              aria-pressed={guestDndOnly}
-              className={`h-12 rounded-xl border px-4 text-sm font-medium ${
-                guestDndOnly ? "border-status-out-of-order bg-status-out-of-order/10 text-status-out-of-order" : "border-charcoal/15 bg-white"
-              }`}
-            >
-              {t("shared.guestDnd")}
-            </button>
-            {filtersActive && (
-              <>
-                <span className="text-sm text-graphite/60">{t("supervisor.ofTotal", { visible: visible.length, total: rooms.length })}</span>
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setStatusFilter("ALL");
-                    setFloorFilter("ALL");
-                    setAttendantFilter("ALL");
-                    setGuestDndOnly(false);
-                  }}
-                  className="h-12 rounded-xl border border-charcoal/15 px-4 text-sm"
-                >
-                  {t("supervisor.clear")}
-                </button>
-              </>
-            )}
-          </div>
+      </PriorityBanner>
 
-          <div className="mb-3 flex flex-wrap gap-2 text-xs">
-            {LEGEND.map((s) => (
-              <span key={s} className="flex items-center gap-1.5 rounded-full bg-white px-2.5 py-1 shadow-sm">
-                <StatusIcon iconKey={STATUS_STYLES[s].iconKey} className="h-3 w-3 shrink-0" />
-                <span className={`h-2 w-2 rounded-full ${STATUS_STYLES[s].dot}`} />
-                {t(`status.${s}` as TKey)}
-              </span>
-            ))}
-          </div>
-
+      {/* Live-Board (Status-Raster): dieselben Filter und Zimmer wie bisher, im Glas-Design (D3b). */}
+      <GlassCard as="section" aria-labelledby="sup-board-title" className="flex flex-col gap-4">
+        <div ref={gridRef} className="scroll-mt-4">
+          <h2 id="sup-board-title" className="text-title-22 text-text-primary">{t("supervisor.liveBoard")}</h2>
+          <p className="text-label text-text-muted">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+        </div>
+        {/* Ein Zimmer unter 145 finden, ohne zu scrollen. */}
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
+          <Field label={t("supervisor.searchPlaceholder")} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t("supervisor.searchPlaceholder")} type="search" />
+          <GlassSelect label={t("supervisor.filterByStatus")} value={statusFilter} onChange={(v) => setStatusFilter(v as RoomStatus | "ALL")}
+            options={[{ value: "ALL", label: t("supervisor.allStatuses") }, ...LEGEND.map((st) => ({ value: st, label: t(`status.${st}` as TKey) }))]} />
+          <GlassSelect label={t("supervisor.filterByFloor")} value={String(floorFilter)} onChange={(v) => setFloorFilter(v === "ALL" ? "ALL" : Number(v))}
+            options={[{ value: "ALL", label: t("supervisor.allFloors") }, ...[...new Set(rooms.map((r) => r.floor))].sort((a, b) => a - b).map((f) => ({ value: String(f), label: t("supervisor.floorN", { floor: f }) }))]} />
+          <GlassSelect label={t("supervisor.filterByAttendant")} value={attendantFilter} onChange={setAttendantFilter}
+            options={[{ value: "ALL", label: t("supervisor.anyone") }, { value: "NONE", label: t("supervisor.unassigned") }, ...attendants.map((a) => ({ value: a.id, label: attendantLabel(a) }))]} />
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          <FilterChip active={guestDndOnly} onClick={() => setGuestDndOnly((v) => !v)}>
+            <Glyph name="moon" size={18} className="me-2" />
+            {withoutLeadingSymbol(t("shared.guestDnd"))}
+          </FilterChip>
+          {filtersActive && (
+            <>
+              <span className="text-body-16 text-text-secondary">{t("supervisor.ofTotal", { visible: visible.length, total: rooms.length })}</span>
+              <FilterChip
+                onClick={() => {
+                  setSearch("");
+                  setStatusFilter("ALL");
+                  setFloorFilter("ALL");
+                  setAttendantFilter("ALL");
+                  setGuestDndOnly(false);
+                }}
+              >
+                <Glyph name="x" size={18} className="me-2" />
+                {t("supervisor.clear")}
+              </FilterChip>
+            </>
+          )}
+        </div>
+        <StatusLegend
+          statuses={LEGEND}
+          labelOf={(st) => t(`status.${st}` as TKey)}
+          markerLabels={{ vip: t("ui.marker.vip"), here: t("supHub.staffHere"), guestDnd: withoutLeadingSymbol(t("shared.guestDnd")), notes: t("supervisor.notesTitle") }}
+        />
+        <div>
           {byFloor.map(([floor, floorRooms]) => (
             <Collapsible
               key={`${floor}-${filtersActive}`}
               defaultOpen={filtersActive}
               summary={
-                <h3 className="font-serif text-xl">
-                  {t("supervisor.floorN", { floor })}
-                  <span className="ms-2 text-xs uppercase tracking-wider text-graphite/50">
+                <span className="flex flex-wrap items-baseline gap-x-3">
+                  <span className="text-title-22">{t("supervisor.floorN", { floor })}</span>
+                  <span className="text-label text-text-muted">
                     {t("supervisor.floorReleased", { done: floorRooms.filter((r) => r.status === "INSPECTED").length, total: floorRooms.length })}
                   </span>
-                </h3>
+                </span>
               }
             >
-              <div className="grid grid-cols-[repeat(auto-fill,minmax(4.6rem,1fr))] gap-1.5">
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(76px,1fr))] gap-1.5">
                 {floorRooms.map((room) => {
                   const attHere = attendants.find((a) => a.currentRoomId === room.id);
+                  const statusLabel = t(`status.${room.status}` as TKey);
+                  const sub =
+                    room.status === "BLOCKED" && room.blockReason ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey) : room.section;
+                  const vip = room.arrivals.some((a) => a.vip);
+                  const label = [
+                    room.number,
+                    statusLabel,
+                    sub,
+                    vip && t("ui.marker.vip"),
+                    room.guestDndActive && t("shared.guestDnd"),
+                    attHere && `${t("supHub.staffHere")}: ${attendantLabel(attHere)}`,
+                    room.openNotesCount > 0 && `${t("supervisor.notesTitle")}: ${room.openNotesCount}`,
+                  ]
+                    .filter(Boolean)
+                    .join(", ");
                   return (
-                    <button
+                    <StatusTile
                       key={room.id}
+                      number={room.number}
+                      status={room.status}
+                      statusLabel={statusLabel}
+                      sub={sub}
+                      vip={vip}
+                      guestDnd={room.guestDndActive}
+                      here={!!attHere}
+                      notes={room.openNotesCount}
+                      busy={busyRoomId === room.id}
+                      label={label}
                       onClick={() => setSelectedId(room.id)}
-                      className={`relative flex h-16 flex-col items-center justify-center rounded-lg border-b-4 text-sm font-semibold shadow-sm transition active:scale-95 ${STATUS_STYLES[room.status].tile} ${
-                        busyRoomId === room.id ? "animate-pulse" : ""
-                      }`}
-                      title={`${room.number} — ${t(`status.${room.status}` as TKey)}`}
-                    >
-                      {room.number}
-                      <span className="max-w-full truncate px-1 text-[9px] font-normal opacity-80">
-                        {room.guestDndActive && "🔕 "}
-                        {room.status === "BLOCKED" && room.blockReason
-                          ? t(`blockReasonShort.${room.blockReason as BlockReason}` as TKey)
-                          : room.section}
-                      </span>
-                      {room.arrivals.some((a) => a.vip) && <span className="absolute start-1 top-0.5 text-[10px]">★</span>}
-                      {attHere && (
-                        <span className="absolute end-0.5 top-0.5 rounded bg-black/40 px-1 text-[9px]" title={attendantLabel(attHere)}>
-                          👤
-                        </span>
-                      )}
-                      <RoomFlagIcons
-                        occupancy={room.occupancy}
-                        isCheckoutToday={room.isCheckoutToday}
-                        className="absolute -bottom-1 -start-1"
-                        badgeClassName="h-4 w-4"
-                        iconClassName="h-2.5 w-2.5"
-                      />
-                      <NoteCountBadge
-                        openCount={room.openNotesCount}
-                        totalCount={room.notes.length}
-                        className="absolute -bottom-1 -end-1"
-                      />
-                    </button>
+                    />
                   );
                 })}
               </div>
             </Collapsible>
           ))}
         </div>
-      </LegacySurface>
-      <LegacySurface>
-        <SupervisorList />
-      </LegacySurface>
+      </GlassCard>
+
+      <SupervisorList />
     </>
   );
 

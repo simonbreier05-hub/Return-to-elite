@@ -14,7 +14,6 @@ import { GlassDialog } from "@/components/shell/GlassDialog";
 import { HkWindow } from "@/components/hk/HkParts";
 import DragDropBoard, { type BoardColumn } from "@/components/DragDropBoard";
 import { usePlanningFloorPlan, type LiveRoom, type OnShiftAttendant } from "@/components/usePlanningFloorPlan";
-import { LegacySurface } from "./SupervisorParts";
 
 const DAY_CATEGORY_KEY: Record<RoomDayCategory, TKey | null> = {
   ARRIVAL: "planning.dayCategoryArrival",
@@ -189,8 +188,7 @@ export function GlassPlanningBoard({ onShiftAttendants, reloadToken }: { onShift
           <Legend />
         </>
       ) : (
-        <LegacySurface>
-          <DragDropBoard
+        <DragDropBoard
             hint={t("board.hint")}
             onMove={(ids, to) => fp.assignMany(ids, to)}
             columns={[
@@ -200,7 +198,12 @@ export function GlassPlanningBoard({ onShiftAttendants, reloadToken }: { onShift
                 const bad = c > fp.targetCredits;
                 return {
                   id: a.id, title: a.name, items: rooms.map(fp.roomItem),
-                  summary: <span className={`text-sm ${bad ? "font-semibold text-status-dirty" : "text-graphite/60"}`}>{Math.round(c * 10) / 10} {t("planning.floorPlanCreditsShort")}</span>,
+                  summary: (
+                    <span className={cx("text-label flex items-center gap-1", bad ? "text-status-warning-fg" : "text-text-secondary")}>
+                      {bad && <Glyph name="triangle-alert" size={16} />}
+                      {num(c)} {t("planning.floorPlanCreditsShort")}{bad ? ` · ${t("supHub.overloadPill")}` : ""}
+                    </span>
+                  ),
                 };
               }),
               {
@@ -210,7 +213,6 @@ export function GlassPlanningBoard({ onShiftAttendants, reloadToken }: { onShift
               },
             ]}
           />
-        </LegacySurface>
       )}
     </GlassCard>
   );

@@ -1650,6 +1650,7 @@
     "supHub.pickAttendant": "Nhân viên cho phòng {{number}}",
     "supHub.leaveOpen": "Để chưa phân công",
     "supHub.sessionRooms": "Đã phân công trong lượt này (chạm để bỏ)",
-    "supHub.removeRoom": "Bỏ {{number}}"
+    "supHub.removeRoom": "Bỏ {{number}}",
+    "supHub.staffHere": "Nhân viên trong phòng"
   }
 }

@@ -69,29 +69,29 @@ export function SupervisorRoomDetail({
         {room.status === "CLEAN" && (
           <>
             <Button icon="check" block onClick={() => onAct("INSPECTED")} disabled={busy}>
-              {busy ? t("supervisor.releasing") : t("supervisor.inspectRelease")}
+              {busy ? t("supervisor.releasing") : withoutLeadingSymbol(t("supervisor.inspectRelease"))}
             </Button>
             <Button variant="secondary" icon="refresh" block onClick={() => onOpenDialog("rework")} disabled={busy}>
-              {t("supervisor.sendBackRework")}
+              {withoutLeadingSymbol(t("supervisor.sendBackRework"))}
             </Button>
           </>
         )}
         {room.status === "INSPECTED" && (
           <Button variant="secondary" icon="log-out" block onClick={() => onAct("DIRTY")} disabled={busy}>
-            {t("supervisor.setDirtyCheckout")}
+            {withoutLeadingSymbol(t("supervisor.setDirtyCheckout"))}
           </Button>
         )}
         {outOfOrder ? (
           <Button variant="secondary" icon="refresh" block onClick={() => onAct("DIRTY")} disabled={busy}>
-            {t("supervisor.returnToInventory")}
+            {withoutLeadingSymbol(t("supervisor.returnToInventory"))}
           </Button>
         ) : (
           <div className="grid grid-cols-2 gap-3">
             <Button variant="secondary" icon="wrench" className="px-4!" onClick={() => onOpenDialog("ooo")} disabled={busy}>
-              {t("supervisor.setOoo")}
+              {withoutLeadingSymbol(t("supervisor.setOoo"))}
             </Button>
             <Button variant="secondary" icon="x" className="px-4!" onClick={() => onAct("OUT_OF_SERVICE")} disabled={busy}>
-              {t("supervisor.setOos")}
+              {withoutLeadingSymbol(t("supervisor.setOos"))}
             </Button>
           </div>
         )}
@@ -168,7 +168,7 @@ export function ReworkDialog({ number, onClose, onSubmit }: { number: string; on
           {t("common.cancel")}
         </Button>
         <Button icon="refresh" onClick={() => onSubmit(note.trim())} disabled={!note.trim()}>
-          {t("supervisor.sendBack")}
+          {withoutLeadingSymbol(t("supervisor.sendBack"))}
         </Button>
       </div>
     </HkWindow>
@@ -201,7 +201,7 @@ export function OooDialog({ number, onClose, onSubmit }: { number: string; onClo
           {t("common.cancel")}
         </Button>
         <Button icon="wrench" onClick={() => onSubmit(until)}>
-          {t("supervisor.setOutOfOrder")}
+          {withoutLeadingSymbol(t("supervisor.setOutOfOrder"))}
         </Button>
       </div>
     </HkWindow>

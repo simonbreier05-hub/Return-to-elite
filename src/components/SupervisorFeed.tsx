@@ -9,6 +9,9 @@ import { FEED_PAGE_SIZE, type FeedItem } from "@/lib/supervisorFeed/rules";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import { hhmm } from "@/lib/i18n/format";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
+import { Pill } from "@/components/ui/Pill";
 
 /** Zuletzt gesehen (je Gerät/Browser, nur Komfort): Einträge danach gelten als „neu“. */
 const SEEN_KEY = "stayclean.supervisorFeed.seenAt";
@@ -29,6 +32,7 @@ export default function SupervisorFeed() {
   const [read, setRead] = useState<Set<string>>(new Set());
   const [openId, setOpenId] = useState<string | null>(null);
   const detail = useGlanceDetail<"item">();
+  const glass = useGlassMode();
 
   useEffect(() => { setSeenAt(readSeen()); }, []);
   const load = useCallback(async () => {
@@ -56,24 +60,58 @@ export default function SupervisorFeed() {
 
   const open = (i: FeedItem) => { setRead((s) => new Set(s).add(i.id)); setOpenId(i.id); detail.open("item"); };
   const item = data?.items.find((i) => i.id === openId) ?? null;
+  const dtCls = glass ? "text-text-muted" : "text-graphite/60";
   const content: DetailContent | null = item ? {
     title: `${item.roomNumber} · ${kindLabel(item)}`,
     subtitle: t("feed.detailRoom", { n: item.roomNumber, floor: item.floor }),
     header: (
-      <dl className="mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
-        <dt className="text-graphite/60">{t("feed.detailTime")}</dt><dd>{hhmm(item.at)}</dd>
-        {who(item) && <><dt className="text-graphite/60">{t("feed.detailTrigger")}</dt><dd>{who(item)}</dd></>}
-        {item.fromStatus && item.toStatus && <><dt className="text-graphite/60">{t("feed.detailChange")}</dt><dd>{t(`status.${item.fromStatus}` as TKey)} → {t(`status.${item.toStatus}` as TKey)}</dd></>}
-        {extra(item) && <><dt className="text-graphite/60">{t("feed.detailInfo")}</dt><dd>{extra(item)}</dd></>}
-        {item.count > 1 && <><dt className="text-graphite/60">{t("feed.detailCount")}</dt><dd>{t("feed.detailCountValue", { n: item.count, from: hhmm(item.firstAt), to: hhmm(item.at) })}</dd></>}
+      <dl className={glass ? "text-body-16 grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-text-primary" : "mb-4 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm"}>
+        <dt className={dtCls}>{t("feed.detailTime")}</dt><dd>{hhmm(item.at)}</dd>
+        {who(item) && <><dt className={dtCls}>{t("feed.detailTrigger")}</dt><dd>{who(item)}</dd></>}
+        {item.fromStatus && item.toStatus && <><dt className={dtCls}>{t("feed.detailChange")}</dt><dd>{t(`status.${item.fromStatus}` as TKey)} → {t(`status.${item.toStatus}` as TKey)}</dd></>}
+        {extra(item) && <><dt className={dtCls}>{t("feed.detailInfo")}</dt><dd>{extra(item)}</dd></>}
+        {item.count > 1 && <><dt className={dtCls}>{t("feed.detailCount")}</dt><dd>{t("feed.detailCountValue", { n: item.count, from: hhmm(item.firstAt), to: hhmm(item.at) })}</dd></>}
       </dl>
     ),
     sections: [{ items: [{ key: "room", title: t("feed.openRoom"), meta: t("feed.detailRoom", { n: item.roomNumber, floor: item.floor }), roomRef: item.roomId }] }],
   } : null;
 
-  if (failed && !data) return <p role="status" className="mt-3 text-sm text-graphite/60">{t("feed.loadFailed")}</p>;
+  if (failed && !data) return <p role="status" className={glass ? "text-body-16 text-text-muted" : "mt-3 text-sm text-graphite/60"}>{t("feed.loadFailed")}</p>;
   if (!data) return null;
   const anyNew = data.items.some(isNew);
+  if (glass) {
+    return (
+      <div className="flex flex-col gap-2 border-t border-border-subtle pt-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-section text-text-muted">{data.house ? t("feed.titleHouse") : t("feed.title")}</h3>
+          {anyNew && (
+            <button type="button" className={cx("text-body-16 min-h-(--size-touch-min) px-2 text-accent-text underline underline-offset-4", FOCUS_RING)}
+              onClick={() => { const now = Date.now(); writeSeen(now); setSeenAt(now); }}>{t("feed.markRead")}</button>
+          )}
+        </div>
+        {data.noFloors ? <p className="text-body-16 text-text-secondary">{t("feed.noFloors")}</p>
+          : data.items.length === 0 ? <p className="text-body-16 text-text-muted">{t("feed.empty")}</p> : (
+          <ul className="flex flex-col gap-1">
+            {data.items.map((i) => (
+              <li key={i.id}>
+                <button type="button" onClick={() => open(i)}
+                  className={cx("press flex min-h-(--size-touch-min) w-full items-center gap-3 rounded-(--glass-radius-sm) px-3 py-2 text-start", i.weight >= 3 ? "bg-accent-subtle-bg" : "bg-surface-card-raised", FOCUS_RING)}>
+                  <span className="text-label w-12 shrink-0 tabular-nums text-text-muted">{hhmm(i.at)}</span>
+                  <span className="text-body-18 w-12 shrink-0 text-text-primary">{i.roomNumber}</span>
+                  <span className="text-body-16 min-w-0 flex-1 truncate text-text-secondary">{kindLabel(i)}{extra(i) ? ` · ${extra(i)}` : ""}{i.count > 1 ? ` · ${t("feed.times", { n: i.count })}` : ""}</span>
+                  {isNew(i) && <Pill tone="accent">{t("feed.new")}</Pill>}
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+        {data.hasMore && (
+          <button type="button" onClick={() => setLimit((n) => n + FEED_PAGE_SIZE)} className={cx("press glass text-body-16 min-h-(--size-touch-min) self-start rounded-(--glass-radius-md) px-5 text-text-primary", FOCUS_RING)}>{t("feed.showMore")}</button>
+        )}
+        <GlanceDetailHost state={detail} content={content} />
+      </div>
+    );
+  }
   return (
     <div className="mt-4 border-t border-charcoal/10 pt-3">
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">

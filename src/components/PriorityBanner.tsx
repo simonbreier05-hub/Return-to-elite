@@ -3,6 +3,9 @@
 import type { ReactNode } from "react";
 import { IconBan, IconCheckCircle, IconClock, IconWarning } from "./icons";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { cx, FOCUS_RING, Glyph } from "@/components/ui/primitives";
+import type { IconName } from "@/lib/ui/icons";
 
 export interface PriorityItem {
   count: number;
@@ -30,6 +33,39 @@ const ICONS = { warning: IconWarning, clock: IconClock, ban: IconBan } as const;
 export default function PriorityBanner({ items, children }: { items: PriorityItem[]; children?: ReactNode }) {
   const { t } = useLocale();
   const active = items.filter((i) => i.count > 0);
+  const glass = useGlassMode();
+  if (glass) {
+    // Glas (D3b): Zähler als Chips mit Symbol + Text, Ton dringend = Gefahr, beobachten = Warnung (nie nur Farbe).
+    const GLYPH: Record<PriorityItem["icon"], IconName> = { warning: "triangle-alert", clock: "clock", ban: "x" };
+    return (
+      <section aria-label={t("priority.importantNow")} className="glass flex flex-col gap-3 rounded-(--glass-radius-lg) p-4 sm:p-6">
+        <h2 className="flex items-center gap-3">
+          <Glyph name="zap" size={22} className="text-accent-text" />
+          <span className="text-section text-text-muted">{t("priority.importantNow")}</span>
+        </h2>
+        {active.length === 0 ? (
+          <p className="text-body-16 flex items-center gap-2 text-status-success-fg">
+            <Glyph name="check" size={20} />
+            {t("priority.allClear")}
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {active.map((item, i) => {
+              const cls = cx(
+                "text-body-16 inline-flex min-h-(--size-touch-min) items-center gap-2 rounded-pill px-4",
+                item.tone === "urgent" ? "bg-status-danger-bg text-status-danger-fg" : "bg-status-warning-bg text-status-warning-fg",
+                item.onClick && "press",
+                FOCUS_RING,
+              );
+              const content = (<><Glyph name={GLYPH[item.icon]} size={18} />{item.count} {item.label}</>);
+              return item.onClick ? <button key={i} type="button" onClick={item.onClick} className={cls}>{content}</button> : <span key={i} className={cls}>{content}</span>;
+            })}
+          </div>
+        )}
+        {children}
+      </section>
+    );
+  }
 
   return (
     <div className="mb-5 animate-rise rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
