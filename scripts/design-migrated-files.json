@@ -33,6 +33,12 @@
     "src/components/RoomTaskModal.tsx",
     "src/components/DragDropBoard.tsx",
     "src/components/LiveListBoards.tsx",
-    "src/components/lists/SupervisorList.tsx"
+    "src/components/lists/SupervisorList.tsx",
+    "src/app/engineering/view.tsx",
+    "src/app/houseman/view.tsx",
+    "src/components/roles/RoleHub.tsx",
+    "src/components/roles/RolePause.tsx",
+    "src/components/roles/EngineeringHub.tsx",
+    "src/components/roles/HousemanHub.tsx"
   ]
 }

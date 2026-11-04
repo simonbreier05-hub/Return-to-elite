@@ -1645,6 +1645,23 @@
     "supHub.leaveOpen": "Lascia non assegnata",
     "supHub.sessionRooms": "Assegnate in questo giro (tocca per togliere)",
     "supHub.removeRoom": "Togli {{number}}",
-    "supHub.staffHere": "Addetta in camera"
+    "supHub.staffHere": "Addetta in camera",
+    "roleHub.engSubtitle": "Ordini di lavoro aperti per oggi",
+    "roleHub.hmSubtitle": "I tuoi compiti di oggi",
+    "roleHub.selectHint": "Tocca una voce per vedere i dettagli.",
+    "roleHub.loadError": "Impossibile caricare i dati.",
+    "roleHub.retry": "Riprova",
+    "roleHub.unknown": "Sconosciuto",
+    "roleHub.doneToday": "Fatti oggi",
+    "roleHub.fromGuest": "Dagli ospiti",
+    "roleHub.reportedAt": "Segnalato alle {{time}}",
+    "roleHub.confirmDoneTitle": "Davvero fatto?",
+    "roleHub.confirm": "Conferma",
+    "roleHub.traces": "Traces",
+    "roleHub.trace": "Trace",
+    "roleHub.task": "Compito",
+    "roleHub.afterDeparture": "Dopo la partenza",
+    "roleHub.byTime": "entro le {{time}}",
+    "roleHub.doneConfirmHint": "L'ordine di lavoro risulterà risolto per tutti."
   }
 }

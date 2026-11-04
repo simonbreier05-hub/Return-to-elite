@@ -19,8 +19,11 @@ describe("UX-Aufräumen (Mobil 390 px)", () => {
     expect(read("app/globals.css")).toMatch(/\.tap\s*\{[^}]*2\.75rem/);
   });
   it("Zimmernummern-Knöpfe nutzen .tap", () => {
-    for (const f of ["app/front-office/view.tsx", "app/concierge/view.tsx", "app/engineering/view.tsx"]) {
+    for (const f of ["app/front-office/view.tsx", "app/concierge/view.tsx"]) {
       expect(read(f), f).toMatch(/className="tap flex items-center gap-1\.5 font-serif/);
     }
+    // Glas-Seiten (D5): Zimmer öffnen über `TextAction` (Tippfläche --size-touch-min = 48 px)
+    expect(read("components/roles/EngineeringHub.tsx")).toMatch(/<TextAction icon="bed-single"/);
+    expect(read("components/hk/HkRoomDetail.tsx")).toMatch(/min-h-\(--size-touch-min\)/);
   });
 });

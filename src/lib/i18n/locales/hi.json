@@ -1645,6 +1645,23 @@
     "supHub.leaveOpen": "बिना आवंटन छोड़ें",
     "supHub.sessionRooms": "इस राउंड में आवंटित (हटाने के लिए टैप करें)",
     "supHub.removeRoom": "{{number}} हटाएँ",
-    "supHub.staffHere": "हाउसकीपर कमरे में"
+    "supHub.staffHere": "हाउसकीपर कमरे में",
+    "roleHub.engSubtitle": "आज के खुले कार्य आदेश",
+    "roleHub.hmSubtitle": "आज के आपके काम",
+    "roleHub.selectHint": "विवरण देखने के लिए किसी प्रविष्टि पर टैप करें।",
+    "roleHub.loadError": "डेटा लोड नहीं हो सका।",
+    "roleHub.retry": "फिर से कोशिश करें",
+    "roleHub.unknown": "अज्ञात",
+    "roleHub.doneToday": "आज पूरे",
+    "roleHub.fromGuest": "मेहमान से",
+    "roleHub.reportedAt": "{{time}} बजे सूचना दी गई",
+    "roleHub.confirmDoneTitle": "सच में पूरा हुआ?",
+    "roleHub.confirm": "पुष्टि करें",
+    "roleHub.traces": "Traces",
+    "roleHub.trace": "Trace",
+    "roleHub.task": "काम",
+    "roleHub.afterDeparture": "चेक-आउट के बाद",
+    "roleHub.byTime": "{{time}} तक",
+    "roleHub.doneConfirmHint": "यह कार्य आदेश सभी के लिए पूरा दिखेगा।"
   }
 }
