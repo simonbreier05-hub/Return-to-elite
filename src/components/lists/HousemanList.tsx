@@ -10,40 +10,39 @@ import PauseControl, { type PauseInfo } from "@/components/PauseControl";
 import TaskMessageModal from "@/components/TaskMessageModal";
 import { hhmm } from "@/lib/i18n/format";
 
-interface Item {
+export interface Item {
   id: string; roomId?: string; roomNumber: string; floor: number; text: string; times: string[]; status: "OPEN" | "DONE";
   doneAt: string | null; roomTaskId: string | null; guest: string | null; waitsForDeparture: boolean; pause?: PauseInfo | null;
 }
-interface Data { date: string | null; floors: number[]; items: Item[]; hub?: HubState }
+export interface Data { date: string | null; floors: number[]; items: Item[]; hub?: HubState }
 
 /**
  * Hausmann-Liste: Traces der Abteilung Hausmann für den Tag. Abhaken per Tap (Zeitstempel + Nutzer im Logbuch),
  * Filter nach Etage, Gast nur als Anrede + Nachname. Live per Socket.IO.
  * Jede offene Aufgabe lässt sich pausieren (mit Grund) und fortsetzen; „Nachricht“ schreibt an alle Beteiligten.
  */
-export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomTaskIds: Set<string>) => void }) {
+/**
+ * Daten und Abhaken der Hausmann-Liste (`/api/lists/houseman`, `PATCH /api/traces/[id]`, Live per Socket.IO) —
+ * geteilt von der alten Liste und dem Glas-Hub (`/houseman`). Fehler beim Laden stehen in `loadError`.
+ */
+export function useHousemanList(onLinkedTasks?: (roomTaskIds: Set<string>) => void) {
   const { t } = useLocale();
   const [data, setData] = useState<Data | null>(null);
-  const [floor, setFloor] = useState<number | null>(null);
+  const [loadError, setLoadError] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [messageFor, setMessageFor] = useState<Item | null>(null);
 
   const load = useCallback(async () => {
     const d = await api<Data>("/api/lists/houseman").catch(() => null);
-    setData(d);
-    if (d) onLinkedTasks?.(new Set(d.items.map((i) => i.roomTaskId).filter((x): x is string => !!x)));
+    setLoadError(!d);
+    if (d) setData(d);
+    if (d) onLinkedTasks?.(new Set((Array.isArray(d.items) ? d.items : []).map((i) => i.roomTaskId).filter((x): x is string => !!x)));
   }, [onLinkedTasks]);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1000);
   useSocket({ "assignments:applied": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
 
-  if (!data) return null;
-  const shown = floor ? data.items.filter((i) => i.floor === floor) : data.items;
-  const open = data.items.filter((i) => i.status === "OPEN").length;
-  const done = data.items.length - open;
-
-  const toggle = async (item: Item) => {
+  const toggle = async (item: Pick<Item, "id" | "status">) => {
     if (busy) return;
     setBusy(item.id); setError(null);
     const next = item.status === "DONE" ? "OPEN" : "DONE";
@@ -53,6 +52,21 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
       soon();
     } catch { setError(t("lists.hmFailed")); } finally { setBusy(null); }
   };
+  const setPause = (id: string, p: PauseInfo | null) => setData((d) => d && { ...d, items: d.items.map((x) => (x.id === id ? { ...x, pause: p } : x)) });
+  return { data, loadError, load, toggle, busy, error, setPause };
+}
+
+export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomTaskIds: Set<string>) => void }) {
+  const { t } = useLocale();
+  const { data, toggle, busy, error, setPause } = useHousemanList(onLinkedTasks);
+  const [floor, setFloor] = useState<number | null>(null);
+  const [messageFor, setMessageFor] = useState<Item | null>(null);
+
+  if (!data) return null;
+  const shown = floor ? data.items.filter((i) => i.floor === floor) : data.items;
+  const open = data.items.filter((i) => i.status === "OPEN").length;
+  const done = data.items.length - open;
+
   const time = (iso: string) => hhmm(iso);
 
   return (
@@ -96,7 +110,7 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
               </button>
               {i.status === "OPEN" && (
                 <div className="mt-2 grid grid-cols-[1fr_auto] items-start gap-2">
-                  <PauseControl targetType="TRACE" targetId={i.id} pause={i.pause} canPause onChanged={(p) => setData((d) => d && { ...d, items: d.items.map((x) => (x.id === i.id ? { ...x, pause: p } : x)) })} />
+                  <PauseControl targetType="TRACE" targetId={i.id} pause={i.pause} canPause onChanged={(p) => setPause(i.id, p)} />
                   {i.roomId && <button type="button" onClick={() => setMessageFor(i)} className="h-12 rounded-xl border border-charcoal/20 bg-white px-4 text-sm font-medium">💬 {t("work.messageBtn")}</button>}
                 </div>
               )}
