@@ -1662,6 +1662,22 @@
     "roleHub.task": "کار",
     "roleHub.afterDeparture": "پس از خروج",
     "roleHub.byTime": "تا {{time}}",
-    "roleHub.doneConfirmHint": "این دستور کار برای همه انجام‌شده نمایش داده می‌شود."
+    "roleHub.doneConfirmHint": "این دستور کار برای همه انجام‌شده نمایش داده می‌شود.",
+    "roleHub.foSubtitle": "ورودهای امروز",
+    "roleHub.ccSubtitle": "گشت‌های امروز",
+    "roleHub.notReady": "اتاق آماده نیست",
+    "roleHub.readyKpi": "اتاق‌های آماده",
+    "roleHub.newArrival": "ورود جدید",
+    "roleHub.etaPassed": "زمان تخمینی گذشته",
+    "roleHub.noArrivals": "امروز هیچ ورودی ثبت نشده است.",
+    "roleHub.editArrival": "ویرایش ورود",
+    "roleHub.guestNameHint": "فقط عنوان، لقب و نام خانوادگی نمایش داده می‌شود.",
+    "roleHub.planned": "برنامه‌ریزی‌شده",
+    "roleHub.guestOut": "بیرون از هتل",
+    "roleHub.endingSoon": "به‌زودی برمی‌گردد",
+    "roleHub.back": "برگشته",
+    "roleHub.excursions": "گشت‌ها",
+    "roleHub.excursion": "گشت",
+    "roleHub.outWindow": "بیرون {{from}}–{{to}}"
   }
 }

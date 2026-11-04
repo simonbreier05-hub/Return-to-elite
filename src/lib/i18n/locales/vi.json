@@ -1662,6 +1662,22 @@
     "roleHub.task": "Công việc",
     "roleHub.afterDeparture": "Sau check-out",
     "roleHub.byTime": "trước {{time}}",
-    "roleHub.doneConfirmHint": "Lệnh công việc sẽ hiển thị là đã xong cho mọi người."
+    "roleHub.doneConfirmHint": "Lệnh công việc sẽ hiển thị là đã xong cho mọi người.",
+    "roleHub.foSubtitle": "Check-in hôm nay",
+    "roleHub.ccSubtitle": "Chuyến đi hôm nay",
+    "roleHub.notReady": "Phòng chưa sẵn sàng",
+    "roleHub.readyKpi": "Phòng sẵn sàng",
+    "roleHub.newArrival": "Check-in mới",
+    "roleHub.etaPassed": "Đã quá giờ dự kiến",
+    "roleHub.noArrivals": "Hôm nay chưa có check-in nào.",
+    "roleHub.editArrival": "Sửa check-in",
+    "roleHub.guestNameHint": "Chỉ hiển thị danh xưng, học hàm và họ.",
+    "roleHub.planned": "Đã lên kế hoạch",
+    "roleHub.guestOut": "Đang ra ngoài",
+    "roleHub.endingSoon": "Sắp quay lại",
+    "roleHub.back": "Đã quay lại",
+    "roleHub.excursions": "Chuyến đi",
+    "roleHub.excursion": "Chuyến đi",
+    "roleHub.outWindow": "Ra ngoài {{from}}–{{to}}"
   }
 }

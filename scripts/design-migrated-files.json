@@ -39,6 +39,10 @@
     "src/components/roles/RoleHub.tsx",
     "src/components/roles/RolePause.tsx",
     "src/components/roles/EngineeringHub.tsx",
-    "src/components/roles/HousemanHub.tsx"
+    "src/components/roles/HousemanHub.tsx",
+    "src/app/front-office/view.tsx",
+    "src/app/concierge/view.tsx",
+    "src/components/roles/FrontOfficeHub.tsx",
+    "src/components/roles/ConciergeHub.tsx"
   ]
 }

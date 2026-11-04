@@ -1662,6 +1662,22 @@
     "roleHub.task": "काम",
     "roleHub.afterDeparture": "चेक-आउट के बाद",
     "roleHub.byTime": "{{time}} तक",
-    "roleHub.doneConfirmHint": "यह कार्य आदेश सभी के लिए पूरा दिखेगा।"
+    "roleHub.doneConfirmHint": "यह कार्य आदेश सभी के लिए पूरा दिखेगा।",
+    "roleHub.foSubtitle": "आज के चेक-इन",
+    "roleHub.ccSubtitle": "आज की सैर",
+    "roleHub.notReady": "कमरा तैयार नहीं",
+    "roleHub.readyKpi": "तैयार कमरे",
+    "roleHub.newArrival": "नया चेक-इन",
+    "roleHub.etaPassed": "अनुमानित समय बीत गया",
+    "roleHub.noArrivals": "आज कोई चेक-इन दर्ज नहीं है।",
+    "roleHub.editArrival": "चेक-इन बदलें",
+    "roleHub.guestNameHint": "केवल संबोधन, उपाधि और उपनाम दिखाए जाते हैं।",
+    "roleHub.planned": "योजना में",
+    "roleHub.guestOut": "बाहर",
+    "roleHub.endingSoon": "जल्द लौटेंगे",
+    "roleHub.back": "लौट आए",
+    "roleHub.excursions": "सैर",
+    "roleHub.excursion": "सैर",
+    "roleHub.outWindow": "बाहर {{from}}–{{to}}"
   }
 }

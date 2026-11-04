@@ -5,7 +5,7 @@ import FrontOfficeView from "./view";
 export default async function FrontOfficePage() {
   const session = await requirePage(["front_office"]);
   return (
-    <AppShell title="role.front_office" userName={session.name} role={session.role}>
+    <AppShell title="roleHub.foSubtitle" userName={session.name} role={session.role} legacy={false}>
       <FrontOfficeView />
     </AppShell>
   );
