@@ -5,6 +5,10 @@ import { LocaleProvider } from "@/lib/i18n/LocaleContext";
 import { EngineeringHub } from "@/components/roles/EngineeringHub";
 import { HousemanHub } from "@/components/roles/HousemanHub";
 import { engFilterCounts, engKpis, mergeWorkOrder, needsConfirm, NEXT_STEP, normalizeWorkOrder, sortWorkOrders, sourceOf, type WorkOrderView } from "@/lib/ui/engineeringHub";
+import { FrontOfficeHub } from "@/components/roles/FrontOfficeHub";
+import { ConciergeHub } from "@/components/roles/ConciergeHub";
+import { foFilterCounts, foKpis, foPill, isOverdue, normalizeArrival, sortArrivals, type ArrivalView } from "@/lib/ui/frontOfficeHub";
+import { ccKpis, normalizeExcursion, phaseOf, sortExcursions, type ExcursionView } from "@/lib/ui/conciergeHub";
 import { hmFilterCounts, hmKpis, hmPill, matchesHmFilter, mergeHousemanItems } from "@/lib/ui/housemanHub";
 
 // Nur erfundene Testdaten (keine echten Gäste/Mitarbeiter).
@@ -155,5 +159,71 @@ describe("Hausmann: eine Liste aus Traces und Aufgaben", () => {
     expect(html).toContain('data-testid="hm-detail"');
     expect(html).toContain("Herr Dr. Test");
     expect(html).toContain("Kissen tauschen · Zi. 305");
+  });
+});
+
+describe("Front Office: Anreisen", () => {
+  const raw = [
+    { id: "a1", guestName: "Herr Dr. Max Testmann", source: "MANUAL", eta: "2026-11-03T13:00:00Z", vip: true, earlyCheckIn: true, neededNow: false, status: "EXPECTED", room: { id: "r1", number: "305", status: "INSPECTED", openNotesCount: 0 } },
+    { id: "a2", guestName: "Erika Beispiel", eta: "2026-11-03T08:00:00Z", status: "EXPECTED", room: { number: "312", status: "DIRTY" } },
+    { id: "a3", guestName: "Frau Probe", status: "CHECKED_IN", room: { number: "410", status: "INSPECTED" } },
+    { id: "a4", status: "CANCELLED" },
+    { guestName: "ohne Id" },
+    { id: "a5" },
+  ];
+  const list = raw.map(normalizeArrival).filter((x): x is ArrivalView => !!x);
+
+  it("Gast nur Anrede Titel Nachname (nie Vorname), storniert/ohne Id fällt weg", () => {
+    expect(list.map((a) => a.id)).toEqual(["a1", "a2", "a3", "a5"]);
+    expect(list[0].guest).toBe("Herr Dr. Testmann");
+    expect(list[1].guest).toBe("Beispiel");
+    expect(list[3].guest).toBeNull();
+    expect(list[3].room).toEqual({ id: null, number: null, status: null, openNotesCount: 0 });
+  });
+  it("Kennzahlen, Filter, Pille, ETA vorbei, Reihenfolge", () => {
+    expect(foKpis(list)).toEqual({ expected: 3, early: 1, vip: 1, ready: 1 });
+    expect(foFilterCounts(list).map((c) => `${c.filter}:${c.count}`)).toEqual(["all:4", "early:1", "vip:1", "notReady:2", "checkedIn:1"]);
+    expect(foPill(list[0])?.labelKey).toBe("frontOffice.early");
+    expect(foPill(list[2])?.tone).toBe("success");
+    expect(isOverdue(list[1], NOW.getTime())).toBe(true);
+    expect(isOverdue(list[0], NOW.getTime())).toBe(false); // Zimmer frei
+    expect(sortArrivals(list).map((a) => a.id)).toEqual(["a2", "a1", "a5", "a3"]);
+  });
+  it("Ansicht rendert Liste und Detail, auch mit leerer Anreise", () => {
+    const props = { arrivals: list, onSelect: noop, onSave: async () => true, onCreate: async () => null, onOpenRoom: noop, busyId: null, actionError: null, loading: false, loadError: null, onRetry: noop, etaInput: () => "", detailMode: "wide" as const };
+    for (const id of ["a1", "a5"]) {
+      const html = render(h(FrontOfficeHub, { ...props, selectedId: id }));
+      expect(html).toContain('data-testid="fo-detail"');
+    }
+    const html = render(h(FrontOfficeHub, { ...props, selectedId: null }));
+    expect(html).toContain("305 · Herr Dr. Testmann");
+    expect(html).not.toContain("Max");
+    expect(html).not.toContain("Erika");
+  });
+});
+
+describe("Concierge: Ausflüge (Zustand nur aus den Zeiten)", () => {
+  const at = (h: number, m = 0) => new Date(Date.UTC(2026, 10, 3, h, m)).toISOString();
+  const list = [
+    { id: "e1", guestName: "Herr Probe", startsAt: at(8), endsAt: at(12), note: "Stadtführung", room: { number: "305" } },
+    { id: "e2", startsAt: at(9), endsAt: at(10, 30), room: { number: "307" } },
+    { id: "e3", startsAt: at(14), endsAt: at(18), room: { number: "308" } },
+    { id: "e4", startsAt: at(6), endsAt: at(9), room: { number: "412" } },
+    { id: "e5" },
+    null,
+  ]
+    .map(normalizeExcursion)
+    .filter((x): x is ExcursionView => !!x);
+  const now = NOW.getTime(); // 10:00 UTC
+
+  it("Zustände, Kennzahlen, Reihenfolge", () => {
+    expect(list.map((e) => phaseOf(e, now))).toEqual(["out", "endingSoon", "planned", "back", "planned"]);
+    expect(ccKpis(list, now)).toEqual({ total: 5, out: 2, endingSoon: 1, planned: 2 });
+    expect(sortExcursions(list, now).at(-1)?.id).toBe("e4");
+  });
+  it("Ansicht rendert Liste und Detail", () => {
+    const props = { excursions: list, onSelect: noop, onCreate: async () => null, onOpenRoom: noop, loading: false, loadError: null, onRetry: noop, now, detailMode: "wide" as const };
+    for (const id of ["e1", "e5"]) expect(render(h(ConciergeHub, { ...props, selectedId: id }))).toContain('data-testid="cc-detail"');
+    expect(render(h(ConciergeHub, { ...props, selectedId: null }))).toContain("Stadtführung");
   });
 });

@@ -5,7 +5,7 @@ import ConciergeView from "./view";
 export default async function ConciergePage() {
   const session = await requirePage(["concierge"]);
   return (
-    <AppShell title="role.concierge" userName={session.name} role={session.role}>
+    <AppShell title="roleHub.ccSubtitle" userName={session.name} role={session.role} legacy={false}>
       <ConciergeView />
     </AppShell>
   );
