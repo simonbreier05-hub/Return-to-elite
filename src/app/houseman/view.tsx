@@ -1,129 +1,120 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import HubMoreMenu from "@/components/HubMoreMenu";
-import HousemanList from "@/components/lists/HousemanList";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
+import { useHousemanList } from "@/components/lists/HousemanList";
+import { HousemanHub } from "@/components/roles/HousemanHub";
+import { Banner } from "@/components/ui";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
-import type { TKey } from "@/lib/i18n/translations";
-import PauseControl, { type PauseInfo } from "@/components/PauseControl";
-import TaskMessageModal from "@/components/TaskMessageModal";
-import { hhmm } from "@/lib/i18n/format";
-
-interface RoomTask {
-  id: string;
-  type: "TWIN_SETUP" | "TWIN_REVERT" | "SONSTIGES";
-  note?: string | null;
-  status: "OPEN" | "DONE";
-  createdAt: string;
-  room: { id?: string; number: string; floor: number };
-  createdBy: { name: string };
-  pause?: PauseInfo | null;
-}
+import { mergeHousemanItems, type HmItemView } from "@/lib/ui/housemanHub";
 
 /**
- * The houseman's whole screen: a flat list of open furniture/bed-config
- * jobs, "Erledigt" to close one out. Deliberately minimal — no cleaning
- * status, no room modal — see prompt Aufgabe B: the houseman does a
- * different job than housekeeping and doesn't need its UI. Pausieren und
- * „Nachricht“ (an alle Beteiligten) sind derselbe Mechanismus wie überall.
+ * Hausmann (`/houseman`): Daten und Aktionen — Darstellung in `src/components/roles/HousemanHub.tsx`.
+ * Hausmann-Liste (Traces) über `useHousemanList` (gleiche Logik wie die alte Liste), von Hand angelegte Aufgaben über
+ * `GET/PATCH /api/roomtasks` — Aufgaben, die schon als Trace-Zeile erscheinen, nicht doppelt.
  */
 export default function HousemanView() {
-  const { t } = useLocale();
-  const [tasks, setTasks] = useState<RoomTask[]>([]);
+  const { t, intl } = useLocale();
+  const hm = useHousemanList();
+  const [tasks, setTasks] = useState<unknown[] | null>(null);
+  const [taskError, setTaskError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [busyId, setBusyId] = useState<string | null>(null);
-  /** Aufgaben, die schon als Zeile der Hausmann-Liste (Trace) erscheinen — nicht doppelt zeigen. */
-  const [linked, setLinked] = useState<Set<string>>(new Set());
-  const [messageFor, setMessageFor] = useState<RoomTask | null>(null);
+  const [busyKey, setBusyKey] = useState<string | null>(null);
+  const [selectedKey, setSelectedKey] = useState<string | null>(null);
 
-  const load = useCallback(async () => {
-    const data = await api<{ roomTasks: RoomTask[] }>("/api/roomtasks");
-    setTasks(data.roomTasks);
-  }, []);
-
+  const loadTasks = useCallback(async () => {
+    try {
+      const data = await api<{ roomTasks?: unknown[] }>("/api/roomtasks");
+      setTasks(Array.isArray(data?.roomTasks) ? data.roomTasks : []);
+      setTaskError(null);
+    } catch (e) {
+      setTaskError(errorText(e, t));
+    }
+  }, [t]);
   useEffect(() => {
-    load();
-  }, [load]);
-
-  const upsert = (task: RoomTask) =>
-    setTasks((prev) => (prev.some((x) => x.id === task.id) ? prev.map((x) => (x.id === task.id ? task : x)) : [task, ...prev]));
+    void loadTasks();
+  }, [loadTasks]);
 
   useSocket({
-    "roomtask:update": (p: { roomTask: RoomTask }) => {
-      if (p.roomTask?.id) setTasks((prev) => prev.some((x) => x.id === p.roomTask.id) ? prev.map((x) => (x.id === p.roomTask.id ? { ...x, ...p.roomTask, pause: p.roomTask.status === "DONE" ? null : x.pause } : x)) : [p.roomTask, ...prev]);
+    "roomtask:update": (p: { roomTask?: { id?: string; status?: string } } | undefined) => {
+      const rt = p?.roomTask;
+      if (!rt?.id) return;
+      setTasks((prev) => {
+        const list = prev ?? [];
+        const has = list.some((x) => (x as { id?: string })?.id === rt.id);
+        return has
+          ? list.map((x) => ((x as { id?: string })?.id === rt.id ? { ...(x as object), ...rt, ...(rt.status === "DONE" ? { pause: null } : {}) } : x))
+          : [rt, ...list];
+      });
     },
-    "work:pause": (p: { targetType?: string } | undefined) => { if (!p || p.targetType === "ROOMTASK") void load(); },
+    "work:pause": (p: { targetType?: string } | undefined) => {
+      if (!p || p.targetType === "ROOMTASK") void loadTasks();
+    },
   });
 
-  const complete = async (task: RoomTask) => {
-    if (busyId) return;
-    setBusyId(task.id);
+  const traceItems = useMemo(() => (Array.isArray(hm.data?.items) ? hm.data!.items : []), [hm.data]);
+  const items = useMemo(() => mergeHousemanItems(traceItems, tasks ?? []), [traceItems, tasks]);
+
+  const toggle = async (item: HmItemView) => {
+    if (busyKey) return;
     setError(null);
+    if (item.kind === "trace") {
+      setBusyKey(item.key);
+      await hm.toggle({ id: item.id, status: item.status });
+      setBusyKey(null);
+      return;
+    }
+    if (item.status !== "OPEN") return;
+    setBusyKey(item.key);
     try {
-      const res = await api<{ roomTask: RoomTask }>(`/api/roomtasks/${task.id}`, {
-        method: "PATCH",
-        body: { status: "DONE" },
-      });
-      upsert(res.roomTask);
+      const res = await api<{ roomTask?: unknown }>(`/api/roomtasks/${item.id}`, { method: "PATCH", body: { status: "DONE" } });
+      const rt = res?.roomTask as { id?: string } | undefined;
+      if (rt?.id) setTasks((prev) => (prev ?? []).map((x) => ((x as { id?: string })?.id === rt.id ? rt : x)));
     } catch (e) {
       setError(errorText(e, t));
     } finally {
-      setBusyId(null);
+      setBusyKey(null);
     }
   };
 
-  const open = tasks.filter((t) => t.status === "OPEN" && !linked.has(t.id));
-
-  const taskLabel = (task: RoomTask) =>
-    task.type === "SONSTIGES"
-      ? `${t("houseman.room")} ${task.room.number} — ${task.note ?? t("roomTaskType.SONSTIGES")}`
-      : `${t("houseman.room")} ${task.room.number} — ${t(`roomTaskType.${task.type}` as TKey)}`;
+  const loading = (hm.data === null && !hm.loadError) || (tasks === null && !taskError);
+  const loadError = hm.data === null && hm.loadError ? t("roleHub.loadError") : tasks === null ? taskError : null;
+  const hub = hm.data?.hub;
 
   return (
-    <div>
-      <div className="mb-4 flex flex-wrap gap-2"><HubMoreMenu /></div>
-      <HousemanList onLinkedTasks={setLinked} />
-      <h2 className="mb-1 font-serif text-3xl">{t("lists.hmOtherTasks")}</h2>
-      <p className="mb-4 text-sm text-graphite/70">{t("houseman.openCount", { count: open.length })}</p>
-
-      {error && (
-        <div className="mb-4 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-sm text-status-out-of-order">
-          {error}
-        </div>
-      )}
-
-      {open.length === 0 ? (
-        <p className="rounded-2xl border border-charcoal/10 bg-linen p-8 text-center text-graphite/60 shadow-card">
-          {t("houseman.noTasks")}
-        </p>
-      ) : (
-        <div className="grid gap-3 md:grid-cols-2">
-          {open.map((task) => (
-            <div key={task.id} className="rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-              <p className="font-serif text-2xl">{taskLabel(task)}</p>
-              <p className="mt-1 text-xs text-graphite/60">
-                {t("houseman.requestedBy", { name: task.createdBy.name })} ·{" "}
-                {hhmm(task.createdAt)}
-              </p>
-              <button
-                onClick={() => complete(task)}
-                disabled={busyId === task.id}
-                className="mt-3 h-12 w-full rounded-xl bg-status-inspected text-base font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
-              >
-                {busyId === task.id ? "…" : t("houseman.markDone")}
-              </button>
-              <div className="mt-2 grid grid-cols-[1fr_auto] items-start gap-2">
-                <PauseControl targetType="ROOMTASK" targetId={task.id} pause={task.pause} canPause onChanged={(pz) => setTasks((prev) => prev.map((x) => (x.id === task.id ? { ...x, pause: pz } : x)))} />
-                {task.room.id && <button type="button" onClick={() => setMessageFor(task)} className="h-12 rounded-xl border border-charcoal/20 bg-white px-4 text-sm font-medium">💬 {t("work.messageBtn")}</button>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-      {messageFor?.room.id && <TaskMessageModal roomId={messageFor.room.id} roomNumber={messageFor.room.number} task={{ type: "ROOMTASK", id: messageFor.id }} onClose={() => setMessageFor(null)} />}
-    </div>
+    <HousemanHub
+      items={items}
+      floors={Array.isArray(hm.data?.floors) ? hm.data!.floors : []}
+      selectedKey={selectedKey}
+      onSelect={(k) => {
+        setSelectedKey(k);
+        setError(null);
+      }}
+      onToggle={toggle}
+      busyKey={busyKey}
+      actionError={error ?? hm.error}
+      loading={loading && !loadError}
+      loadError={loadError}
+      onRetry={() => {
+        void hm.load();
+        void loadTasks();
+      }}
+      onPauseChanged={(item, pause) => {
+        if (item.kind === "trace") hm.setPause(item.id, pause);
+        else setTasks((prev) => (prev ?? []).map((x) => ((x as { id?: string })?.id === item.id ? { ...(x as object), pause } : x)));
+      }}
+      notices={
+        hub && !hub.ready ? (
+          <Banner
+            tone="info"
+            icon="calendar-days"
+            title={t("hubDay.missingTitle", { date: new Date(`${hub.date}T12:00:00Z`).toLocaleDateString(intl, { day: "2-digit", month: "2-digit", year: "numeric", timeZone: "UTC" }) })}
+            detail={t("hubDay.missingAttendant")}
+          />
+        ) : undefined
+      }
+    />
   );
 }

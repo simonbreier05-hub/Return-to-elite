@@ -46,6 +46,16 @@
     "src/components/planung/HouseMap.tsx",
     "src/components/planung/ProgressRing.tsx",
     "src/components/planung/PlanungClient.tsx",
-    "src/components/PurgeBanner.tsx"
+    "src/components/PurgeBanner.tsx",
+    "src/app/engineering/view.tsx",
+    "src/app/houseman/view.tsx",
+    "src/components/roles/RoleHub.tsx",
+    "src/components/roles/RolePause.tsx",
+    "src/components/roles/EngineeringHub.tsx",
+    "src/components/roles/HousemanHub.tsx",
+    "src/app/front-office/view.tsx",
+    "src/app/concierge/view.tsx",
+    "src/components/roles/FrontOfficeHub.tsx",
+    "src/components/roles/ConciergeHub.tsx"
   ]
 }

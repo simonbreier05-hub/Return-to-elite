@@ -31,7 +31,7 @@ describe("Schließen-Button", () => {
 describe("Jedes Fenster / jede Seitenleiste hat einen sichtbaren Schließen-Button und Esc", () => {
   const overlays = files.filter((f) => /fixed inset-0/.test(readFileSync(f, "utf8")));
   it("findet die bekannten Fenster", () => {
-    expect(overlays.map(rel)).toEqual(expect.arrayContaining(["components/Modal.tsx", "components/guest/GuestModal.tsx", "components/ImageLightbox.tsx", "app/front-office/view.tsx"]));
+    expect(overlays.map(rel)).toEqual(expect.arrayContaining(["components/Modal.tsx", "components/guest/GuestModal.tsx", "components/ImageLightbox.tsx"]));
   });
   for (const f of overlays) {
     it(rel(f), () => {

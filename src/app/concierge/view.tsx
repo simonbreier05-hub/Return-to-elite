@@ -1,164 +1,88 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import HubMoreMenu from "@/components/HubMoreMenu";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
 import RoomDetailModal from "@/components/RoomDetailModal";
 import { useRoomLookup } from "@/components/useRoomLookup";
-import { NOTE_STATUS_STYLES } from "@/components/status";
+import { ConciergeHub, type NewExcursionInput } from "@/components/roles/ConciergeHub";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
-import { hhmm } from "@/lib/i18n/format";
+import { ccKpis, normalizeExcursion, type ExcursionView } from "@/lib/ui/conciergeHub";
 
-interface Excursion {
-  id: string;
-  guestName?: string | null;
-  startsAt: string;
-  endsAt: string;
-  note?: string | null;
-  room: { number: string; status: string; openNotesCount: number };
-}
+/** „HH:MM“ → Zeitpunkt heute (Gerätezeit, wie bisher). */
+const timeToIso = (hhmm: string) => {
+  const [h, m] = hhmm.split(":").map(Number);
+  const d = new Date();
+  d.setHours(h, m, 0, 0);
+  return d.toISOString();
+};
 
+/**
+ * Concierge (`/concierge`): Daten und Aktionen — Darstellung in `src/components/roles/ConciergeHub.tsx`.
+ * Gleiche Wege wie bisher: `GET/POST /api/excursions`, Live `excursion:update`. Die Außer-Haus-Fenster speisen
+ * die Reinigungspriorität (Housekeeping reinigt, während der Gast unterwegs ist).
+ */
 export default function ConciergeView() {
   const { t } = useLocale();
-  const [excursions, setExcursions] = useState<Excursion[]>([]);
-  const [roomNumber, setRoomNumber] = useState("");
-  const [guestName, setGuestName] = useState("");
-  const [start, setStart] = useState("");
-  const [end, setEnd] = useState("");
-  const [note, setNote] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  const [raw, setRaw] = useState<unknown[] | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
   const roomLookup = useRoomLookup();
 
   const load = useCallback(async () => {
-    const data = await api<{ excursions: Excursion[] }>("/api/excursions");
-    setExcursions(data.excursions);
+    try {
+      const data = await api<{ excursions?: unknown[] }>("/api/excursions");
+      setRaw(Array.isArray(data?.excursions) ? data.excursions : []);
+      setLoadError(null);
+    } catch (e) {
+      setLoadError(errorText(e, t));
+    }
+  }, [t]);
+  useEffect(() => {
+    void load();
+  }, [load]);
+  // Zustand (außer Haus / kommt bald zurück) hängt an der Uhr: einmal pro Minute neu berechnen.
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 60_000);
+    return () => clearInterval(id);
   }, []);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useSocket({ "excursion:update": () => void load() });
 
-  useSocket({ "excursion:update": () => load() });
+  const excursions = useMemo(() => (raw ?? []).map(normalizeExcursion).filter((x): x is ExcursionView => !!x), [raw]);
 
-  const timeToIso = (t: string) => {
-    const [h, m] = t.split(":").map(Number);
-    const d = new Date();
-    d.setHours(h, m, 0, 0);
-    return d.toISOString();
-  };
-
-  const submit = async () => {
-    setBusy(true);
-    setError(null);
+  const create = async (f: NewExcursionInput): Promise<string | null> => {
     try {
       await api("/api/excursions", {
-        body: {
-          roomNumber,
-          guestName: guestName || undefined,
-          startsAt: timeToIso(start),
-          endsAt: timeToIso(end),
-          note: note || undefined,
-        },
+        body: { roomNumber: f.roomNumber, guestName: f.guestName || undefined, startsAt: timeToIso(f.start), endsAt: timeToIso(f.end), note: f.note || undefined },
       });
-      setRoomNumber(""); setGuestName(""); setStart(""); setEnd(""); setNote("");
-      load();
+      void load();
+      return null;
     } catch (e) {
-      setError(errorText(e, t));
-    } finally {
-      setBusy(false);
+      return errorText(e, t);
     }
   };
 
-  const now = Date.now();
-
-  /** Guests whose out-of-house window closes within the hour — the room
-   * should be finished before they walk back in. */
-  const endingSoon = useMemo(
-    () => excursions.filter((e) => new Date(e.startsAt).getTime() <= now && new Date(e.endsAt).getTime() - now <= 60 * 60_000 && new Date(e.endsAt).getTime() > now).length,
-    [excursions, now]
-  );
+  const endingSoon = ccKpis(excursions, now).endingSoon;
 
   return (
-    <div className="grid gap-4 lg:grid-cols-[24rem_1fr]">
-      <div className="flex flex-wrap gap-2 lg:col-span-2"><HubMoreMenu /></div>
-      <div className="rounded-2xl border border-charcoal/10 bg-white p-5 shadow-sm">
-        <h2 className="mb-1 font-serif text-2xl">{t("concierge.logExcursion")}</h2>
-        <p className="mb-4 text-sm text-graphite/60">{t("concierge.outOfHouseHint")}</p>
-        <label className="mb-1 block text-sm font-medium">{t("concierge.roomNumber")}</label>
-        <input value={roomNumber} onChange={(e) => setRoomNumber(e.target.value)} placeholder="402"
-          className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
-        <label className="mb-1 block text-sm font-medium">
-          {t("concierge.guestOptional")} ({t("common.optional")})
-        </label>
-        <input value={guestName} onChange={(e) => setGuestName(e.target.value)} placeholder="Mr. & Mrs. Tanaka"
-          className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
-        <div className="mb-3 grid grid-cols-2 gap-3">
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t("concierge.outFrom")}</label>
-            <input type="time" value={start} onChange={(e) => setStart(e.target.value)}
-              className="h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium">{t("concierge.backAt")}</label>
-            <input type="time" value={end} onChange={(e) => setEnd(e.target.value)}
-              className="h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
-          </div>
-        </div>
-        <label className="mb-1 block text-sm font-medium">
-          {t("concierge.noteOptional")} ({t("common.optional")})
-        </label>
-        <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t("concierge.notePlaceholder")}
-          className="mb-4 h-12 w-full rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold" />
-        {error && <p className="mb-2 text-sm text-status-out-of-order">{error}</p>}
-        <button onClick={submit} disabled={busy || !roomNumber || !start || !end}
-          className="h-12 w-full rounded-xl bg-navy font-medium text-ivory disabled:opacity-40">
-          {busy ? t("common.saving") : t("concierge.logExcursionBtn")}
-        </button>
-      </div>
-
-      <div>
-        <PriorityBanner items={[{ count: endingSoon, label: t("priority.excursionsEndingSoon"), icon: "clock", tone: "watch" }]} />
-
-        <h2 className="mb-3 font-serif text-2xl">{t("concierge.todaysWindows")}</h2>
-        <div className="space-y-2">
-          {excursions.length === 0 && <p className="text-sm text-graphite/60">{t("concierge.noExcursions")}</p>}
-          {excursions.map((e) => {
-            const active = new Date(e.startsAt).getTime() <= now && new Date(e.endsAt).getTime() > now;
-            return (
-              <div key={e.id}
-                className={`rounded-xl border p-4 transition-colors ${active ? "border-status-pickup/40 bg-status-pickup/10" : "border-charcoal/10 bg-white"}`}>
-                <div className="flex items-center justify-between">
-                  <button
-                    onClick={() => roomLookup.open(e.room.number)}
-                    className="tap flex items-center gap-1.5 font-serif text-2xl hover:text-navy hover:underline"
-                  >
-                    {e.room.number}
-                    {e.room.openNotesCount > 0 && (
-                      <span className={`rounded-full border px-1.5 text-[0.62rem] font-medium ${NOTE_STATUS_STYLES.OPEN.badge}`}>
-                        📝 {e.room.openNotesCount}
-                      </span>
-                    )}
-                  </button>
-                  <span className="text-sm">
-                    {hhmm(e.startsAt)} –{" "}
-                    {hhmm(e.endsAt)}
-                    {active && <span className="ms-2 rounded-full bg-status-pickup px-2 py-0.5 text-xs text-linen">{t("concierge.guestOut")}</span>}
-                  </span>
-                </div>
-                <p className="mt-1 text-sm text-graphite/70">
-                  {e.guestName ?? t("concierge.guestFallback")}{e.note ? ` · ${e.note}` : ""}
-                </p>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
+    <>
+      <ConciergeHub
+        excursions={excursions}
+        selectedId={selectedId}
+        onSelect={setSelectedId}
+        onCreate={create}
+        onOpenRoom={(n) => roomLookup.open(n)}
+        loading={raw === null && !loadError}
+        loadError={raw === null ? loadError : null}
+        onRetry={() => void load()}
+        now={now}
+        notices={<PriorityBanner items={[{ count: endingSoon, label: t("priority.excursionsEndingSoon"), icon: "clock", tone: "watch" }]} />}
+      />
       {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
-    </div>
+    </>
   );
 }

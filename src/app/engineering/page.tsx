@@ -5,7 +5,7 @@ import EngineeringView from "./view";
 export default async function EngineeringPage() {
   const session = await requirePage(["engineering"]);
   return (
-    <AppShell title="role.engineering" userName={session.name} role={session.role}>
+    <AppShell title="roleHub.engSubtitle" userName={session.name} role={session.role} legacy={false}>
       <EngineeringView />
     </AppShell>
   );
