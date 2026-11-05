@@ -155,3 +155,8 @@
 - Hausmann: eine Liste aus Traces (`useHousemanList`, geteilt mit der alten `HousemanList`) + RoomTasks ohne Trace (`mergeHousemanItems`); erledigte Hand-Aufgaben nur von heute.
 - Front Office: Gast immer `shortGuestName(guestName, source)`; Gastname ist per PATCH nicht änderbar. Concierge: Ausflug hat kein Status-Feld — Zustand nur aus Zeiten (`phaseOf`: geplant/außer Haus/bald zurück/zurück); Bearbeiten/Löschen gibt es nicht (keine API).
 - Detail-Panel der Rollen-Hubs mit `DETAIL_FIT` (passt neben die Liste, Hauptknopf bleibt sichtbar). Demo `/dev/roles?role=…` (erfundene Daten, `&state=loading|error|empty`, `&confirm=1`, `&new=1`), Browser-Nachweis `tests/e2e/roles.e2e.mjs` gegen `npm start`.
+- Gäste-Screen „Glas & Premium“ (D6, Figma `41:2827`): `/g` hat `.theme-glass bg-atmosphere` im Layout; `GuestView`/`GuestModal`/`GuestOfflineBar`/`GuestUnavailable` bauen aus D0-Bausteinen — immer **direkt** aus der Datei importieren (`@/components/ui/ActionTile`), nie aus `@/components/ui` (Sammeldatei zieht alle Bausteine ins Gäste-Bundle). Die alten `--g-*`-Farben gibt es nicht mehr.
+- `primitives.tsx` bleibt ohne `next/link`; `Interactive` liegt in `src/components/ui/Interactive.tsx` (sonst lädt jede Seite mit `Glyph` den Link-Code mit).
+- Datenschutz/Impressum auf dem Gäste-Screen: `Setting` `guestPrivacyUrl`/`guestImprintUrl` (`src/lib/guestLegalLinks.ts`, nur http(s) oder `/…`); leer = Link wird nicht gezeigt.
+- Gäste-Playwright: `tests/e2e/guest.e2e.mjs` (Wegwerf-DB, erfundene Testdaten, prod-Server). Bundle `/g/*` First-Load 134 kB (vorher 126) — neue Gäste-Abhängigkeiten dagegen messen.
+- Root-Layout lädt Cormorant/Inter (next/font) auch auf `/g/*` (12 Schriftdateien) — nur über eine Änderung am Root-Layout lösbar, nicht im Gäste-Bereich.

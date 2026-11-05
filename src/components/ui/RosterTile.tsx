@@ -1,6 +1,7 @@
 import { Pill } from "./Pill";
 import { ProgressBar } from "./ProgressBar";
-import { cx, Interactive, type InteractiveProps } from "./primitives";
+import { cx } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 import type { PillData } from "./rowShared";
 
 export interface RosterTileProps extends Omit<InteractiveProps, "aria-current" | "aria-pressed"> {

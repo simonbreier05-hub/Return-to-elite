@@ -1,5 +1,6 @@
 import GuestView from "@/components/guest/GuestView";
 import GuestUnavailable from "@/components/guest/GuestUnavailable";
+import { getGuestLegalLinks } from "@/lib/guestLegalLinks";
 import { resolveGuestAccessByRoomCode } from "@/lib/guestServer";
 
 export const dynamic = "force-dynamic";
@@ -12,8 +13,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function GuestRoomCodePage({ params }: { params: Promise<{ roomCode: string }> }) {
   const { roomCode } = await params;
-  const access = await resolveGuestAccessByRoomCode(roomCode);
-  if (!access) return <GuestUnavailable />;
+  const [access, legalLinks] = await Promise.all([resolveGuestAccessByRoomCode(roomCode), getGuestLegalLinks()]);
+  if (!access) return <GuestUnavailable legalLinks={legalLinks} />;
 
   return (
     <GuestView
@@ -21,6 +22,7 @@ export default async function GuestRoomCodePage({ params }: { params: Promise<{ 
       floor={access.room.floor}
       actionBase={`/api/guest/r/${roomCode}`}
       stayLanguage={access.stay.language}
+      legalLinks={legalLinks}
     />
   );
 }

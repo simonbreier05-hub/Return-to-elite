@@ -2,7 +2,6 @@
  * Gemeinsame Kleinteile der Design-Bausteine (D0): Symbol, klickbare Hülle, Fokusring,
  * Ton-Klassen. Nur Token-Klassen (docs/design/glass-spec.md), keine harten Farben.
  */
-import Link from "next/link";
 import type { ReactNode } from "react";
 import { ICONS, ICON_STROKE, type IconName } from "@/lib/ui/icons";
 import type { Tone } from "@/lib/ui/tone";
@@ -60,47 +59,6 @@ export function cx(...parts: Array<string | false | null | undefined>): string {
 export function Glyph({ name, size = 24, className }: { name: IconName; size?: number; className?: string }) {
   const C = ICONS[name];
   return <C aria-hidden="true" focusable="false" width={size} height={size} strokeWidth={ICON_STROKE} className={cx("shrink-0", className)} />;
-}
-
-export interface InteractiveProps {
-  /** Ziel-Link (Seitenwechsel) … */
-  href?: string;
-  /** … oder Aktion. Ohne beides ist der Baustein nur Anzeige. */
-  onClick?: () => void;
-  disabled?: boolean;
-  "aria-label"?: string;
-  "aria-current"?: "page" | "true" | boolean;
-  "aria-pressed"?: boolean;
-}
-
-/** Hülle: Link, Button oder (ohne Aktion) div — mit Fokusring und Eindrück-Effekt. */
-export function Interactive({
-  href,
-  onClick,
-  disabled,
-  className,
-  children,
-  ...aria
-}: InteractiveProps & { className?: string; children: ReactNode }) {
-  if (href && !disabled) {
-    return (
-      <Link href={href} className={cx("press", FOCUS_RING, className)} {...aria}>
-        {children}
-      </Link>
-    );
-  }
-  if (onClick || disabled) {
-    return (
-      <button type="button" onClick={onClick} disabled={disabled} className={cx("press text-start", FOCUS_RING, className)} {...aria}>
-        {children}
-      </button>
-    );
-  }
-  return (
-    <div className={className} aria-label={aria["aria-label"]} aria-current={aria["aria-current"]}>
-      {children}
-    </div>
-  );
 }
 
 /** Zähler-Badge in Champagner (Navigation, Tab-Leiste). */

@@ -1,6 +1,9 @@
 "use client";
 
 import { GuestLocaleProvider, useGuestLocale } from "@/lib/guestI18n/GuestLocaleContext";
+import { Glyph } from "@/components/ui/primitives";
+import GuestLegalLinks from "./GuestLegalLinks";
+import type { GuestLegalLinkUrls } from "@/lib/guestLegalLinks";
 
 /**
  * Shown for every access failure on the guest screen — unknown room code,
@@ -11,30 +14,26 @@ import { GuestLocaleProvider, useGuestLocale } from "@/lib/guestI18n/GuestLocale
  * Stay to read a language from here, so this only ever detects from the
  * browser/a prior manual choice, never a stay's own preference.
  */
-export default function GuestUnavailable() {
+export default function GuestUnavailable({ legalLinks }: { legalLinks?: GuestLegalLinkUrls }) {
   return (
     <GuestLocaleProvider>
-      <GuestUnavailableContent />
+      <GuestUnavailableContent legalLinks={legalLinks} />
     </GuestLocaleProvider>
   );
 }
 
-function GuestUnavailableContent() {
+function GuestUnavailableContent({ legalLinks }: { legalLinks?: GuestLegalLinkUrls }) {
   const { t } = useGuestLocale();
   return (
-    <div className="flex min-h-screen items-center justify-center px-6">
-      <div
-        className="w-full max-w-sm rounded-2xl border px-6 py-8 text-center shadow-sm"
-        style={{ borderColor: "var(--g-panel)", background: "white" }}
-      >
-        <img src="/guest/hotel-crest.svg" alt="" className="mx-auto mb-4 h-10 w-10" />
-        <h1 className="font-serif text-2xl" style={{ color: "var(--g-navy)" }}>
-          {t("unavailable.title")}
-        </h1>
-        <p className="mt-3 text-sm" style={{ color: "var(--g-muted)" }}>
-          {t("unavailable.message")}
-        </p>
+    <main className="flex min-h-dvh flex-col items-center justify-center gap-6 px-4 py-10">
+      <div className="glass w-full max-w-sm px-6 py-8 text-center">
+        <span className="glass-disc mx-auto mb-4 flex size-16 items-center justify-center rounded-pill text-text-primary">
+          <Glyph name="info" size={30} />
+        </span>
+        <h1 className="text-title-28 text-text-primary">{t("unavailable.title")}</h1>
+        <p className="text-body-16 mt-3 text-text-secondary">{t("unavailable.message")}</p>
       </div>
-    </div>
+      {legalLinks && <GuestLegalLinks links={legalLinks} />}
+    </main>
   );
 }

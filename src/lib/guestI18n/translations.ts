@@ -20,16 +20,21 @@ const en = {
   header: {
     room: "ROOM {{number}}",
     floor: "Floor {{floor}}",
+    roomFloor: "Room {{number}} · Floor {{floor}}",
+    welcome: "Welcome",
+    subtitle: "How can we help you?",
   },
   tiles: {
     dnd: { title: "Do Not Disturb", hint: "Choose a time window" },
-    clean: { title: "Clean now", hint: "Choose a time" },
+    clean: { title: "Request cleaning", hint: "Choose a time" },
     defect: { title: "Report an issue", hint: "Category & description" },
     contact: { title: "Contact a department", hint: "Choose who to reach" },
   },
   dndActive: {
     banner: "Do Not Disturb is active",
     cancel: "Lift Do Not Disturb",
+    short: "Active",
+    confirmQuestion: "Lift Do Not Disturb now? Our team may then enter your room again.",
   },
   dndWindow: {
     NOW: "Now",
@@ -86,11 +91,16 @@ const en = {
   },
   comment: {
     label: "Message to Housekeeping (optional)",
-    placeholder: "Your message…",
+    fieldLabel: "Anything else?",
+    placeholder: "Your message to us …",
     send: "Send",
+    empty: "Please enter a message first.",
   },
   status: {
     title: "Your requests",
+    latest: "Your request: {{kind}}",
+    showAll: "Show all requests",
+    empty: "No requests yet.",
     RECEIVED: "Received",
     IN_PROGRESS: "In progress",
     DONE: "Done",
@@ -123,11 +133,18 @@ const en = {
     message: "We couldn't find a current stay for this link. Please contact the front desk.",
   },
   language: {
+    label: "Language",
     de: "DE",
     en: "EN",
   },
+  legal: {
+    privacy: "Privacy",
+    imprint: "Legal notice",
+  },
   common: {
     close: "Close",
+    dismiss: "Dismiss",
+    sending: "Sending …",
   },
 } as const;
 
@@ -135,16 +152,21 @@ const de = {
   header: {
     room: "ZIMMER {{number}}",
     floor: "Etage {{floor}}",
+    roomFloor: "Zimmer {{number}} · Etage {{floor}}",
+    welcome: "Willkommen",
+    subtitle: "Wie können wir Ihnen helfen?",
   },
   tiles: {
     dnd: { title: "Bitte nicht stören", hint: "Zeitfenster wählen" },
-    clean: { title: "Jetzt reinigen", hint: "Zeitpunkt wählen" },
+    clean: { title: "Reinigung wünschen", hint: "Zeitpunkt wählen" },
     defect: { title: "Mangel melden", hint: "Kategorie & Beschreibung" },
     contact: { title: "Abteilung kontaktieren", hint: "Zuständige Stelle wählen" },
   },
   dndActive: {
     banner: "Bitte nicht stören ist aktiv",
     cancel: "Bitte nicht stören zurücknehmen",
+    short: "Aktiv",
+    confirmQuestion: "Bitte nicht stören jetzt zurücknehmen? Unser Team darf Ihr Zimmer dann wieder betreten.",
   },
   dndWindow: {
     NOW: "Jetzt",
@@ -201,11 +223,16 @@ const de = {
   },
   comment: {
     label: "Nachricht an das Housekeeping (optional)",
-    placeholder: "Ihre Nachricht…",
+    fieldLabel: "Weiteres Anliegen",
+    placeholder: "Ihre Nachricht an uns …",
     send: "Senden",
+    empty: "Bitte geben Sie zuerst eine Nachricht ein.",
   },
   status: {
     title: "Ihre Anfragen",
+    latest: "Ihre Anfrage: {{kind}}",
+    showAll: "Alle Anfragen anzeigen",
+    empty: "Noch keine Anfragen.",
     RECEIVED: "Eingegangen",
     IN_PROGRESS: "In Bearbeitung",
     DONE: "Erledigt",
@@ -238,11 +265,18 @@ const de = {
     message: "Für diesen Zugang finden wir gerade keinen Aufenthalt. Bitte wenden Sie sich an die Rezeption.",
   },
   language: {
+    label: "Sprache",
     de: "DE",
     en: "EN",
   },
+  legal: {
+    privacy: "Datenschutz",
+    imprint: "Impressum",
+  },
   common: {
     close: "Schließen",
+    dismiss: "Ausblenden",
+    sending: "Wird gesendet …",
   },
 } satisfies Widen<typeof en>;
 

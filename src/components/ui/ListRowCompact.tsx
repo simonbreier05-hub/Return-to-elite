@@ -1,6 +1,7 @@
 import type { IconName } from "@/lib/ui/icons";
 import { Pill } from "./Pill";
-import { Glyph, Interactive, type InteractiveProps } from "./primitives";
+import { Glyph } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 import { RowDecor, rowClasses, type PillData, type RowState } from "./rowShared";
 
 export interface ListRowCompactProps extends Omit<InteractiveProps, "aria-current" | "aria-pressed"> {

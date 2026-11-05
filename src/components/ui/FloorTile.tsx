@@ -1,6 +1,7 @@
 import { MARKER_UI, type MarkerKind } from "@/lib/ui/markers";
 import { TILE_UI, type TileState } from "@/lib/ui/room-tile";
-import { cx, Glyph, Interactive, TILE_FG, TONE_FG, type InteractiveProps } from "./primitives";
+import { cx, Glyph, TILE_FG, TONE_FG } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 
 export interface FloorTileProps extends Omit<InteractiveProps, "aria-label" | "aria-current"> {
   room: string;

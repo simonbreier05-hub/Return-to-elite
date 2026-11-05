@@ -1,5 +1,6 @@
 import GuestView from "@/components/guest/GuestView";
 import GuestUnavailable from "@/components/guest/GuestUnavailable";
+import { getGuestLegalLinks } from "@/lib/guestLegalLinks";
 import { resolveGuestAccessByStayToken } from "@/lib/guestServer";
 
 export const dynamic = "force-dynamic";
@@ -13,8 +14,8 @@ export const dynamic = "force-dynamic";
  */
 export default async function GuestStayTokenPage({ params }: { params: Promise<{ stayToken: string }> }) {
   const { stayToken } = await params;
-  const access = await resolveGuestAccessByStayToken(stayToken);
-  if (!access) return <GuestUnavailable />;
+  const [access, legalLinks] = await Promise.all([resolveGuestAccessByStayToken(stayToken), getGuestLegalLinks()]);
+  if (!access) return <GuestUnavailable legalLinks={legalLinks} />;
 
   return (
     <GuestView
@@ -22,6 +23,7 @@ export default async function GuestStayTokenPage({ params }: { params: Promise<{
       floor={access.room.floor}
       actionBase={`/api/guest/s/${stayToken}`}
       stayLanguage={access.stay.language}
+      legalLinks={legalLinks}
     />
   );
 }

@@ -56,6 +56,13 @@
     "src/app/front-office/view.tsx",
     "src/app/concierge/view.tsx",
     "src/components/roles/FrontOfficeHub.tsx",
-    "src/components/roles/ConciergeHub.tsx"
+    "src/components/roles/ConciergeHub.tsx",
+    "src/app/g/layout.tsx",
+    "src/components/guest/GuestView.tsx",
+    "src/components/guest/GuestModal.tsx",
+    "src/components/guest/GuestOfflineBar.tsx",
+    "src/components/guest/GuestUnavailable.tsx",
+    "src/components/guest/GuestLanguageSwitcher.tsx",
+    "src/components/guest/GuestLegalLinks.tsx"
   ]
 }
