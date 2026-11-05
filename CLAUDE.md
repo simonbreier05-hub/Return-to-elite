@@ -145,3 +145,8 @@
 - Live-Board-Raster (Supervisor) = `StatusTile`/`StatusLegend`/`GlassSelect` in `src/components/supervisor/SupervisorParts.tsx`; Status-Symbol/Ton nur aus `ROOM_STATUS_UI`/`STATUS_UI`. Supervisor-Liste am Handy mit `RoomRowCompact` (breite `RoomRow` läuft über).
 - `FloorTile` hat optional `marker` (z. B. Wäschewechsel) und `hint` (Vorlesetext, z. B. Kraft); Goldrahmen-Text kommt aus `TILE_UNASSIGNED_KEY`.
 - Browser-Nachweis D3: `scripts/e2e-supervisor-setup.ts` (erfundener Tag, nur SQLite) + `tests/e2e/supervisor.e2e.mjs` — gegen `next build`/`npm start` laufen lassen; der Dev-Server wirft dabei sporadisch „clientReferenceManifest“-Fehler (Next.js).
+- Gäste-Screen „Glas & Premium“ (D6, Figma `41:2827`): `/g` hat `.theme-glass bg-atmosphere` im Layout; `GuestView`/`GuestModal`/`GuestOfflineBar`/`GuestUnavailable` bauen aus D0-Bausteinen — immer **direkt** aus der Datei importieren (`@/components/ui/ActionTile`), nie aus `@/components/ui` (Sammeldatei zieht alle Bausteine ins Gäste-Bundle). Die alten `--g-*`-Farben gibt es nicht mehr.
+- `primitives.tsx` bleibt ohne `next/link`; `Interactive` liegt in `src/components/ui/Interactive.tsx` (sonst lädt jede Seite mit `Glyph` den Link-Code mit).
+- Datenschutz/Impressum auf dem Gäste-Screen: `Setting` `guestPrivacyUrl`/`guestImprintUrl` (`src/lib/guestLegalLinks.ts`, nur http(s) oder `/…`); leer = Link wird nicht gezeigt.
+- Gäste-Playwright: `tests/e2e/guest.e2e.mjs` (Wegwerf-DB, erfundene Testdaten, prod-Server). Bundle `/g/*` First-Load 134 kB (vorher 126) — neue Gäste-Abhängigkeiten dagegen messen.
+- Root-Layout lädt Cormorant/Inter (next/font) auch auf `/g/*` (12 Schriftdateien) — nur über eine Änderung am Root-Layout lösbar, nicht im Gäste-Bereich.

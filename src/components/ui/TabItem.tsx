@@ -1,5 +1,6 @@
 import type { IconName } from "@/lib/ui/icons";
-import { CountBadge, cx, Glyph, Interactive, type InteractiveProps } from "./primitives";
+import { CountBadge, cx, Glyph } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 
 export interface TabItemProps extends Omit<InteractiveProps, "aria-current" | "aria-label" | "aria-pressed"> {
   icon: IconName;

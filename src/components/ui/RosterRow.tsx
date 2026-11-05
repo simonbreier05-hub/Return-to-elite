@@ -1,6 +1,7 @@
 import { ProgressBar } from "./ProgressBar";
 import { StatusChip } from "./StatusChip";
-import { Glyph, Interactive, type InteractiveProps } from "./primitives";
+import { Glyph } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 import { RowDecor, rowClasses, type StatusData } from "./rowShared";
 
 export interface RosterRowProps extends Omit<InteractiveProps, "aria-current" | "aria-pressed"> {

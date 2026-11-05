@@ -3,7 +3,7 @@ import { LangChip } from "./LangChip";
 import { MarkerBadge } from "./MarkerBadge";
 import { Pill } from "./Pill";
 import { StatusIcon } from "./StatusIcon";
-import { Interactive, type InteractiveProps } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 import { RowDecor, rowClasses, type MarkerData, type PillData, type RowState, type StatusData } from "./rowShared";
 
 export interface RoomRowCompactProps extends Omit<InteractiveProps, "aria-current" | "aria-pressed"> {

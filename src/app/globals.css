@@ -268,19 +268,6 @@ body {
   }
 }
 
-/*
- * Guest screen (src/app/g/[roomNumber]) uses its own small palette
- * straight from the brief, scoped to `.guest-theme` so it doesn't touch the
- * staff app's ivory/gold palette above.
- */
-.guest-theme {
-  --g-cream: #f7f3ea;
-  --g-navy: #133457;
-  --g-brass: #a9843f;
-  --g-panel: #ede6d6;
-  --g-muted: #8a8578;
-}
-
 /* ───────────────────────────────────────────────────────────────────────
  * Planungstool (/planung). Bewegung hat immer einen Zweck: nur transform und
  * opacity, keine Dauerschleifen außer Spinner und Ring-Puls. Basiszustand =

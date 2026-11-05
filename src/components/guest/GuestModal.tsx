@@ -1,18 +1,21 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useGuestLocale } from "@/lib/guestI18n/GuestLocaleContext";
 import { useEscapeKey } from "@/components/useEscapeKey";
+import { Glyph, FOCUS_RING } from "@/components/ui/primitives";
 
 /**
- * Guest-screen modal frame — a copy of src/components/Modal.tsx (same
- * bottom-sheet/centred-dialog behaviour and animation), not a reuse of it:
- * that one is styled in the staff Hub's ivory/gold palette and reads its
- * close-button label from the staff LocaleProvider, neither of which
- * belongs on the guest screen's own navy/brass/cream design system and
- * DE/EN locale (Prompt G2 Teil 3).
+ * Guest-screen modal frame (D6 „Glas & Premium“) — deliberately NOT the
+ * staff Hub's Modal/GlassDialog: those read their close label from the
+ * staff LocaleProvider. Here the label comes from the guest's own DE/EN
+ * dictionary. Glass sheet (no blur, one shadow), close = symbol + word,
+ * ≥ 48 px, Escape closes, Tab stays inside (focus trap), focus returns to
+ * the element that opened it.
  */
 const CLOSE_MS = 220; // keep in sync with --duration-base in globals.css
+
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
 export default function GuestModal({
   title,
@@ -27,6 +30,7 @@ export default function GuestModal({
 }) {
   const { t } = useGuestLocale();
   const [closing, setClosing] = useState(false);
+  const panel = useRef<HTMLDivElement>(null);
 
   const close = () => {
     setClosing(true);
@@ -34,40 +38,61 @@ export default function GuestModal({
   };
   useEscapeKey(close, !closing);
 
+  // Fokus hinein beim Öffnen, zurück zum Auslöser beim Schließen.
+  useEffect(() => {
+    const opener = document.activeElement as HTMLElement | null;
+    const first = panel.current?.querySelector<HTMLElement>("[autofocus]") ?? panel.current?.querySelector<HTMLElement>(FOCUSABLE);
+    first?.focus();
+    return () => opener?.focus?.();
+  }, []);
+
+  const trapTab = (e: React.KeyboardEvent) => {
+    if (e.key !== "Tab" || !panel.current) return;
+    const items = Array.from(panel.current.querySelectorAll<HTMLElement>(FOCUSABLE));
+    if (items.length === 0) return;
+    const first = items[0];
+    const last = items[items.length - 1];
+    if (e.shiftKey && document.activeElement === first) {
+      e.preventDefault();
+      last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault();
+      first.focus();
+    }
+  };
+
   return (
     <div
-      className={`fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-0 sm:items-center sm:p-4 ${
+      className={`fixed inset-0 z-50 flex items-end justify-center bg-bg-canvas/80 p-0 sm:items-center sm:p-4 ${
         closing ? "animate-overlay-out" : "animate-overlay"
       }`}
       onClick={close}
     >
       <div
-        className={`max-h-[92vh] w-full max-w-md overflow-y-auto rounded-t-2xl p-5 shadow-2xl sm:rounded-2xl ${
+        ref={panel}
+        className={`glass max-h-[92vh] w-full max-w-md overflow-y-auto rounded-b-none p-5 sm:rounded-b-(--glass-radius-lg) ${
           closing ? "animate-sheet-out" : "animate-sheet"
         }`}
-        style={{ background: "white" }}
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={trapTab}
         role="dialog"
         aria-modal="true"
+        aria-labelledby="guest-modal-title"
       >
         <div className="mb-4 flex items-start justify-between gap-3">
-          <div>
-            <h3 className="font-serif text-2xl leading-tight" style={{ color: "var(--g-navy)" }}>
+          <div className="min-w-0">
+            <h2 id="guest-modal-title" className="text-title-22 text-text-primary">
               {title}
-            </h3>
-            {subtitle && (
-              <p className="mt-0.5 text-sm" style={{ color: "var(--g-muted)" }}>
-                {subtitle}
-              </p>
-            )}
+            </h2>
+            {subtitle && <p className="text-body-16 mt-1 text-text-secondary">{subtitle}</p>}
           </div>
           <button
+            type="button"
             onClick={close}
             aria-label={t("common.close")}
-            className="-mr-1 -mt-1 inline-flex h-11 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium hover:bg-black/5"
-            style={{ color: "var(--g-navy)" }}
+            className={`press text-label -me-1 -mt-1 inline-flex min-h-(--size-touch-min) shrink-0 items-center gap-1.5 rounded-pill border border-border-subtle px-4 text-text-primary ${FOCUS_RING}`}
           >
-            <span aria-hidden className="text-base leading-none">✕</span>
+            <Glyph name="x" size={20} />
             <span>{t("common.close")}</span>
           </button>
         </div>

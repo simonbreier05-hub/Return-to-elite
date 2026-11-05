@@ -33,6 +33,13 @@
     "src/components/RoomTaskModal.tsx",
     "src/components/DragDropBoard.tsx",
     "src/components/LiveListBoards.tsx",
-    "src/components/lists/SupervisorList.tsx"
+    "src/components/lists/SupervisorList.tsx",
+    "src/app/g/layout.tsx",
+    "src/components/guest/GuestView.tsx",
+    "src/components/guest/GuestModal.tsx",
+    "src/components/guest/GuestOfflineBar.tsx",
+    "src/components/guest/GuestUnavailable.tsx",
+    "src/components/guest/GuestLanguageSwitcher.tsx",
+    "src/components/guest/GuestLegalLinks.tsx"
   ]
 }

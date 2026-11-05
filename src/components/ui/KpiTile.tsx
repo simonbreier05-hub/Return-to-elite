@@ -1,5 +1,6 @@
 import type { IconName } from "@/lib/ui/icons";
-import { cx, Glyph, Interactive, type InteractiveProps } from "./primitives";
+import { cx, Glyph } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 
 export type KpiTone = "default" | "attention";
 

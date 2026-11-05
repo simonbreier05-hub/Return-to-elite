@@ -6,17 +6,22 @@ export interface ActionTileProps {
   title: string;
   /** `active` = Einstellung an (z. B. DND an). */
   active?: boolean;
+  /** Kleine Zeile unter dem Titel (z. B. „Aktiv · Nächste 2 Stunden“), optional. */
+  hint?: string;
+  /** Vollständige Beschriftung für Bildschirmleser, wenn Titel allein nicht reicht (optional). */
+  ariaLabel?: string;
   onClick?: () => void;
   disabled?: boolean;
   className?: string;
 }
 
 /** Große Aktionsfläche der Gäste-Startseite (DND, Reinigung, Mangel, Abteilung). Figma `39:2010`. */
-export function ActionTile({ icon, title, active = false, onClick, disabled, className }: ActionTileProps) {
+export function ActionTile({ icon, title, active = false, hint, ariaLabel, onClick, disabled, className }: ActionTileProps) {
   return (
     <button
       type="button"
       aria-pressed={active}
+      aria-label={ariaLabel}
       onClick={onClick}
       disabled={disabled}
       className={cx(
@@ -36,6 +41,7 @@ export function ActionTile({ icon, title, active = false, onClick, disabled, cla
         <Glyph name={icon} size={30} />
       </span>
       <span className="text-body-18 text-center text-text-primary">{title}</span>
+      {hint && <span className="text-label -mt-2 text-center text-text-secondary">{hint}</span>}
     </button>
   );
 }

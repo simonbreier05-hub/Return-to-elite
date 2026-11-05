@@ -1,6 +1,7 @@
 import type { IconName } from "@/lib/ui/icons";
 import type { KpiTone } from "./KpiTile";
-import { cx, Glyph, Interactive, type InteractiveProps } from "./primitives";
+import { cx, Glyph } from "./primitives";
+import { Interactive, type InteractiveProps } from "./Interactive";
 
 export interface KpiTileCompactProps extends Omit<InteractiveProps, "aria-pressed"> {
   label: string;

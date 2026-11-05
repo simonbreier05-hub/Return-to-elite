@@ -15,7 +15,7 @@ describe("UX-Aufräumen (Mobil 390 px)", () => {
   it("gemeinsame Bausteine haben mindestens 44 px Tippfläche", () => {
     expect(read("components/Collapsible.tsx")).toContain("min-h-11");
     expect(read("components/AppShell.tsx")).toContain("min-w-11");
-    expect(read("components/guest/GuestLanguageSwitcher.tsx")).toContain("h-11 w-11");
+    expect(read("components/guest/GuestLanguageSwitcher.tsx")).toMatch(/<FilterChip/); // FilterChip: min-h-(--size-touch-min) = 48 px
     expect(read("app/globals.css")).toMatch(/\.tap\s*\{[^}]*2\.75rem/);
   });
   it("Zimmernummern-Knöpfe nutzen .tap", () => {
