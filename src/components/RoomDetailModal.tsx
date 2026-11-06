@@ -12,6 +12,8 @@ import { PauseBadge, type PauseInfo } from "./PauseControl";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import { hhmm, dateTime } from "@/lib/i18n/format";
+import { useGlassMode } from "./shell/GlassMode";
+import { RoomDetailGlass } from "./room/RoomWindowGlass";
 
 /** The room shape returned by GET /api/rooms — shared by the global quick search. */
 export interface SearchedRoom {
@@ -85,6 +87,9 @@ export default function RoomDetailModal({
   task?: { type: PauseTarget; id: string };
 }) {
   const { t } = useLocale();
+  // Glas-Seiten (AppShell legacy={false}): dasselbe Fenster im Design „Glas & Premium“ (D7) — gleiche Daten, Slots, Rechte.
+  const glass = useGlassMode();
+  if (glass) return <RoomDetailGlass room={room} onClose={onClose} actions={actions} editor={editor} summary={summary} task={task} />;
   // Absturzsicher: unvollständige Antworten (fehlende Listen, unbekannter Status) dürfen das Modal nicht sprengen.
   const style = STATUS_STYLES[room.status] ?? STATUS_STYLES.DIRTY;
   const notes = Array.isArray(room.notes) ? room.notes : [];

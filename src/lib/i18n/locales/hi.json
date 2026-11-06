@@ -794,6 +794,7 @@
     "roomEdit.confirm": "पुष्टि के लिए फिर टैप करें",
     "roomEdit.saved": "सेव हुआ",
     "roomEdit.failed": "सेव नहीं हुआ।",
+    "roomEdit.loadFailed": "कमरा लोड नहीं हो सका।",
     "roomEdit.logbook": "कमरे की लॉगबुक",
     "roomEdit.logbookEmpty": "अभी कोई बदलाव नहीं।",
     "roomEdit.noTraces": "आज कोई Trace नहीं।",

@@ -794,6 +794,7 @@
     "roomEdit.confirm": "Onaylamak için tekrar dokunun",
     "roomEdit.saved": "Kaydedildi",
     "roomEdit.failed": "Kaydedilemedi.",
+    "roomEdit.loadFailed": "Oda yüklenemedi.",
     "roomEdit.logbook": "Oda günlüğü",
     "roomEdit.logbookEmpty": "Henüz değişiklik yok.",
     "roomEdit.noTraces": "Bugün Trace yok.",

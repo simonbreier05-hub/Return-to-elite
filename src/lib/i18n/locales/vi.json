@@ -794,6 +794,7 @@
     "roomEdit.confirm": "Chạm lần nữa để xác nhận",
     "roomEdit.saved": "Đã lưu",
     "roomEdit.failed": "Không lưu được.",
+    "roomEdit.loadFailed": "Không thể tải phòng.",
     "roomEdit.logbook": "Nhật ký phòng",
     "roomEdit.logbookEmpty": "Chưa có thay đổi.",
     "roomEdit.noTraces": "Hôm nay không có Trace.",
