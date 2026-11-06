@@ -3,6 +3,11 @@
 import { IconBan, IconLaundry, IconPerson } from "@/components/icons";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { Glyph, Pill, SectionLabel } from "@/components/ui";
+import { cx } from "@/components/ui/primitives";
+import { kindPill, type DayKind } from "@/lib/ui/hkHub";
+import { windowGuestName } from "@/lib/ui/roomWindow";
 
 export interface DayInfo { kind: string | null; laundry: boolean; vip: boolean; eta: string | null; guest: string | null; pax: number | null; dnd?: boolean; credits?: number }
 export interface DayTrace { id: string; text: string; dept: string; status: string }
@@ -16,8 +21,10 @@ const chip = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 tex
  */
 export default function RoomDayInfo({ day, traces = [], showDept = false }: { day: DayInfo | null | undefined; traces?: DayTrace[] | null; showDept?: boolean }) {
   const { t } = useLocale();
+  const glass = useGlassMode();
   const list = Array.isArray(traces) ? traces : [];
   if (!day && list.length === 0) return null;
+  if (glass) return <RoomDayInfoGlass day={day} traces={list} showDept={showDept} />;
   return (
     <div className="mt-3 space-y-2" data-testid="room-today">
       {day && (
@@ -51,6 +58,58 @@ export default function RoomDayInfo({ day, traces = [], showDept = false }: { da
             ))}
           </ul>
         </div>
+      )}
+    </div>
+  );
+}
+
+/** „Heute“ im Glas-Fenster (D7): Art als Pille, Kennzeichen mit Symbol + Text, Gast „Anrede Titel Nachname“ + Personen, Anreisezeit, Traces. */
+function RoomDayInfoGlass({ day, traces, showDept }: { day: DayInfo | null | undefined; traces: DayTrace[]; showDept: boolean }) {
+  const { t } = useLocale();
+  const pill = day ? kindPill((day.kind as DayKind) ?? null) : null;
+  const guest = day ? windowGuestName(day.guest, "IMPORT") : null;
+  const pax = day?.pax == null ? null : day.pax === 1 ? t("lists.paxOne") : t("lists.pax", { n: day.pax });
+  return (
+    <div className="flex flex-col gap-4" data-testid="room-today">
+      {day && (
+        <section className="flex flex-col gap-3" aria-label={t("roomEdit.today")}>
+          <SectionLabel as="h3" icon="calendar-days" title={t("roomEdit.today")} />
+          <div className="flex flex-wrap items-center gap-2">
+            <Pill tone={pill?.tone ?? "neutral"}>{pill ? t(pill.labelKey) : day.kind ? t(`lists.kind${day.kind}` as TKey) : t("lists.kindNone")}</Pill>
+            {day.vip && <Pill tone="accent" className="gap-1.5"><Glyph name="star" size={14} />{t("lists.vip")}</Pill>}
+            {day.laundry && <Pill tone="info" className="gap-1.5"><Glyph name="shirt" size={14} />{t("lists.laundry")}</Pill>}
+            {day.dnd && <Pill tone="danger" className="gap-1.5"><Glyph name="moon" size={14} />{t("lists.dnd")}</Pill>}
+            {day.credits != null && day.credits > 0 && <Pill>{t("lists.creditsN", { n: day.credits.toString().replace(".", ",") })}</Pill>}
+          </div>
+          {(guest || pax) && (
+            <p className="text-body-16 flex items-center gap-3 text-text-primary">
+              <Glyph name="user" size={22} className="shrink-0 text-text-secondary" />
+              {[guest, pax].filter(Boolean).join(" · ")}
+            </p>
+          )}
+          {day.eta && (
+            <p className="text-body-16 flex items-center gap-3 text-text-primary">
+              <Glyph name="clock" size={22} className="shrink-0 text-text-secondary" />
+              {t("hkHub.arrivalAt", { time: day.eta })}
+            </p>
+          )}
+        </section>
+      )}
+      {traces.length > 0 && (
+        <section className="flex flex-col gap-2" aria-label={t("work.traces")}>
+          <SectionLabel as="h3" icon="file-text" title={t("work.traces")} />
+          <ul className="flex flex-col gap-2">
+            {traces.map((x) => (
+              <li key={x.id} className={cx("text-body-16 flex items-start gap-3 break-words", x.status === "DONE" ? "text-text-muted line-through" : "text-text-primary")}>
+                <span aria-hidden="true" className="mt-2.5 size-1.5 shrink-0 rounded-pill bg-accent-default" />
+                <span>
+                  {showDept && <span className="text-label me-2 text-text-muted">{t(`lists.dept${x.dept}` as TKey)}:</span>}
+                  {x.text}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </section>
       )}
     </div>
   );

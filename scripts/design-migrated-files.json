@@ -1,5 +1,5 @@
 {
-  "_hinweis": "Dateien, die ein Design-Paket (D1–D6) auf „Glas & Premium“ umgestellt hat. 'warn' = harte Farben werden gemeldet, aber noch nicht blockiert; nach der Abnahme eines Pakets wandern seine Dateien nach 'strict'. src/components/ui/** ist immer strict.",
+  "_hinweis": "Dateien, die ein Design-Paket (D1–D7) auf „Glas & Premium“ umgestellt hat. 'warn' = harte Farben werden gemeldet, aber noch nicht blockiert; nach der Abnahme eines Pakets wandern seine Dateien nach 'strict'. src/components/ui/** ist immer strict.",
   "strict": [
     "src/components/AppShell.tsx",
     "src/components/shell/DetailContainer.tsx",
@@ -63,6 +63,15 @@
     "src/components/guest/GuestOfflineBar.tsx",
     "src/components/guest/GuestUnavailable.tsx",
     "src/components/guest/GuestLanguageSwitcher.tsx",
-    "src/components/guest/GuestLegalLinks.tsx"
+    "src/components/guest/GuestLegalLinks.tsx",
+    "src/components/RoomDetailModal.tsx",
+    "src/components/RoomEditPanel.tsx",
+    "src/components/room/RoomWindowGlass.tsx",
+    "src/components/room/RoomEditGlass.tsx",
+    "src/components/room/useRoomEdit.ts",
+    "src/components/lists/LiveRoomModal.tsx",
+    "src/components/lists/RoomDayInfo.tsx",
+    "src/components/TwoTapButton.tsx",
+    "src/lib/ui/roomWindow.ts"
   ]
 }

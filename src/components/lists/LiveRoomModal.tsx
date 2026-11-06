@@ -9,7 +9,12 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { RoomDetail } from "@/lib/rooms/roomDetail";
-import PauseControl from "@/components/PauseControl";
+import PauseControl, { usePauseAction } from "@/components/PauseControl";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { GlassRoomWindow } from "@/components/room/RoomWindowGlass";
+import { HkPauseControl } from "@/components/hk/HkParts";
+import { Banner } from "@/components/ui";
+import { roomWindowPrimary } from "@/lib/ui/roomWindow";
 import RoomDayInfo from "./RoomDayInfo";
 
 /**
@@ -26,6 +31,7 @@ export default function LiveRoomModal(props: { roomRef: string; onClose: () => v
 
 function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; onClose: () => void; onChanged?: () => void }) {
   const { t } = useLocale();
+  const glass = useGlassMode();
   const [room, setRoom] = useState<RoomDetail | null>(null);
   const [failed, setFailed] = useState(false);
   const load = useCallback(async () => {
@@ -46,6 +52,19 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
     "work:pause": (p: { roomId?: string } | undefined) => { if (!p || !room || p.roomId === room.id) soon(); },
   });
 
+  // Glas: „Fortsetzen“ als goldener Hauptknopf (gleicher Weg POST /api/work/pause wie PauseControl).
+  const resume = usePauseAction("ROOM", room?.id ?? "", () => { void load(); onChanged?.(); });
+
+  if (!room && glass) {
+    // Lade-/Fehlerzustand im Glas-Stil — Meldung ohne Gastdaten, nur die Zimmernummer aus dem Aufruf.
+    return (
+      <GlassRoomWindow title={t("hkHub.roomTitle", { n: roomRef })} onClose={onClose}>
+        {failed
+          ? <div role="alert"><Banner tone="warning" icon="triangle-alert" title={t("roomEdit.loadFailed")} /></div>
+          : <p role="status" className="text-body-16 text-text-muted">{t("common.loading")}</p>}
+      </GlassRoomWindow>
+    );
+  }
   if (!room) {
     return failed
       ? <RoomDetailModal onClose={onClose} room={{ id: "", number: roomRef, floor: 0, section: "", type: "STANDARD", status: "DIRTY", isCheckoutToday: false, openNotesCount: 0, arrivals: [], notes: [], defects: [] }} editor={<p role="alert" className="mt-3 text-sm text-status-out-of-order">{t("roomEdit.failed")}</p>} />
@@ -62,10 +81,17 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
   const pauseCtl = (room.pause || room.status === "IN_PROGRESS") && (
     <PauseControl targetType="ROOM" targetId={room.id} pause={room.pause} canPause={room.status === "IN_PROGRESS"} showBadge={false} onChanged={() => { void load(); onChanged?.(); }} />
   );
+  const reload = () => { void load(); onChanged?.(); };
+  const glassActions = !glass ? undefined : roomWindowPrimary({ hasOwnPrimary: false, paused: !!room.pause }) === "resume"
+    ? { primary: { label: t("work.resume"), onClick: () => void resume.send("resume") }, busy: resume.busy,
+        extra: resume.error ? <p role="alert" className="text-body-16 text-status-danger-fg">{resume.error}</p> : undefined }
+    : room.status === "IN_PROGRESS"
+      ? { extra: <HkPauseControl targetType="ROOM" targetId={room.id} canPause onChanged={reload} /> }
+      : undefined;
   return (
     <RoomDetailModal room={searched} onClose={onClose}
       summary={<RoomDayInfo day={room.day} />}
-      actions={pauseCtl ? { extra: pauseCtl } : undefined}
+      actions={glass ? glassActions : pauseCtl ? { extra: pauseCtl } : undefined}
       task={room.canMessage ? { type: "ROOM", id: room.id } : undefined}
       editor={<RoomEditPanel room={room} onChanged={async () => { await load(); onChanged?.(); }} />} />
   );

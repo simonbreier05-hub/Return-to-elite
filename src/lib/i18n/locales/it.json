@@ -794,6 +794,7 @@
     "roomEdit.confirm": "Tocca di nuovo per confermare",
     "roomEdit.saved": "Salvato",
     "roomEdit.failed": "Salvataggio non riuscito.",
+    "roomEdit.loadFailed": "Impossibile caricare la camera.",
     "roomEdit.logbook": "Registro della camera",
     "roomEdit.logbookEmpty": "Ancora nessuna modifica.",
     "roomEdit.noTraces": "Oggi nessun Trace.",

@@ -794,6 +794,7 @@
     "roomEdit.confirm": "برای تأیید دوباره بزنید",
     "roomEdit.saved": "ذخیره شد",
     "roomEdit.failed": "ذخیره نشد.",
+    "roomEdit.loadFailed": "اتاق بارگیری نشد.",
     "roomEdit.logbook": "دفتر اتاق",
     "roomEdit.logbookEmpty": "هنوز تغییری نیست.",
     "roomEdit.noTraces": "امروز Trace نیست.",
