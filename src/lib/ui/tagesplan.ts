@@ -8,7 +8,12 @@ import type { TKey } from "@/lib/i18n/translations";
 import type { DayKind } from "@/lib/dayplan/dayNumbers";
 import type { IconName } from "./icons";
 import type { Tone } from "./tone";
-import { MAX_FLOORS_HINT, OVERLOAD_EXTRA_ROOMS, ROOM_BANDS, type CrewKind } from "./tagesplanConfig";
+import { DEFAULT_SETTINGS } from "@/lib/domain";
+import { roomBand } from "@/lib/planung/floorTeam";
+import { MAX_FLOORS_HINT, OVERLOAD_EXTRA_ROOMS, type CrewKind } from "./tagesplanConfig";
+
+/** Einstellungen mit den Zimmer-Spannen (`/api/settings` → `settings`); fehlt etwas, gilt der Standard. */
+export type BandSettings = Partial<Record<string, number>>;
 
 // ── Reinigungsart ──────────────────────────────────────────────────────────
 
@@ -62,8 +67,9 @@ export function crewKindOf(kind: string | null | undefined): CrewKind {
   return kind === "TEILZEIT" || kind === "AZUBI" ? kind : "VOLLZEIT";
 }
 
-export function bandOf(kind: string | null | undefined) {
-  return ROOM_BANDS[crewKindOf(kind)];
+/** Zimmer-Spanne einer Kraft: dieselbe Regel wie der Zuteilungsvorschlag (`roomBand`, Hausregel aus den Einstellungen). */
+export function bandOf(kind: string | null | undefined, settings?: BandSettings) {
+  return roomBand(crewKindOf(kind), { ...(DEFAULT_SETTINGS as unknown as Record<string, number>), ...(settings as Record<string, number> | undefined) });
 }
 
 /** Zimmerzahl gegen die Spanne des Typs. */
@@ -113,7 +119,7 @@ export interface CrewSummary {
   roomIds: string[];
 }
 
-export function crewSummaries(crew: Crew[], rooms: PlanRoom[]): CrewSummary[] {
+export function crewSummaries(crew: Crew[], rooms: PlanRoom[], settings?: BandSettings): CrewSummary[] {
   return crew.map((c) => {
     const mine = rooms.filter((r) => r.assignedToId === c.id);
     const mix = emptyMix();
@@ -127,7 +133,7 @@ export function crewSummaries(crew: Crew[], rooms: PlanRoom[]): CrewSummary[] {
         f.rooms++; f.credits = roundCredits(f.credits + r.credit);
       }
     }
-    const band = bandOf(c.kind);
+    const band = bandOf(c.kind, settings);
     return {
       id: c.id, name: c.name, rooms: mine.length, credits: roundCredits(credits), band,
       state: loadState(mine.length, band), mix,

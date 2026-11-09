@@ -106,7 +106,7 @@ export async function getFloorTeamState(date: string): Promise<FloorTeamState> {
   const people: FloorPerson[] = present.map((u) => {
     const role = roleOf(u.role);
     if (role !== "HK") return { id: u.id, name: u.name, role, ...(role === "SUP" ? { badge: badges[u.id] } : {}) };
-    const b = roomBand(u.hkType, u.hkLevel, settings as unknown as Record<string, number>);
+    const b = roomBand(u.hkType, settings as unknown as Record<string, number>);
     return { id: u.id, name: u.name, role, level: Math.min(3, Math.max(1, u.hkLevel)), kind: u.hkType, roomsLo: b.lo, roomsHi: b.hi };
   });
 

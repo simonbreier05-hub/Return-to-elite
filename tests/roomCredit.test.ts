@@ -4,31 +4,19 @@ import { ROOM_TYPE_DEFAULT_CREDITS } from "@/lib/domain";
 
 const credits = ROOM_TYPE_DEFAULT_CREDITS;
 
-describe("computeRoomCredit", () => {
-  it("charges the full room-type credit for a departure", () => {
-    expect(
-      computeRoomCredit({ type: "CLASSIC", category: "DEPARTURE", laundryDue: false, credits, tidyCredit: 0.5 })
-    ).toBe(1);
-    expect(
-      computeRoomCredit({ type: "JUNIOR_SUITE", category: "DEPARTURE", laundryDue: false, credits, tidyCredit: 0.5 })
-    ).toBe(1.5);
+describe("computeRoomCredit (Plan-1b: Credit = Zimmerkategorie)", () => {
+  it("Standard 1, Deluxe 1,25, Junior Suite 1,5, alle weiteren Suiten 2", () => {
+    expect(computeRoomCredit({ type: "CLASSIC", credits })).toBe(1);
+    expect(computeRoomCredit({ type: "SUPERIOR", credits })).toBe(1);
+    expect(computeRoomCredit({ type: "DELUXE", credits })).toBe(1.25);
+    expect(computeRoomCredit({ type: "JUNIOR_SUITE", credits })).toBe(1.5);
+    expect(computeRoomCredit({ type: "SUITE", credits })).toBe(2);
+    expect(computeRoomCredit({ type: "PENTHOUSE", credits })).toBe(2);
   });
-
-  it("charges the tidy credit for a stayover not due for linen", () => {
-    expect(
-      computeRoomCredit({ type: "JUNIOR_SUITE", category: "STAYOVER", laundryDue: false, credits, tidyCredit: 0.5 })
-    ).toBe(0.5);
+  it("noch nicht erfasste Zimmerart zählt 1", () => {
+    expect(computeRoomCredit({ type: "UNVERIFIED", credits })).toBe(1);
   });
-
-  it("charges the full room-type credit for a stayover due for linen", () => {
-    expect(
-      computeRoomCredit({ type: "JUNIOR_SUITE", category: "STAYOVER", laundryDue: true, credits, tidyCredit: 0.5 })
-    ).toBe(1.5);
-  });
-
-  it("always charges a full clean for a same-day turn, regardless of laundryDue", () => {
-    expect(
-      computeRoomCredit({ type: "CLASSIC", category: "SAME_DAY_TURN", laundryDue: false, credits, tidyCredit: 0.5 })
-    ).toBe(1);
+  it("Hauswert aus den Einstellungen gewinnt", () => {
+    expect(computeRoomCredit({ type: "DELUXE", credits: { ...credits, DELUXE: 1.4 } })).toBe(1.4);
   });
 });

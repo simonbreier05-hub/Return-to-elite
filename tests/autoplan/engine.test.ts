@@ -56,18 +56,33 @@ describe("Zuteilungsvorschlag: harte Regeln", () => {
 });
 
 describe("Zuteilungsvorschlag: Fairness", () => {
-  // Haus mit etwas mehr Arbeit, damit das Zielband erreichbar ist
-  const rooms = makeDay(110);
+  // So viel Arbeit, dass alle Zimmer-Bänder erreichbar sind (6 × 10–13 + 6–8)
+  const rooms = makeDay(80);
   const r = proposePlan(makeInput(rooms, TEAM()));
   const vz = ["a", "b", "c", "d", "e", "f"];
 
-  it("Vollzeit liegt im Zielband (±1,5 um 14), Azubi bei 6–8", () => {
+  const roomsN = (id: string) => r.metrics.find((m) => m.hkId === id)!.rooms;
+  it("Plan-1b: Zimmerzahl im Band je Typ — Vollzeit 10–13, Azubi 6–8", () => {
     for (const id of vz) {
-      expect(credits(r, id), id).toBeGreaterThanOrEqual(12.5 - 0.3);
-      expect(credits(r, id), id).toBeLessThanOrEqual(15.5 + 0.3);
+      expect(roomsN(id), id).toBeGreaterThanOrEqual(10);
+      expect(roomsN(id), id).toBeLessThanOrEqual(13);
     }
-    expect(credits(r, "g")).toBeGreaterThanOrEqual(6 - 0.3);
-    expect(credits(r, "g")).toBeLessThanOrEqual(8 + 0.3);
+    expect(roomsN("g")).toBeGreaterThanOrEqual(6);
+    expect(roomsN("g")).toBeLessThanOrEqual(8);
+    expect(credits(r, "a")).toBeGreaterThan(0); // Credits bleiben als Gegenprobe sichtbar
+  });
+
+  it("Plan-1b: Azubi bekommt keine Junior Suite/Suite, solange andere frei sind", () => {
+    const byId = new Map(rooms.map((x) => [x.id, x]));
+    expect(roomsOf(r, "g").filter((id) => byId.get(id)!.demanding.includes("SUITE"))).toEqual([]);
+  });
+
+  it("Plan-1b: Mischung je Kraft ähnlich — Turn, Deep clean, Tidy, Linen change (Vollzeit)", () => {
+    const of = (id: string) => { const m = r.metrics.find((x) => x.hkId === id)!; return { turn: m.turns, deep: m.departures - m.turns, tidy: m.stayovers, linen: m.linen }; };
+    for (const key of ["turn", "deep", "tidy", "linen"] as const) {
+      const v = vz.map((id) => of(id)[key]);
+      expect(Math.max(...v) - Math.min(...v), key).toBeLessThanOrEqual(3);
+    }
   });
 
   it("Abreisen, Bleiber und Wäschewechsel sind ähnlich verteilt (Vollzeit)", () => {
@@ -88,9 +103,11 @@ describe("Zuteilungsvorschlag: Fairness", () => {
   });
 
   it("Interconnecting-Zimmer gehen zum selben Housekeeper", () => {
-    const pairs = rooms.filter((x) => x.interconnect.length).flatMap((x) => x.interconnect.map((o) => [x.id, o]));
+    const big = makeDay(110); // genug Zimmer, damit Interconnecting-Paare im Plan stehen
+    const rb = proposePlan(makeInput(big, TEAM()));
+    const pairs = big.filter((x) => x.interconnect.length).flatMap((x) => x.interconnect.map((o) => [x.id, o]));
     expect(pairs.length).toBeGreaterThan(0);
-    for (const [a, b] of pairs) expect(r.assignment[a], `${a}/${b}`).toBe(r.assignment[b]);
+    for (const [a, b] of pairs) expect(rb.assignment[a], `${a}/${b}`).toBe(rb.assignment[b]);
   });
 
   it("Stammetage: schwacher Wunsch (Gewicht 1); mit höherem Gewicht klar erkennbar", () => {
@@ -109,8 +126,9 @@ describe("zu wenige Kräfte", () => {
     const rooms = makeDay(94);
     const res = proposePlan(makeInput(rooms, [hk("a", "VOLLZEIT", 3), hk("b", "VOLLZEIT", 2), hk("c", "VOLLZEIT", 2)]));
     expect(res.unassigned).toEqual([]);
-    expect(res.needed).toMatchObject({ housekeepers: 6, targetCredits: 14, present: 3 });
-    expect(res.warnings.find((w) => w.code === "TOO_FEW_STAFF")!.message).toContain("Personal reicht nicht: benötigt 6 Kräfte, ausgewählt 3");
+    // Plan-1b: Bedarf nach Zimmern — 94 Zimmer ÷ 11,5 Zimmer je Vollzeitkraft = 9
+    expect(res.needed).toMatchObject({ housekeepers: 9, targetRooms: 11.5, present: 3 });
+    expect(res.warnings.find((w) => w.code === "TOO_FEW_STAFF")!.message).toContain("Personal reicht nicht: benötigt 9 Kräfte, ausgewählt 3 (bei 11,5 Zimmern je Vollzeitkraft)");
     expect(res.warnings.map((w) => w.code)).toContain("TOO_MANY_FLOORS");
   });
 });
@@ -126,7 +144,7 @@ describe("mehr Kräfte als Arbeit", () => {
 });
 
 describe("Route", () => {
-  it("Turn (nach Anreisezeit) → VIP → Abreise → Bleiber", () => {
+  it("Plan-1b: Turn (nach Anreisezeit) → VIP → Bleiber → Deep clean (Abreise ohne Anreise) zuletzt", () => {
     const base = { section: "1A", laundry: false, credits: 1, demanding: [], traces: 0, interconnect: [], state: "TODO", fixedTo: null } as const;
     const mk = (id: string, floor: number, kind: PlanRoom["kind"], extra: Partial<PlanRoom> = {}): PlanRoom =>
       ({ ...base, id, number: `${floor}0${id}`, floor, kind, vip: false, eta: null, ...extra }) as PlanRoom;
@@ -134,14 +152,14 @@ describe("Route", () => {
       mk("1", 1, "STAYOVER"), mk("2", 1, "DEPARTURE"), mk("3", 2, "STAYOVER", { vip: true }),
       mk("4", 3, "TURN", { eta: "15:00" }), mk("5", 4, "TURN", { eta: "11:00" }), mk("6", 5, "DEPARTURE", { vip: true }),
     ]);
-    expect(route.map((r) => r.id)).toEqual(["5", "4", "3", "6", "2", "1"]);
+    expect(route.map((r) => r.id)).toEqual(["5", "4", "3", "6", "1", "2"]);
   });
 
   it("Vorschlag liefert die Route in dieser Reihenfolge", () => {
     const res = proposePlan(makeInput(makeDay(94), TEAM()));
     const rooms = new Map(makeDay(94).map((x) => [x.id, x]));
     for (const rt of res.routes) {
-      const tiers = rt.roomIds.map((id) => { const x = rooms.get(id)!; return x.kind === "TURN" ? 0 : x.vip ? 1 : x.kind === "DEPARTURE" ? 2 : 3; });
+      const tiers = rt.roomIds.map((id) => { const x = rooms.get(id)!; return x.kind === "TURN" ? 0 : x.vip ? 1 : x.kind === "STAYOVER" ? 2 : 3; });
       expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
     }
   });

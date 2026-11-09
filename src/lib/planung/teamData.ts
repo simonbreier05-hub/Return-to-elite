@@ -3,8 +3,9 @@ import { audit } from "@/lib/audit";
 import { berlinDate } from "@/lib/dayplan/time";
 import { parseAssignedFloors } from "@/lib/floors";
 import { assignFloors } from "@/lib/users/assignFloors";
-import { bandFor, loadDay } from "@/lib/autoplan/load";
-import { getPlanningCreditSettings, getSettings } from "@/lib/settings";
+import { loadDay } from "@/lib/autoplan/load";
+import { getSettings } from "@/lib/settings";
+import { bandCenter, roomBand } from "./floorTeam";
 import { PLAN_FLOORS, pickDefaultTeam, type SavedTeam, type TeamSelection } from "./team";
 import { supervisorBadges, type HouseSupervisor } from "./model";
 
@@ -41,15 +42,16 @@ async function readSaved(): Promise<SavedTeam | null> {
 }
 
 export async function getTeamState(date: string): Promise<TeamState> {
-  const [settings, planning] = await Promise.all([getSettings(), getPlanningCreditSettings()]);
+  const settings = await getSettings();
   const [hks, sups, hms] = await Promise.all([
     prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, orderBy: { name: "asc" } }),
     prisma.user.findMany({ where: { role: "supervisor" }, orderBy: { name: "asc" }, select: { id: true, name: true, assignedFloors: true } }),
     prisma.user.findMany({ where: { role: "houseman" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const hk: HkMember[] = hks.map((u) => {
-    const band = bandFor({ hkType: u.hkType, dailyTarget: u.dailyTarget }, settings, planning.targetCreditsPerAttendant);
-    return { id: u.id, name: u.name, kind: u.hkType, level: Math.min(3, Math.max(1, u.hkLevel)), target: Math.round(((band.lo + band.hi) / 2) * 10) / 10 };
+    // Plan-1b: Ziel in Zimmern (Mitte des Bands je Typ), Bedarf = Zimmer des Tages
+    const target = Math.round(bandCenter(roomBand(u.hkType, settings as unknown as Record<string, number>)) * 10) / 10;
+    return { id: u.id, name: u.name, kind: u.hkType, level: Math.min(3, Math.max(1, u.hkLevel)), target };
   });
   const badges = supervisorBadges(sups);
   const sel = pickDefaultTeam(date, await readSaved(), {

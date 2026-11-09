@@ -26,8 +26,8 @@ export function makeDay(occupied = 94, opts: { vipEvery?: number } = {}): PlanRo
     k++;
     const kind: WorkKind = k % 3 === 0 ? (k % 18 === 0 ? "TURN" : "DEPARTURE") : "STAYOVER";
     const laundry = kind === "STAYOVER" && k % 4 === 0;
-    const typeCredit = h.type === "STANDARD" ? 1 : 1.5;
-    const credits = kind === "STAYOVER" ? Math.round(typeCredit * 0.7 * 100) / 100 : typeCredit;
+    // Plan-1b: Credit = Zimmerkategorie (Standard 1, Junior Suite 1,5, Suite 2), unabhängig von der Art
+    const credits = h.type === "STANDARD" ? 1 : h.type === "JUNIOR_SUITE" ? 1.5 : 2;
     const demanding: DemandingReason[] = [];
     const vip = k % (opts.vipEvery ?? 17) === 0;
     if (vip) demanding.push("VIP");
@@ -49,11 +49,13 @@ export function makeDay(occupied = 94, opts: { vipEvery?: number } = {}): PlanRo
 
 export function hk(id: string, type: HkType, level: 1 | 2 | 3, extra: Partial<PlanHousekeeper> = {}): PlanHousekeeper {
   const [lo, hi] = type === "VOLLZEIT" ? [12.5, 15.5] : [6, 8];
-  return { id, name: id.toUpperCase(), type, level, homeFloors: [], yesterdayFloors: [], lo, hi, ...extra };
+  // Plan-1b: Zimmer-Band je Typ (Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8)
+  const [roomsLo, roomsHi] = type === "VOLLZEIT" ? [10, 13] : type === "TEILZEIT" ? [6, 9] : [6, 8];
+  return { id, name: id.toUpperCase(), type, level, homeFloors: [], yesterdayFloors: [], lo, hi, roomsLo, roomsHi, ...extra };
 }
 
 export function makeInput(rooms: PlanRoom[], housekeepers: PlanHousekeeper[]): PlanInput {
-  return { rooms, housekeepers, weights: { ...AUTOPLAN_WEIGHTS }, maxFloors: 2, fullTimeTarget: 14 };
+  return { rooms, housekeepers, weights: { ...AUTOPLAN_WEIGHTS }, maxFloors: 2, fullTimeTarget: 14, fullTimeRooms: 11.5 };
 }
 
 /** 6 Vollzeit (Stufen 3,3,2,2,2,1) + 1 Azubi (Stufe 1). */

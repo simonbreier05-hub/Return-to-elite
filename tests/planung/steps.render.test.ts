@@ -40,8 +40,9 @@ describe("Schritt Team", () => {
     expect(out).toContain("Azubi · Stufe 1");
   });
   it("Bedarf gegen Besetzung: Aussage steht im Text, nicht nur in der Farbe", () => {
-    expect(team({ verdict: capacityVerdict(40, [14]) })).toContain("Zu knapp: 26 Credits fehlen");
-    expect(team({ verdict: capacityVerdict(10, [14]) })).toContain("Besetzung reicht");
+    // Plan-1b: Bedarf in Zimmern gegen Zimmer-Ziel je Kraft
+    expect(team({ verdict: capacityVerdict(40, [12]) })).toContain("Zu knapp: 28 Zimmer fehlen");
+    expect(team({ verdict: capacityVerdict(10, [11.5]) })).toContain("Besetzung reicht");
   });
   it("nennt, was für Weiter fehlt", () => {
     expect(team({ missing: ["HK"] })).toContain("Es fehlt mindestens ein Housekeeper.");

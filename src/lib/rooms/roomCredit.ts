@@ -1,23 +1,16 @@
 import type { RoomType } from "@/lib/domain";
-import type { RoomDayCategory } from "./roomDayCategory";
 
 export interface RoomCreditInput {
   type: RoomType;
-  category: RoomDayCategory;
-  /** From isLaundryDue — only meaningful when category is STAYOVER. */
-  laundryDue: boolean;
   credits: Record<RoomType, number>;
-  tidyCredit: number;
 }
 
 /**
- * A stayover that isn't due for a linen change is a lighter "tidy" clean
- * (make the bed, refresh the bathroom, no towels/sheets) rather than a full
- * room-type clean — see Schritt 4. Every other category (arrival,
- * departure, same-day-turn, DND-blocked-but-still-counted) is always a full
- * clean at the room's own credit value.
+ * Credit eines Zimmers = Wert seiner **Zimmerkategorie** (Plan-1b, Vorgabe Simon Nov. 2026): Standard 1, Deluxe 1,25,
+ * Junior Suite 1,5, alle weiteren Suiten 2 (Standard in `ROOM_TYPE_DEFAULT_CREDITS`, Hauswert per Setting `roomTypeCredits`).
+ * Die Reinigungsart (Tidy/Linen change/Turn/Deep clean) ändert den Credit nicht mehr — sie zählt in der Planung als
+ * Zimmerzahl und als Mischung je Kraft. Eine Definition für Grundriss, Tagesplan, Listen und Zuteilungsvorschlag.
  */
-export function computeRoomCredit({ type, category, laundryDue, credits, tidyCredit }: RoomCreditInput): number {
-  if (category === "STAYOVER" && !laundryDue) return tidyCredit;
+export function computeRoomCredit({ type, credits }: RoomCreditInput): number {
   return credits[type] ?? 1;
 }
