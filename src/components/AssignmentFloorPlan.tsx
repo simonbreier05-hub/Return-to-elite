@@ -13,13 +13,14 @@ import Link from "next/link";
 import { Banner, FilterChip, GlassCard, Glyph } from "@/components/ui";
 import { cx, FOCUS_RING } from "@/components/ui/primitives";
 import { GlassRedistribution } from "@/components/supervisor/GlassRedistribution";
-import { GlassPlanningBoard } from "@/components/supervisor/GlassPlanningBoard";
+import { TagesplanView } from "@/components/tagesplan/TagesplanView";
+import { useTagesplanMeta } from "@/components/tagesplan/useTagesplanMeta";
 
 interface DayInfo { date: string; today: string; actionableRoomIds: string[]; attendants: { id: string; name: string }[]; roster: { id: string; name: string; absent: boolean }[]; hub?: HubState }
 
 /**
- * Die einzige Zuteilungsansicht (nur Supervisor/Duty Manager) — „Tagesplanung“ im Design „Glas & Premium“ (Figma `31:1118`):
- * Grundriss je Etage oder Liste je Zimmermädchen, beide Zuteilungsmodi (Zwei-Tap), Mehrfachauswahl, Ziehen zwischen Kräften.
+ * Die einzige Zuteilungsansicht (nur Supervisor/Duty Manager) — „Tagesplan“ (Plan-1, `TagesplanView`) im Design „Glas & Premium“:
+ * Etagen-Zeilen mit Grundriss oder Liste je Zimmermädchen, Zwei-Tap-Zuteilung, Mehrfachauswahl, Ziehen zwischen Kräften.
  * Liest und schreibt dieselbe Wahrheit wie alle anderen Ansichten (Room.assignedToId); Änderungen melden die Betroffenen
  * über notifyReassignment (Server), und alle offenen Ansichten laden live nach.
  * Unter 640 px nur ein Hinweis (Entscheidung Simon: Tagesplanung nur am Tablet quer/Desktop).
@@ -42,6 +43,7 @@ export default function AssignmentFloorPlan() {
   };
 
   const attendants = useMemo(() => day?.attendants ?? [], [day]);
+  const meta = useTagesplanMeta(day?.today ?? null, version);
 
   if (bp === "phone") {
     return (
@@ -59,7 +61,7 @@ export default function AssignmentFloorPlan() {
     <div className="theme-glass flex flex-col gap-4 sm:gap-6">
       <HubMissingNotice hub={day.hub} planner />
       <GlassRedistribution />
-      <GlassPlanningBoard reloadToken={version} onShiftAttendants={attendants} />
+      <TagesplanView reloadToken={version} onShiftAttendants={attendants} meta={meta} date={day.today} />
 
       <GlassCard as="section" aria-labelledby="plan-present-title" className="flex flex-col gap-3">
         <h2 id="plan-present-title" className="text-title-22 text-text-primary">{t("planning.presentTitle")}</h2>

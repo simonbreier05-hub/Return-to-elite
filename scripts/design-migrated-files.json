@@ -8,7 +8,13 @@
     "src/components/shell/HeaderPhoto.tsx",
     "src/components/shell/Overlay.tsx",
     "src/components/shell/ShellNav.tsx",
-    "src/app/dev/shell/ShellDemo.tsx"
+    "src/app/dev/shell/ShellDemo.tsx",
+    "src/components/tagesplan/TagesplanView.tsx",
+    "src/components/tagesplan/TagesplanParts.tsx",
+    "src/components/tagesplan/PlanningParts.tsx",
+    "src/components/tagesplan/TagesplanWindow.tsx",
+    "src/lib/ui/tagesplan.ts",
+    "src/lib/ui/tagesplanConfig.ts"
   ],
   "warn": [
     "src/app/attendant/view.tsx",
@@ -20,7 +26,6 @@
     "src/components/supervisor/SupervisorRoomDetail.tsx",
     "src/components/supervisor/SupervisorParts.tsx",
     "src/components/supervisor/GlassRedistribution.tsx",
-    "src/components/supervisor/GlassPlanningBoard.tsx",
     "src/components/AssignmentFloorPlan.tsx",
     "src/app/duty-manager/view.tsx",
     "src/components/dutymanager/DutyHouse.tsx",
