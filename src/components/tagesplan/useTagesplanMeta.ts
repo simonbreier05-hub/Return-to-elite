@@ -13,6 +13,8 @@ import type { LevelWarning } from "@/lib/ui/tagesplan";
  */
 export interface TagesplanMeta {
   kinds: Record<string, string>;
+  /** Zimmer-Band je Kraft (Typ oder persönliches Tagesziel), vom Server. */
+  bands: Record<string, { lo: number; hi: number }>;
   levelWarnings: LevelWarning[];
   hasProposal: boolean;
   confirmed: boolean;
@@ -21,9 +23,9 @@ export interface TagesplanMeta {
   traces: number | null;
 }
 
-export const EMPTY_META: TagesplanMeta = { kinds: {}, levelWarnings: [], hasProposal: false, confirmed: false, edits: 0, traces: null };
+export const EMPTY_META: TagesplanMeta = { kinds: {}, bands: {}, levelWarnings: [], hasProposal: false, confirmed: false, edits: 0, traces: null };
 
-interface TeamResponse { members: { hk: { id: string; kind: string }[] } }
+interface TeamResponse { members: { hk: { id: string; kind: string; roomsLo?: number; roomsHi?: number }[] } }
 interface ProposalResponse { proposal: { status: string; payload: { result: { warnings: LevelWarning[] } } } | null }
 interface HouseResponse { floors: { tiles: { openTraces?: number }[] }[] }
 
@@ -47,6 +49,7 @@ export function useTagesplanMeta(date: string | null, reloadToken = 0): Tagespla
       const p = prop?.proposal ?? null;
       setMeta({
         kinds: Object.fromEntries((team?.members.hk ?? []).map((h) => [h.id, h.kind])),
+        bands: Object.fromEntries((team?.members.hk ?? []).filter((h) => h.roomsLo != null && h.roomsHi != null).map((h) => [h.id, { lo: h.roomsLo!, hi: h.roomsHi! }])),
         levelWarnings: p?.payload.result.warnings ?? [],
         hasProposal: !!p,
         confirmed: p?.status === "CONFIRMED",

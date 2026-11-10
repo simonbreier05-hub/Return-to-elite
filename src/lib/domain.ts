@@ -259,15 +259,10 @@ export const DEFAULT_SETTINGS = {
   // Aufenthalte (Stay) ohne Namen werden so viele Tage nach der Abreise ganz gelöscht.
   guestStayDeleteDays: 30,
   // M2b — Zuteilungsvorschlag (docs/autoplan.md). Gewichte der Kostenfunktion: Setting "autoplanWeight.<name>".
-  autoplanTolerance: 1.5, // ± Credits um das Tagesziel (Vollzeit)
   autoplanMaxFloors: 2, // höchstens so viele Etagen je Housekeeper (weich)
   stayoverFactor: 0.5, // Plan-1b: nur noch Zeitfaktor — Tidy dauert ca. halb so lang wie ein Turn (Startschätzung Arbeitsdaten)
   stayoverLaundryFactor: 1, // Plan-1b: nur noch Zeitfaktor — Linen change dauert so lang wie ein Turn
   autoplanManyTraces: 2, // ab so vielen offenen Traces gilt ein Zimmer als anspruchsvoll
-  azubiCreditsMin: 6,
-  azubiCreditsMax: 8,
-  teilzeitCreditsMin: 6,
-  teilzeitCreditsMax: 8,
   minutesPerCredit: 25, // Start-Schätzung, bis aus den heutigen Zeitstempeln berechnet wird
   earlyFinishMinutes: 45, // "früher fertig": geschätzte Restzeit darunter
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag

@@ -201,3 +201,11 @@ describe("Gewichte", () => {
     expect(buildResult(makeInput(rooms, TEAM()), off.assignment).metrics.length).toBe(7);
   });
 });
+
+describe("Credit-Gegenprobe (Plan-1b)", () => {
+  it("Credit-Band = Zimmer-Band × durchschnittlicher Credit je Zimmer", async () => {
+    const { bandFor } = await import("@/lib/autoplan/load");
+    expect(bandFor({ lo: 10, hi: 13 }, 1.2)).toEqual({ lo: 12, hi: 15.6 });
+    expect(bandFor({ lo: 6, hi: 8 }, 1)).toEqual({ lo: 6, hi: 8 });
+  });
+});

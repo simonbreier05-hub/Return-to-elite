@@ -17,7 +17,7 @@ import { supervisorBadges, type HouseSupervisor } from "./model";
 const KEY = "planningTeam";
 
 export interface TeamMember { id: string; name: string }
-export interface HkMember extends TeamMember { kind: string; level: number; target: number }
+export interface HkMember extends TeamMember { kind: string; level: number; target: number; roomsLo: number; roomsHi: number }
 export interface SupMember extends TeamMember { badge: HouseSupervisor }
 
 export interface TeamState {
@@ -50,8 +50,9 @@ export async function getTeamState(date: string): Promise<TeamState> {
   ]);
   const hk: HkMember[] = hks.map((u) => {
     // Plan-1b: Ziel in Zimmern (Mitte des Bands je Typ), Bedarf = Zimmer des Tages
-    const target = Math.round(bandCenter(roomBand(u.hkType, settings as unknown as Record<string, number>)) * 10) / 10;
-    return { id: u.id, name: u.name, kind: u.hkType, level: Math.min(3, Math.max(1, u.hkLevel)), target };
+    const band = roomBand(u.hkType, settings as unknown as Record<string, number>, u.dailyTarget);
+    const target = Math.round(bandCenter(band) * 10) / 10;
+    return { id: u.id, name: u.name, kind: u.hkType, level: Math.min(3, Math.max(1, u.hkLevel)), target, roomsLo: band.lo, roomsHi: band.hi };
   });
   const badges = supervisorBadges(sups);
   const sel = pickDefaultTeam(date, await readSaved(), {

@@ -47,10 +47,10 @@ describe("Team speichern", () => {
     expect(s.demand.rooms).toBe(2);
     expect(s.demand.credits).toBeGreaterThan(1);
     expect(s.selected.hk).toHaveLength(3);
-    // Plan-1b: Ziel in Zimmern = Mitte des Bands je Typ (Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8); dailyTarget (Credits) zählt hier nicht
+    // Plan-1b: Ziel in Zimmern = Mitte des Bands je Typ (Vollzeit 10–13, Teilzeit 6–9); dailyTarget = persönliches Tagesziel in Zimmern (± 1)
     expect(s.members.hk.find((h) => h.id === ids.h1)!.target).toBe(11.5);
     expect(s.members.hk.find((h) => h.id === ids.h2)!.target).toBe(7.5);
-    expect(s.members.hk.find((h) => h.id === ids.h3)!.target).toBe(7);
+    expect(s.members.hk.find((h) => h.id === ids.h3)).toMatchObject({ target: 10, roomsLo: 9, roomsHi: 11 });
     expect(s.floorAssign[1]).toBe(ids.s1);
     expect(s.floorAssign[3]).toBe(ids.s2);
   });

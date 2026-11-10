@@ -366,6 +366,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
           draft={{ rooms: plan.draft.input.rooms, assignment: plan.draft.assignment, onAssign: plan.assign, onAssignMany: plan.assignMany }}
           meta={{
             kinds: Object.fromEntries(plan.draft.input.housekeepers.map((h) => [h.id, h.type])),
+            bands: Object.fromEntries(plan.draft.input.housekeepers.filter((h) => h.roomsLo != null && h.roomsHi != null).map((h) => [h.id, { lo: h.roomsLo!, hi: h.roomsHi! }])),
             levelWarnings: plan.view?.warnings ?? [],
             hasProposal: true,
             confirmed: !!plan.confirmed,

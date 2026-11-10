@@ -8,8 +8,8 @@ import { DEFAULT_LINEN_CYCLE_DAYS, DEFAULT_SETTINGS, ROOM_TYPES } from "@/lib/do
 import type { TKey } from "@/lib/i18n/translations";
 
 interface Hk { id: string; name: string; hkType: string; hkLevel: number; homeFloors: string; dailyTarget: number | null; hkActive: boolean }
-type SettingKey = "autoplanTolerance" | "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "azubiCreditsMin" | "azubiCreditsMax" | "teilzeitCreditsMin" | "teilzeitCreditsMax" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves" | "statusRewindMinutes" | "roomsVzMin" | "roomsVzMax" | "roomsTzMin" | "roomsTzMax" | "roomsAzMin" | "roomsAzMax" | "floorSuggestWindow" | "floorSuggestMinDays" | "floorDemandingWarnShare" | "learnWindow" | "learnMinDays" | "learnExpireDays" | "learnStaffDropShare" | "workdataMinSamples" | "workdataRetentionDays" | "shiftMinutes";
-const SETTING_KEYS: SettingKey[] = ["autoplanTolerance", "autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "azubiCreditsMin", "azubiCreditsMax", "teilzeitCreditsMin", "teilzeitCreditsMax", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves", "statusRewindMinutes", "roomsVzMin", "roomsVzMax", "roomsTzMin", "roomsTzMax", "roomsAzMin", "roomsAzMax", "floorSuggestWindow", "floorSuggestMinDays", "floorDemandingWarnShare", "learnWindow", "learnMinDays", "learnExpireDays", "learnStaffDropShare", "workdataMinSamples", "workdataRetentionDays", "shiftMinutes"];
+type SettingKey = "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves" | "statusRewindMinutes" | "roomsVzMin" | "roomsVzMax" | "roomsTzMin" | "roomsTzMax" | "roomsAzMin" | "roomsAzMax" | "floorSuggestWindow" | "floorSuggestMinDays" | "floorDemandingWarnShare" | "learnWindow" | "learnMinDays" | "learnExpireDays" | "learnStaffDropShare" | "workdataMinSamples" | "workdataRetentionDays" | "shiftMinutes";
+const SETTING_KEYS: SettingKey[] = ["autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves", "statusRewindMinutes", "roomsVzMin", "roomsVzMax", "roomsTzMin", "roomsTzMax", "roomsAzMin", "roomsAzMax", "floorSuggestWindow", "floorSuggestMinDays", "floorDemandingWarnShare", "learnWindow", "learnMinDays", "learnExpireDays", "learnStaffDropShare", "workdataMinSamples", "workdataRetentionDays", "shiftMinutes"];
 const WEIGHT_KEYS = Object.keys(AUTOPLAN_WEIGHTS) as (keyof typeof AUTOPLAN_WEIGHTS)[];
 
 /** Einstellungen: Stammdaten der Housekeeper (Typ, Stufe, Stammetagen, Tagesziel) und Regeln/Gewichte des Zuteilungsvorschlags. Nur Supervisor/Duty Manager. */
@@ -65,7 +65,7 @@ export default function HousekeeperSettingsPanel() {
                     onBlur={(e) => { const f = e.target.value.split(",").map((x) => parseInt(x, 10)).filter((n) => n >= 1 && n <= 7).slice(0, 2); patchHk(h.id, { homeFloors: f }); }} />
                 </td>
                 <td className="pe-3">
-                  <input className={`${input} w-20`} type="number" step="0.5" min={0} defaultValue={h.dailyTarget ?? ""}
+                  <input className={`${input} w-20`} type="number" step="1" min={0} max={30} defaultValue={h.dailyTarget ?? ""}
                     onBlur={(e) => patchHk(h.id, { dailyTarget: e.target.value === "" ? null : Number(e.target.value) })} />
                 </td>
                 <td><input type="checkbox" className="h-5 w-5" checked={h.hkActive} onChange={(e) => patchHk(h.id, { hkActive: e.target.checked })} /></td>

@@ -32,6 +32,10 @@ describe("Status je Kraft (Zimmerzahl)", () => {
     // Hausregel aus den Einstellungen gewinnt (dieselbe Quelle wie der Zuteilungsvorschlag)
     expect(bandOf("TEILZEIT", { roomsTzMin: 5, roomsTzMax: 8 })).toEqual({ lo: 5, hi: 8 });
   });
+  it("Band vom Server (persönliches Tagesziel) gewinnt vor dem Typ-Band", () => {
+    const [c] = crewSummaries([{ id: "a", name: "A", kind: "VOLLZEIT", band: { lo: 6, hi: 8 } }], []);
+    expect(c.band).toEqual({ lo: 6, hi: 8 });
+  });
   it("▼ Niedrig / ✓ Ausgewogen / ▲ Hoch / ⚠ Überlast", () => {
     const b = { lo: 10, hi: 13 };
     expect(loadState(9, b)).toBe("low");

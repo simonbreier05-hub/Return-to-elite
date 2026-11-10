@@ -103,6 +103,12 @@ describe("Zimmer-Zielband je Typ (Plan-1b)", () => {
     expect(roomBand("AZUBI", s)).toEqual({ lo: 6, hi: 8 });
     expect(roomBand(undefined, s)).toEqual({ lo: 10, hi: 13 });
   });
+  it("persönliches Tagesziel (dailyTarget) = Zimmerzahl ± 1 und ersetzt das Typ-Band", () => {
+    expect(roomBand("AZUBI", s, 7)).toEqual({ lo: 6, hi: 8 });
+    expect(roomBand("VOLLZEIT", s, 12)).toEqual({ lo: 11, hi: 13 });
+    expect(roomBand("VOLLZEIT", s, null)).toEqual({ lo: 10, hi: 13 });
+    expect(roomBand("VOLLZEIT", s, 0)).toEqual({ lo: 10, hi: 13 });
+  });
 });
 
 describe("floorDiff (Audit vorher/nachher)", () => {

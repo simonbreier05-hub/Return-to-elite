@@ -103,7 +103,8 @@ export interface PlanRoom {
   open: boolean;
 }
 
-export interface Crew { id: string; name: string; kind?: string | null }
+/** `band` = Zimmer-Band der Kraft vom Server (berücksichtigt das persönliche Tagesziel); fehlt es, gilt das Band des Typs. */
+export interface Crew { id: string; name: string; kind?: string | null; band?: { lo: number; hi: number } }
 
 export interface CrewSummary {
   id: string;
@@ -133,7 +134,7 @@ export function crewSummaries(crew: Crew[], rooms: PlanRoom[], settings?: BandSe
         f.rooms++; f.credits = roundCredits(f.credits + r.credit);
       }
     }
-    const band = bandOf(c.kind, settings);
+    const band = c.band ?? bandOf(c.kind, settings);
     return {
       id: c.id, name: c.name, rooms: mine.length, credits: roundCredits(credits), band,
       state: loadState(mine.length, band), mix,

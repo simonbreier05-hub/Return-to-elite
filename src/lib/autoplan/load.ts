@@ -37,14 +37,13 @@ export interface DayData {
 
 const stateOf = (status: string): RoomState => (status === "IN_PROGRESS" ? "STARTED" : status === "CLEAN" || status === "INSPECTED" ? "DONE" : "TODO");
 
-export function bandFor(u: { hkType: string; dailyTarget: number | null }, s: SettingsShape, fullTimeTarget: number): { lo: number; hi: number } {
-  if (u.dailyTarget && u.dailyTarget > 0) {
-    const tol = u.hkType === "VOLLZEIT" ? s.autoplanTolerance : 1;
-    return { lo: Math.max(0, u.dailyTarget - tol), hi: u.dailyTarget + tol };
-  }
-  if (u.hkType === "AZUBI") return { lo: s.azubiCreditsMin, hi: s.azubiCreditsMax };
-  if (u.hkType === "TEILZEIT") return { lo: s.teilzeitCreditsMin, hi: s.teilzeitCreditsMax };
-  return { lo: fullTimeTarget - s.autoplanTolerance, hi: fullTimeTarget + s.autoplanTolerance };
+/**
+ * Credit-Band einer Kraft (nur Gegenprobe, Plan-1b): ihr Zimmer-Band × durchschnittlicher Credit je Zimmer des Tages.
+ * Wer viele Suiten hat (höhere Credits), landet so bei weniger Zimmern. Eigene Credit-Ziele je Typ gibt es nicht mehr.
+ */
+export function bandFor(rooms: { lo: number; hi: number }, avgCredit: number): { lo: number; hi: number } {
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return { lo: r(rooms.lo * avgCredit), hi: r(rooms.hi * avgCredit) };
 }
 
 const floors = (csv: string) => csv.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n)).slice(0, 2);
@@ -117,15 +116,20 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
 
   const team = opts.attendantIds ?? (await teamIdsFor(date));
   const users = await prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, orderBy: { name: "asc" } });
-  const hks = users.map((u) => ({
+  const avgCredit = rooms.length ? rooms.reduce((a, r) => a + r.credits, 0) / rooms.length : 1;
+  const hks = users.map((u) => {
+    // Zimmer-Band je Typ bzw. persönliches Tagesziel in Zimmern (dailyTarget); Credits nur als Gegenprobe daraus
+    const band = roomBand(u.hkType, settings as unknown as Record<string, number>, u.dailyTarget);
+    return {
     id: u.id, name: u.name, type: (u.hkType as HkType), level: Math.min(3, Math.max(1, u.hkLevel)) as 1 | 2 | 3,
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
-    ...bandFor({ hkType: u.hkType, dailyTarget: u.dailyTarget }, settings, fullTimeTarget),
-    ...(() => { const b = roomBand(u.hkType, settings as unknown as Record<string, number>); return { roomsLo: b.lo, roomsHi: b.hi }; })(),
+    ...bandFor(band, avgCredit),
+    roomsLo: band.lo, roomsHi: band.hi,
     todayFloors: u.floorsOn === date ? parseAssignedFloors(u.assignedFloors) : [],
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!team || team.includes(u.id)),
-  }));
+  };
+  });
   const learnedNotes = await applyLearned(date, rooms, hks);
   // H3: gemessene Zeiten (nur wenn „Messdaten in Planung verwenden" an ist) — Credits bleiben die Basis
   const minutes = await planningMinutesFor(date, hks.map((h) => h.id)).catch(() => ({} as Record<string, never>));
