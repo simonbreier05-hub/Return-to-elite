@@ -95,15 +95,19 @@ describe("Live-Kennzahl je Etage", () => {
   });
 });
 
-describe("Zimmer-Zielband (Typ + Stufe)", () => {
+describe("Zimmer-Zielband je Typ (Plan-1b)", () => {
   const s = DEFAULT_SETTINGS as unknown as Record<string, number>;
-  it("Vollzeit 13 / 10–11 / 6–8, Teilzeit 9 / 7", () => {
-    expect(roomBand("VOLLZEIT", 3, s)).toEqual({ lo: 13, hi: 13 });
-    expect(roomBand("VOLLZEIT", 2, s)).toEqual({ lo: 10, hi: 11 });
-    expect(roomBand("VOLLZEIT", 1, s)).toEqual({ lo: 6, hi: 8 });
-    expect(roomBand("TEILZEIT", 3, s)).toEqual({ lo: 9, hi: 9 });
-    expect(roomBand("TEILZEIT", 2, s)).toEqual({ lo: 7, hi: 7 });
-    expect(roomBand("AZUBI", 3, s)).toEqual({ lo: 6, hi: 8 });
+  it("Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8; Stufe spielt keine Rolle mehr", () => {
+    expect(roomBand("VOLLZEIT", s)).toEqual({ lo: 10, hi: 13 });
+    expect(roomBand("TEILZEIT", s)).toEqual({ lo: 6, hi: 9 });
+    expect(roomBand("AZUBI", s)).toEqual({ lo: 6, hi: 8 });
+    expect(roomBand(undefined, s)).toEqual({ lo: 10, hi: 13 });
+  });
+  it("persönliches Tagesziel (dailyTarget) = Zimmerzahl ± 1 und ersetzt das Typ-Band", () => {
+    expect(roomBand("AZUBI", s, 7)).toEqual({ lo: 6, hi: 8 });
+    expect(roomBand("VOLLZEIT", s, 12)).toEqual({ lo: 11, hi: 13 });
+    expect(roomBand("VOLLZEIT", s, null)).toEqual({ lo: 10, hi: 13 });
+    expect(roomBand("VOLLZEIT", s, 0)).toEqual({ lo: 10, hi: 13 });
   });
 });
 

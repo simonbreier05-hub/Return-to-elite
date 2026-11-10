@@ -94,13 +94,13 @@ describe("Zimmermädchen-Liste", () => {
     expect(JSON.stringify(body)).not.toContain("Klimaanlage");
   });
 
-  it("Kopf: Fortschritt x von y und Credits-Summe (Bleiber normal 0,5, mit Wäschewechsel voll)", async () => {
+  it("Kopf: Fortschritt x von y und Credits-Summe (Plan-1b: Credit = Zimmerkategorie, unabhängig von der Art)", async () => {
     getSessionMock.mockReset(); getSessionMock.mockResolvedValue({ userId: ids.anna, name: "anna Test", role: "room_attendant" });
     const { progress } = await (await housekeeperGet()).json();
     expect(progress.total).toBe(4);
     expect(progress.done).toBe(1); // 202 ist CLEAN
-    // 201 Abreise 1 + 202 Bleiber mit Wäschewechsel 1 + 203 Bleiber normal 0,5 + 204 Turn 1
-    expect(progress.creditsTotal).toBe(3.5);
+    // 201 Abreise + 202 Bleiber mit Wäschewechsel + 203 Bleiber normal + 204 Turn — je Zimmerkategorie (hier 1)
+    expect(progress.creditsTotal).toBe(4);
     expect(progress.creditsDone).toBe(1); // 202 ist fertig
   });
 

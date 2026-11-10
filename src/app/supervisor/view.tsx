@@ -137,10 +137,10 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   // Nur Anzeige (Credits in „Team heute“): dieselben Quellen wie der Grundriss, Fehler lassen die Credits leer (0).
   const loadCredits = useCallback(async () => {
     const [settings, day] = await Promise.all([
-      api<{ roomTypeCredits: Record<string, number>; planningCredits: { tidyCredit: number } }>("/api/settings").catch(() => null),
+      api<{ roomTypeCredits: Record<string, number> }>("/api/settings").catch(() => null),
       api<{ numbers: { laundryDue: { ids: string[] } | null } | null }>("/api/day-numbers").catch(() => null),
     ]);
-    if (settings) setCreditSettings({ roomTypeCredits: settings.roomTypeCredits, tidyCredit: settings.planningCredits?.tidyCredit ?? 0.5 });
+    if (settings) setCreditSettings({ roomTypeCredits: settings.roomTypeCredits });
     if (day) setLaundryIds(new Set(day.numbers?.laundryDue?.ids ?? []));
   }, []);
 

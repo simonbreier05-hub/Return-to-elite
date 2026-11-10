@@ -181,16 +181,16 @@ export const roundCredits = (n: number) => Math.round(n * 10) / 10;
 /** Einstellungen für die Credits je Zimmer — dieselben Felder, die der Grundriss liest (`/api/settings`). */
 export interface CreditSettings {
   roomTypeCredits: Record<string, number>;
-  tidyCredit: number;
 }
 
 /**
  * Credit eines Zimmers — dieselbe Rechnung wie im Grundriss (`computeRoomCredit`, Wäschewechsel nur aus dem Tagesplan).
  * Ohne Einstellungen: 0 (die Kachel zeigt dann keine erfundene Zahl).
  */
-export function roomCreditOf(r: Pick<SupRoom, "type" | "occupancy" | "isCheckoutToday" | "blockReason" | "arrivals">, laundryDue: boolean, s: CreditSettings | null): number {
+export function roomCreditOf(r: Pick<SupRoom, "type" | "occupancy" | "isCheckoutToday" | "blockReason" | "arrivals">, _laundryDue: boolean, s: CreditSettings | null): number {
+  // Plan-1b: Credit = Zimmerkategorie; Art und Wäschewechsel ändern ihn nicht mehr.
   if (!s) return 0;
-  return computeRoomCredit({ type: (r.type ?? "") as RoomType, category: dayCategoryOf(r), laundryDue, credits: s.roomTypeCredits as Record<RoomType, number>, tidyCredit: s.tidyCredit });
+  return computeRoomCredit({ type: (r.type ?? "") as RoomType, credits: s.roomTypeCredits as Record<RoomType, number> });
 }
 
 /** Überlast = über der Credit-Richtgröße (nur ein Hinweis, nie eine Sperre — wie bisher im Grundriss). */

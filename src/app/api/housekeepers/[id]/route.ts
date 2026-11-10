@@ -8,7 +8,7 @@ const Body = z.object({
   hkType: z.enum(["VOLLZEIT", "TEILZEIT", "AZUBI"]).optional(),
   hkLevel: z.number().int().min(1).max(3).optional(),
   homeFloors: z.array(z.number().int().min(1).max(7)).max(2).optional(),
-  dailyTarget: z.number().min(0).max(40).nullable().optional(),
+  dailyTarget: z.number().int().min(0).max(30).nullable().optional(), // Plan-1b: persönliches Tagesziel in Zimmern
   hkActive: z.boolean().optional(),
 }).strict();
 

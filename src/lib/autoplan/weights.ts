@@ -5,8 +5,8 @@
  */
 export const AUTOPLAN_WEIGHTS = {
   extraFloor: 100, // je Etage über das Maximum (2) hinaus
-  credits: 10, // quadratische Abweichung vom Tagesziel (außerhalb der Toleranz)
-  categoryFairness: 5, // Ungleichheit bei Abreisen, Bleibern, Wäschewechseln
+  credits: 3, // quadratische Abweichung vom Tagesziel (außerhalb der Toleranz) — Plan-1b: nur Gegenprobe (Zimmerkategorie), Zimmerzahl führt
+  categoryFairness: 5, // Ungleichheit der Arten je Kraft: Turn, Deep clean, Tidy, Linen change (Plan-1b: vier Arten)
   demandingFairness: 8, // Ungleichheit bei anspruchsvollen Zimmern unter Stufe 2/3
   interconnectSplit: 20, // je getrenntes Interconnecting-Paar
   homeFloor: 1, // je Zimmer abseits der Stammetage / gestrigen Etage
@@ -15,6 +15,7 @@ export const AUTOPLAN_WEIGHTS = {
   assignedFloor: 6, // H1: je Zimmer abseits der heute eingeteilten Etagen (Etagenzuweisung)
   overtime: 3, // H3: je 10 Minuten über Schichtende (geschätzt aus Messdaten)
   learned: 10, // H3: je Zimmer gegen ein gelerntes Muster (Person / Mindeststufe) — weich, harte Regeln gewinnen
+  traineeSuite: 40, // Plan-1b: je Junior Suite/Suite bei einem Azubi (Azubis vor allem Standard/Deluxe) — weich, nie eine Sperre
 } as const;
 
 export type AutoplanWeights = { -readonly [K in keyof typeof AUTOPLAN_WEIGHTS]: number };

@@ -84,7 +84,8 @@ describe("Zahlen aus der Datenbank", () => {
 
 describe("Planung nur mit den gewählten Kräften", () => {
   it("4 von 6 Kräften gewählt, 37 Zimmer: alle werden verteilt, Warnung „Personal reicht nicht“, niemand sonst bekommt Zimmer", async () => {
-    await prisma.setting.create({ data: { key: "targetCreditsPerAttendant", value: "4" } }); // 37 Zimmer brauchen dann mehr als die 4 gewählten Kräfte
+    // Plan-1b: Bedarf nach Zimmern — bei 3–5 Zimmern je Vollzeitkraft (Mitte 4) brauchen 37 Zimmer mehr als die 4 gewählten Kräfte
+    for (const [key, value] of [["roomsVzMin", "3"], ["roomsVzMax", "5"]]) await prisma.setting.create({ data: { key, value } });
     await prisma.setting.create({ data: { key: "planningTeam", value: JSON.stringify({ date: DATE, hk: [id.a, id.b, id.c, id.d], sup: [id.sup1], hm: [id.hm1] }) } });
     await prisma.user.updateMany({ where: { id: { in: [id.e, id.f] } }, data: { absentDate: DATE } });
     expect(await teamIdsFor(DATE)).toEqual([id.a, id.b, id.c, id.d]);

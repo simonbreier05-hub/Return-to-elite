@@ -392,7 +392,12 @@ export default function AppShell({
             </div>
           )}
 
-          {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
+          {/* Schnellsuche: auf Glas-Seiten dasselbe Zimmer-Fenster im Glas-Stil (D7), auf alten Seiten hell. */}
+          {selectedRoom && (
+            <GlassMode on={!legacy}>
+              <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />
+            </GlassMode>
+          )}
 
           <main className="relative z-10 mx-auto w-full max-w-7xl px-3 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] sm:px-6 sm:pb-6">
             <ErrorBoundary>

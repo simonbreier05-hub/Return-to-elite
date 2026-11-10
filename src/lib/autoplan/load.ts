@@ -2,13 +2,14 @@ import { prisma } from "@/lib/db";
 import { isToClean, PLAN_KIND } from "@/lib/dayplan/dayNumbers";
 import { getAutoplanWeights, getPlanningCreditSettings, getRoomTypeCredits, getSettings } from "@/lib/settings";
 import { berlinToUtc } from "@/lib/dayplan/time";
-import { creditFactor } from "@/lib/rooms/stayoverCredit";
+import { computeRoomCredit } from "@/lib/rooms/roomCredit";
+import type { RoomType } from "@/lib/domain";
 import { savedTeamFor } from "@/lib/planung/savedTeam";
 import { estimateSpeeds } from "./speed";
 import type { LiveInput } from "./redistribute";
 import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, PlanRoom, RoomState } from "./types";
 import type { SettingsShape } from "@/lib/domain";
-import { roomBand } from "@/lib/planung/floorTeam";
+import { bandCenter, roomBand } from "@/lib/planung/floorTeam";
 import { parseAssignedFloors } from "@/lib/floors";
 import { activePatterns } from "@/lib/learning/store";
 import { planningMinutesFor } from "@/lib/workdata/load";
@@ -36,14 +37,13 @@ export interface DayData {
 
 const stateOf = (status: string): RoomState => (status === "IN_PROGRESS" ? "STARTED" : status === "CLEAN" || status === "INSPECTED" ? "DONE" : "TODO");
 
-export function bandFor(u: { hkType: string; dailyTarget: number | null }, s: SettingsShape, fullTimeTarget: number): { lo: number; hi: number } {
-  if (u.dailyTarget && u.dailyTarget > 0) {
-    const tol = u.hkType === "VOLLZEIT" ? s.autoplanTolerance : 1;
-    return { lo: Math.max(0, u.dailyTarget - tol), hi: u.dailyTarget + tol };
-  }
-  if (u.hkType === "AZUBI") return { lo: s.azubiCreditsMin, hi: s.azubiCreditsMax };
-  if (u.hkType === "TEILZEIT") return { lo: s.teilzeitCreditsMin, hi: s.teilzeitCreditsMax };
-  return { lo: fullTimeTarget - s.autoplanTolerance, hi: fullTimeTarget + s.autoplanTolerance };
+/**
+ * Credit-Band einer Kraft (nur Gegenprobe, Plan-1b): ihr Zimmer-Band × durchschnittlicher Credit je Zimmer des Tages.
+ * Wer viele Suiten hat (höhere Credits), landet so bei weniger Zimmern. Eigene Credit-Ziele je Typ gibt es nicht mehr.
+ */
+export function bandFor(rooms: { lo: number; hi: number }, avgCredit: number): { lo: number; hi: number } {
+  const r = (n: number) => Math.round(n * 100) / 100;
+  return { lo: r(rooms.lo * avgCredit), hi: r(rooms.hi * avgCredit) };
 }
 
 const floors = (csv: string) => csv.split(",").map((x) => parseInt(x, 10)).filter((n) => Number.isFinite(n)).slice(0, 2);
@@ -84,10 +84,9 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     const today = r.assignedOn === date;
     const assignee = r.assignedToId && (today || state !== "TODO") ? r.assignedToId : null;
     if (state !== "TODO" && !assignee) continue; // schon erledigt/begonnen, niemandem zugeordnet: nichts zu planen
-    // Anreise in ein nicht gereinigtes Zimmer = volle Reinigung wie eine Abreise
-    const kind = p.cleaningType === "SAME_DAY_TURN" ? "TURN" : p.cleaningType === "STAYOVER" ? "STAYOVER" : "DEPARTURE";
-    const factor = creditFactor(kind, p.laundryDue, settings); // Bleiber normal 0,5, mit Wäschewechsel voll (siehe stayoverCredit.ts)
-    const credits = Math.round((typeCredits[r.type as keyof typeof typeCredits] ?? 1) * factor * 100) / 100;
+    // Plan-1b: Turn = Anreise und Abreise (auch Anreise in ein nicht gereinigtes Zimmer); DEPARTURE = Deep clean (Abreise ohne Anreise heute)
+    const kind = p.cleaningType === "SAME_DAY_TURN" || p.cleaningType === "ARRIVAL" ? "TURN" : p.cleaningType === "STAYOVER" ? "STAYOVER" : "DEPARTURE";
+    const credits = computeRoomCredit({ type: r.type as RoomType, credits: typeCredits }); // Plan-1b: Wert der Zimmerkategorie
     const traceN = traceCount.get(r.id) ?? 0;
     const demanding: DemandingReason[] = [];
     if (p.vip) demanding.push("VIP");
@@ -117,15 +116,20 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
 
   const team = opts.attendantIds ?? (await teamIdsFor(date));
   const users = await prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, orderBy: { name: "asc" } });
-  const hks = users.map((u) => ({
+  const avgCredit = rooms.length ? rooms.reduce((a, r) => a + r.credits, 0) / rooms.length : 1;
+  const hks = users.map((u) => {
+    // Zimmer-Band je Typ bzw. persönliches Tagesziel in Zimmern (dailyTarget); Credits nur als Gegenprobe daraus
+    const band = roomBand(u.hkType, settings as unknown as Record<string, number>, u.dailyTarget);
+    return {
     id: u.id, name: u.name, type: (u.hkType as HkType), level: Math.min(3, Math.max(1, u.hkLevel)) as 1 | 2 | 3,
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
-    ...bandFor({ hkType: u.hkType, dailyTarget: u.dailyTarget }, settings, fullTimeTarget),
-    ...(() => { const b = roomBand(u.hkType, u.hkLevel, settings as unknown as Record<string, number>); return { roomsLo: b.lo, roomsHi: b.hi }; })(),
+    ...bandFor(band, avgCredit),
+    roomsLo: band.lo, roomsHi: band.hi,
     todayFloors: u.floorsOn === date ? parseAssignedFloors(u.assignedFloors) : [],
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!team || team.includes(u.id)),
-  }));
+  };
+  });
   const learnedNotes = await applyLearned(date, rooms, hks);
   // H3: gemessene Zeiten (nur wenn „Messdaten in Planung verwenden" an ist) — Credits bleiben die Basis
   const minutes = await planningMinutesFor(date, hks.map((h) => h.id)).catch(() => ({} as Record<string, never>));
@@ -168,6 +172,7 @@ export function morningInput(d: DayData): PlanInput {
   return {
     rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
     weights: d.weights, maxFloors: d.settings.autoplanMaxFloors, fullTimeTarget: d.fullTimeTarget,
+    fullTimeRooms: bandCenter(roomBand("VOLLZEIT", d.settings as unknown as Record<string, number>)),
     ...(d.hks.some((h) => h.minutesByKind) ? { shiftMinutes: d.settings.shiftMinutes } : {}),
   };
 }

@@ -17,7 +17,7 @@ Drei Listen aus derselben Quelle (`src/lib/lists/dayRows.ts`: `DayRoomPlan` + `S
 - **Verschieben über Etagen** ist erlaubt. Jede Änderung der Zuteilung meldet (`notifyReassignment`): dem neuen und dem bisherigen Zimmermädchen (Zimmer, Etage) und den Supervisoren der Zimmer-Etage bzw. der Etagen des neuen Zimmermädchens (mit Namen, außer dem Verursacher).
 - **Nachimport-Hinweis**: aus dem Audit `DAY_PLAN_MERGED` (`changedRooms`, `first`); beim ersten Import des Tages wird nichts als „geändert" markiert.
 - **Erledigte Traces** bleiben erledigt (`Trace.status`/`doneAt`, Schlüssel `dedupeKey`); Abhaken zieht die verknüpfte Aufgabe (`RoomTask`) mit und umgekehrt.
-- Credits: Typ-Wert × Faktor wie im Zuteilungsvorschlag (`creditFactor`: Bleiber normal 0,5, mit Wäschewechsel voll); reine Anreisen zählen nicht.
+- Credits: Wert der Zimmerkategorie wie im Zuteilungsvorschlag (`computeRoomCredit`, Plan-1b); reine Anreisen zählen nicht.
 
 ## Tests
 

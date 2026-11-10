@@ -90,10 +90,10 @@ describe("Kachel und Credits", () => {
     expect(tileStateOf(room({ id: "310", occupancy: "OCCUPIED" }))).toBe("stayover");
     expect(tileStateOf(room({ id: "311" }))).toBe("empty");
   });
-  it("Credits wie im Grundriss: Bleiber ohne Wäsche = Tidy, sonst Zimmertyp; ohne Einstellungen 0", () => {
-    const s = { roomTypeCredits: { DELUXE: 1.5 }, tidyCredit: 0.5 };
+  it("Credits wie im Grundriss (Plan-1b): immer der Wert der Zimmerkategorie; ohne Einstellungen 0", () => {
+    const s = { roomTypeCredits: { DELUXE: 1.5 } };
     const stay = room({ id: "312", type: "DELUXE", occupancy: "OCCUPIED" });
-    expect(roomCreditOf(stay, false, s)).toBe(0.5);
+    expect(roomCreditOf(stay, false, s)).toBe(1.5);
     expect(roomCreditOf(stay, true, s)).toBe(1.5);
     expect(roomCreditOf(room({ id: "313", type: "DELUXE", isCheckoutToday: true }), false, s)).toBe(1.5);
     expect(roomCreditOf(stay, false, null)).toBe(0);

@@ -28,6 +28,9 @@ import PlanStep from "./PlanStep";
 import ProgressRing from "./ProgressRing";
 import StepSegments from "./StepSegments";
 import TeamStep from "./TeamStep";
+import { TagesplanWindow } from "@/components/tagesplan/TagesplanWindow";
+import { sumTraces } from "@/components/tagesplan/useTagesplanMeta";
+import { countEdits } from "@/lib/ui/tagesplan";
 import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
 import { useFloorTeam } from "./useFloorTeam";
 import Stepper from "./Stepper";
@@ -56,6 +59,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   const [skipAsk, setSkipAsk] = useState<{ id: string; name: string; rooms: number } | null>(null);
   const [undo, setUndo] = useState<{ id: string; name: string } | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [tagesplanOpen, setTagesplanOpen] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
   const hadData = useRef(initialHouse.hasData);
@@ -127,6 +131,12 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
     return r;
   };
   const floorTeam = useFloorTeam(house.date);
+  // Ist der Vorschlag fertig, öffnet sich der Tagesplan als letzter Schritt (Duty Manager prüft, ändert, bestätigt).
+  const shownFor = useRef<string | null>(null);
+  useEffect(() => {
+    const id = plan.draft?.proposalId ?? null;
+    if (plan.done && id && !plan.confirmed && shownFor.current !== id) { shownFor.current = id; setTagesplanOpen(true); }
+  }, [plan.done, plan.draft?.proposalId, plan.confirmed]);
 
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
@@ -314,7 +324,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         ) : (
           <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.view?.warnings ?? []} error={plan.error} started={plan.started}
             summary={plan.view && plan.draft ? { assigned: plan.draft.input.rooms.length - plan.view.unassigned.length, total: plan.draft.input.rooms.length, open: plan.view.unassigned.length } : null}
-            hkRows={planHkRows} onEdit={() => setEditor({ tab: "rooms", view: "plan" })} onOpen={(tab, view) => setEditor({ tab, view: view ?? "plan" })} onToggleHk={toggleHk} confirmed={plan.confirmed} />
+            hkRows={planHkRows} onEdit={() => setTagesplanOpen(true)} onOpen={(tab, view) => setEditor({ tab, view: view ?? "plan" })} onToggleHk={toggleHk} confirmed={plan.confirmed} />
         )}
         {step >= 2 && team.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {team.error}</p>}
       </div>
@@ -349,6 +359,27 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
 
   const overlays = (
     <>
+      {tagesplanOpen && plan.draft && (
+        <TagesplanWindow
+          onClose={() => setTagesplanOpen(false)}
+          onShiftAttendants={plan.draft.input.housekeepers.map((h) => ({ id: h.id, name: h.name }))}
+          draft={{ rooms: plan.draft.input.rooms, assignment: plan.draft.assignment, onAssign: plan.assign, onAssignMany: plan.assignMany }}
+          meta={{
+            kinds: Object.fromEntries(plan.draft.input.housekeepers.map((h) => [h.id, h.type])),
+            bands: Object.fromEntries(plan.draft.input.housekeepers.filter((h) => h.roomsLo != null && h.roomsHi != null).map((h) => [h.id, { lo: h.roomsLo!, hi: h.roomsHi! }])),
+            levelWarnings: plan.view?.warnings ?? [],
+            hasProposal: true,
+            confirmed: !!plan.confirmed,
+            edits: countEdits(plan.draft.proposed, plan.draft.assignment),
+            traces: sumTraces(house),
+          }}
+          date={house.date}
+          onLists={() => { setTagesplanOpen(false); setEditor({ tab: "rooms", view: "list" }); }}
+          confirm={plan.confirmed
+            ? <Button block onClick={() => router.push("/floor-plan")}>{t("planungTool.toAssignmentBtn")}</Button>
+            : <Button block disabled={plan.confirming} onClick={() => setConfirmOpen(true)}>{t("planungTool.reviewConfirm")}</Button>}
+        />
+      )}
       {editor && plan.draft && (
         <PlanEditorWindow draft={plan.draft} initialTab={editor.tab} initialView={editor.view} floorSel={team.floorSel}
           supOptions={team.chosenSups.map((x) => ({ id: x.id, name: x.name }))} onPickFloor={team.pickFloor}

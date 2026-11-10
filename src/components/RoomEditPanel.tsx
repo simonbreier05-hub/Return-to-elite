@@ -1,21 +1,16 @@
 "use client";
 
-import { useState } from "react";
-import { api, ApiError } from "@/components/api";
 import TwoTapButton from "@/components/TwoTapButton";
 import { useLocale } from "@/lib/i18n/LocaleContext";
-import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import type { RoomDetail } from "@/lib/rooms/roomDetail";
 import { STATUS_STYLES } from "@/components/status";
+import { useGlassMode } from "@/components/shell/GlassMode";
+import { RoomEditGlass } from "@/components/room/RoomEditGlass";
+import { ACTION_LABEL, DEPTS, useRoomEdit } from "@/components/room/useRoomEdit";
 
-const DEPTS = ["HOUSEKEEPING", "HOUSEMAN", "ENGINEERING", "FRONT_OFFICE"] as const;
 const field = "min-h-11 w-full rounded-lg border border-charcoal/20 bg-white px-3 text-sm outline-none focus:border-gold";
 const h4 = "mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60";
-const ACTION_LABEL: Record<string, TKey> = {
-  ROOM_ASSIGNED: "shared.logRoomAssigned", ROOM_MOVED_STARTED: "shared.logRoomMovedStarted", TRACE_ADDED: "shared.logTraceAdded", TRACE_EDITED: "shared.logTraceEdited", TRACE_DONE: "shared.logTraceDone",
-  TRACE_REOPENED: "shared.logTraceReopened", NOTE_ADDED: "shared.logNoteAdded", NOTE_EDITED: "shared.logNoteEdited", NOTE_STATUS_CHANGED: "shared.logNoteStatus", GUEST_REQUEST_UPDATED: "shared.logGuestRequest", STATUS_CHANGE: "shared.logStatus",
-};
 
 /**
  * Bearbeiten im gemeinsamen Zimmer-Detail-Modal (Duty Manager/Supervisor): Status (nur sinnvolle Übergänge), Zuteilung,
@@ -24,37 +19,15 @@ const ACTION_LABEL: Record<string, TKey> = {
  * der Server meldet die Betroffenen live und schreibt das Logbuch.
  */
 export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; onChanged: () => void | Promise<void> }) {
-  const { t, fmt } = useLocale();
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [ooo, setOoo] = useState("");
-  const [assignTo, setAssignTo] = useState("");
-  const [newText, setNewText] = useState("");
-  const [newDept, setNewDept] = useState<(typeof DEPTS)[number]>("HOUSEKEEPING");
-  const [editing, setEditing] = useState<{ kind: "trace" | "note"; id: string; text: string } | null>(null);
-  const [startedPrompt, setStartedPrompt] = useState<string | null>(null);
+  // Glas-Seiten (D7): gleiche Logik (`useRoomEdit`), gleiche API-Wege, nur Glas-Darstellung. Ohne Provider bleibt die helle Fassung.
+  const glass = useGlassMode();
+  return glass ? <RoomEditGlass room={room} onChanged={onChanged} /> : <RoomEditLight room={room} onChanged={onChanged} />;
+}
 
-  const run = async (fn: () => Promise<unknown>) => {
-    setMsg(null);
-    try { await fn(); setMsg({ ok: true, text: t("roomEdit.saved") }); await onChanged(); }
-    catch (e) { setMsg({ ok: false, text: errorText(e, t, "roomEdit.failed") }); }
-  };
-  const setStatus = (status: string) => run(() => api(`/api/rooms/${room.id}/status`, { body: { status, ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString() } : {}) } }));
-  const setDnd = (on: boolean) => run(() => api(`/api/rooms/${room.id}/status`, { body: on ? { status: "BLOCKED", blockReason: "DND" } : { status: "DIRTY" } }));
-  const assign = (attendantId: string | null, confirmStarted = false) =>
-    run(async () => {
-      try { await api(`/api/rooms/${room.id}/assign`, { body: { attendantId, confirmStarted } }); setStartedPrompt(null); }
-      catch (e) { if (e instanceof ApiError && e.code === "STARTED_ROOM") { setStartedPrompt(attendantId ?? ""); return; } throw e; }
-    });
-  const traceDone = (id: string, done: boolean) => run(() => api(`/api/rooms/${room.id}/traces/${id}`, { method: "PATCH", body: { status: done ? "DONE" : "OPEN" } }));
-  const addTrace = () => run(async () => { await api(`/api/rooms/${room.id}/traces`, { body: { text: newText, dept: newDept } }); setNewText(""); });
-  const saveEdit = async () => { if (editing) await run(async () => {
-    if (editing.kind === "trace") await api(`/api/rooms/${room.id}/traces/${editing.id}`, { method: "PATCH", body: { text: editing.text } });
-    else await api(`/api/rooms/${room.id}/notes/${editing.id}`, { method: "PATCH", body: { body: editing.text } });
-    setEditing(null);
-  }); };
-  const guestDnd = room.guestRequests.find((g) => g.kind === "DND");
-  const clearGuestDnd = () => guestDnd && run(() => api(`/api/guest-requests/${guestDnd.id}`, { method: "PATCH", body: { status: "DONE" } }));
-  const isDnd = room.status === "BLOCKED" && room.blockReason === "DND";
+function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () => void | Promise<void> }) {
+  const { t, fmt } = useLocale();
+  const { msg, ooo, setOoo, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
+    setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd } = useRoomEdit(room, onChanged);
   const editRow = (kind: "trace" | "note", id: string) => editing && editing.kind === kind && editing.id === id && (
     <div className="mt-1 flex flex-col gap-2 sm:flex-row">
       <input className={field} value={editing.text} maxLength={kind === "trace" ? 300 : 1000} onChange={(e) => setEditing({ ...editing, text: e.target.value })} aria-label={t(kind === "trace" ? "roomEdit.traceText" : "roomEdit.noteEdit")} />

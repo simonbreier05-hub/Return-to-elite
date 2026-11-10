@@ -90,14 +90,14 @@ export function sweepPlace(c: Compiled, assign: Int16Array, rooms: number[]) {
   const sorted = [...rooms].sort((a, b) => c.rooms[a].floor - c.rooms[b].floor || c.num[a] - c.num[b] || a - b);
   const order = hks.map((_, k) => k).sort((a, b) =>
     Math.min(...(hks[a].homeFloors.length ? hks[a].homeFloors : [99])) - Math.min(...(hks[b].homeFloors.length ? hks[b].homeFloors : [99])) || a - b);
-  // Zielgröße je Kraft: Anteil am Gesamt-Credit-Volumen ∝ Zielmitte (bereits vergebene feste Credits angerechnet)
-  const total = sorted.reduce((a, i) => a + c.rooms[i].credits, 0);
-  const share = (k: number) => (total * c.centers[k]) / c.centerSum;
+  // Zielgröße je Kraft (Plan-1b): Anteil an der Zimmerzahl ∝ Mitte ihres Zimmer-Bands (ohne Band: Credit-Mitte)
+  const total = sorted.length;
+  const share = (k: number) => (total * c.roomCenters[k]) / c.roomCenterSum;
   let pos = 0, acc = 0;
   for (const i of sorted) {
     while (pos < order.length - 1 && acc >= share(order[pos]) - 1e-9) { pos++; acc = 0; }
     assign[i] = order[pos];
-    acc += c.rooms[i].credits;
+    acc += 1;
   }
   const bad = sorted.filter((i) => !eligible(c, i, assign[i]));
   for (const i of bad) assign[i] = -1;
