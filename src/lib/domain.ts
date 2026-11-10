@@ -99,10 +99,10 @@ export const ROOM_TYPE_DEFAULT_CREDITS: Record<RoomType, number> = {
   UNVERIFIED: 1,
   CLASSIC: 1,
   SUPERIOR: 1,
-  DELUXE: 1,
+  DELUXE: 1.25,
   JUNIOR_SUITE: 1.5,
-  SUITE: 1.5,
-  PENTHOUSE: 1.5,
+  SUITE: 2,
+  PENTHOUSE: 2,
 };
 
 /** A stayover clean that isn't due for a linen change costs less than a full clean. */
@@ -259,30 +259,21 @@ export const DEFAULT_SETTINGS = {
   // Aufenthalte (Stay) ohne Namen werden so viele Tage nach der Abreise ganz gelöscht.
   guestStayDeleteDays: 30,
   // M2b — Zuteilungsvorschlag (docs/autoplan.md). Gewichte der Kostenfunktion: Setting "autoplanWeight.<name>".
-  autoplanTolerance: 1.5, // ± Credits um das Tagesziel (Vollzeit)
   autoplanMaxFloors: 2, // höchstens so viele Etagen je Housekeeper (weich)
-  stayoverFactor: 0.5, // Bleiber normal (ohne Wäschewechsel) zählt Faktor × Zimmertyp-Wert
-  stayoverLaundryFactor: 1, // Bleiber mit Wäschewechsel: voller Zimmertyp-Wert (wie im älteren Planungshub)
+  stayoverFactor: 0.5, // Plan-1b: nur noch Zeitfaktor — Tidy dauert ca. halb so lang wie ein Turn (Startschätzung Arbeitsdaten)
+  stayoverLaundryFactor: 1, // Plan-1b: nur noch Zeitfaktor — Linen change dauert so lang wie ein Turn
   autoplanManyTraces: 2, // ab so vielen offenen Traces gilt ein Zimmer als anspruchsvoll
-  azubiCreditsMin: 6,
-  azubiCreditsMax: 8,
-  teilzeitCreditsMin: 6,
-  teilzeitCreditsMax: 8,
   minutesPerCredit: 25, // Start-Schätzung, bis aus den heutigen Zeitstempeln berechnet wird
   earlyFinishMinutes: 45, // "früher fertig": geschätzte Restzeit darunter
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag
   // Chat-Hub: Nachrichten werden so viele Tage nach dem Senden gelöscht (stündlich + Nachtlöschung, src/lib/chat/retention.ts).
   chatRetentionDays: 14,
   statusRewindMinutes: 10, // Housekeeper darf den eigenen letzten Statusschritt so lange zurückspulen (src/lib/rooms/rewind.ts)
-  // H1 (Antwort Simon 01.11.2026): Zimmerzahl ist das Hauptziel, Credits nur noch Gegenprobe.
-  // Vollzeit: Stufe 3 = 13, Stufe 2 = 10–11, Stufe 1 = 6–8 Zimmer. Teilzeit: Stufe 3 = 9, Stufe 2 = 7.
-  // Teilzeit Stufe 1 = 5–6, Azubi = Stufe-1-Band 6–8 (von Simon bestätigt 01.11.2026).
-  roomsVz3Min: 13, roomsVz3Max: 13,
-  roomsVz2Min: 10, roomsVz2Max: 11,
-  roomsVz1Min: 6, roomsVz1Max: 8,
-  roomsTz3Min: 9, roomsTz3Max: 9,
-  roomsTz2Min: 7, roomsTz2Max: 7,
-  roomsTz1Min: 5, roomsTz1Max: 6,
+  // Plan-1b (Antwort Simon Nov. 2026): Zimmerzahl ist das Hauptziel, je Typ (nicht mehr je Stufe):
+  // Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8 Zimmer. Credits beschreiben nur noch die Zimmerkategorie (Gegenprobe).
+  roomsVzMin: 10, roomsVzMax: 13,
+  roomsTzMin: 6, roomsTzMax: 9,
+  roomsAzMin: 6, roomsAzMax: 8,
   // Etagen-Vorschlag aus tatsächlichen Einsätzen (src/lib/planung/floorTeam.ts):
   // Etage vorschlagen, wenn die Person an ≥ floorSuggestMinDays der letzten floorSuggestWindow Einsatztage dort war.
   floorSuggestWindow: 5,

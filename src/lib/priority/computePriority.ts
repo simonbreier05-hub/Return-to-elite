@@ -88,7 +88,7 @@ export const PRIORITY_WEIGHTS = {
   earlyCheckInFlag: 25,
   vip: 40,
   checkoutWithArrival: 35, // same-day turn beats stayover
-  checkoutToday: 15,
+  checkoutToday: 15, // Plan-1b: ABZUG für Deep clean (Abreise ohne Anreise) — niedrigste Priorität, hinter jedem Bleiber
   excursionActive: 30, // guest out of house right now
   excursionEndingSoon: 15, // extra urgency: window closes within 60 min
   blockedAgePerInterval: 10, // per elapsed recheck-interval while BLOCKED
@@ -170,7 +170,8 @@ export function computePriority(room: PriorityRoomInput, ctx: PriorityContext): 
       reason: "Checkout with same-day re-arrival — turn before stayovers.",
     });
   } else if (room.isCheckoutToday) {
-    reasons.push({ signal: "checkout", points: W.checkoutToday, reason: "Due-out today — return to inventory." });
+    // Plan-1b: Deep clean — niemand wartet heute auf das Zimmer, also nach allen Bleibern (Abzug statt Bonus).
+    reasons.push({ signal: "deep_clean", points: -W.checkoutToday, reason: "Deep clean (no arrival today) — lowest priority." });
   }
 
   // (4) Concierge excursion window

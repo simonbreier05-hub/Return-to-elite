@@ -17,7 +17,8 @@ import { DEFAULT_HOUSEKEEPER_DM_ROLES } from "./chat/policy";
 /** Priority weights are stored under this prefix so they cannot collide. */
 export const WEIGHT_PREFIX = "priorityWeight.";
 /** Per-room-type credit overrides are stored under this prefix. */
-export const ROOM_TYPE_CREDIT_PREFIX = "roomTypeCredit.";
+/** Plan-1b: neuer Präfix — ältere Hauswerte (vor 1 / 1,25 / 1,5 / 2) gelten bewusst nicht mehr. */
+export const ROOM_TYPE_CREDIT_PREFIX = "roomTypeCreditV2.";
 
 /** Escalation thresholds: DB-backed (Setting table) with sane defaults. */
 export async function getSettings(): Promise<SettingsShape> {
@@ -52,7 +53,7 @@ export async function getPriorityWeights(): Promise<PriorityWeights> {
 /**
  * Cleaning credits per room type (Standard 1.0, Junior Suite 1.5, ... —
  * see ROOM_TYPE_DEFAULT_CREDITS), overridable per type via
- * Setting rows keyed "roomTypeCredit.<TYPE>" so a new type or a house
+ * Setting rows keyed "roomTypeCreditV2.<TYPE>" so a new type or a house
  * policy change never needs a UI hardcode or a redeploy.
  */
 export async function getRoomTypeCredits(): Promise<Record<RoomType, number>> {

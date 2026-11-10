@@ -3,7 +3,7 @@ import {
   bandOf, cleanKindOf, countEdits, crewSummaries, floorLanes, groupByCrew, loadState, mixEntries, emptyMix,
   planHints, planState, roomsWithoutFloor, worstState, LOAD_UI, type PlanRoom,
 } from "@/lib/ui/tagesplan";
-import { OVERLOAD_EXTRA_ROOMS, ROOM_BANDS } from "@/lib/ui/tagesplanConfig";
+import { OVERLOAD_EXTRA_ROOMS } from "@/lib/ui/tagesplanConfig";
 
 // Erfundene Testdaten — keine echten Namen/Gäste.
 const room = (id: string, floor: number | null, kind: PlanRoom["kind"], to: string | null, credit = 1, open = false): PlanRoom =>
@@ -24,11 +24,17 @@ describe("Reinigungsart", () => {
 });
 
 describe("Status je Kraft (Zimmerzahl)", () => {
-  it("Spannen je Typ: Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8; unbekannt = Vollzeit", () => {
+  it("Spannen je Typ aus den Einstellungen: Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8; unbekannt = Vollzeit", () => {
     expect(bandOf("VOLLZEIT")).toEqual({ lo: 10, hi: 13 });
     expect(bandOf("TEILZEIT")).toEqual({ lo: 6, hi: 9 });
     expect(bandOf("AZUBI")).toEqual({ lo: 6, hi: 8 });
-    expect(bandOf(undefined)).toEqual(ROOM_BANDS.VOLLZEIT);
+    expect(bandOf(undefined)).toEqual({ lo: 10, hi: 13 });
+    // Hausregel aus den Einstellungen gewinnt (dieselbe Quelle wie der Zuteilungsvorschlag)
+    expect(bandOf("TEILZEIT", { roomsTzMin: 5, roomsTzMax: 8 })).toEqual({ lo: 5, hi: 8 });
+  });
+  it("Band vom Server (persönliches Tagesziel) gewinnt vor dem Typ-Band", () => {
+    const [c] = crewSummaries([{ id: "a", name: "A", kind: "VOLLZEIT", band: { lo: 6, hi: 8 } }], []);
+    expect(c.band).toEqual({ lo: 6, hi: 8 });
   });
   it("▼ Niedrig / ✓ Ausgewogen / ▲ Hoch / ⚠ Überlast", () => {
     const b = { lo: 10, hi: 13 };

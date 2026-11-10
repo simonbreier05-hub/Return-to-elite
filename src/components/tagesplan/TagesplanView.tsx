@@ -69,7 +69,7 @@ export function TagesplanView({
     }];
   }), [fp.dayRows, fp.liveById, fp.roomFacts, fp.onShiftIds, floorOf, openIds]);
 
-  const crew = useMemo(() => crewSummaries(onShiftAttendants.map((a) => ({ ...a, kind: meta.kinds[a.id] })), rooms), [onShiftAttendants, meta.kinds, rooms]);
+  const crew = useMemo(() => crewSummaries(onShiftAttendants.map((a) => ({ ...a, kind: meta.kinds[a.id], band: meta.bands[a.id] })), rooms, fp.settings?.settings), [onShiftAttendants, meta.kinds, meta.bands, rooms, fp.settings]);
   const crewById = useMemo(() => new Map(crew.map((c) => [c.id, c])), [crew]);
   const floors = fp.plan?.floors ?? [];
   const lanes = useMemo(() => floorLanes(floors, rooms, crew), [floors, rooms, crew]);

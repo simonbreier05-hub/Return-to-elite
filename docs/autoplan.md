@@ -14,23 +14,23 @@ Grundlage: Interview vom 06.10.2026. **Das System schlägt vor, der Supervisor e
 | Art | Regel |
 |---|---|
 | **Hart** | Manuelle (heutige) Zuteilungen sind fest. Stufe 1 bekommt nie anspruchsvolle Zimmer — gibt es zu wenige Kräfte der Stufe 2/3, bleibt das Zimmer offen, mit Warnung. Begonnene Zimmer (`IN_PROGRESS`, `CLEAN`, `INSPECTED`) werden nie verschoben. |
-| **Stark** | Fairness bei Credits (Ziel ± Toleranz) und bei Abreisen, Bleibern, Wäschewechseln. Höchstens 2 Etagen je Housekeeper (Ausnahme bei Personalmangel, mit Warnung). Anspruchsvolle Zimmer gleichmäßig auf Stufe 2/3. |
+| **Stark** | Zimmerzahl im Band je Typ (Plan-1b: Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8); ähnliche Mischung je Kraft aus Turn, Deep clean, Tidy, Linen change; Azubis vor allem Standard/Deluxe (`traineeSuite`). Credits nur als Gegenprobe. Höchstens 2 Etagen je Housekeeper (Ausnahme bei Personalmangel, mit Warnung). Anspruchsvolle Zimmer gleichmäßig auf Stufe 2/3. |
 | **Schwach** | Stammetage und Etage von gestern; Zimmer nah beieinander (Flügel, Nummern); Interconnecting zum selben Housekeeper. |
 
 **Anspruchsvoll** = mindestens eines von: VIP (Tagesplan), Suite (Zimmertyp `JUNIOR_SUITE`, `SUITE`, `PENTHOUSE`), Allergiker-Zimmer (`Room.isAntiAllergic`), viele offene Traces (≥ `autoplanManyTraces`, Standard 2).
 
-**Credits:** Abreise/Turn = Wert des Zimmertyps (`getRoomTypeCredits`); **Bleiber normal = 0,5 × Zimmertyp** (`stayoverFactor`), **Bleiber mit Wäschewechsel = voller Zimmertyp-Wert** (`stayoverLaundryFactor`, 1,0) — dieselbe Rechnung wie im älteren Planungshub; eine Definition in `src/lib/rooms/stayoverCredit.ts` für Vorschlag und Listen.
+**Credits (Plan-1b):** Credit = Wert der **Zimmerkategorie** (`computeRoomCredit`, `src/lib/rooms/roomCredit.ts`; Standard 1, Deluxe 1,25, Junior Suite 1,5, Suite/Penthouse 2, Hauswert per `roomTypeCredits`) — unabhängig von der Art. Eine Definition für Grundriss, Tagesplan, Listen und Vorschlag. `stayoverFactor`/`stayoverLaundryFactor` sind nur noch Zeitfaktoren der Arbeitsdaten (Tidy schneller als Turn/Linen change).
 
-**Ziele:** Vollzeit = `targetCreditsPerAttendant` (14) ± `autoplanTolerance` (1,5); Azubi/Teilzeit = 6–8 (`azubiCredits*`, `teilzeitCredits*`); je Person überschreibbar (`dailyTarget`). Credit-Abweichungen unter 0,25 lösen keine Warnung aus (ein Zimmer lässt sich nicht teilen).
+**Ziele:** Hauptziel ist die Zimmerzahl je Typ (`roomBand()`, Settings `rooms{Vz|Tz|Az}{Min|Max}`, Kostenteil `rooms`); je Person überschreibbar mit `dailyTarget` = Tagesziel in **Zimmern** (± 1). Credit-Band nur als Gegenprobe (Gewicht `credits` 3): Zimmer-Band × durchschnittlicher Credit je Zimmer des Tages (`bandFor`) — eigene Credit-Ziele für Azubi/Teilzeit und die Vollzeit-Toleranz gibt es nicht mehr. Credit-Abweichungen unter 0,25 lösen keine Warnung aus.
 
-**Route:** 1. Same-Day-Turn (nach Anreisezeit aus den Arrivals), 2. frühe Anreise, 3. VIP, 4. Abreisen vor Bleibern; innerhalb einer Stufe Etage → Nummer. Fehlt die Anreisezeit, sind Turns trotzdem vorn, nur ohne Zeitsortierung.
+**Route:** 1. Turn (Abreise + Anreise, auch Anreise in ein ungereinigtes Zimmer; nach Anreisezeit), 2. frühe Anreise, 3. VIP, 4. Bleiber (Linen change, Tidy), 5. **Deep clean** (Abreise ohne Anreise) zuletzt — auch die Live-Priorität zieht dafür `checkoutToday` ab; innerhalb einer Stufe Etage → Nummer. Fehlt die Anreisezeit, sind Turns trotzdem vorn, nur ohne Zeitsortierung.
 
 ## Verfahren (deterministisch, kein Machine Learning)
 
 1. Eingabe: Zimmer des Tages aus `DayRoomPlan` (Abreise, Turn, Bleiber; Anreise-Zimmer werden nicht gereinigt), anwesende Housekeeper, feste Vorbelegung.
 2. Zwei Startlösungen — *Greedy* (anspruchsvolle zuerst, nach Etage/Flügel, je Zimmer der günstigste geeignete Housekeeper) und *Sweep* (zusammenhängende Blöcke nach Etage, Größe = Tagesziel) —, je mit lokaler Suche (Zimmer verschieben, tauschen), dann 10 feste Störungsrunden. Die günstigste Lösung gewinnt. Gleiche Eingabe → gleicher Vorschlag; Zeitlimit 2 s nur als Notbremse; bei 145 Zimmern und 10 Kräften unter 3 s.
-3. Kostenfunktion (Gewichte in `weights.ts`, Setting `autoplanWeight.<name>`): Etage über 2 hinaus 100 · Credits-Abweichung (quadratisch, außerhalb des Bands) 10 · Ungleichheit Abreisen/Bleiber/Wäsche 5 · Ungleichheit anspruchsvoller Zimmer 8 · Interconnecting getrennt 20 · abseits Stammetage 1 · Flügel-/Nummernsprung 2 · offenes Zimmer 500.
-4. Ausgabe je Zimmer mit Begründung („VIP: Stufe 3", „Stammetage 3", „Verbunden mit 105: beim selben Housekeeper") und Kennzahlen je Housekeeper (Credits, Abreisen, Bleiber, Wäschewechsel, Etagen, anspruchsvoll). Warnungen in einfacher Sprache; „Benötigt: X Housekeeper bei Ziel Y Credits".
+3. Kostenfunktion (Gewichte in `weights.ts`, Setting `autoplanWeight.<name>`): Etage über 2 hinaus 100 · Zimmerband (quadratisch) 20 · Credits-Abweichung (quadratisch, außerhalb des Bands) 3 · Ungleichheit Turn/Deep clean/Tidy/Linen change 5 · Junior Suite/Suite bei Azubi 40 · Ungleichheit anspruchsvoller Zimmer 8 · Interconnecting getrennt 20 · abseits Stammetage 1 · Flügel-/Nummernsprung 2 · offenes Zimmer 500.
+4. Ausgabe je Zimmer mit Begründung („VIP: Stufe 3", „Stammetage 3", „Verbunden mit 105: beim selben Housekeeper") und Kennzahlen je Housekeeper (Credits, Abreisen, Bleiber, Wäschewechsel, Etagen, anspruchsvoll). Warnungen in einfacher Sprache; „Benötigt: X Housekeeper bei Y Zimmern je Vollzeitkraft" (Zimmer ÷ Mitte des Vollzeit-Bands).
 
 ## Live-Umverteilung
 

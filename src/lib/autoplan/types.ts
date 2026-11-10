@@ -47,7 +47,7 @@ export interface PlanHousekeeper {
   /** Zielband der Credits [lo, hi]. */
   lo: number;
   hi: number;
-  /** H1: Zielband in Zimmern (Hauptziel, aus Typ + Stufe). Fehlt → nur Credits. */
+  /** Zielband in Zimmern (Hauptziel, je Typ — Plan-1b). Fehlt → nur Credits. */
   roomsLo?: number;
   roomsHi?: number;
   /** H1: heutige Etagen laut Etagenzuweisung (User.floorsOn === heute). Gesetzt → ersetzt Stammetage/gestern als Präferenz. */
@@ -61,8 +61,10 @@ export interface PlanInput {
   housekeepers: PlanHousekeeper[];
   weights: AutoplanWeights;
   maxFloors: number;
-  /** Tagesziel Vollzeit (für "Benötigt: X Housekeeper"). */
+  /** Tagesziel Vollzeit in Credits (Gegenprobe). */
   fullTimeTarget: number;
+  /** Plan-1b: Zimmer je Vollzeitkraft (Mitte des Bands) — Grundlage für „Benötigt: X Housekeeper“. Fehlt → Credits. */
+  fullTimeRooms?: number;
   /** H3: Schichtlänge in Minuten (Warnung/Gewicht „nicht vor Schichtende fertig"). */
   shiftMinutes?: number;
 }
@@ -104,7 +106,7 @@ export interface PlanResult {
   reasons: Record<string, string[]>;
   warnings: PlanWarning[];
   unassigned: string[];
-  needed: { housekeepers: number; targetCredits: number; present: number };
+  needed: { housekeepers: number; targetCredits: number; targetRooms?: number; present: number };
   cost: { total: number; parts: Record<string, number> };
   timedOut: boolean;
 }

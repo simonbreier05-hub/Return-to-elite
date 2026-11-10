@@ -74,7 +74,11 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   const warnings: PlanWarning[] = [];
   const totalAll = c.rooms.reduce((a, r) => a + r.credits, 0);
   // Mehr Kräfte als Arbeit: dann sind "zu wenig Credits" keine Einzelwarnungen, sondern ein Hinweis fürs ganze Team.
-  const overstaffed = input.housekeepers.length > 0 && totalAll < input.housekeepers.reduce((a, h) => a + h.lo, 0) - 0.5;
+  // Plan-1b: Maß ist die Zimmerzahl (Band je Typ); ohne Band wie bisher die Credits.
+  const byRooms = input.housekeepers.length > 0 && input.housekeepers.every((h) => h.roomsLo !== undefined);
+  const overstaffed = input.housekeepers.length > 0 && (byRooms
+    ? c.rooms.length < input.housekeepers.reduce((a, h) => a + (h.roomsLo ?? 0), 0)
+    : totalAll < input.housekeepers.reduce((a, h) => a + h.lo, 0) - 0.5);
   for (const m of metrics) {
     const name = nameOf.get(m.hkId)!;
     const roomsOut = m.roomsLo !== undefined && m.roomsHi !== undefined && m.rooms > 0 && (m.rooms > m.roomsHi || m.rooms < m.roomsLo);
@@ -112,21 +116,22 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
       message: `${unassigned.length} Zimmer sind noch offen (${rs.map((r) => r.number).join(", ")}). Bitte im Grundriss zuteilen.` });
   }
   const totalCredits = totalAll;
-  const needed = Math.ceil(totalCredits / Math.max(1, input.fullTimeTarget));
+  const perHk = input.fullTimeRooms ? `${fmt(input.fullTimeRooms)} Zimmern` : `${fmt(input.fullTimeTarget)} Credits`;
+  const needed = input.fullTimeRooms ? Math.ceil(c.rooms.length / Math.max(1, input.fullTimeRooms)) : Math.ceil(totalCredits / Math.max(1, input.fullTimeTarget));
   const present = input.housekeepers.length;
   if (overstaffed) {
     warnings.push({ code: "TOO_MANY_STAFF", severity: "INFO",
-      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${fmt(input.fullTimeTarget)} Credits, anwesend sind ${present}. Wenn jemand nicht eingeplant werden soll, bitte „Nicht einplanen“ wählen — sonst sind alle Anwesenden gleichmäßig eingeplant.` });
+      message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${perHk} je Vollzeitkraft, anwesend sind ${present}. Wenn jemand nicht eingeplant werden soll, bitte „Nicht einplanen“ wählen — sonst sind alle Anwesenden gleichmäßig eingeplant.` });
   }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
-      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${fmt(input.fullTimeTarget)} Credits je Kraft). Alle Zimmer sind trotzdem verteilt — Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
+      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${perHk} je Vollzeitkraft). Alle Zimmer sind trotzdem verteilt — Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
   }
 
   const { total, parts } = cost(c, idx);
   return {
     assignment, routes, metrics, reasons, warnings, unassigned,
-    needed: { housekeepers: needed, targetCredits: input.fullTimeTarget, present },
+    needed: { housekeepers: needed, targetCredits: input.fullTimeTarget, ...(input.fullTimeRooms ? { targetRooms: input.fullTimeRooms } : {}), present },
     cost: { total, parts }, timedOut,
   };
 }

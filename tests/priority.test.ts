@@ -66,6 +66,13 @@ describe("computePriority — explainable scoring", () => {
     expect(turn.reasons.some((r) => r.signal === "same_day_turn")).toBe(true);
   });
 
+  it("Plan-1b: Deep clean (Abreise ohne Anreise) steht hinter jedem Bleiber", () => {
+    const deep = computePriority({ ...baseRoom, isCheckoutToday: true }, emptyCtx);
+    const stay = computePriority(baseRoom, emptyCtx);
+    expect(deep.score).toBeLessThan(stay.score);
+    expect(deep.reasons.some((r) => r.signal === "deep_clean" && r.points < 0)).toBe(true);
+  });
+
   it("prioritizes rooms whose guest is currently out on an excursion", () => {
     const res = computePriority(baseRoom, {
       ...emptyCtx,

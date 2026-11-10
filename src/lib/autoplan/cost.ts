@@ -21,12 +21,15 @@ export interface Compiled {
   num: number[];
   centers: number[];
   centerSum: number;
+  /** Plan-1b: Mitte des Zimmer-Bands je Kraft (Anteil an jeder Art); ohne Band die Credit-Mitte. */
+  roomCenters: number[];
+  roomCenterSum: number;
   pref: Set<number>[];
   /** Heutige Etagen laut Etagenzuweisung (leer = keine). */
   today: Set<number>[];
 }
 
-export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "levelMismatch" | "rooms" | "assignedFloor" | "learned" | "overtime";
+export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "levelMismatch" | "rooms" | "assignedFloor" | "learned" | "overtime" | "traineeSuite";
 export interface CostOptions {
   /** Nur die Regeln (Etagen, Interconnecting, Stammetage, Sprünge) — für Umverteilung nach Restzeit. */
   rulesOnly?: boolean;
@@ -44,8 +47,10 @@ export function compile(input: PlanInput): Compiled {
     if (j !== undefined && i < j) pairs.push([i, j]);
   }));
   const centers = input.housekeepers.map((h) => (h.lo + h.hi) / 2);
+  const roomCenters = input.housekeepers.map((h, k) => (h.roomsLo !== undefined && h.roomsHi !== undefined ? (h.roomsLo + h.roomsHi) / 2 : centers[k]));
   return {
     input, rooms, order, roomIdx, hkIdx, pairs, num, centers, centerSum: centers.reduce((a, b) => a + b, 0) || 1,
+    roomCenters, roomCenterSum: roomCenters.reduce((a, b) => a + b, 0) || 1,
     pref: input.housekeepers.map((h) => (h.todayFloors?.length ? new Set<number>() : new Set([...h.homeFloors, ...h.yesterdayFloors]))),
     today: input.housekeepers.map((h) => new Set(h.todayFloors ?? [])),
   };
@@ -73,9 +78,9 @@ export function suitable(c: Compiled, roomI: number, hkI: number): boolean {
 export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): { total: number; parts: Record<CostPart, number> } {
   const { weights: w, maxFloors, housekeepers: hks } = c.input;
   const H = hks.length;
-  const credits = new Float64Array(H), dep = new Int32Array(H), stay = new Int32Array(H), linen = new Int32Array(H), dem = new Int32Array(H);
+  const credits = new Float64Array(H), turn = new Int32Array(H), deep = new Int32Array(H), stay = new Int32Array(H), linen = new Int32Array(H), dem = new Int32Array(H);
   const mask = new Int32Array(H), last = new Int32Array(H).fill(-1), count = new Int32Array(H), minutes = new Float64Array(H);
-  let homeMis = 0, jumps = 0, unassigned = 0, levelMis = 0, todayMis = 0, learnedMis = 0;
+  let homeMis = 0, jumps = 0, unassigned = 0, levelMis = 0, todayMis = 0, learnedMis = 0, traineeSuites = 0;
 
   for (const i of c.order) {
     const a = assign[i];
@@ -88,8 +93,9 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     if (r.minLevel && hks[a].level < r.minLevel) learnedMis++;
     const today = c.today[a];
     if (today.size && !today.has(r.floor)) todayMis++;
-    if (r.kind === "STAYOVER") { if (r.laundry) linen[a]++; else stay[a]++; } else dep[a]++;
+    if (r.kind === "STAYOVER") { if (r.laundry) linen[a]++; else stay[a]++; } else if (r.kind === "TURN") turn[a]++; else deep[a]++;
     if (r.demanding.length) { dem[a]++; if (hks[a].level < 2) levelMis++; }
+    if (hks[a].type === "AZUBI" && r.demanding.includes("SUITE")) traineeSuites++;
     mask[a] |= 1 << r.floor;
     const pref = c.pref[a];
     if (pref.size && !pref.has(r.floor)) homeMis++;
@@ -101,7 +107,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     last[a] = i;
   }
 
-  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, levelMismatch: 0, rooms: 0, assignedFloor: 0, learned: 0, overtime: 0 };
+  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, levelMismatch: 0, rooms: 0, assignedFloor: 0, learned: 0, overtime: 0, traineeSuite: 0 };
   for (let h = 0; h < H; h++) {
     const extra = popcount(mask[h]) - maxFloors;
     if (extra > 0) parts.extraFloor += extra * w.extraFloor;
@@ -113,6 +119,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   parts.learned = learnedMis * (w.learned ?? 0);
   parts.unassigned = unassigned * UNASSIGNED_PENALTY;
   parts.levelMismatch = levelMis * LEVEL1_DEMANDING_PENALTY;
+  parts.traineeSuite = traineeSuites * (w.traineeSuite ?? 0);
 
   if (!opts.rulesOnly) {
     for (let h = 0; h < H; h++) {
@@ -132,11 +139,12 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
       const dev = n < roomsLo ? roomsLo - n : n > roomsHi ? n - roomsHi : 0;
       parts.rooms += (w.rooms ?? 0) * dev * dev;
     }
-    for (const cnt of [dep, stay, linen]) {
+    // Plan-1b: jede Kraft eine ähnliche Mischung aus Turn, Deep clean, Tidy und Linen change — Anteil nach ihrem Zimmer-Band
+    for (const cnt of [turn, deep, stay, linen]) {
       let total = 0;
       for (let h = 0; h < H; h++) total += cnt[h];
       for (let h = 0; h < H; h++) {
-        const expected = (total * c.centers[h]) / c.centerSum;
+        const expected = (total * c.roomCenters[h]) / c.roomCenterSum;
         parts.categoryFairness += w.categoryFairness * (cnt[h] - expected) ** 2;
       }
     }

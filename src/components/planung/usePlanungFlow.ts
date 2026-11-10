@@ -41,7 +41,7 @@ export function usePlanungTeam(date: string | null) {
   const pickFloor = useCallback((floor: number, id: string) => setFloorSel((f) => ({ ...f, [floor]: id })), []);
 
   const targets = useMemo(() => (state ? state.members.hk.filter((h) => sel.hk.includes(h.id)).map((h) => h.target) : []), [state, sel.hk]);
-  const verdict = useMemo(() => capacityVerdict(state?.demand.credits ?? 0, targets), [state, targets]);
+  const verdict = useMemo(() => capacityVerdict(state?.demand.rooms ?? 0, targets), [state, targets]);
   const missing = useMemo(() => teamMissing({ hk: sel.hk.length, sup: sel.sup.length }), [sel.hk.length, sel.sup.length]);
   const openFloors = useMemo(() => floorsMissing(floorSel), [floorSel]);
   const chosenSups = useMemo(() => (state ? state.members.sup.filter((s) => sel.sup.includes(s.id)) : []), [state, sel.sup]);

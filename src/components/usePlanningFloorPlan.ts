@@ -35,6 +35,8 @@ export interface LiveRoom {
 interface SettingsResponse {
   roomTypeCredits: Record<string, number>;
   planningCredits: { tidyCredit: number; linenCycleDays: number; targetCreditsPerAttendant: number };
+  /** Hausregeln (u. a. Zimmer-Spannen je Typ, `roomInventory`). */
+  settings?: Record<string, number>;
 }
 
 export type AssignMode = "room-first" | "housekeeper-first";
@@ -171,7 +173,6 @@ export function usePlanningFloorPlan({
   const roomFacts = useMemo(() => {
     const credits = settings?.roomTypeCredits ?? {};
     const draftCredit = new Map((draft?.rooms ?? []).map((r) => [r.id, r.credits]));
-    const tidyCredit = settings?.planningCredits.tidyCredit ?? 0.5;
     const map = new Map<
       string,
       { category: RoomDayCategory; laundryDue: boolean; credit: number; guestDndActive: boolean }
@@ -184,7 +185,7 @@ export function usePlanningFloorPlan({
         hasExpectedArrival: r.arrivals.length > 0,
       });
       const laundryDue = laundryIds.has(r.id); // nur aus dem Tagesplan (echte Daten), nie geschätzt
-      const credit = computeRoomCredit({ type: r.type as RoomType, category, laundryDue, credits: credits as Record<RoomType, number>, tidyCredit });
+      const credit = computeRoomCredit({ type: r.type as RoomType, credits: credits as Record<RoomType, number> });
       map.set(r.id, { category, laundryDue, credit: draftCredit.get(r.id) ?? credit, guestDndActive: r.guestDndActive ?? false });
     }
     return map;
