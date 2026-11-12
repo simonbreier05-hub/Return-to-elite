@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { RoomTaskStatusSchema } from "@/lib/domain";
 import { endPauseOnChange } from "@/lib/work/pauseData";
+import { notifyTaskDone } from "@/lib/rooms/notifyTaskDone";
 
 const INCLUDE = {
   room: { select: { id: true, number: true, floor: true } },
@@ -57,5 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
 
   broadcast("roomtask:update", { roomTask });
+  // Hand-Aufgabe erledigt → Supervisor der Etage (wie bei Traces). Nur Zimmer + Etage, nie Aufgabentext.
+  try { await notifyTaskDone({ room: roomTask.room, actorId: auth.session.userId, done: true }); } catch { /* Meldung darf das Erledigen nie scheitern lassen */ }
   return NextResponse.json({ roomTask });
 }

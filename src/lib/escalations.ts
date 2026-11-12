@@ -3,6 +3,7 @@ import { broadcast } from "./realtime";
 import { getSettings } from "./settings";
 import type { Role } from "./domain";
 import { keyed } from "@/lib/i18n/notificationText";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
 /**
  * Escalation engine — executed every minute by the ticker in server.js
@@ -86,7 +87,7 @@ export async function runEscalations(now = new Date()) {
       level: minutes <= 0 ? "critical" : "warning",
       targetRole: "supervisor",
       roomId: arrival.roomId,
-      message: `Room ${arrival.room.number}: ${arrival.guestName}${arrival.vip ? " (VIP)" : ""} ETA ${
+      message: `Room ${arrival.room.number}: ${arrival.vip ? "VIP " : ""}arrival ETA ${
         minutes <= 0 ? "passed" : `in ${minutes} min`
       } but room is ${arrival.room.status}, not INSPECTED.`,
       ...(minutes <= 0
@@ -95,6 +96,16 @@ export async function runEscalations(now = new Date()) {
       dedupeKey: `ETA_AT_RISK:${arrival.id}`,
     });
     if (n) created.push(n.type);
+  }
+
+  // --- Ausflug: Gast kommt bald zurück (Fenster endet in höchstens 60 min) → zuständige Kraft, einmal je Ausflug ----
+  const soon = await prisma.excursion.findMany({
+    where: { endsAt: { gt: now, lte: new Date(now.getTime() + 60 * 60_000) }, startsAt: { lte: now } },
+    select: { id: true, roomId: true },
+  });
+  for (const e of soon) {
+    const who = await notifyHousekeeperOfRoomChange({ roomId: e.roomId, kind: "EXCURSION_SOON", now, dedupeKey: `EXCURSION_SOON:${e.id}` });
+    if (who) created.push("EXCURSION");
   }
 
   // --- Release queue backlog --------------------------------------------

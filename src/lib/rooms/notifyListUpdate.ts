@@ -34,7 +34,10 @@ export async function notifyListUpdate(opts: { date: string; actorId: string | n
 
   // Zimmermädchen: wem gehören die geänderten Zimmer / Hinweise?
   const nums = [...new Set([...changes.map((c) => c.number), ...newTraces.filter((t) => t.dept === "HOUSEKEEPING").map((t) => t.number)])];
-  const rooms = await prisma.room.findMany({ where: { number: { in: nums } }, select: { number: true, floor: true, assignedToId: true } });
+  // Nur Zuteilungen des Tages (`assignedOn === date`): vor der Planbestätigung hängt am Zimmer noch die Zuteilung von
+  // gestern — diese Kraft bekäme sonst eine Meldung zu einer Liste, die sie heute gar nicht hat (Plan-Bestätigung meldet selbst).
+  const rooms = (await prisma.room.findMany({ where: { number: { in: nums } }, select: { number: true, floor: true, assignedToId: true, assignedOn: true } }))
+    .map((r) => ({ ...r, assignedToId: r.assignedOn === date ? r.assignedToId : null }));
   const byHk = new Map<string, { changed: RoomChange[]; traces: string[] }>();
   const slot = (id: string) => byHk.get(id) ?? byHk.set(id, { changed: [], traces: [] }).get(id)!;
   for (const c of changes) { const r = rooms.find((x) => x.number === c.number); if (r?.assignedToId) slot(r.assignedToId).changed.push(c); }
