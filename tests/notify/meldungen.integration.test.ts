@@ -179,27 +179,56 @@ describe("Nachimport meldet nur heutige Zuteilungen", () => {
   });
 });
 
-describe("„Alle gelesen“ quittiert nur eigene Meldungen", () => {
-  it("Duty Manager: liest alle, quittiert aber keine HK-Meldung; HK-Glocke bleibt ungelesen", async () => {
+describe("Gelesen je Person (NotificationRead)", () => {
+  const mk = (data: Record<string, unknown>) => prisma.notification.create({ data: { type: "X", level: "info", message: "m", ...data } as never });
+  const readBy = async (key: string, role: string) => {
+    as(key, role);
+    const g = await (await notificationsGet()).json();
+    return Object.fromEntries((g.notifications as { id: string; acknowledged: boolean }[]).map((x) => [x.id, x.acknowledged]));
+  };
+
+  it("Duty Manager: liest alle, sein „Alle gelesen“ ändert keine fremde Glocke", async () => {
     await fresh();
-    const mk = (data: Record<string, unknown>) => prisma.notification.create({ data: { type: "X", level: "info", message: "m", ...data } as never });
     const forHk = await mk({ targetRole: "room_attendant", targetUserId: ids.hkA });
     const forDm = await mk({ targetRole: "duty_manager" });
-    const forDmPerson = await mk({ targetRole: "duty_manager", targetUserId: ids.dm });
     as("dm", "duty_manager");
     const g = await (await notificationsGet()).json();
-    expect(g.notifications).toHaveLength(3); // Übersicht bleibt
+    expect(g.notifications).toHaveLength(2); // Übersicht bleibt
     expect(g.me).toEqual({ role: "duty_manager", userId: ids.dm });
     await notificationsPatch(req({ all: true }));
-    await notificationsPatch(req({ id: forHk.id }));
-    const by = async (id: string) => (await prisma.notification.findUniqueOrThrow({ where: { id } })).acknowledged;
-    expect(await by(forHk.id)).toBe(false);
-    expect(await by(forDm.id)).toBe(true);
-    expect(await by(forDmPerson.id)).toBe(true);
+    expect(await readBy("dm", "duty_manager")).toEqual({ [forHk.id]: true, [forDm.id]: true }); // für ihn selbst gelesen
+    expect((await readBy("hkA", "room_attendant"))[forHk.id]).toBe(false); // HK-Glocke bleibt ungelesen
+    expect((await prisma.notification.findUniqueOrThrow({ where: { id: forHk.id } })).acknowledged).toBe(false); // Altspalte unberührt
+  });
+
+  it("Rollen-Meldung: HK A quittiert → HK B bleibt ungelesen; doppelt quittieren ist harmlos", async () => {
+    await fresh();
+    const role = await mk({ targetRole: "room_attendant" });
     as("hkA", "room_attendant");
-    const h = await (await notificationsGet()).json();
-    expect(h.notifications.filter((x: { acknowledged: boolean }) => !x.acknowledged)).toHaveLength(1);
+    await notificationsPatch(req({ id: role.id }));
+    await notificationsPatch(req({ id: role.id }));
     await notificationsPatch(req({ all: true }));
-    expect(await by(forHk.id)).toBe(true);
+    expect(await prisma.notificationRead.count({ where: { notificationId: role.id } })).toBe(1);
+    expect((await readBy("hkA", "room_attendant"))[role.id]).toBe(true);
+    expect((await readBy("hkB", "room_attendant"))[role.id]).toBe(false);
+  });
+
+  it("fremde Meldungen kann man nicht quittieren; Altbestand (acknowledged) gilt als gelesen", async () => {
+    await fresh();
+    const other = await mk({ targetRole: "room_attendant", targetUserId: ids.hkB });
+    const legacy = await mk({ targetRole: "room_attendant", acknowledged: true });
+    as("hkA", "room_attendant");
+    await notificationsPatch(req({ id: other.id }));
+    expect(await prisma.notificationRead.count({ where: { notificationId: other.id } })).toBe(0);
+    expect((await readBy("hkB", "room_attendant"))[legacy.id]).toBe(true);
+  });
+
+  it("Meldung gelöscht → Lesezeilen fallen mit weg", async () => {
+    await fresh();
+    const n = await mk({ targetRole: "room_attendant" });
+    as("hkA", "room_attendant");
+    await notificationsPatch(req({ id: n.id }));
+    await prisma.notification.delete({ where: { id: n.id } });
+    expect(await prisma.notificationRead.count({ where: { notificationId: n.id } })).toBe(0);
   });
 });

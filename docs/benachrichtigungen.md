@@ -16,8 +16,11 @@ Basis: `design/glass` @ `f72d413` (kein P-Fix-Branch auf `origin` gefunden).
 - **Wiederöffnen**: Socket-Reconnect, `visibilitychange` → sichtbar, `online` → Meldungen neu laden, Banner „N neue Meldungen“
   (bleibt bis geöffnet) + Ton, und `app:resync` an alle Ansichten (`useSocket({ "app:resync": … })`). Offline > 3 s → „Verbindung weg“.
   Gesehene IDs in `sessionStorage` (`stayclean.notify.seen`), damit Seitenwechsel nichts doppelt meldet.
-- **Gelesen**: `PATCH /api/notifications` quittiert nur Meldungen an die eigene Rolle *ohne Person* oder an mich persönlich —
-  auch beim Duty Manager (liest alle, quittiert nichts Fremdes). Zähler/Pop-up zählen nur „meine“.
+- **Gelesen je Person**: Tabelle `NotificationRead (notificationId, userId, readAt)`, eindeutig je Paar, fällt mit Meldung/Person weg
+  (Cascade). `PATCH /api/notifications` legt nur Zeilen für mich an, nur für Meldungen, die ich sehen darf; `GET` liefert
+  `acknowledged` = von mir gelesen (oder Altspalte `Notification.acknowledged` von vor O1, wird nicht mehr geschrieben).
+  Eine Rollen-Meldung, die HK A quittiert, bleibt für HK B ungelesen; das „Alle gelesen“ des Duty Managers gilt nur für ihn.
+  Zähler/Pop-up zählen nur „meine“ (DM: nur DM-Meldungen bzw. an ihn).
 
 ## Meldungsstellen (vorher → nachher)
 
@@ -42,8 +45,8 @@ Basis: `design/glass` @ `f72d413` (kein P-Fix-Branch auf `origin` gefunden).
 
 ## Offen / später
 
-- **Gelesen je Person** braucht eine additive Tabelle, z. B. `NotificationRead { notificationId, userId, readAt, @@unique([notificationId, userId]) }`
-  (+ Regel in `purgeGuestDataNow` nicht nötig, keine Gastdaten). Nicht gebaut — Freigabe nötig.
+- Einführung `NotificationRead` (additiv, freigegeben): `db push` legt nur die neue Tabelle an. Vorher Backup der Preview-DB;
+  nie gegen Production. Keine Gastdaten → keine Regel in `purgeGuestDataNow` nötig.
 - Nacharbeits-Grund als Textschlüssel: es gibt keine Grund-Codes, nur Freitext (`reworkNote`); Meldung nennt deshalb keinen Grund.
 - `notify.newTaskNote`/`notify.newWorkOrder` tragen Freitext (`note`) in `messageVars`; ein vom Gast gemeldeter Mangel kann dort Text des Gastes enthalten.
 - `BLOCKED_RECHECK` geht an alle HK (Rolle), nicht an die zuständige.
