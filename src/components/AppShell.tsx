@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api } from "./api";
-import { useSocket } from "./useSocket";
 import NoteCountBadge from "./NoteCountBadge";
 import { RoomFlagIcons } from "./RoomFlags";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
@@ -11,40 +10,19 @@ import ErrorBoundary from "./ErrorBoundary";
 import { ChatProvider } from "./chat/ChatContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
-import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 import { GlassMode } from "./shell/GlassMode";
 import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
-import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
 import { roleHome, type Role } from "@/lib/domain";
 import { firstName, greetingKey, initials } from "@/lib/ui/greeting";
 import { STATUS_UI, uiStatusForRoom } from "@/lib/ui/status";
 import { Pill } from "./ui/Pill";
-import { Button } from "./ui/Button";
 import { cx, FOCUS_RING, Glyph } from "./ui/primitives";
 import { GlassIconButton } from "./shell/GlassIconButton";
 import { HeaderPhoto } from "./shell/HeaderPhoto";
 import { Rail, Sidebar, TabBar } from "./shell/ShellNav";
-
-interface Notification {
-  id: string;
-  type: string;
-  level: string;
-  message: string;
-  messageKey?: string | null;
-  messageVars?: string | null;
-  targetRole: string;
-  targetUserId?: string | null;
-  acknowledged: boolean;
-  createdAt: string;
-}
-
-/** Meldungs-Stufen — eigenes System, nie mit Zimmerstatus verwechselbar; immer mit Typ-Text daneben. */
-const LEVEL_STYLES: Record<string, string> = {
-  info: "border-s-status-info-fg",
-  warning: "border-s-status-warning-fg",
-  critical: "border-s-status-danger-fg",
-};
+import { NotifyRoot } from "./notify/NotifyRoot";
+import { NotifyBell, SoundToggle } from "./notify/NotifyLayer";
 
 /** Schließt ein Aufklapp-Feld bei Klick daneben. */
 function useOutsideClose(open: boolean, close: () => void) {
@@ -113,9 +91,7 @@ export default function AppShell({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { t, fmt } = useLocale();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [open, setOpen] = useState(false);
+  const { t } = useLocale();
   const [profileOpen, setProfileOpen] = useState(false);
   const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
   const [greetingAt, setGreetingAt] = useState<Date | null>(null);
@@ -141,15 +117,6 @@ export default function AppShell({
     // Harte Navigation: der App-Router-Cache gehört nach dem Identitätswechsel noch dem alten Nutzer.
     window.location.assign("/");
   };
-
-  const load = () =>
-    api<{ notifications: Notification[] }>("/api/notifications")
-      .then((d) => setNotifications(d.notifications))
-      .catch(() => {});
-
-  useEffect(() => {
-    load();
-  }, []);
 
   useEffect(() => {
     const q = query.trim();
@@ -179,35 +146,23 @@ export default function AppShell({
     if (matches.length === 1) openRoom(matches[0]);
   };
 
-  useSocket({
-    // Socket-Ereignisse erreichen jeden Client — den Rollenfilter von /api/notifications hier wiederholen.
-    // Der Server bleibt maßgeblich; das hier entscheidet nur die Anzeige.
-    "notification:new": (p: { notification: Notification }) => {
-      const n = p?.notification;
-      if (!n) return;
-      if (role !== "duty_manager" && n.targetRole !== role) return;
-      if (n.targetUserId) { load(); return; } // an eine Person gerichtet: der Server entscheidet, ob es meine ist
-      setNotifications((prev) => (prev.some((x) => x.id === n.id) ? prev : [n, ...prev].slice(0, 50)));
-    },
-  });
+  // Meldung antippen → Zimmerfenster (Meldungs-Zentrum, src/components/notify/). Nur Zimmernummer aus der Meldung, nie Gastdaten.
+  const openRoomById = (roomId: string, number: string | null) => {
+    if (!number) return;
+    api<{ rooms: SearchedRoom[] }>(`/api/rooms?q=${encodeURIComponent(number)}`)
+      .then((d) => { const r = d.rooms.find((x) => x.id === roomId) ?? d.rooms.find((x) => x.number === number); if (r) setSelectedRoom(r); })
+      .catch(() => {});
+  };
 
-  useEscapeKey(() => setOpen(false), open);
   useEscapeKey(() => setProfileOpen(false), profileOpen);
   useEscapeKey(() => setSearchOpen(false), searchOpen);
   const searchRef = useOutsideClose(searchOpen, () => setSearchOpen(false));
   const profileRef = useOutsideClose(profileOpen, () => setProfileOpen(false));
 
-  const unread = notifications.filter((n) => !n.acknowledged).length;
-
   const logout = async () => {
     await api("/api/auth/logout", { method: "POST" });
     router.push("/login");
     router.refresh();
-  };
-
-  const ackAll = async () => {
-    await api("/api/notifications", { method: "PATCH", body: { all: true } });
-    load();
   };
 
   const roleKey = `role.${role}` as TKey;
@@ -243,6 +198,7 @@ export default function AppShell({
 
   return (
     <ChatProvider>
+      <NotifyRoot role={role} onOpenRoom={openRoomById}>
       <div className="theme-glass bg-atmosphere min-h-dvh">
         <Sidebar role={role} home={home} profile={profileBlock} />
         <Rail
@@ -309,13 +265,7 @@ export default function AppShell({
                   </div>
                 )}
               </div>
-              <GlassIconButton
-                icon="bell"
-                label={unread > 0 ? `${t("appShell.notifications")} (${unread})` : t("appShell.notifications")}
-                onClick={() => setOpen((o) => !o)}
-                dot={unread > 0}
-                expanded={open}
-              />
+              <NotifyBell />
               <div ref={profileRef} className="relative">
                 <button
                   type="button"
@@ -330,6 +280,7 @@ export default function AppShell({
                 {profileOpen && (
                   <div className="glass animate-in-up absolute end-0 top-14 z-50 flex w-[min(20rem,calc(100vw-2rem))] flex-col gap-3 rounded-(--glass-radius-md) p-4">
                     {profileBlock}
+                    <SoundToggle />
                     {devUsers && (
                       <select
                         aria-label={t("appShell.devSwitchLabel")}
@@ -363,35 +314,6 @@ export default function AppShell({
             )}
           </header>
 
-          {open && (
-            <div role="dialog" aria-label={t("appShell.notifications")} className="theme-glass glass animate-in-up fixed inset-x-2 top-24 z-50 mx-auto max-w-lg rounded-(--glass-radius-lg) sm:start-auto sm:end-6 sm:w-[26rem]">
-              <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
-                <span className="text-title-22 text-text-primary">{t("appShell.notifications")}</span>
-                <div className="ms-auto flex items-center gap-2">
-                  <Button variant="secondary" className="min-h-11! whitespace-nowrap px-3! text-label!" onClick={ackAll}>
-                    {t("appShell.markAllRead")}
-                  </Button>
-                  <CloseButton onClick={() => setOpen(false)} className="border-border-subtle! bg-surface-card-raised! text-text-primary! hover:bg-surface-card!" />
-                </div>
-              </div>
-              <div className="max-h-96 overflow-y-auto p-2">
-                {notifications.length === 0 && <p className="text-body-16 p-4 text-text-muted">{t("appShell.noNotifications")}</p>}
-                {notifications.map((n, i) => (
-                  <div
-                    key={n.id}
-                    style={{ "--i": i } as React.CSSProperties}
-                    className={cx("animate-in-up mb-2 rounded-(--glass-radius-sm) border-s-4 bg-surface-card-raised p-3", LEVEL_STYLES[n.level], n.acknowledged && "opacity-65")}
-                  >
-                    <div className="text-label text-text-muted">
-                      {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
-                    </div>
-                    <div className="text-body-16 mt-1 text-text-primary">{notificationText(n, t)}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Schnellsuche: auf Glas-Seiten dasselbe Zimmer-Fenster im Glas-Stil (D7), auf alten Seiten hell. */}
           {selectedRoom && (
             <GlassMode on={!legacy}>
@@ -419,6 +341,7 @@ export default function AppShell({
 
         <TabBar role={role} />
       </div>
+      </NotifyRoot>
     </ChatProvider>
   );
 }

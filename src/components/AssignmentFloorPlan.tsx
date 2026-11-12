@@ -34,7 +34,7 @@ export default function AssignmentFloorPlan() {
   const load = useCallback(() => api<DayInfo>("/api/assignments/day").then(setDay).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(() => { void load(); setVersion((v) => v + 1); }, 1200);
-  useSocket({ "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon() });
+  useSocket({ "app:resync": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon() });
 
   const toggle = async (id: string, absent: boolean) => {
     setError(null);

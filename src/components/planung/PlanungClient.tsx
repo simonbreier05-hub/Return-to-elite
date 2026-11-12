@@ -34,6 +34,7 @@ import { countEdits } from "@/lib/ui/tagesplan";
 import { usePlanRun, usePlanungTeam } from "./usePlanungFlow";
 import { useFloorTeam } from "./useFloorTeam";
 import Stepper from "./Stepper";
+import { NotifyBell } from "@/components/notify/NotifyLayer";
 import { errorText, useImportSession, type ImportItem } from "./useImportSession";
 
 const SLOTS: ImportType[] = ["FORECAST", "DEPARTURES", "ARRIVALS", "TRACES", "INHOUSE"];
@@ -140,6 +141,7 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
 
   // Live bei Nachimport / geändertem Tagesplan
   useSocket({
+    "app:resync": () => { void refreshHouse(); },
     "dayplan:updated": (p: { changedRooms?: string[] }) => { void refreshHouse({ changed: p?.changedRooms }); },
     "import:applied": () => { void session.loadStatus(); },
     "import:deleted": () => { void session.loadStatus(); void refreshHouse(); },
@@ -203,7 +205,10 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
         <div className="mt-3 flex items-center justify-between text-label text-pl-muted">
           <Link href="/supervisor" className="-ms-3 inline-flex min-h-12 items-center gap-1 rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span>{t("planungTool.leave")}</Link>
           <span>{t("planungTool.stepOf", { n: step })} · <LiveClock tone="pl" /></span>
-          <Link href="/supervisor" className="inline-flex min-h-12 items-center rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
+          <span className="flex items-center gap-1">
+            <Link href="/supervisor" className="inline-flex min-h-12 items-center rounded-full px-3 hover:text-pl-text focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light">{t("planungTool.liveBoard")} →</Link>
+            <NotifyBell />
+          </span>
         </div>
       </div>
 

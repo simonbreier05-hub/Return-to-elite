@@ -10,7 +10,7 @@ export function useMyFloors(): number[] {
   const [floors, setFloors] = useState<number[]>([]);
   const load = useCallback(() => { api<{ floors: number[] }>("/api/me/floors").then((d) => setFloors(d.floors)).catch(() => setFloors([])); }, []);
   useEffect(load, [load]);
-  useSocket({ "user:floors": () => load() });
+  useSocket({ "user:floors": () => load(), "app:resync": () => load() });
   return floors;
 }
 

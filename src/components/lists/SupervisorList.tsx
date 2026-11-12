@@ -55,6 +55,7 @@ export default function SupervisorList() {
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1500);
   useSocket({
+    "app:resync": () => soon(),
     "room:update": () => soon(),
     "work:pause": () => soon(),
     "assignments:applied": () => soon(),

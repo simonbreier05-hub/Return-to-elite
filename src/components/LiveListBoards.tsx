@@ -38,7 +38,7 @@ export default function LiveListBoards({ date }: { date: string }) {
   }, [date]);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(() => { void load(); }, 1200);
-  useSocket({ "trace:update": () => soon(), "assignments:applied": () => soon(), "dayplan:updated": () => soon() });
+  useSocket({ "app:resync": () => soon(), "trace:update": () => soon(), "assignments:applied": () => soon(), "dayplan:updated": () => soon() });
 
   if (!team) return null;
   const sups = team.members.sup.filter((s) => team.selected.sup.includes(s.id));

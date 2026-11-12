@@ -45,6 +45,7 @@ export default function SupervisorFeed() {
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(() => { void load(); }, 2500);
   useSocket({
+    "app:resync": () => soon(),
     "room:status": () => soon(), "room:update": () => soon(), "work:pause": () => soon(), "workorder:update": () => soon(),
     "guestrequest:new": () => soon(), "guestrequest:update": () => soon(), "notification:new": () => soon(), "user:floors": () => soon(),
   });

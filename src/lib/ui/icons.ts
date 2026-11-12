@@ -32,6 +32,9 @@ import {
   TriangleAlert,
   User,
   Users,
+  Volume2,
+  VolumeX,
+  WifiOff,
   Wrench,
   X,
   Zap,
@@ -70,6 +73,9 @@ export const ICONS = {
   info: Info,
   user: User,
   "file-text": FileText,
+  volume: Volume2,
+  "volume-off": VolumeX,
+  "wifi-off": WifiOff,
 } as const satisfies Record<string, LucideIcon>;
 
 export type IconName = keyof typeof ICONS;

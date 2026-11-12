@@ -52,6 +52,7 @@ export default function EngineeringView() {
     });
 
   useSocket({
+    "app:resync": () => void load(),
     "workorder:update": (p: { workOrder?: unknown } | undefined) => {
       if (p?.workOrder) upsert(p.workOrder);
     },

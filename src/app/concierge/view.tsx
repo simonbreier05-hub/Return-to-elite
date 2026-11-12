@@ -50,7 +50,7 @@ export default function ConciergeView() {
     return () => clearInterval(id);
   }, []);
 
-  useSocket({ "excursion:update": () => void load() });
+  useSocket({ "excursion:update": () => void load(), "app:resync": () => void load() });
 
   const excursions = useMemo(() => (raw ?? []).map(normalizeExcursion).filter((x): x is ExcursionView => !!x), [raw]);
 

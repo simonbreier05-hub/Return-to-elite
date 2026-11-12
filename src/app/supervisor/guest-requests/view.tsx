@@ -68,6 +68,7 @@ export default function GuestRequestsView({ currentUserId }: { currentUserId: st
   }, [load]);
 
   useSocket({
+    "app:resync": () => load(),
     "guestrequest:new": () => load(),
     "guestrequest:update": () => load(),
   });

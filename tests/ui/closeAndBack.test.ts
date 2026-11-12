@@ -40,8 +40,8 @@ describe("Jedes Fenster / jede Seitenleiste hat einen sichtbaren Schließen-Butt
       expect(s, "Esc schließt").toMatch(/useEscapeKey/);
     });
   }
-  it("die Meldungsliste im Kopf (AppShell) lässt sich schließen", () => {
-    const s = readFileSync(path.join(SRC, "components/AppShell.tsx"), "utf8");
+  it("die Meldungsliste im Kopf (Meldungs-Zentrum, in AppShell und Planungstool) lässt sich schließen", () => {
+    const s = readFileSync(path.join(SRC, "components/notify/NotifyLayer.tsx"), "utf8");
     expect(s).toMatch(/<CloseButton onClick=\{\(\) => setOpen\(false\)\}/);
     expect(s).toMatch(/useEscapeKey\(\(\) => setOpen\(false\), open\)/);
   });

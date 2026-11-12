@@ -155,6 +155,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const refetchSoon = useCoalescedRefetch(load, 2000);
 
   useSocket({
+    "app:resync": () => { refetchSoon(); creditsSoon(); },
     // Tagesplan im Planungshub berechnet/geändert → Board neu laden (auch der erste Plan des Tages).
     "dayplan:updated": () => { refetchSoon(); creditsSoon(); },
     // Patch the changed room in place. The broadcast carries only scalar room

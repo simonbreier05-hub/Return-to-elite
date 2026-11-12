@@ -1,15 +1,11 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { api } from "@/components/api";
 import { getSocket, useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
-import CloseButton from "@/components/CloseButton";
-import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { ChannelSummary, ChatMessageView } from "@/lib/chat/service";
-import { channelTitle } from "./labels";
 
 interface ChatState {
   channels: ChannelSummary[];
@@ -17,11 +13,13 @@ interface ChatState {
   me: { id: string; role: string } | null;
   canReview: boolean;
   refresh: () => void;
-  /** Gerade geöffneter Kanal (kein Toast dafür). */
+  /** Gerade geöffneter Kanal (kein Pop-up dafür). */
   setActive: (channelId: string | null) => void;
+  /** Welcher Kanal ist gerade offen? (Meldungs-Zentrum: kein Pop-up für den offenen Kanal.) */
+  activeChannel: () => string | null;
 }
 
-const Ctx = createContext<ChatState>({ channels: [], unread: 0, me: null, canReview: false, refresh: () => {}, setActive: () => {} });
+const Ctx = createContext<ChatState>({ channels: [], unread: 0, me: null, canReview: false, refresh: () => {}, setActive: () => {}, activeChannel: () => null });
 export const useChat = () => useContext(Ctx);
 
 /** Live-Payload prüfen — unvollständige Nachrichten dürfen nichts zum Absturz bringen. */
@@ -37,15 +35,14 @@ export function asChatMessage(p: unknown): ChatMessageView | null {
 
 /**
  * Chat-Zustand für jede Staff-Seite (in AppShell): setzt den eigenen Socket serverseitig in die erlaubten Räume
- * (POST /api/chat/join, bei jeder Verbindung neu), hält Kanäle + Ungelesen-Zähler und zeigt einen Toast bei neuer Nachricht.
+ * (POST /api/chat/join, bei jeder Verbindung neu) und hält Kanäle + Ungelesen-Zähler. Das Pop-up bei neuer Nachricht zeigt
+ * das Meldungs-Zentrum (`src/components/notify/`), im selben Glas-System wie alle anderen Meldungen.
  */
 export function ChatProvider({ children }: { children: ReactNode }) {
-  const { t } = useLocale();
   const pathname = usePathname();
   const [channels, setChannels] = useState<ChannelSummary[]>([]);
   const [me, setMe] = useState<{ id: string; role: string } | null>(null);
   const [canReview, setCanReview] = useState(false);
-  const [toast, setToast] = useState<{ channelId: string; title: string; text: string; urgent: boolean } | null>(null);
   const active = useRef<string | null>(null);
 
   const load = useCallback(async () => {
@@ -73,43 +70,22 @@ export function ChatProvider({ children }: { children: ReactNode }) {
   }, [load, join]);
 
   useSocket({
-    "chat:message": (p: unknown) => {
-      const m = asChatMessage(p);
-      soon();
-      if (!m || !me || m.author.id === me.id) return;
-      if (active.current === m.channelId && pathname?.startsWith("/chat")) return;
-      const ch = channels.find((c) => c.id === m.channelId);
-      setToast({ channelId: m.channelId, title: `${ch ? channelTitle(ch, t) : t("chat.title")} · ${m.author.name}`, text: m.body.slice(0, 90), urgent: m.urgent });
-    },
+    "chat:message": () => soon(),
     "chat:read": () => soon(),
     "chat:retracted": () => soon(),
     "chat:channels": () => { soon(); void join(); },
   });
 
-  useEffect(() => {
-    if (!toast) return;
-    const id = setTimeout(() => setToast(null), toast.urgent ? 12000 : 6000);
-    return () => clearTimeout(id);
-  }, [toast]);
-
   const value = useMemo<ChatState>(() => ({
     channels, me, canReview, refresh: () => { void load(); },
     unread: channels.reduce((n, c) => n + (c.unread || 0), 0),
     setActive: (id) => { active.current = id; },
-  }), [channels, me, canReview, load]);
+    activeChannel: () => (pathname?.startsWith("/chat") ? active.current : null),
+  }), [channels, me, canReview, load, pathname]);
 
   return (
     <Ctx.Provider value={value}>
       {children}
-      {toast && (
-        <div role="status" className={`fixed inset-x-3 bottom-4 z-50 mx-auto flex max-w-md items-start gap-2 rounded-2xl border p-3 shadow-2xl ${toast.urgent ? "border-status-out-of-order/40 bg-white" : "border-gold-line/60 bg-linen"}`}>
-          <Link href={`/chat?c=${encodeURIComponent(toast.channelId)}`} onClick={() => setToast(null)} className="min-h-11 min-w-0 flex-1">
-            <p className="text-xs font-semibold uppercase tracking-wider text-gold-soft">{toast.urgent ? `⚠ ${t("chat.urgent")} · ` : ""}{toast.title}</p>
-            <p className="truncate text-sm">{toast.text}</p>
-          </Link>
-          <CloseButton onClick={() => setToast(null)} />
-        </div>
-      )}
     </Ctx.Provider>
   );
 }

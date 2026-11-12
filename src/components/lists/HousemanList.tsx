@@ -40,7 +40,7 @@ export function useHousemanList(onLinkedTasks?: (roomTaskIds: Set<string>) => vo
   }, [onLinkedTasks]);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1000);
-  useSocket({ "assignments:applied": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
+  useSocket({ "app:resync": () => soon(), "assignments:applied": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
 
   const toggle = async (item: Pick<Item, "id" | "status">) => {
     if (busy) return;

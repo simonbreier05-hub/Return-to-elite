@@ -109,15 +109,19 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
   const endRef = useRef<HTMLDivElement>(null);
 
   const markRead = useCallback(() => { api(`/api/chat/channels/${channel.id}/read`, { method: "POST" }).then(onRead).catch(() => {}); }, [channel.id, onRead]);
-  useEffect(() => {
+  const loadMessages = () => {
     api<{ messages: ChatMessageView[]; hasMore: boolean }>(`/api/chat/channels/${channel.id}/messages`)
       .then((d) => { setMessages(Array.isArray(d.messages) ? d.messages : []); setHasMore(!!d.hasMore); markRead(); })
       .catch((e) => setError(errorText(e, t)));
+  };
+  useEffect(() => {
+    loadMessages();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [channel.id]);
   useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [messages.length]);
 
   useSocket({
+    "app:resync": () => loadMessages(), // App wieder offen/online: verpasste Nachrichten nachladen
     "chat:message": (p: unknown) => {
       const m = asChatMessage(p);
       if (!m || m.channelId !== channel.id) return;

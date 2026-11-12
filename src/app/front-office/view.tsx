@@ -62,6 +62,7 @@ export default function FrontOfficeView() {
   };
 
   useSocket({
+    "app:resync": () => void load(),
     "arrival:update": (p: { arrival?: Record<string, unknown> } | undefined) => upsert(p?.arrival),
     // Ein Statuswechsel betrifft nur das Zimmer in der jeweiligen Anreise.
     "room:update": (p: { room?: { id?: string; status?: string } } | undefined) => {
