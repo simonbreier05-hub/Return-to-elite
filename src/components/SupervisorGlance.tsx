@@ -53,6 +53,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(() => { void load(); }, 2000);
   useSocket({
+    "app:resync": () => soon(),
     "room:update": () => soon(), "dayplan:updated": () => soon(), "assignments:applied": () => soon(),
     "workorder:update": () => soon(), "roomtask:update": () => soon(), "user:floors": () => soon(),
   });

@@ -100,6 +100,7 @@ export default function DutyManagerView() {
   const refetchSoon = useCoalescedRefetch(() => load().catch(() => {}), 2000);
 
   useSocket({
+    "app:resync": () => refetchSoon(),
     "room:update": () => refetchSoon(),
     "dayplan:updated": () => refetchSoon(),
     "arrival:update": () => refetchSoon(),

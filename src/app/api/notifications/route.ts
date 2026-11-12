@@ -8,7 +8,11 @@ import { broadcast } from "@/lib/realtime";
  * GET /api/notifications — alerts for my role (duty_manager sees all).
  * POST — supervisor raises one to duty_manager (currently just the
  * "need more Room Attendants" ask from the planning board).
- * PATCH — acknowledge one ({id}) or all ({all:true}) of my role's alerts.
+ * PATCH — mark one ({id}) or all ({all:true}) visible alerts as read **for me**.
+ *
+ * „Gelesen“ gilt je Person (`NotificationRead`, Paket O1): wer quittiert, ändert nur die eigene Glocke — auch eine
+ * Rollen-Meldung bleibt für die Kolleginnen ungelesen, und das „Alle gelesen“ des Duty Managers berührt niemanden sonst.
+ * `acknowledged` in der Antwort = von mir gelesen (oder Altbestand `Notification.acknowledged` von vor O1).
  */
 /** Meldungen für mich: meine Rolle, und wenn eine Meldung an eine Person gerichtet ist, nur wenn ich es bin (Duty Manager sieht alle). */
 function scopeFor(session: { role: string; userId: string }) {
@@ -18,13 +22,15 @@ function scopeFor(session: { role: string; userId: string }) {
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
-  const { role } = auth.session;
-  const notifications = await prisma.notification.findMany({
+  const rows = await prisma.notification.findMany({
     where: scopeFor(auth.session),
     orderBy: { createdAt: "desc" },
     take: 50,
+    include: { reads: { where: { userId: auth.session.userId }, select: { id: true } } },
   });
-  return NextResponse.json({ notifications });
+  const notifications = rows.map(({ reads, ...n }) => ({ ...n, acknowledged: n.acknowledged || reads.length > 0 }));
+  // `me`: damit der Client „an mich gerichtet“ (Pop-up, Ton, Zähler) ohne eigene Abfrage entscheiden kann.
+  return NextResponse.json({ notifications, me: { role: auth.session.role, userId: auth.session.userId } });
 }
 
 const StaffingRequestBody = z.object({
@@ -59,11 +65,19 @@ export async function PATCH(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Pass {id} or {all:true}.", code: "INVALID_INPUT" }, { status: 400 });
 
-  const roleFilter = scopeFor(auth.session);
-  if ("all" in parsed.data) {
-    await prisma.notification.updateMany({ where: { ...roleFilter, acknowledged: false }, data: { acknowledged: true } });
-  } else {
-    await prisma.notification.updateMany({ where: { id: parsed.data.id, ...roleFilter }, data: { acknowledged: true } });
+  const { userId } = auth.session;
+  // Nur Meldungen, die ich sehen darf; schon gelesene (von mir oder Altbestand) auslassen.
+  const unread = await prisma.notification.findMany({
+    where: { ...scopeFor(auth.session), ...("id" in parsed.data ? { id: parsed.data.id } : {}), acknowledged: false, reads: { none: { userId } } },
+    select: { id: true },
+  });
+  if (unread.length) {
+    try {
+      await prisma.notificationRead.createMany({ data: unread.map((n) => ({ notificationId: n.id, userId })) });
+    } catch {
+      // Doppelklick/zweites Gerät gleichzeitig: einzelne Zeile existiert schon — einzeln nachziehen.
+      for (const n of unread) await prisma.notificationRead.upsert({ where: { notificationId_userId: { notificationId: n.id, userId } }, create: { notificationId: n.id, userId }, update: {} });
+    }
   }
   return NextResponse.json({ ok: true });
 }

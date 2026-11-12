@@ -8,6 +8,7 @@ import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
 import { endPauseOnChange } from "@/lib/work/pauseData";
 import { keyed } from "@/lib/i18n/notificationText";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
 /**
  * The one place a room's status is allowed to change.
@@ -170,9 +171,8 @@ export async function applyStatusChange(
           level: "info",
           targetRole: "front_office",
           roomId: room.id,
-          message: `Room ${room.number} released (INSPECTED) — ready for ${arrival.guestName}${
-            arrival.vip ? " (VIP)" : ""
-          }.`,
+          // Ohne Gastnamen (CLAUDE.md): Meldungen gehen per Broadcast an jeden Client.
+          message: `Room ${room.number} released (INSPECTED) — ready for the ${arrival.vip ? "VIP " : ""}arrival.`,
           ...keyed(arrival.vip ? "notify.roomReleasedVip" : "notify.roomReleased", { n: room.number }),
           dedupeKey: `ROOM_RELEASED:${arrival.id}:${now.getTime()}`,
         },
@@ -180,6 +180,10 @@ export async function applyStatusChange(
       broadcast("notification:new", { notification });
     }
   }
+
+  // Ablehnung/Nacharbeit: die heute zuständige Kraft erfährt es sofort (Pop-up + Ton). Nur Zimmer + Etage —
+  // der Grund steht als Freitext im Zimmer (reworkNote), nie in der Meldung.
+  if (to === "PICKUP") await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "REWORK", actorId: session.userId, now });
 
   broadcast("room:update", { room: updated });
   broadcast("room:status", { roomId: room.id, number: room.number, from, to, by: session.name });

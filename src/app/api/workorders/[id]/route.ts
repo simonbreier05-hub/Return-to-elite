@@ -7,6 +7,8 @@ import { broadcast } from "@/lib/realtime";
 import { WorkOrderStatusSchema, type WorkOrderStatus } from "@/lib/domain";
 import { endPauseOnChange } from "@/lib/work/pauseData";
 import { keyed } from "@/lib/i18n/notificationText";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
+import { ROLES } from "@/lib/domain";
 
 /**
  * PATCH /api/workorders/[id] — engineering advances a work order:
@@ -80,6 +82,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       },
     });
     broadcast("notification:new", { notification });
+
+    // Mangel behoben → die heute zuständige Kraft und die Person, die ihn gemeldet hat (wenn es nicht dieselbe ist,
+    // nicht der Gast-Systemzugang und nicht wer ihn gerade selbst behoben hat). Nur Zimmer + Etage.
+    const room = wo.defect.room;
+    const hk = await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "DEFECT_FIXED", actorId: auth.session.userId, now });
+    const reporter = await prisma.user.findUnique({ where: { id: wo.defect.reportedById }, select: { id: true, role: true } });
+    if (reporter && reporter.id !== auth.session.userId && reporter.id !== hk && (ROLES as readonly string[]).includes(reporter.role)) {
+      const n2 = await prisma.notification.create({
+        data: {
+          type: "DEFECT_FIXED", level: "info", targetRole: reporter.role, targetUserId: reporter.id, roomId: room.id,
+          message: `Zimmer ${room.number} (Etage ${room.floor}): Mangel behoben.`,
+          ...keyed("notify.roomChange", { n: room.number, floor: room.floor, whatKey: "notify.changeDEFECT_FIXED" }),
+          dedupeKey: `DEFECT_FIXED:${id}:${reporter.id}`,
+        },
+      });
+      broadcast("notification:new", { notification: n2 });
+    }
   }
 
   const { _count, ...defectRoom } = workOrder.defect.room;

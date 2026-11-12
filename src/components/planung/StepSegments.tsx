@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { NotifyBell } from "@/components/notify/NotifyLayer";
 
 import LiveClock from "@/components/LiveClock";
 import type { StepId } from "@/lib/planung/model";
@@ -12,7 +13,10 @@ import type { StepId } from "@/lib/planung/model";
 export default function StepSegments({ current, labels, dateText, stepText, ariaLabel, leaveLabel }: { current: StepId; labels: Record<StepId, string>; dateText: string; stepText: string; ariaLabel: string; leaveLabel: string }) {
   return (
     <div className="mb-5 md:hidden">
-      <Link href="/supervisor" className="-ms-3 mb-1 inline-flex min-h-12 items-center gap-1 rounded-full px-3 text-sm font-medium text-pl-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span>{leaveLabel}</Link>
+      <div className="mb-1 flex items-center justify-between">
+        <Link href="/supervisor" className="-ms-3 inline-flex min-h-12 items-center gap-1 rounded-full px-3 text-sm font-medium text-pl-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brass-light"><span aria-hidden className="inline-block rtl:-scale-x-100">←</span>{leaveLabel}</Link>
+        <NotifyBell />
+      </div>
       <div className="flex items-baseline justify-between">
         <span className="font-serif text-2xl font-semibold">StayClean</span>
         <span className="text-label text-pl-muted"><LiveClock tone="pl" /> · {stepText}</span>

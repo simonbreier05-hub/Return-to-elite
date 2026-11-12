@@ -135,6 +135,7 @@ export default function AttendantView() {
   const refreshAll = () => { refreshRoomsSoon(); refreshListSoon(); refreshPrioritiesSoon(); };
 
   useSocket({
+    "app:resync": () => refreshAll(), // Meldungs-Zentrum: App wieder offen/online → alles nachladen
     "dayplan:updated": (p: { changedRooms?: string[] } | undefined) => {
       refreshAll();
       if (p?.changedRooms?.length) {

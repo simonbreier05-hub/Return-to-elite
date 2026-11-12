@@ -16,7 +16,7 @@ export default function PlausibilityBanner({ refreshKey }: { refreshKey?: string
   const [busy, setBusy] = useState(false);
   const load = useCallback(() => api<PlausibilityState>("/api/import/plausibility").then(setState).catch(() => {}), []);
   useEffect(() => { void load(); }, [load, refreshKey]);
-  useSocket({ "dayplan:updated": () => { void load(); }, "import:deleted": () => { void load(); } });
+  useSocket({ "app:resync": () => { void load(); }, "dayplan:updated": () => { void load(); }, "import:deleted": () => { void load(); } });
 
   if (!state?.findings.length) return null;
   if (state.acknowledged) return <p role="status" className="mb-3 text-label text-pl-muted">{t("planungTool.plausAcked", { n: state.findings.length })}</p>;

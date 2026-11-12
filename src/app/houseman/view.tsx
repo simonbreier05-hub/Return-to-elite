@@ -38,6 +38,7 @@ export default function HousemanView() {
   }, [loadTasks]);
 
   useSocket({
+    "app:resync": () => void loadTasks(),
     "roomtask:update": (p: { roomTask?: { id?: string; status?: string } } | undefined) => {
       const rt = p?.roomTask;
       if (!rt?.id) return;

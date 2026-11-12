@@ -68,6 +68,7 @@ model User {
   chatMessages  ChatMessage[]
   chatMembers   ChatMember[]
   chatReads     ChatReadState[]
+  notificationReads NotificationRead[]
 }
 
 model Room {
@@ -357,8 +358,23 @@ model Notification {
   messageKey   String?
   messageVars  String? // JSON {"n":"305","floor":3}
   dedupeKey    String? // prevents the escalation ticker from re-firing the same alert
-  acknowledged Boolean   @default(false)
+  acknowledged Boolean   @default(false) // Altbestand: vor O1 „gelesen für alle“; neu wird nur noch NotificationRead geschrieben
   createdAt    DateTime  @default(now())
+  reads        NotificationRead[]
+}
+
+// Paket O1 (additiv): „gelesen“ je Person. Eine Zeile = diese Person hat diese Meldung gelesen/quittiert.
+// Keine Gastdaten, keine Texte; fällt mit der Meldung bzw. der Person weg.
+model NotificationRead {
+  id             String       @id @default(cuid())
+  notificationId String
+  notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  readAt         DateTime     @default(now())
+
+  @@unique([notificationId, userId])
+  @@index([userId])
 }
 
 model Setting {

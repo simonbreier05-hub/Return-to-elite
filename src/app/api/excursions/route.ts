@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -63,5 +64,8 @@ export async function POST(req: NextRequest) {
   });
   await audit({ action: "EXCURSION_LOGGED", userId: auth.session.userId, roomId: room.id, meta: { excursionId: excursion.id } });
   broadcast("excursion:update", { excursion });
+  // Gast außer Haus: die heute zuständige Kraft kann das Zimmer jetzt machen. Nur Zimmer + Etage, kein Gastname.
+  // Nur wenn der Ausflug schon läuft oder heute beginnt — „kommt bald zurück“ meldet der Ticker (src/lib/escalations.ts).
+  if (excursion.startsAt.getTime() - Date.now() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}` });
   return NextResponse.json({ excursion }, { status: 201 });
 }

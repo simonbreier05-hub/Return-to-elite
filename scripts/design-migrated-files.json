@@ -14,7 +14,10 @@
     "src/components/tagesplan/PlanningParts.tsx",
     "src/components/tagesplan/TagesplanWindow.tsx",
     "src/lib/ui/tagesplan.ts",
-    "src/lib/ui/tagesplanConfig.ts"
+    "src/lib/ui/tagesplanConfig.ts",
+    "src/components/notify/NotifyLayer.tsx",
+    "src/components/notify/NotifyContext.tsx",
+    "src/components/notify/NotifyRoot.tsx"
   ],
   "warn": [
     "src/app/attendant/view.tsx",

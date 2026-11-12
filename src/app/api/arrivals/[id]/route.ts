@@ -5,6 +5,8 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
+import { notifyFloorSupervisors } from "@/lib/rooms/notifyFloorSupervisors";
+import { keyed } from "@/lib/i18n/notificationText";
 
 const PatchSchema = z.object({
   eta: z.coerce.date().nullable().optional(),
@@ -37,5 +39,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const prioChanged = (["vip", "neededNow"] as const).some((k) => parsed.data[k] !== undefined && parsed.data[k] !== existing[k])
     || (parsed.data.eta !== undefined && (parsed.data.eta?.getTime() ?? null) !== (existing.eta?.getTime() ?? null));
   if (prioChanged) await notifyHousekeeperOfRoomChange({ roomId: arrival.roomId, kind: "PRIORITY", actorId: auth.session.userId });
+
+  // „Sofort gebraucht“ oder VIP-Frühanreise neu gesetzt → auch der Supervisor der Etage (Zimmer muss zuerst freigegeben werden).
+  // Ohne Gastnamen: nur Zimmer, Etage und Anlass.
+  const nowNeeded = parsed.data.neededNow === true && !existing.neededNow;
+  const vipEarly = !!(arrival.vip && arrival.earlyCheckIn) && !(existing.vip && existing.earlyCheckIn);
+  if (nowNeeded || vipEarly) {
+    const room = await prisma.room.findUnique({ where: { id: arrival.roomId }, select: { id: true, number: true, floor: true } });
+    if (room) {
+      const what = nowNeeded ? "sofort gebraucht" : "VIP-Frühanreise";
+      await notifyFloorSupervisors({
+        room, actorId: auth.session.userId, type: "ARRIVAL_PRIORITY", level: "warning",
+        message: `Zimmer ${room.number} (Etage ${room.floor}): ${what} — bitte zuerst fertig machen und freigeben.`,
+        k: keyed(nowNeeded ? "notify.arrivalNeededNow" : "notify.arrivalVipEarly", { n: room.number, floor: room.floor }),
+      });
+    }
+  }
   return NextResponse.json({ arrival });
 }

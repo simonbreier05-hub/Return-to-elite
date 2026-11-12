@@ -44,6 +44,7 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
   const mine = (p: Payload) => !p || !room
     || p.roomNumber === room.number || p.room?.id === room.id || p.room?.number === room.number || p.note?.roomId === room.id;
   useSocket({
+    "app:resync": () => soon(),
     "room:update": (p: Payload) => { if (mine(p)) soon(); },
     "trace:update": (p: Payload) => { if (mine(p)) soon(); },
     "note:new": (p: Payload) => { if (mine(p)) soon(); },

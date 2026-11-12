@@ -25,7 +25,7 @@ export function useRedistribution() {
     api<{ suggestions: RedistSuggestion[]; attendants: { id: string; name: string }[] }>("/api/redistribution").then((d) => { setItems(d.suggestions); setAttendants(d.attendants); }).catch(() => {});
   }, []);
   useEffect(() => { load(); const id = setInterval(load, 60_000); return () => clearInterval(id); }, [load]);
-  useSocket({ "redistribution:new": load, "assignments:applied": load, "room:update": () => {} });
+  useSocket({ "app:resync": load, "redistribution:new": load, "assignments:applied": load, "room:update": () => {} });
 
   const decide = async (s: RedistSuggestion, action: "confirm" | "reject") => {
     setBusy(true); setError(null);

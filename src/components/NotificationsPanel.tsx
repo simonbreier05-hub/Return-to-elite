@@ -43,6 +43,7 @@ export function useRoleNotifications(targetRole: string) {
   }, []);
 
   useSocket({
+    "app:resync": () => load(),
     "notification:new": (p: { notification: RoleNotification }) => {
       const n = p?.notification;
       if (!n || n.targetRole !== targetRole) return;

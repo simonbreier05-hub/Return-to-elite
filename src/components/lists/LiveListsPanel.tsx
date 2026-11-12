@@ -40,7 +40,7 @@ export default function LiveListsPanel() {
   ]), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
-  useSocket({ "note:new": () => soon(), "note:update": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
+  useSocket({ "app:resync": () => soon(), "note:new": () => soon(), "note:update": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
 
   const linked = new Set((data?.tasks ?? []).map((it) => it.roomTaskId).filter((x): x is string => !!x));
   const tabs: [Tab, string][] = [["overview", t("service.title")], ["hk", t("dutyManager.liveHk")], ["sup", t("dutyManager.liveSup")], ["hm", t("dutyManager.liveHm")]];

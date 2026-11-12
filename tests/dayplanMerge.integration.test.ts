@@ -111,7 +111,8 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
 
   it("Nachimport: Zuteilung bleibt fest, Zimmer bekommt Hinweis; fehlender Aufenthalt wird markiert, nicht gelöscht", async () => {
     const attendant = await prisma.user.create({ data: { email: "att@test", name: "Att", passwordHash: "x", role: "room_attendant" } });
-    await prisma.room.update({ where: { number: "101" }, data: { assignedToId: attendant.id } });
+    // Heutige Zuteilung (assignedOn = heute, wie jeder Zuteilungsweg sie setzt) — nur sie bekommt die Nachimport-Meldung.
+    await prisma.room.update({ where: { number: "101" }, data: { assignedToId: attendant.id, assignedOn: TODAY } });
     // Abreise von Zimmer 101 fällt aus der Liste: Nachimport mit geändertem Stand
     const batch = await prisma.importBatch.findFirstOrThrow({ where: { type: "DEPARTURES", status: "APPLIED" }, include: { rows: true } });
     await prisma.importRow.deleteMany({ where: { batchId: batch.id, room: "101" } });

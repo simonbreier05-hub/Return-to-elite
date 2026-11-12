@@ -40,7 +40,7 @@ export default function ServiceOverview() {
   const load = useCallback(() => api<Data>("/api/lists/service").then(setData).catch(() => {}), []);
   useEffect(() => { void load(); }, [load]);
   const soon = useCoalescedRefetch(load, 1200);
-  useSocket({ "room:update": () => soon(), "assignments:applied": () => soon(), "dayplan:updated": () => soon(), "trace:update": () => soon(), "work:pause": () => soon() });
+  useSocket({ "app:resync": () => soon(), "room:update": () => soon(), "assignments:applied": () => soon(), "dayplan:updated": () => soon(), "trace:update": () => soon(), "work:pause": () => soon() });
 
   const rooms = useMemo(() => {
     if (!data) return [];
