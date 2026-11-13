@@ -122,6 +122,10 @@ model Room {
   // POST /api/rooms/[id]/linen (supervisor/duty_manager, from the
   // Planungshub grundriss); null means never recorded (treated as due).
   lastLinenChangeAt DateTime?
+  // Offizielle Zimmerliste v2.1 (src/lib/rooms/roomList.ts): Credit je Zimmer (vor dem Kategorie-Wert) und aktiv/inaktiv.
+  // Additiv: null = Kategorie-Credit wie bisher; inaktive Zimmer werden nie gelöscht, nur ausgeblendet.
+  credit            Float?
+  active            Boolean   @default(true)
   updatedAt        DateTime  @updatedAt
 
   notes         RoomNote[]

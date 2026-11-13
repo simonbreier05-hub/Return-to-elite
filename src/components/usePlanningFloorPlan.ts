@@ -21,6 +21,7 @@ export interface LiveRoom {
   id: string;
   number: string;
   type: string;
+  credit?: number | null;
   status: string;
   occupancy?: string | null;
   isCheckoutToday: boolean;
@@ -185,7 +186,7 @@ export function usePlanningFloorPlan({
         hasExpectedArrival: r.arrivals.length > 0,
       });
       const laundryDue = laundryIds.has(r.id); // nur aus dem Tagesplan (echte Daten), nie geschätzt
-      const credit = computeRoomCredit({ type: r.type as RoomType, credits: credits as Record<RoomType, number> });
+      const credit = computeRoomCredit({ type: r.type as RoomType, credits: credits as Record<RoomType, number>, roomCredit: r.credit });
       map.set(r.id, { category, laundryDue, credit: draftCredit.get(r.id) ?? credit, guestDndActive: r.guestDndActive ?? false });
     }
     return map;

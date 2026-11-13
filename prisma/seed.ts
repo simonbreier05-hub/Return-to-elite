@@ -1,6 +1,7 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import { FLOOR_PLAN, HOTEL, FLOOR_FACILITIES } from "../src/lib/floorplan/hotelDeRome";
+import { syncRoomList } from "../src/lib/rooms/roomListSync";
 import { DEMO_PASSWORD, demoUsers } from "./demoUsers";
 import { ensureDemoStay } from "./demoStay";
 
@@ -117,6 +118,9 @@ async function main() {
     }
   }
   console.log(`Created ${count} rooms (${HOTEL.totalRooms} expected from the floor plan).`);
+  // Offizielle Zimmerliste v2.1: fehlende Zimmer anlegen, Typ/Credit je Zimmer setzen, Zimmer außerhalb der Liste (307) deaktivieren.
+  const listPlan = await syncRoomList(prisma, { apply: true });
+  console.log(`Zimmerliste: ${listPlan.create.length} neu, ${listPlan.update.length} gesetzt, ${listPlan.deactivate.length} deaktiviert.`);
 
   // --- Floor facilities (HSK offices, lifts, fire escapes) ----------------
   for (const facility of FLOOR_FACILITIES) {

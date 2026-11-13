@@ -3,6 +3,8 @@ import type { RoomType } from "@/lib/domain";
 export interface RoomCreditInput {
   type: RoomType;
   credits: Record<RoomType, number>;
+  /** Credit je Zimmer aus der offiziellen Zimmerliste (`Room.credit`); gesetzt = gilt vor dem Kategorie-Wert. */
+  roomCredit?: number | null;
 }
 
 /**
@@ -11,6 +13,7 @@ export interface RoomCreditInput {
  * Die Reinigungsart (Tidy/Linen change/Turn/Deep clean) ändert den Credit nicht mehr — sie zählt in der Planung als
  * Zimmerzahl und als Mischung je Kraft. Eine Definition für Grundriss, Tagesplan, Listen und Zuteilungsvorschlag.
  */
-export function computeRoomCredit({ type, credits }: RoomCreditInput): number {
+export function computeRoomCredit({ type, credits, roomCredit }: RoomCreditInput): number {
+  if (typeof roomCredit === "number" && Number.isFinite(roomCredit) && roomCredit > 0) return roomCredit;
   return credits[type] ?? 1;
 }

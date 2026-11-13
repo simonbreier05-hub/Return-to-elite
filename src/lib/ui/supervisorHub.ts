@@ -20,6 +20,7 @@ export interface SupRoom {
   floor: number;
   status: string;
   type?: string;
+  credit?: number | null;
   blockReason?: string | null;
   guestDndActive?: boolean;
   occupancy?: string | null;
@@ -187,10 +188,10 @@ export interface CreditSettings {
  * Credit eines Zimmers — dieselbe Rechnung wie im Grundriss (`computeRoomCredit`, Wäschewechsel nur aus dem Tagesplan).
  * Ohne Einstellungen: 0 (die Kachel zeigt dann keine erfundene Zahl).
  */
-export function roomCreditOf(r: Pick<SupRoom, "type" | "occupancy" | "isCheckoutToday" | "blockReason" | "arrivals">, _laundryDue: boolean, s: CreditSettings | null): number {
+export function roomCreditOf(r: Pick<SupRoom, "type" | "credit" | "occupancy" | "isCheckoutToday" | "blockReason" | "arrivals">, _laundryDue: boolean, s: CreditSettings | null): number {
   // Plan-1b: Credit = Zimmerkategorie; Art und Wäschewechsel ändern ihn nicht mehr.
   if (!s) return 0;
-  return computeRoomCredit({ type: (r.type ?? "") as RoomType, credits: s.roomTypeCredits as Record<RoomType, number> });
+  return computeRoomCredit({ type: (r.type ?? "") as RoomType, credits: s.roomTypeCredits as Record<RoomType, number>, roomCredit: r.credit });
 }
 
 /** Überlast = über der Credit-Richtgröße (nur ein Hinweis, nie eine Sperre — wie bisher im Grundriss). */

@@ -102,7 +102,7 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       lang: stay?.language ?? null,
       pax: stay ? stay.adults + stay.children : null,
       dnd: dnd.has(r.id) || r.blockReason === "DND",
-      credits: kind === "ARRIVAL" || !kind ? 0 : computeRoomCredit({ type: r.type as RoomType, credits: typeCredits }),
+      credits: kind === "ARRIVAL" || !kind ? 0 : computeRoomCredit({ type: r.type as RoomType, credits: typeCredits, roomCredit: r.credit }),
       traces: traceBy.get(r.id) ?? [],
       type: r.type, defects: defectCount.get(r.id) ?? 0, wish: wishBy.get(r.id) ?? null,
       pause: r.status === "IN_PROGRESS" ? pauses.get(r.id) ?? null : null,

@@ -16,6 +16,7 @@
     "db:push:postgres": "prisma db push --schema prisma/schema.postgres.prisma",
     "db:generate:postgres": "prisma generate --schema prisma/schema.postgres.prisma",
     "db:seed": "tsx prisma/seed.ts",
+    "rooms:sync": "tsx scripts/sync-room-list.ts",
     "fixtures:opera": "tsx scripts/generate-opera-fixtures.ts",
     "test": "vitest run",
     "test:watch": "vitest",
