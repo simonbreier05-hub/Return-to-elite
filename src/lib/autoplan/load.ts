@@ -86,7 +86,7 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     if (state !== "TODO" && !assignee) continue; // schon erledigt/begonnen, niemandem zugeordnet: nichts zu planen
     // Plan-1b: Turn = Anreise und Abreise (auch Anreise in ein nicht gereinigtes Zimmer); DEPARTURE = Deep clean (Abreise ohne Anreise heute)
     const kind = p.cleaningType === "SAME_DAY_TURN" || p.cleaningType === "ARRIVAL" ? "TURN" : p.cleaningType === "STAYOVER" ? "STAYOVER" : "DEPARTURE";
-    const credits = computeRoomCredit({ type: r.type as RoomType, credits: typeCredits }); // Plan-1b: Wert der Zimmerkategorie
+    const credits = computeRoomCredit({ type: r.type as RoomType, credits: typeCredits, roomCredit: r.credit }); // Plan-1b: Wert der Zimmerkategorie
     const traceN = traceCount.get(r.id) ?? 0;
     const demanding: DemandingReason[] = [];
     if (p.vip) demanding.push("VIP");

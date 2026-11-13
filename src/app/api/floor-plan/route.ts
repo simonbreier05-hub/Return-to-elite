@@ -16,8 +16,10 @@ export async function GET() {
 
   const [rooms, facilities] = await Promise.all([
     prisma.room.findMany({
+      where: { active: true }, // Zimmerliste v2.1: inaktive Zimmer nicht im Grundriss
       select: {
         number: true,
+        credit: true,
         floor: true,
         section: true,
         interconnectingGroup: true,

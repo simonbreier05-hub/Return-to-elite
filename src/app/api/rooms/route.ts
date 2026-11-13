@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
   }
 
   const rooms = await prisma.room.findMany({
-    where,
+    where: { ...where, active: true }, // Zimmerliste v2.1: inaktive Zimmer (z. B. 307) nicht im Board/Grundriss
     orderBy: { number: "asc" },
     include: {
       assignedTo: { select: { id: true, name: true, dailyNumber: true } },
