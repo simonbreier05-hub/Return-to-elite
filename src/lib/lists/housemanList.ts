@@ -3,6 +3,7 @@ import { classifyTraceText } from "@/lib/import/traceClassifier";
 import { listDay, type Kind } from "./dayRows";
 import { shortGuestName, timesInText } from "./guestName";
 import { activePauses, endPauseOnChange, type PauseView } from "@/lib/work/pauseData";
+import { compareHousemanItems } from "@/lib/houseman/order";
 
 export interface HousemanItem {
   id: string;
@@ -24,6 +25,8 @@ export interface HousemanItem {
   guest: string | null;
   /** Rückbau (Twin zurück) ist erst nach der Abreise dran. */
   waitsForDeparture: boolean;
+  /** Betrieb L2 (Punkt 9): Anreisezeit des Gastes „HH:MM“ (Tagesplan) — Sortierung nach Anreise, sonst Zimmernummer. */
+  eta: string | null;
   /** Aktive Pause (Grund-Code, seit, von wem) — pausiert zählt nicht als erledigt. */
   pause: PauseView | null;
 }
@@ -62,8 +65,9 @@ export async function getHousemanList(floor?: number | null, forUserId?: string 
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
       waitsForDeparture: task?.type === "TWIN_REVERT" && kind !== "DEPARTURE" && kind !== "SAME_DAY_TURN",
       pause: t.status === "DONE" ? null : pauses.get(t.id) ?? null,
+      eta: p?.eta ?? null,
     };
-  }).sort((a, b) => Number(a.status === "DONE") - Number(b.status === "DONE") || a.roomNumber.localeCompare(b.roomNumber));
+  }).sort(compareHousemanItems); // Betrieb L2 (Punkt 9): offen zuerst, nach Anreisezeit, sonst Zimmernummer
   // Ein Hausmann sieht seine eigenen und die nicht zugeteilten Aufgaben; Supervisor sehen alle.
   let visible = forUserId ? items.filter((i) => !i.assignedToId || i.assignedToId === forUserId) : items;
   // Supervisor sehen nur Aufgaben auf ihren Etagen; der Duty Manager sieht alle (onlyFloors = null).

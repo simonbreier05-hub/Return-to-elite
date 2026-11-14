@@ -29,6 +29,12 @@ const en = {
     clean: { title: "Request cleaning", hint: "Choose a time" },
     defect: { title: "Report an issue", hint: "Category & description" },
     contact: { title: "Contact a department", hint: "Choose who to reach" },
+    green: { title: "Green Option", hint: "No linen change today" },
+  },
+  green: {
+    confirmQuestion: "Skip today's change of towels and bed linen? Your room will still be cleaned. Thank you for helping the environment.",
+    confirm: "Yes, no linen change today",
+    chosen: "Chosen for today — thank you!",
   },
   dndActive: {
     banner: "Do Not Disturb is active",
@@ -88,6 +94,7 @@ const en = {
     defect: "Thank you — forwarded to our technical team.",
     contact: "{{department}} has been notified.",
     note: "Thank you! Your message has been sent to Housekeeping.",
+    green: "Thank you — no linen change today.",
   },
   comment: {
     label: "Message to Housekeeping (optional)",
@@ -111,6 +118,7 @@ const en = {
       CONTACT: "Department contact",
       DEFECT: "Reported issue",
       NOTE: "Message",
+      GREEN: "Green Option",
     },
   },
   error: {
@@ -161,6 +169,12 @@ const de = {
     clean: { title: "Reinigung wünschen", hint: "Zeitpunkt wählen" },
     defect: { title: "Mangel melden", hint: "Kategorie & Beschreibung" },
     contact: { title: "Abteilung kontaktieren", hint: "Zuständige Stelle wählen" },
+    green: { title: "Green Option", hint: "Heute kein Wäschewechsel" },
+  },
+  green: {
+    confirmQuestion: "Heute auf den Wechsel von Handtüchern und Bettwäsche verzichten? Ihr Zimmer wird trotzdem gereinigt. Danke, dass Sie die Umwelt schonen.",
+    confirm: "Ja, heute kein Wäschewechsel",
+    chosen: "Für heute gewählt — vielen Dank!",
   },
   dndActive: {
     banner: "Bitte nicht stören ist aktiv",
@@ -220,6 +234,7 @@ const de = {
     defect: "Vielen Dank — die Meldung wurde weitergeleitet.",
     contact: "{{department}} wurde benachrichtigt.",
     note: "Danke! Ihre Nachricht wurde an das Housekeeping übermittelt.",
+    green: "Danke — heute kein Wäschewechsel.",
   },
   comment: {
     label: "Nachricht an das Housekeeping (optional)",
@@ -243,6 +258,7 @@ const de = {
       CONTACT: "Abteilungskontakt",
       DEFECT: "Gemeldeter Mangel",
       NOTE: "Nachricht",
+      GREEN: "Green Option",
     },
   },
   error: {

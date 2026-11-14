@@ -19,6 +19,8 @@ import { addRoomNote } from "@/lib/rooms/addRoomNote";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { sanitizeGuestText } from "@/lib/guestSanitize";
 import { keyed } from "@/lib/i18n/notificationText";
+import { GREEN_KIND, greenRoomsOn } from "@/lib/guest/green";
+import { berlinDate } from "@/lib/dayplan/time";
 
 /**
  * The five guest write actions, shared by both access paths
@@ -32,7 +34,7 @@ import { keyed } from "@/lib/i18n/notificationText";
 
 type GuestActionRoom = { id: string; number: string };
 
-export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes"] as const;
+export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes", "green"] as const;
 export type GuestAction = (typeof GUEST_ACTIONS)[number];
 
 export function isGuestAction(value: string): value is GuestAction {
@@ -53,7 +55,35 @@ export function runGuestAction(action: GuestAction, room: GuestActionRoom, req: 
       return handleContact(room, req);
     case "notes":
       return handleNotes(room, req);
+    case "green":
+      return handleGreen(room);
   }
+}
+
+/**
+ * Betrieb L2 (Punkt 11): Green Option — der Gast verzichtet heute auf den Wäschewechsel. Nur für heute (`src/lib/guest/green.ts`),
+ * zweimal am Tag wählen legt keinen zweiten Eintrag an. Gilt sofort als erledigt (DONE) — nichts zu bearbeiten, die
+ * DSGVO-Aufbewahrung räumt den Eintrag wie andere geschlossene Gastwünsche ab. Housekeeper und Supervisor werden gemeldet.
+ */
+async function handleGreen(room: GuestActionRoom): Promise<NextResponse> {
+  const today = berlinDate(new Date());
+  if ((await greenRoomsOn(today, [room.id])).has(room.id)) return NextResponse.json({ ok: true, already: true }, { status: 200 });
+  const guestUserId = await getGuestSystemUserId();
+  const [notification, guestRequest] = await Promise.all([
+    prisma.notification.create({
+      data: {
+        type: "GUEST_REQUEST", level: "info", targetRole: "supervisor", roomId: room.id,
+        message: `Room ${room.number}: guest chose the Green Option — no linen change today.`,
+        ...keyed("notify.guestGreen", { n: room.number }),
+      },
+    }),
+    prisma.guestRequest.create({ data: { roomId: room.id, kind: GREEN_KIND, status: "DONE", detail: JSON.stringify({ date: today }) } }),
+  ]);
+  await audit({ action: "GUEST_GREEN_OPTION", userId: guestUserId, roomId: room.id, meta: { date: today } });
+  broadcast("notification:new", { notification });
+  broadcast("guestrequest:new", { guestRequest });
+  await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "GUEST_WISH" });
+  return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
 }
 
 const DndBody = z.object({ window: z.enum(DND_WINDOWS) });

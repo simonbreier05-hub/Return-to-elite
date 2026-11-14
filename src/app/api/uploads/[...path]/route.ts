@@ -2,13 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { readFile } from "fs/promises";
 import path from "path";
 import { requireAuth } from "@/lib/rbac";
+import { canSeeDefectPhotos } from "@/lib/rooms/defectPhotoAccess";
 
 /**
  * GET /api/uploads/<file> — the only way to read a defect photo (DSGVO: not
  * publicly reachable static files, see docs/guest-api.md). Files live in the
- * private ./uploads directory (never under public/); any signed-in staff
- * member may view one, matching how defect photos already surface across
- * every Hub screen (RoomDetailModal, engineering hub) regardless of role.
+ * private ./uploads directory (never under public/). Betrieb L2 (Punkt 8): only engineering, supervisor and
+ * duty manager may view one (`canSeeDefectPhotos`); every other role gets 403 and never receives a photoPath
+ * in the first place (`withoutPhotosFor`).
  */
 
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
@@ -24,6 +25,7 @@ const CONTENT_TYPES: Record<string, string> = {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
+  if (!canSeeDefectPhotos(auth.session.role)) return NextResponse.json({ error: "Fotos sehen nur Technik, Supervisor und Duty Manager.", code: "FORBIDDEN" }, { status: 403 });
 
   const { path: segments } = await params;
   // Each segment comes from the URL pre-split on "/", but reject anything

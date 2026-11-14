@@ -19,6 +19,7 @@ import { cx, FOCUS_RING } from "@/components/ui/primitives";
 import type { MarkerData } from "@/components/ui";
 import { uiStatusForRoom } from "@/lib/ui/status";
 import { kindPill, withoutLeadingSymbol } from "@/lib/ui/hkHub";
+import { workProgress } from "@/lib/ui/workProgress";
 import type { RoomStatus } from "@/lib/domain";
 
 type Group = "PROGRESS" | "DONE" | "OPEN" | "DND" | "ARRIVAL";
@@ -167,6 +168,15 @@ function GlassSupervisorList({ data, open, toggle, flash, stand, error, roomRef,
     if ((room.hints?.length ?? 0) > 0) extra.push({ label: t("lists.hint"), tone: "info" });
     if (room.changed || flash.has(room.number)) extra.push({ label: t("lists.changed"), tone: "accent" });
     if (phone) for (const m of markers.slice(1)) extra.push({ label: m.label, tone: "neutral" });
+    // Betrieb L2: In Arbeit (Start, Laufzeit, Restzeit) · Late Check-out · Ausgecheckt · Green Option
+    const wp = workProgress(room.startedAt, room.estMinutes ?? 0, new Date());
+    if (wp) extra.push(wp.overMin > 0
+      ? { label: t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }), tone: "warning" }
+      : { label: t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin }), tone: "info" });
+    if (room.lateCheckout) extra.push({ label: t("lists.lateCheckout", { time: room.lateCheckout }), tone: "warning" });
+    if (room.checkedOut && (room.kind === "SAME_DAY_TURN" || room.kind === "DEPARTURE")) extra.push({ label: t("lists.checkedOut"), tone: "success" });
+    if (room.dndCard) extra.push({ label: t("lists.dndCard"), tone: "warning" });
+    if (room.green) extra.push({ label: t("lists.green"), tone: "success" });
     if (room.credits > 0) extra.push({ label: t("lists.creditsN", { n: room.credits.toString().replace(".", ",") }), tone: "neutral" });
     return (
       <li key={room.id} data-room={room.number} className={cx("rounded-(--glass-radius-sm)", flash.has(room.number) && "bg-surface-selected")}>
@@ -175,7 +185,8 @@ function GlassSupervisorList({ data, open, toggle, flash, stand, error, roomRef,
           <RoomRowCompact
             room={room.number}
             guest={room.guest ?? undefined}
-            pill={pill ? { label: t(pill.labelKey), tone: pill.tone } : undefined}
+            lang={room.lang ?? undefined}
+            pill={pill ? { label: t(pill.labelKey), tone: pill.tone, edge: pill.edge } : undefined}
             status={{ value: status, label: t(`status.${room.status}` as TKey) }}
             marker={markers[0]}
             onClick={() => setRoomRef(room.id)}
@@ -185,7 +196,8 @@ function GlassSupervisorList({ data, open, toggle, flash, stand, error, roomRef,
           <RoomRow
             room={room.number}
             guest={room.guest ?? undefined}
-            pill={pill ? { label: t(pill.labelKey), tone: pill.tone } : undefined}
+            lang={room.lang ?? undefined}
+            pill={pill ? { label: t(pill.labelKey), tone: pill.tone, edge: pill.edge } : undefined}
             status={{ value: status, label: t(`status.${room.status}` as TKey) }}
             markers={markers}
             onClick={() => setRoomRef(room.id)}

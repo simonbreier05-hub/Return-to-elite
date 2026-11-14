@@ -27,7 +27,7 @@ export function RoomRowCompact({ room, guest, lang, pill, status, marker, state 
         {guest && <span className="text-body-18 max-w-full truncate text-text-primary">{guest}</span>}
         {(pill || lang) && (
           <span className="flex items-center gap-1">
-            {pill && <Pill tone={pill.tone}>{pill.label}</Pill>}
+            {pill && <Pill tone={pill.tone} edge={pill.edge}>{pill.label}</Pill>}
             {lang && <LangChip code={lang} />}
           </span>
         )}

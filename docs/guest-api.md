@@ -72,7 +72,7 @@ POST /api/guest/r/:roomCode/:action
 POST /api/guest/s/:stayToken/:action
 ```
 
-`:action` ∈ `dnd` | `dnd-cancel` | `clean-request` | `defect` | `contact` |
+`:action` ∈ `dnd` | `dnd-cancel` | `clean-request` | `defect` | `contact` | `green` |
 `notes`. Antworten sind `application/json`, außer beim Mängel-Endpunkt
 (Request), der `multipart/form-data` erwartet. Beide Routen teilen sich
 dieselbe Implementierung (`src/lib/guestActions.ts`) — sie unterscheiden sich
@@ -198,6 +198,31 @@ Freitext-Nachricht ans Housekeeping.
 **Fehler**: wie `dnd`, plus 400 bei fehlendem/leerem/zu langem `body`.
 
 Landet als normaler `RoomNote`-Eintrag (wie jede Personal-Notiz).
+
+### `.../green`
+
+„Green Option“ (Betrieb L2): Der Gast verzichtet **heute** auf den Wechsel von
+Handtüchern und Bettwäsche. Das Zimmer wird trotzdem gereinigt. Gilt nur für den
+Tag der Wahl (Europe/Berlin), am nächsten Tag ist der Wechsel wieder fällig.
+
+**Request**
+```json
+{}
+```
+
+**Response `201`** (neu) bzw. **`200`** mit `"already": true` (heute schon gewählt)
+```json
+{ "ok": true, "requestId": "..." }
+```
+
+**Fehler**: wie `dnd`.
+
+Wird als `GuestRequest` mit `kind: "GREEN"`, `status: "DONE"` gespeichert (es gibt
+nichts zu bearbeiten) und erscheint im Status-Feed als `GREEN`. Wirkung: In den
+Arbeitslisten und im Zuteilungsvorschlag entfällt der Wäschewechsel des Tages
+(`src/lib/guest/green.ts`). Housekeeperin und Supervisor werden gemeldet, ohne
+Gastnamen. Der Zimmerstatus „Green Opt-Out“ (ganze Reinigung entfällt) ist
+etwas anderes und wird hier nie gesetzt.
 
 ## Status-Feed (Prompt G2 Teil 3)
 

@@ -99,7 +99,7 @@ export function HkHub(p: HkHubProps) {
       guest: i.guest ?? undefined,
       lang: langCode(i.lang) ?? undefined,
       // Planung L1 (Regel 9): „Reinigung ab HH:MM“ steht sichtbar an der Art-Pille, nicht nur als Symbol
-      pill: pill ? { label: v.cleanAfter ? `${t(pill.labelKey)} · ${t("ui.marker.later", { time: v.cleanAfter })}` : t(pill.labelKey), tone: pill.tone } : undefined,
+      pill: pill ? { label: v.cleanAfter ? `${t(pill.labelKey)} · ${t("ui.marker.later", { time: v.cleanAfter })}` : t(pill.labelKey), tone: pill.tone, edge: pill.edge } : undefined,
       status: { value: ui, label: t(STATUS_UI[ui].labelKey) },
       state,
       onClick: () => p.onSelect(v.id),

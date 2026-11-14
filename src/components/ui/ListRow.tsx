@@ -27,7 +27,7 @@ export function ListRow({ icon, title, subtitle, pill, meta, state = "default", 
         <span className="text-body-18 truncate text-text-primary">{title}</span>
         {subtitle && <span className="text-body-16 truncate text-text-secondary">{subtitle}</span>}
       </span>
-      {pill && <Pill tone={pill.tone}>{pill.label}</Pill>}
+      {pill && <Pill tone={pill.tone} edge={pill.edge}>{pill.label}</Pill>}
       {meta && <span className="text-body-16 shrink-0 whitespace-nowrap text-text-secondary">{meta}</span>}
       {interactive && <Glyph name="chevron-right" size={24} className="text-text-secondary rtl:-scale-x-100" />}
       <RowDecor state={state} />

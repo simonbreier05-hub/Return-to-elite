@@ -32,6 +32,10 @@ export async function POST(req: NextRequest) {
   if (!parsed.success) {
     return NextResponse.json({ error: "Invalid payload.", code: "INVALID_INPUT", details: parsed.error.flatten() }, { status: 400 });
   }
+  // Betrieb L2 (Punkt 5, Meeting 13.11.): Abnahme nur einzeln — Freigeben (INSPECTED) mehrerer Zimmer auf einmal ist gesperrt.
+  if (parsed.data.status === "INSPECTED" && parsed.data.roomIds.length > 1) {
+    return NextResponse.json({ error: "Zimmer werden einzeln freigegeben.", code: "RELEASE_SINGLE_ONLY" }, { status: 400 });
+  }
   const { roomIds, ...input } = parsed.data;
 
   const succeeded: { roomId: string; number: string }[] = [];

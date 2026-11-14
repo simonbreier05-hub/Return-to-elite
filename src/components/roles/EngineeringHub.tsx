@@ -25,7 +25,8 @@ import { TextAction } from "@/components/hk/HkRoomDetail";
 import { DetailContainer } from "@/components/shell/DetailContainer";
 import type { Breakpoint } from "@/components/shell/useBreakpoint";
 import { GlassDialog } from "@/components/shell/GlassDialog";
-import { Banner, Button, Pill } from "@/components/ui";
+import { Banner, Button, Field, Pill } from "@/components/ui";
+import TwoTapButton from "@/components/TwoTapButton";
 import { DETAIL_FIT, DetailLine, RoleHub } from "./RoleHub";
 import { RolePause } from "./RolePause";
 
@@ -34,7 +35,10 @@ export interface EngineeringHubProps {
   selectedId: string | null;
   onSelect: (id: string | null) => void;
   /** Nächster Schritt (gleicher PATCH wie bisher); „Erledigt“ kommt erst nach dem Bestätigungsdialog hier an. */
-  onAdvance: (wo: WorkOrderView) => void;
+  /** Betrieb L2 (Punkt 7): beim „Erledigt“ optional die Notiz aus dem Bestätigungsdialog (als Nachricht am Auftrag). */
+  onAdvance: (wo: WorkOrderView, note?: string) => void;
+  /** Betrieb L2 (Punkt 7): Zimmer außer Betrieb setzen (bis `untilIso`). */
+  onSetOutOfOrder?: (roomId: string, untilIso: string) => void;
   busyId: string | null;
   actionError: string | null;
   loading: boolean;
@@ -58,6 +62,8 @@ export function EngineeringHub(p: EngineeringHubProps) {
   const { t } = useLocale();
   const [filter, setFilter] = useState<EngFilter>("all");
   const [confirmFor, setConfirmFor] = useState<WorkOrderView | null>(() => p.orders.find((o) => o.id === p.confirmPreviewId) ?? null);
+  const [doneNote, setDoneNote] = useState("");
+  const [oooUntil, setOooUntil] = useState("");
 
   const sorted = useMemo(() => sortWorkOrders(p.orders), [p.orders]);
   const counts = useMemo(() => engFilterCounts(sorted), [sorted]);
@@ -118,6 +124,13 @@ export function EngineeringHub(p: EngineeringHubProps) {
           )}
           {sel.room.id && <HkNoteThread key={sel.id} roomId={sel.room.id} initialNotes={[]} task={{ type: "WORKORDER", id: sel.id }} />}
           {sel.status !== "RESOLVED" && <RolePause targetType="WORKORDER" targetId={sel.id} pause={sel.pause} onChanged={(pz) => p.onPauseChanged(sel.id, pz)} />}
+          {/* Betrieb L2 (Punkt 7): Technik darf das Zimmer außer Betrieb setzen — mit Endzeit, zweiter Tipp speichert */}
+          {sel.room.id && p.onSetOutOfOrder && sel.status !== "RESOLVED" && (
+            <div className="flex flex-wrap items-end gap-3" data-testid="eng-ooo">
+              <div className="w-56"><Field label={t("engineering.oooUntil")} type="datetime-local" value={oooUntil} onChange={(e) => setOooUntil(e.target.value)} /></div>
+              <TwoTapButton disabled={!oooUntil || p.busyId === sel.id} onConfirm={() => { p.onSetOutOfOrder!(sel.room.id!, new Date(oooUntil).toISOString()); setOooUntil(""); }}>{t("engineering.setOoo")}</TwoTapButton>
+            </div>
+          )}
           {sel.room.number && (
             <TextAction icon="bed-single" onClick={() => p.onOpenRoom(sel.room.number!)}>
               {t("lists.hmOpenRoom", { n: sel.room.number })}
@@ -171,11 +184,16 @@ export function EngineeringHub(p: EngineeringHubProps) {
         busy={!!confirmFor && p.busyId === confirmFor.id}
         onCancel={() => setConfirmFor(null)}
         onConfirm={() => {
-          if (confirmFor) p.onAdvance(confirmFor);
+          if (confirmFor) p.onAdvance(confirmFor, doneNote.trim() || undefined);
+          setDoneNote("");
           setConfirmFor(null);
         }}
       >
         {t("roleHub.doneConfirmHint")}
+        {/* Betrieb L2 (Punkt 7): Notiz zum Erledigen (optional) — landet als Nachricht am Auftrag, nie in Logbuch/Meldung */}
+        <div className="mt-3">
+          <Field label={t("engineering.doneNote")} value={doneNote} maxLength={500} onChange={(e) => setDoneNote(e.target.value)} />
+        </div>
       </GlassDialog>
     </>
   );

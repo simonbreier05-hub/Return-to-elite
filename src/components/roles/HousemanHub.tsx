@@ -12,6 +12,7 @@ import type { Breakpoint } from "@/components/shell/useBreakpoint";
 import { Banner, Button, FilterChip, Pill } from "@/components/ui";
 import { DETAIL_FIT, DetailLine, RoleHub } from "./RoleHub";
 import { RolePause } from "./RolePause";
+import { RecurringTasksPanel } from "./RecurringTasksPanel";
 
 export interface HousemanHubProps {
   items: HmItemView[];
@@ -144,6 +145,8 @@ export function HousemanHub(p: HousemanHubProps) {
       detail={detail}
       detailOpen={!!sel}
       notices={p.notices}
+      // Betrieb L2 (Punkt 9): wiederkehrende Aufgaben anlegen/verwalten
+      below={<RecurringTasksPanel />}
       loading={p.loading}
       loadError={p.loadError}
       onRetry={p.onRetry}

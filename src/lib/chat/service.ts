@@ -6,6 +6,7 @@ import { ROLES, type Role } from "@/lib/domain";
 import { ALL_CHANNEL_ROLES, CHANNEL_ROLES, CHAT_CHANNELS, canDirectMessage, canUseChannel, channelsForRole, directKey, type ChatChannelKey } from "./policy";
 import { resolveMentions } from "./text";
 import { keyed } from "@/lib/i18n/notificationText";
+import { readReceipt, type ReadReceipt } from "./readReceipt";
 
 /**
  * Chat-Hub — Datenbankseite. Jede Funktion bekommt die Session und prüft selbst über `policy.ts`; die API-Routen sind dünn.
@@ -85,6 +86,8 @@ export interface ChatMessageView {
   id: string; channelId: string; body: string; originalLanguage: string; urgent: boolean; createdAt: string;
   author: { id: string; name: string; role: string };
   retracted: boolean; hidden: boolean;
+  /** Betrieb L2 (Punkt 10): nur bei eigenen Nachrichten — gelesen von `read` der `total` Leser. */
+  readBy?: ReadReceipt;
 }
 
 type MessageRow = { id: string; channelId: string; body: string; originalLanguage: string; urgent: boolean; createdAt: Date; retractedAt: Date | null; hiddenAt: Date | null; author: { id: string; name: string; role: string } };
@@ -96,12 +99,25 @@ const view = (m: MessageRow): ChatMessageView => ({
 const AUTHOR = { select: { id: true, name: true, role: true } } as const;
 
 /** Verlauf: die neuesten MESSAGE_PAGE (vor `before`), aufsteigend sortiert (neueste unten). */
-export async function listMessages(channelId: string, before?: Date): Promise<{ messages: ChatMessageView[]; hasMore: boolean }> {
+export async function listMessages(channelId: string, before?: Date, viewerId?: string): Promise<{ messages: ChatMessageView[]; hasMore: boolean }> {
   const rows = await prisma.chatMessage.findMany({
     where: { channelId, ...(before ? { createdAt: { lt: before } } : {}) },
     orderBy: { createdAt: "desc" }, take: MESSAGE_PAGE + 1, include: { author: AUTHOR },
   });
-  return { messages: rows.slice(0, MESSAGE_PAGE).reverse().map(view), hasMore: rows.length > MESSAGE_PAGE };
+  const page = rows.slice(0, MESSAGE_PAGE).reverse();
+  const messages = page.map(view);
+  // Betrieb L2 (Punkt 10): Lesebestätigung nur für die eigenen Nachrichten des Betrachters (abgeleitet, nichts gespeichert)
+  if (viewerId && page.some((m) => m.author.id === viewerId)) {
+    const ch = await prisma.chatChannel.findUnique({ where: { id: channelId }, include: { members: { select: { userId: true } } } });
+    if (ch) {
+      const readerIds = (await readersOf(ch)).map((r) => r.id);
+      const reads = new Map((await prisma.chatReadState.findMany({ where: { channelId } })).map((r) => [r.userId, r.lastReadAt]));
+      page.forEach((m, i) => {
+        if (m.author.id === viewerId && !m.retractedAt && !m.hiddenAt) messages[i].readBy = readReceipt(m.createdAt, viewerId, readerIds, reads);
+      });
+    }
+  }
+  return { messages, hasMore: rows.length > MESSAGE_PAGE };
 }
 
 /** Wer kann diesen Kanal lesen? (für Erwähnungen und „dringend“ — nie Personen außerhalb benachrichtigen). */
@@ -164,6 +180,8 @@ export async function markRead(s: ChatSession, channelId: string, at = new Date(
     update: { lastReadAt: at },
   });
   emitTo(userRoom(s.userId), "chat:read", { channelId });
+  // Betrieb L2 (Punkt 10): Lesebestätigung live — Absender im Kanal laden ihre Zähler neu (nur Kanal-Id, kein Inhalt)
+  emitTo(room(channelId), "chat:receipt", { channelId });
 }
 
 /** Personen, denen ich direkt schreiben darf (Housekeeper-Regel aus den Einstellungen). */

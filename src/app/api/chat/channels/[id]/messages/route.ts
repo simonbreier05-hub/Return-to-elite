@@ -13,7 +13,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!(await accessibleChannel(a.s, id))) return NextResponse.json({ error: "Kein Zugriff auf diesen Kanal.", code: "CHANNEL_FORBIDDEN" }, { status: 403 });
   const beforeRaw = req.nextUrl.searchParams.get("before");
   const before = beforeRaw && !Number.isNaN(Date.parse(beforeRaw)) ? new Date(beforeRaw) : undefined;
-  return NextResponse.json(await listMessages(id, before));
+  return NextResponse.json(await listMessages(id, before, a.s.userId)); // Betrieb L2: Lesebestätigung der eigenen Nachrichten
 }
 
 const Body = z.object({ body: z.string().max(5000), urgent: z.boolean().optional() });

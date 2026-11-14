@@ -22,10 +22,8 @@ export interface ReleaseQueueProps {
   rooms: GlanceRoom[];
   backlog: boolean;
   busyRoomId: string | null;
-  bulkBusy: boolean;
   onRelease: (roomId: string) => void;
   onRework: (roomId: string) => void;
-  onReleaseAll: () => void;
 }
 
 /**
@@ -73,12 +71,8 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
     sections: [{ items: floorBreakdown(data.rows ?? []).map((l) => ({ key: `f${l.floor}`, title: t("glance.floorLine", { floor: l.floor }), meta: t("glance.floorLineValue", { cleaned: l.cleaned, toClean: l.toClean, open: l.open }), tone: l.open > 0 ? "accent" as const : undefined })) }],
   } : detail.key === "queue" && releaseQueue ? {
     title: t("glance.releaseQueueTile"),
-    header: releaseQueue.rooms.length > 1 ? (
-      <button type="button" onClick={releaseQueue.onReleaseAll} disabled={releaseQueue.bulkBusy}
-        className="mb-3 h-12 w-full rounded-xl bg-status-inspected text-sm font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50">
-        {releaseQueue.bulkBusy ? t("supervisor.releasing") : t("supervisor.releaseAll", { count: releaseQueue.rooms.length })}
-      </button>
-    ) : undefined,
+    // Betrieb L2 (Punkt 5): kein „Alle freigeben“ mehr — jedes Zimmer einzeln
+    header: undefined,
     sections: [{ empty: t("supervisor.nothingWaiting"), items: releaseQueue.rooms.map((r) => {
       const busy = releaseQueue.busyRoomId === r.id;
       return {

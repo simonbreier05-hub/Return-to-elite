@@ -21,12 +21,14 @@ export type BandSettings = Partial<Record<string, number>>;
 export const CLEAN_KINDS = ["turn", "linen", "tidy", "deep", "arrival"] as const;
 export type CleanKind = (typeof CLEAN_KINDS)[number];
 
+// Betrieb L2 (Meeting 13.11.): Bleiber (Tidy, Linen change mit Wäsche-Symbol) Grün, Deep clean/Abreise Rot, Anreise Blau,
+// Turn Blau (Symbol; in den Zimmerzeilen blaue Pille mit rotem Rand, `KIND_PILL`). Symbol + Text immer dabei.
 export const CLEAN_KIND_UI: Record<CleanKind, { icon: IconName; tone: Tone; labelKey: TKey; shortKey: TKey }> = {
-  turn: { icon: "refresh", tone: "accent", labelKey: "tagesplan.kindTurn", shortKey: "tagesplan.kindTurnShort" },
-  linen: { icon: "shirt", tone: "info", labelKey: "tagesplan.kindLinen", shortKey: "tagesplan.kindLinenShort" },
+  turn: { icon: "refresh", tone: "info", labelKey: "tagesplan.kindTurn", shortKey: "tagesplan.kindTurnShort" },
+  linen: { icon: "shirt", tone: "success", labelKey: "tagesplan.kindLinen", shortKey: "tagesplan.kindLinenShort" },
   tidy: { icon: "bed-single", tone: "success", labelKey: "tagesplan.kindTidy", shortKey: "tagesplan.kindTidyShort" },
-  deep: { icon: "log-out", tone: "warning", labelKey: "tagesplan.kindDeep", shortKey: "tagesplan.kindDeepShort" },
-  arrival: { icon: "log-in", tone: "neutral", labelKey: "tagesplan.kindArrival", shortKey: "tagesplan.kindArrivalShort" },
+  deep: { icon: "log-out", tone: "danger", labelKey: "tagesplan.kindDeep", shortKey: "tagesplan.kindDeepShort" },
+  arrival: { icon: "log-in", tone: "info", labelKey: "tagesplan.kindArrival", shortKey: "tagesplan.kindArrivalShort" },
 };
 
 /** Art aus einer Tageszeile. `OCCUPIED` (belegt ohne Tagesplan) wird nicht gereinigt → null. */

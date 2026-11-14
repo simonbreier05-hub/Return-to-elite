@@ -8,6 +8,8 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import type { ReactNode } from "react";
 import { PauseBadge, type PauseInfo } from "@/components/PauseControl";
+import { workProgress } from "@/lib/ui/workProgress";
+import { hhmm } from "@/lib/i18n/format";
 
 export interface ListTrace { id: string; code: string; text: string; dept: string; status: string }
 export interface ListRoom {
@@ -31,15 +33,27 @@ export interface ListRoom {
   /** Gastwunsch „Reinigung ab HH:MM“ — wird angezeigt. */
   cleanAfter?: string | null;
   checkedOut?: boolean;
+  /** Betrieb L2: Start der Reinigung (ISO) und geschätzte Dauer (Credit × Minuten je Credit). */
+  startedAt?: string | null;
+  estMinutes?: number;
+  /** Betrieb L2: Late Check-out „HH:MM“. */
+  lateCheckout?: string | null;
+  /** Betrieb L2 (Punkt 4): DND ab 12 Uhr noch nicht gereinigt — Karte ans Zimmer hängen. */
+  dndCard?: boolean;
+  /** Betrieb L2: Gast hat heute die Green Option gewählt (kein Wäschewechsel). */
+  green?: boolean;
 }
 
 const LABEL_ICON = { TURN: IconClock, DEPARTURE: IconBroom, STAYOVER: IconMoon, ARRIVAL: IconSuitcase, NONE: null } as const;
-/** Gedämpfte Farben je Hauptlabel (immer zusammen mit Icon + Text). Turn = höchste Dringlichkeit, Messing. */
+/**
+ * Gedämpfte Farben je Hauptlabel (immer zusammen mit Icon + Text). Betrieb L2 (Meeting 13.11.): Bleiber Grün, Abreise Rot,
+ * Anreise Blau, Turn Blau/Rot (blaue Pille, roter Rand). Gleiche Zuordnung wie `KIND_PILL` im Glas-Design.
+ */
 export const LABEL_STYLE: Record<MainLabel, { chip: string; edge: string }> = {
-  TURN: { chip: "border-gold bg-gold/20 text-charcoal font-semibold", edge: "border-s-gold" },
+  TURN: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected font-semibold", edge: "border-s-status-dirty" },
   DEPARTURE: { chip: "border-status-dirty/40 bg-status-dirty/10 text-status-dirty", edge: "border-s-status-dirty" },
-  STAYOVER: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected", edge: "border-s-status-inspected" },
-  ARRIVAL: { chip: "border-status-pickup/40 bg-status-pickup/10 text-status-pickup", edge: "border-s-status-pickup" },
+  STAYOVER: { chip: "border-status-clean/40 bg-status-clean/10 text-status-clean", edge: "border-s-status-clean" },
+  ARRIVAL: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected", edge: "border-s-status-inspected" },
   NONE: { chip: "border-charcoal/15 bg-ivory text-charcoal", edge: "border-s-charcoal/15" },
 };
 const chip = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.7rem] font-medium";
@@ -64,6 +78,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
   const style = STATUS_STYLES[room.status as RoomStatus];
   const traces = Array.isArray(room.traces) ? room.traces : [];
   const openTraces = traces.filter((x) => x.status === "OPEN");
+  const wp = workProgress(room.startedAt, room.estMinutes ?? 0, new Date());
   return (
     <li data-room={room.number} data-highlight={highlight ? "1" : undefined}
       className={`rounded-xl border border-s-4 bg-white transition-shadow duration-500 ${LABEL_STYLE[label].edge} ${highlight ? "border-gold shadow-[0_0_0_3px_rgba(169,132,63,0.35)]" : "border-charcoal/10"}`}>
@@ -95,6 +110,13 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             {room.pax != null && <span className={`${chip} border-charcoal/15 text-graphite`}><IconPerson className="h-3.5 w-3.5" />{room.pax === 1 ? t("lists.paxOne") : t("lists.pax", { n: room.pax })}</span>}
             {room.changed && <span className={`${chip} border-gold bg-parchment text-charcoal`}>↻ {t("lists.changed")}</span>}
             {room.pause && <PauseBadge pause={room.pause} showBy={showDept} />}
+            {/* Betrieb L2: In Arbeit (Start/Laufzeit/Rest), Late Check-out, Ausgecheckt, Green Option, Gastsprache — immer Symbol + Text */}
+            {wp && <span className={`${chip} ${wp.overMin > 0 ? "border-status-dirty/40 bg-status-dirty/10 text-status-dirty" : "border-status-inspected/40 bg-status-inspected/10 text-status-inspected"}`}><IconClock className="h-3.5 w-3.5" />{wp.overMin > 0 ? t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }) : t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin })}</span>}
+            {room.lateCheckout && <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><IconClock className="h-3.5 w-3.5" />{t("lists.lateCheckout", { time: room.lateCheckout })}</span>}
+            {room.checkedOut && (room.kind === "SAME_DAY_TURN" || room.kind === "DEPARTURE") && <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-status-clean`}><span aria-hidden>✓</span>{t("lists.checkedOut")}</span>}
+            {room.dndCard && <span className={`${chip} border-status-blocked/40 bg-status-blocked/10 text-status-blocked`}><IconBan className="h-3.5 w-3.5" />{t("lists.dndCard")}</span>}
+            {room.green && <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-status-clean`}><span aria-hidden>🌿</span>{t("lists.green")}</span>}
+            {room.lang && <span className={`${chip} border-charcoal/15 bg-white text-graphite`} title={t("lists.guestLanguage")}><span aria-hidden>🗣</span>{room.lang.toUpperCase()}</span>}
             {badges}
           </div>
           {room.guest && (

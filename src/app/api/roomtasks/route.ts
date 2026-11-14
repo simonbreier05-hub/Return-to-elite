@@ -5,11 +5,17 @@ import { requireAuth, requireRole } from "@/lib/rbac";
 import { RoomTaskTypeSchema } from "@/lib/domain";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
 import { activePauses } from "@/lib/work/pauseData";
+import { berlinToday } from "@/lib/import/businessDay";
+import { ensureRecurringTasks } from "@/lib/houseman/recurring";
 
 /** GET /api/roomtasks — the houseman queue (visible to all authenticated roles, like /api/workorders). */
 export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
+  // Betrieb L2 (Punkt 9): heute fällige wiederkehrende Aufgaben anlegen (idempotent); Anreisezeit für die Sortierung
+  const today = berlinToday();
+  await ensureRecurringTasks(today).catch(() => 0);
+  const etaBy = new Map((await prisma.dayRoomPlan.findMany({ where: { date: today, eta: { not: null } }, select: { roomId: true, eta: true } })).map((p) => [p.roomId, p.eta]));
   const roomTasks = await prisma.roomTask.findMany({
     orderBy: [{ createdAt: "desc" }],
     include: {
@@ -19,7 +25,7 @@ export async function GET() {
     },
   });
   const pauses = await activePauses("ROOMTASK", roomTasks.filter((t) => t.status === "OPEN").map((t) => t.id));
-  return NextResponse.json({ roomTasks: roomTasks.map((t) => ({ ...t, pause: pauses.get(t.id) ?? null })) });
+  return NextResponse.json({ roomTasks: roomTasks.map((t) => ({ ...t, eta: etaBy.get(t.roomId) ?? null, pause: pauses.get(t.id) ?? null })) });
 }
 
 /**

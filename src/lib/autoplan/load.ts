@@ -15,6 +15,7 @@ import { parseAssignedFloors } from "@/lib/floors";
 import { activePatterns } from "@/lib/learning/store";
 import { planningMinutesFor } from "@/lib/workdata/load";
 import { lastCleanerByStay, type StayRef } from "@/lib/learning/stayContinuity";
+import { greenRoomsOn } from "@/lib/guest/green";
 
 import { SUITE_TYPES } from "./types";
 export { SUITE_TYPES };
@@ -80,6 +81,8 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
   const traces = await prisma.trace.groupBy({ by: ["roomId"], where: { status: "OPEN" }, _count: true });
   const traceCount = new Map(traces.map((t) => [t.roomId, t._count]));
   const idByNumber = new Map(plan.map((p) => [p.room.number, p.roomId]));
+  // Betrieb L2 (Punkt 11): Green Option heute → kein Wäschewechsel
+  const green = await greenRoomsOn(date);
 
   const rooms: PlanRoom[] = [];
   const current: Assignment = {};
@@ -104,7 +107,7 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     if (traceN >= settings.autoplanManyTraces) demanding.push("TRACES");
     const interconnect = (r.interconnectingGroup ?? "").split(",").map((n) => idByNumber.get(n.trim())).filter((x): x is string => !!x);
     rooms.push({
-      id: r.id, number: r.number, floor: r.floor, section: r.section, kind, laundry: kind === "STAYOVER" && p.laundryDue,
+      id: r.id, number: r.number, floor: r.floor, section: r.section, kind, laundry: kind === "STAYOVER" && p.laundryDue && !green.has(r.id),
       vip: p.vip, eta: p.eta, credits, demanding, traces: traceN, interconnect, state, fixedTo: assignee,
     });
     current[r.id] = assignee;

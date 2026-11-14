@@ -49,15 +49,18 @@ export function hkStatusLabelKey(s: UiStatus): TKey {
   return STATUS_UI[s].labelKey;
 }
 
-/** Reinigungsart → Pille (Text-Schlüssel + Ton). Ohne Tagesplan-Eintrag keine Pille. */
-export const KIND_PILL: Record<Exclude<DayKind, null>, { labelKey: TKey; tone: Tone }> = {
-  SAME_DAY_TURN: { labelKey: "hkHub.kindTurn", tone: "accent" },
-  DEPARTURE: { labelKey: "lists.kindDEPARTURE", tone: "accent" },
-  STAYOVER: { labelKey: "lists.kindSTAYOVER", tone: "neutral" },
+/**
+ * Reinigungsart → Pille (Text-Schlüssel + Ton). Ohne Tagesplan-Eintrag keine Pille. Betrieb L2 (Meeting 13.11.): Bleiber Grün,
+ * Abreise Rot, Anreise Blau, Turn Blau/Rot (blaue Pille, roter Rand `edge`). Der Text steht immer dabei, nie nur Farbe.
+ */
+export const KIND_PILL: Record<Exclude<DayKind, null>, { labelKey: TKey; tone: Tone; edge?: Tone }> = {
+  SAME_DAY_TURN: { labelKey: "hkHub.kindTurn", tone: "info", edge: "danger" },
+  DEPARTURE: { labelKey: "lists.kindDEPARTURE", tone: "danger" },
+  STAYOVER: { labelKey: "lists.kindSTAYOVER", tone: "success" },
   ARRIVAL: { labelKey: "lists.kindARRIVAL", tone: "info" },
 };
 
-export function kindPill(kind: DayKind): { labelKey: TKey; tone: Tone } | null {
+export function kindPill(kind: DayKind): { labelKey: TKey; tone: Tone; edge?: Tone } | null {
   return kind ? KIND_PILL[kind] : null;
 }
 
@@ -70,12 +73,12 @@ export function hkMarkers(r: HkRoomView): MarkerKind[] {
   const out: MarkerKind[] = [];
   if (r.urgent || r.early) out.push("priority");
   if (r.cleanAfter) out.push("later"); // Regel 9: Uhrzeit immer sichtbar (vor den übrigen Markern)
+  if (r.laundry) out.push("laundry"); // Betrieb L2: Wäschewechsel als Symbol am Bleiber — weit vorn, damit er unter den 2 sichtbaren ist
   if (r.dnd && shown !== "dnd") out.push("dnd");
   if (r.defects > 0 && shown !== "defect") out.push("defect");
   if (r.paused && shown !== "paused") out.push("pause");
   if ((r.kind === "ARRIVAL" || r.kind === "SAME_DAY_TURN") && r.eta) out.push("arrival");
   if (r.vip) out.push("vip");
-  if (r.laundry) out.push("laundry");
   return out;
 }
 

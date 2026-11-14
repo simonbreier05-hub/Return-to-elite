@@ -9,6 +9,8 @@ export type RowState = "default" | "selected" | "done";
 export interface PillData {
   label: string;
   tone?: Tone;
+  /** Zweite Farbe als Rand (z. B. Turn Blau/Rot). */
+  edge?: Tone;
 }
 export interface StatusData {
   value: UiStatus;

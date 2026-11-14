@@ -6,7 +6,7 @@ import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 
-type Kind = "DND" | "CLEAN_REQUEST" | "CONTACT";
+type Kind = "DND" | "CLEAN_REQUEST" | "CONTACT" | "GREEN"; // GREEN = Betrieb L2 Green Option (sofort erledigt)
 type Status = "RECEIVED" | "IN_PROGRESS" | "DONE" | "CANCELLED";
 
 interface GuestRequest {
@@ -19,7 +19,7 @@ interface GuestRequest {
   createdAt: string;
 }
 
-const KIND_ICON: Record<Kind, string> = { DND: "🔕", CLEAN_REQUEST: "✨", CONTACT: "💬" };
+const KIND_ICON: Record<Kind, string> = { DND: "🔕", CLEAN_REQUEST: "✨", CONTACT: "💬", GREEN: "🌿" };
 
 function parseDetail(json: string | null): Record<string, string> {
   if (!json) return {};

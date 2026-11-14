@@ -24,7 +24,7 @@ export function ListRowCompact({ icon, title, subtitle, pill, state = "default",
         <span className="text-body-18 truncate text-text-primary">{title}</span>
         {subtitle && <span className="text-label truncate text-text-secondary">{subtitle}</span>}
       </span>
-      {pill && <Pill tone={pill.tone}>{pill.label}</Pill>}
+      {pill && <Pill tone={pill.tone} edge={pill.edge}>{pill.label}</Pill>}
       <RowDecor state={state} compact />
     </Interactive>
   );

@@ -30,6 +30,8 @@ export interface DerivedStay {
   status: string | null;
   vip: boolean;
   arrTime: string | null;
+  /** Betrieb L2: Abreisezeit „HH:MM“ aus dem Departures-Report (für Late Check-out), sonst null. */
+  depTime?: string | null;
   adults: number;
   children: number;
   /** Aus welcher Liste: Departures (Zeitraum), Arrivals und/oder In-House. */
@@ -48,6 +50,8 @@ export interface DerivedRoom {
   /** Der bleibende bzw. abreisende Aufenthalt (arrDate) — und der anreisende. */
   stay: string | null;
   arrivingStay: string | null;
+  /** Betrieb L2: Abreisezeit des abreisenden Gastes (Abreise/Turn), sonst null. */
+  depTime?: string | null;
 }
 
 export interface DayFiguresDerived {
@@ -78,7 +82,7 @@ export function mergeStays(departures: DepartureRow[], arrivals: ArrivalRow[], i
   const map = new Map<string, DerivedStay>();
   for (const d of departures) {
     map.set(`${d.room}|${d.arrDate}`, {
-      room: d.room, arrDate: d.arrDate, depDate: d.depDate, status: d.status, vip: d.vip, arrTime: null,
+      room: d.room, arrDate: d.arrDate, depDate: d.depDate, status: d.status, vip: d.vip, arrTime: null, depTime: d.depTime ?? null,
       adults: d.adults, children: d.children, inDepartures: true, inArrivals: false,
     });
   }
@@ -139,9 +143,9 @@ export function deriveDayPlan(input: DeriveInput): {
     }
     const dep = departing[0], stay = staying[0], arr = arriving[0];
     if (dep && arr) {
-      rooms.push({ room, cleaningType: "SAME_DAY_TURN", laundryDue: false, nights: null, vip: arr.vip || dep.vip, eta: arr.arrTime, stay: dep.arrDate, arrivingStay: arr.arrDate });
+      rooms.push({ room, cleaningType: "SAME_DAY_TURN", laundryDue: false, nights: null, vip: arr.vip || dep.vip, eta: arr.arrTime, stay: dep.arrDate, arrivingStay: arr.arrDate, depTime: dep.depTime ?? null });
     } else if (dep) {
-      rooms.push({ room, cleaningType: "DEPARTURE", laundryDue: false, nights: diffDays(dep.arrDate, date), vip: dep.vip, eta: null, stay: dep.arrDate, arrivingStay: null });
+      rooms.push({ room, cleaningType: "DEPARTURE", laundryDue: false, nights: diffDays(dep.arrDate, date), vip: dep.vip, eta: null, stay: dep.arrDate, arrivingStay: null, depTime: dep.depTime ?? null });
     } else if (stay) {
       const linen = input.lastLinenChange?.[room] ?? null;
       const nights = diffDays(stay.arrDate, date);

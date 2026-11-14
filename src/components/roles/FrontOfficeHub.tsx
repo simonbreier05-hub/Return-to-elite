@@ -4,7 +4,7 @@ import { useMemo, useState, type ReactNode } from "react";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
 import { hhmm } from "@/lib/i18n/format";
-import { foFilterCounts, foKpis, foPill, FO_FILTER_LABEL, isOverdue, isReady, matchesFoFilter, sortArrivals, type ArrivalView, type FoFilter } from "@/lib/ui/frontOfficeHub";
+import { foFilterCounts, foKpis, foPill, foStage, FO_FILTER_LABEL, FO_STAGE_LABEL, FO_STAGES, isOverdue, isReady, matchesFoFilter, sortArrivals, type ArrivalView, type FoFilter } from "@/lib/ui/frontOfficeHub";
 import { ROOM_STATUS_UI } from "@/lib/ui/status";
 import { HkWindow } from "@/components/hk/HkParts";
 import { TextAction } from "@/components/hk/HkRoomDetail";
@@ -47,6 +47,8 @@ export interface FrontOfficeHubProps {
   /** Uhrzeit „HH:MM“ einer ETA für das Eingabefeld (wie bisher Gerätezeit). */
   etaInput: (iso: string | null) => string;
   detailMode?: Breakpoint;
+  /** Betrieb L2 (Punkt 3): „Abreisen heute“ (ausgecheckt melden, Late Check-out) unter der Anreisenliste. */
+  departures?: ReactNode;
   /** Nur Demo: Fenster „Neue Anreise“ offen starten. */
   newOpen?: boolean;
 }
@@ -98,7 +100,8 @@ export function FrontOfficeHub(p: FrontOfficeHubProps) {
             key: a.id,
             icon: "log-in",
             title: `${a.room.number ?? unknown} · ${a.guest ?? unknown}`,
-            subtitle: [roomStatusLabel(a), isOverdue(a) ? t("roleHub.etaPassed") : null].filter(Boolean).join(" · "),
+            // Betrieb L2 (Punkt 5): Ablauf in Arbeit → geprüft → freigegeben, live
+            subtitle: [t(FO_STAGE_LABEL[foStage(a.room.status)]), isOverdue(a) ? t("roleHub.etaPassed") : null].filter(Boolean).join(" · "),
             pill: pill ? { label: cap(t(pill.labelKey)), tone: pill.tone } : undefined,
             meta: a.eta ? hhmm(a.eta) : undefined,
             done: a.status === "CHECKED_IN",
@@ -114,7 +117,7 @@ export function FrontOfficeHub(p: FrontOfficeHubProps) {
         onRetry={p.onRetry}
         emptyText={t("roleHub.noArrivals")}
         selectHint={t("roleHub.selectHint")}
-        below={<p className="text-label text-text-muted">{t("frontOffice.cannotChangeStatus")}</p>}
+        below={<>{p.departures}<p className="text-label text-text-muted">{t("frontOffice.cannotChangeStatus")}</p></>}
       />
       {newOpen && <NewArrivalWindow onClose={() => setNewOpen(false)} onCreate={p.onCreate} />}
     </>
@@ -169,6 +172,19 @@ function ArrivalDetail({ a, roomStatusLabel, ...p }: FrontOfficeHubProps & { a: 
             {a.room.status ? <StatusChip status={ROOM_STATUS_UI[a.room.status]} label={roomStatusLabel} /> : <span className="text-text-secondary">{roomStatusLabel}</span>}
           </span>
         </DetailLine>
+        {/* Betrieb L2 (Punkt 5): Schritte live — erreichte Schritte mit Haken, aktueller fett (Text + Symbol, nie nur Farbe) */}
+        <ol aria-label={t("frontOffice.stageTitle")} className="flex flex-wrap items-center gap-2" data-testid="fo-stages">
+          {FO_STAGES.map((s, i) => {
+            const cur = FO_STAGES.indexOf(foStage(a.room.status));
+            return (
+              <li key={s} aria-current={i === cur ? "step" : undefined} className={`text-label inline-flex items-center gap-1 ${i <= cur ? "text-text-primary" : "text-text-muted"} ${i === cur ? "font-semibold" : ""}`}>
+                <span aria-hidden="true">{i < cur ? "✓" : i === cur ? "●" : "○"}</span>
+                {t(FO_STAGE_LABEL[s])}
+                {i < FO_STAGES.length - 1 && <span aria-hidden="true" className="ms-1 text-text-muted">→</span>}
+              </li>
+            );
+          })}
+        </ol>
         {!expected && <Banner tone="info" icon="check" title={t("frontOffice.checkedIn").charAt(0).toLocaleUpperCase() + t("frontOffice.checkedIn").slice(1)} />}
         {expected && !ready && <Banner tone="warning" icon="clock" title={t("frontOffice.roomNotReady")} />}
         {expected && (

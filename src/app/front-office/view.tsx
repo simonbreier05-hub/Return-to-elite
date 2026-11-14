@@ -7,6 +7,7 @@ import PriorityBanner from "@/components/PriorityBanner";
 import RoomDetailModal from "@/components/RoomDetailModal";
 import { useRoomLookup } from "@/components/useRoomLookup";
 import { FrontOfficeHub, type ArrivalPatch, type NewArrivalInput } from "@/components/roles/FrontOfficeHub";
+import { FrontOfficeDepartures, type DepartureView } from "@/components/roles/FrontOfficeDepartures";
 import { Banner } from "@/components/ui";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
@@ -40,6 +41,31 @@ export default function FrontOfficeView() {
   const [released, setReleased] = useState<string | null>(null);
   const roomLookup = useRoomLookup();
 
+  // Betrieb L2 (Punkt 3): Abreisen heute — ausgecheckt melden, Late Check-out
+  const [departures, setDepartures] = useState<DepartureView[]>([]);
+  const [depBusy, setDepBusy] = useState<string | null>(null);
+  const [depError, setDepError] = useState<string | null>(null);
+  const loadDepartures = useCallback(async () => {
+    try {
+      const data = await api<{ departures?: DepartureView[] }>("/api/front-office/departures");
+      setDepartures(Array.isArray(data?.departures) ? data.departures : []);
+    } catch {
+      /* Abreisen sind eine Zusatzansicht — Fehler blockieren die Anreisen nicht */
+    }
+  }, []);
+  const depAction = async (roomId: string, run: () => Promise<unknown>) => {
+    setDepBusy(roomId);
+    setDepError(null);
+    try {
+      await run();
+      await loadDepartures();
+    } catch (e) {
+      setDepError(errorText(e, t));
+    } finally {
+      setDepBusy(null);
+    }
+  };
+
   const load = useCallback(async () => {
     try {
       const data = await api<{ arrivals?: Record<string, unknown>[] }>("/api/arrivals");
@@ -48,7 +74,8 @@ export default function FrontOfficeView() {
     } catch (e) {
       setLoadError(errorText(e, t));
     }
-  }, [t]);
+    void loadDepartures();
+  }, [t, loadDepartures]);
   useEffect(() => {
     void load();
   }, [load]);
@@ -65,9 +92,11 @@ export default function FrontOfficeView() {
     "app:resync": () => void load(),
     "arrival:update": (p: { arrival?: Record<string, unknown> } | undefined) => upsert(p?.arrival),
     // Ein Statuswechsel betrifft nur das Zimmer in der jeweiligen Anreise.
+    "dayplan:updated": () => void loadDepartures(),
     "room:update": (p: { room?: { id?: string; status?: string } } | undefined) => {
       const r = p?.room;
       if (!r?.id) return;
+      setDepartures((prev) => prev.map((d) => (d.roomId === r.id && r.status ? { ...d, status: r.status } : d)));
       setRaw((prev) => prev && prev.map((x) => {
         const room = (x.room ?? {}) as Record<string, unknown>;
         return room.id === r.id ? { ...x, room: { ...room, status: r.status } } : x;
@@ -135,6 +164,15 @@ export default function FrontOfficeView() {
         loadError={raw === null ? loadError : null}
         onRetry={() => void load()}
         etaInput={etaInput}
+        departures={
+          <FrontOfficeDepartures
+            rows={departures}
+            busyId={depBusy}
+            error={depError}
+            onCheckout={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { body: {} }))}
+            onLateCheckout={(roomId, time) => void depAction(roomId, () => api(`/api/rooms/${roomId}/late-checkout`, { method: "PATCH", body: { time } }))}
+          />
+        }
         notices={
           <>
             {released && <Banner tone="info" icon="bell" title={released} />}

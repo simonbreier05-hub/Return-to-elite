@@ -141,6 +141,7 @@ model Room {
   excursions    Excursion[]
   auditLogs     AuditLog[]
   roomTasks     RoomTask[]
+  recurringTasks RecurringTask[]
 }
 
 /**
@@ -528,6 +529,10 @@ model DayRoomPlan {
   eta            String? // "HH:MM", Anreisezeit
   typeOverridden Boolean  @default(false) // Supervisor hat die Reinigungsart geändert
   derivedType    String? // Art laut Listen, falls überschrieben
+  // Betrieb L2 (additiv): Late Check-out „HH:MM“ — aus der Abreisezeit im Departures-Report (nach Setting lateCheckoutAfterMinutes)
+  // oder vom Front Office von Hand gesetzt (lateCheckoutManual). Keine Gastdaten.
+  lateCheckout       String?
+  lateCheckoutManual Boolean  @default(false)
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -660,4 +665,22 @@ model PlanDeviation {
 
   @@index([date])
   @@index([kind, date])
+}
+
+// Betrieb L2 (additiv): wiederkehrende Hausmann-Aufgabe, z. B. „Blumen gießen alle 2 Tage“ in Zimmer 305.
+// Daraus entsteht an jedem fälligen Tag genau eine RoomTask (src/lib/houseman/recurring.ts, lastCreatedOn verhindert Doppelte).
+// `label` ist interner Kurztext des Teams (keine Gastdaten); Nachtlöschung lässt ihn bewusst stehen (siehe guestDataPurge-Scan).
+model RecurringTask {
+  id            String   @id @default(cuid())
+  roomId        String
+  room          Room     @relation(fields: [roomId], references: [id])
+  label         String // höchstens 80 Zeichen
+  everyDays     Int // Zyklus in Tagen (1 = täglich)
+  startDate     String // "YYYY-MM-DD", erster fälliger Tag
+  active        Boolean  @default(true)
+  lastCreatedOn String? // "YYYY-MM-DD", an dem zuletzt eine RoomTask angelegt wurde
+  createdById   String
+  createdAt     DateTime @default(now())
+
+  @@index([active])
 }

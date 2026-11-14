@@ -61,18 +61,30 @@ export default function EngineeringView() {
     },
   });
 
-  const advance = async (wo: WorkOrderView) => {
+  const advance = async (wo: WorkOrderView, note?: string) => {
     const next = NEXT_STEP[wo.status];
     if (!next || busyId) return;
     setBusyId(wo.id);
     setError(null);
     try {
+      // Betrieb L2 (Punkt 7): Notiz aus dem Bestätigungsdialog zuerst als Nachricht am Auftrag (gleicher Weg wie der Verlauf)
+      if (note && wo.room.id) await api(`/api/rooms/${wo.room.id}/notes`, { body: { body: note, kind: "MESSAGE", task: { type: "WORKORDER", id: wo.id } } });
       const res = await api<{ workOrder?: unknown }>(`/api/workorders/${wo.id}`, { method: "PATCH", body: { status: next.to } });
       if (res?.workOrder) upsert(res.workOrder);
     } catch (e) {
       setError(errorText(e, t));
     } finally {
       setBusyId(null);
+    }
+  };
+
+  // Betrieb L2 (Punkt 7): Technik setzt ein Zimmer außer Betrieb (gleicher Status-Weg wie überall, Server prüft die Rolle)
+  const setOutOfOrder = async (roomId: string, untilIso: string) => {
+    setError(null);
+    try {
+      await api(`/api/rooms/${roomId}/status`, { body: { status: "OUT_OF_ORDER", oooUntil: untilIso } });
+    } catch (e) {
+      setError(errorText(e, t));
     }
   };
 
@@ -90,6 +102,7 @@ export default function EngineeringView() {
           setError(null);
         }}
         onAdvance={advance}
+        onSetOutOfOrder={(roomId, untilIso) => void setOutOfOrder(roomId, untilIso)}
         busyId={busyId}
         actionError={error}
         loading={orders === null && !loadError}

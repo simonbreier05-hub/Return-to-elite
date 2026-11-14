@@ -75,7 +75,7 @@ function RoomDayInfoGlass({ day, traces, showDept }: { day: DayInfo | null | und
         <section className="flex flex-col gap-3" aria-label={t("roomEdit.today")}>
           <SectionLabel as="h3" icon="calendar-days" title={t("roomEdit.today")} />
           <div className="flex flex-wrap items-center gap-2">
-            <Pill tone={pill?.tone ?? "neutral"}>{pill ? t(pill.labelKey) : day.kind ? t(`lists.kind${day.kind}` as TKey) : t("lists.kindNone")}</Pill>
+            <Pill tone={pill?.tone ?? "neutral"} edge={pill?.edge}>{pill ? t(pill.labelKey) : day.kind ? t(`lists.kind${day.kind}` as TKey) : t("lists.kindNone")}</Pill>
             {day.vip && <Pill tone="accent" className="gap-1.5"><Glyph name="star" size={14} />{t("lists.vip")}</Pill>}
             {day.laundry && <Pill tone="info" className="gap-1.5"><Glyph name="shirt" size={14} />{t("lists.laundry")}</Pill>}
             {day.dnd && <Pill tone="danger" className="gap-1.5"><Glyph name="moon" size={14} />{t("lists.dnd")}</Pill>}
