@@ -47,7 +47,8 @@ describe("Zimmerzeile", () => {
     expect(out).toContain("Same-Day-Turn");
     expect(out).toMatch(/<svg/);
     expect(out).toContain("VIP");
-    expect(out).toMatch(/border-s-gold/);
+    expect(out).toMatch(/border-s-status-dirty/); // Betrieb L2: Turn = blaue Pille, roter Rand
+    expect(out).toMatch(/text-status-inspected/);
   });
   it("Hinweis aus der Planung ist klar gekennzeichnet", () => {
     const out = html(room("201", "STAYOVER", { hints: [{ id: "n1", body: "Bitte extra Kissen" }] }));

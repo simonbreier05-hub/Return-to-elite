@@ -12,7 +12,7 @@ import type { Role, RoomStatus } from "./domain";
  *                    ↑        └→ PICKUP → IN_PROGRESS   (supervisor rework)
  *   DIRTY/IN_PROGRESS ↔ BLOCKED (reason + timer)
  *   * → DEFECT_REPORTED → DIRTY/IN_PROGRESS             (via work order)
- *   supervisor/duty_manager: * → OUT_OF_ORDER / OUT_OF_SERVICE → DIRTY
+ *   supervisor/duty_manager: * → OUT_OF_ORDER / OUT_OF_SERVICE → DIRTY (engineering: * → OUT_OF_ORDER, Betrieb L2)
  *   DIRTY ↔ GREEN_OPT_OUT
  *   INSPECTED → DIRTY (next checkout / PMS event)
  */
@@ -47,7 +47,8 @@ export const ROLE_ALLOWED_TARGETS: Record<Role, RoomStatus[]> = {
     "DIRTY", "IN_PROGRESS", "CLEAN", "INSPECTED", "PICKUP", "BLOCKED",
     "DEFECT_REPORTED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT",
   ] as RoomStatus[])],
-  engineering: ["DEFECT_REPORTED"], // may flag a defect; everything else via work orders
+  // Betrieb L2 (Punkt 7): Technik darf ein Zimmer außer Betrieb setzen (mit Endzeit, REQUIRES_OOO_END); sonst über Arbeitsaufträge
+  engineering: ["DEFECT_REPORTED", "OUT_OF_ORDER"],
   front_office: [], // MUST NOT change housekeeping status
   concierge: [], // MUST NOT change housekeeping status
   houseman: [], // furniture/bed tasks only (RoomTask) — MUST NOT change housekeeping status

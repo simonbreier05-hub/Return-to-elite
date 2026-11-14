@@ -5,7 +5,7 @@ import { api } from "@/components/api";
 
 export interface GuestStatusItem {
   id: string;
-  kind: "DND" | "CLEAN_REQUEST" | "CONTACT" | "DEFECT" | "NOTE";
+  kind: "DND" | "CLEAN_REQUEST" | "CONTACT" | "DEFECT" | "NOTE" | "GREEN"; // GREEN = Betrieb L2 Green Option
   detail: string | null;
   status: "RECEIVED" | "IN_PROGRESS" | "DONE" | "CANCELLED";
   createdAt: string;

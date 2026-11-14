@@ -66,7 +66,7 @@ export function HkRoomDetail({ data, pause, actions, thread }: { data: HkDetailD
   return (
     <div className="flex flex-col gap-4" data-testid="hk-detail">
       <div className="flex flex-wrap items-center gap-2">
-        {pill && <Pill tone={pill.tone}>{t(pill.labelKey)}</Pill>}
+        {pill && <Pill tone={pill.tone} edge={pill.edge}>{t(pill.labelKey)}</Pill>}
         {code && <LangChip code={code} />}
         {markers.map((m) => (
           <MarkerBadge key={m} marker={m} label={t(MARKER_UI[m].labelKey)} />

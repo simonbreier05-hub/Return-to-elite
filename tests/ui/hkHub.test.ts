@@ -49,8 +49,11 @@ describe("Status → Anzeige (D2)", () => {
 
 describe("Pille, Marker, Sprache", () => {
   it("Reinigungsart → Pille, ohne Tagesplan keine", () => {
-    expect(kindPill("SAME_DAY_TURN")).toEqual({ labelKey: "hkHub.kindTurn", tone: "accent" });
-    expect(kindPill("STAYOVER")?.tone).toBe("neutral");
+    // Betrieb L2 (Meeting 13.11.): Turn Blau/Rot, Bleiber Grün, Abreise Rot, Anreise Blau
+    expect(kindPill("SAME_DAY_TURN")).toEqual({ labelKey: "hkHub.kindTurn", tone: "info", edge: "danger" });
+    expect(kindPill("DEPARTURE")?.tone).toBe("danger");
+    expect(kindPill("ARRIVAL")?.tone).toBe("info");
+    expect(kindPill("STAYOVER")?.tone).toBe("success");
     expect(kindPill(null)).toBeNull();
   });
   it("Marker: Priorität zuerst, kein doppeltes DND/Pause neben dem Status", () => {
@@ -58,7 +61,7 @@ describe("Pille, Marker, Sprache", () => {
     expect(hkMarkers(room({ dnd: true }))).not.toContain("dnd");
     expect(hkMarkers(room({ status: "IN_PROGRESS", dnd: true }))).toContain("dnd");
     expect(hkMarkers(room({ status: "IN_PROGRESS", paused: true }))).not.toContain("pause");
-    expect(hkMarkers(room({ kind: "STAYOVER", laundry: true, vip: true }))).toEqual(["vip", "laundry"]);
+    expect(hkMarkers(room({ kind: "STAYOVER", laundry: true, vip: true }))).toEqual(["laundry", "vip"]); // Betrieb L2: Wäsche-Symbol vorn
     expect(hkMarkers(room({ kind: "STAYOVER", eta: "14:00" }))).not.toContain("arrival");
   });
   it("Sprachkürzel", () => {

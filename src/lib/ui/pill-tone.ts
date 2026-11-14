@@ -47,11 +47,11 @@ export function pillTone(kind: string): Tone {
   return (PILL_TONE as Record<string, Tone>)[kind] ?? "neutral";
 }
 
-/** Reinigungsart aus der Tages-Kategorie (Bestand `roomDayCategory`) → Pillen-Ton. */
+/** Reinigungsart aus der Tages-Kategorie (Bestand `roomDayCategory`) → Pillen-Ton. Betrieb L2: wie `KIND_PILL` (Turn: Rand rot). */
 export const CATEGORY_PILL_TONE: Record<RoomDayCategory, Tone> = {
-  SAME_DAY_TURN: "accent",
-  DEPARTURE: "accent",
-  STAYOVER: "info",
+  SAME_DAY_TURN: "info",
+  DEPARTURE: "danger",
+  STAYOVER: "success",
   ARRIVAL: "info",
   DND: "danger",
   NONE: "neutral",

@@ -62,6 +62,9 @@ const Body = z.object({
   maxSuitesPerHk: z.number().int().min(1).max(20).optional(),
   suiteMinCredit: z.number().min(1).max(10).optional(),
   redistributeOnAbsence: z.number().int().min(0).max(1).optional(),
+  // Betrieb L2
+  lateCheckoutAfterMinutes: z.number().int().min(360).max(1080).optional(),
+  dndReminderHour: z.number().int().min(6).max(20).optional(),
   floorSuggestWindow: z.number().int().min(1).max(30).optional(),
   floorSuggestMinDays: z.number().int().min(1).max(30).optional(),
   floorDemandingWarnShare: z.number().min(0).max(1).optional(),

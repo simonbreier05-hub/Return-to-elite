@@ -113,8 +113,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [floorFilter, setFloorFilter] = useState<number | "ALL">("ALL");
   const [attendantFilter, setAttendantFilter] = useState<string>("ALL");
   const [guestDndOnly, setGuestDndOnly] = useState(false);
-  const [bulkBusy, setBulkBusy] = useState(false);
-  const [bulkResult, setBulkResult] = useState<string | null>(null);
   // Non-null when the server scoped this board to the signed-in supervisor's
   // assigned floor(s) — see GET /api/rooms. Null for duty_manager (never
   // scoped) and for a supervisor with no floors assigned yet (fails open).
@@ -285,36 +283,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     gridRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  /**
-   * Release the whole queue in one action. Each room still passes the same
-   * server-side checks, so a room someone else touched meanwhile is reported
-   * rather than silently skipped.
-   */
-  const releaseAll = async () => {
-    if (bulkBusy || releaseQueue.length === 0) return;
-    setBulkBusy(true);
-    setError(null);
-    setBulkResult(null);
-    try {
-      const res = await api<{
-        changed: number;
-        rejected: number;
-        failed: { error: string }[];
-      }>("/api/rooms/bulk-status", {
-        body: { roomIds: releaseQueue.map((r) => r.id), status: "INSPECTED" },
-      });
-      setBulkResult(
-        res.rejected === 0
-          ? t("supervisor.releasedAndPushed", { count: res.changed })
-          : t("supervisor.releasedPartial", { changed: res.changed, rejected: res.rejected, error: res.failed[0]?.error ?? "" })
-      );
-      load();
-    } catch (e) {
-      setError(errorText(e, t));
-    } finally {
-      setBulkBusy(false);
-    }
-  };
+  // Betrieb L2 (Punkt 5): „Alle freigeben“ entfernt — jedes Zimmer wird einzeln abgenommen (act(room, "INSPECTED")).
 
   // ── D3: Anzeige-Daten für die Glas-Übersicht (nur Darstellung, Regeln in src/lib/ui/supervisorHub.ts) ──
   const kpis = useMemo(() => supervisorKpis(rooms), [rooms]);
@@ -350,7 +319,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           <Banner tone="warning" title={error} />
         </div>
       )}
-      {bulkResult && <Banner tone="info" icon="check" title={bulkResult} />}
     </>
   );
 
@@ -363,10 +331,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         arrival: r.arrivals[0] ?? null,
       }))}
       busyRoomId={busyRoomId}
-      bulkBusy={bulkBusy}
       onRelease={(id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); }}
       onRework={(id) => { const room = roomById.get(id); if (room) setDialog({ kind: "rework", room }); }}
-      onReleaseAll={() => void releaseAll()}
       onOpen={setSelectedId}
     />
   );

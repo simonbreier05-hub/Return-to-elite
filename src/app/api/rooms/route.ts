@@ -3,6 +3,7 @@ import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
 import { resolveFloorScope } from "@/lib/floors";
 import { shortGuestName } from "@/lib/lists/guestName";
+import { withoutPhotosFor } from "@/lib/rooms/defectPhotoAccess";
 import { assignedToday, hubDay } from "@/lib/dayplan/hubDay";
 import { activePauses } from "@/lib/work/pauseData";
 import { rewindOptions } from "@/lib/rooms/rewindData";
@@ -113,6 +114,8 @@ export async function GET(req: NextRequest) {
       { role: auth.session.role, userId: me, floors: floorScope },
       { floor: room.floor, housekeeperId: room.assignedToId, housemanIds: [], engineerIds: [] },
     )),
+    // Betrieb L2 (Punkt 8): Mängel-Fotos nur für Technik/Supervisor/Duty Manager
+    defects: withoutPhotosFor(auth.session.role, room.defects),
     pause: pauses.get(room.id) ?? null,
     rewind: rewinds.get(room.id) ?? null,
     guestRequests,

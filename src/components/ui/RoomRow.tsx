@@ -30,7 +30,7 @@ export function RoomRow({ room, guest, lang, pill, status, markers = [], state =
         {guest && <span className="text-body-18 max-w-full truncate text-text-primary">{guest}</span>}
         {lang && <LangChip code={lang} />}
       </span>
-      {pill && <Pill tone={pill.tone}>{pill.label}</Pill>}
+      {pill && <Pill tone={pill.tone} edge={pill.edge}>{pill.label}</Pill>}
       <StatusChip status={status.value} label={status.label} />
       {markers.length > 0 && (
         <span className="flex shrink-0 items-center gap-2">

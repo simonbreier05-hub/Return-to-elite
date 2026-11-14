@@ -117,3 +117,26 @@ export function foPill(a: ArrivalView): { labelKey: TKey; tone: Tone } | null {
   if (a.vip) return { labelKey: "frontOffice.vip", tone: "accent" };
   return null;
 }
+
+/**
+ * Betrieb L2 (Punkt 5): Front Office sieht live, wo das Zimmer steht — offen → in Arbeit → geprüft (gereinigt, Abnahme
+ * durch den Supervisor läuft) → freigegeben. Nur Ableitung aus `Room.status` (Live über `room:update`), keine eigene Zählung.
+ */
+export const FO_STAGES = ["OPEN", "IN_PROGRESS", "CHECK", "RELEASED"] as const;
+export type FoStage = (typeof FO_STAGES)[number];
+
+export function foStage(status: RoomStatus | null | undefined): FoStage {
+  switch (status) {
+    case "IN_PROGRESS": case "PICKUP": return "IN_PROGRESS"; // Nacharbeit = wieder in Arbeit
+    case "CLEAN": return "CHECK";
+    case "INSPECTED": return "RELEASED";
+    default: return "OPEN";
+  }
+}
+
+export const FO_STAGE_LABEL: Record<FoStage, TKey> = {
+  OPEN: "frontOffice.stageOPEN",
+  IN_PROGRESS: "frontOffice.stageIN_PROGRESS",
+  CHECK: "frontOffice.stageCHECK",
+  RELEASED: "frontOffice.stageRELEASED",
+};

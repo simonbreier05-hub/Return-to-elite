@@ -132,6 +132,16 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
       if (!p || p.channelId !== channel.id || !p.messageId) return;
       setMessages((prev) => prev.map((x) => (x.id === p.messageId ? { ...x, body: "", retracted: p.kind !== "hidden", hidden: p.kind === "hidden" } : x)));
     },
+    // Betrieb L2 (Punkt 10): jemand hat gelesen → nur die Lesebestätigungen nachladen (nie selbst „gelesen“ melden: keine Schleife)
+    "chat:receipt": (p: { channelId?: string } | null) => {
+      if (!p || p.channelId !== channel.id) return;
+      api<{ messages: ChatMessageView[] }>(`/api/chat/channels/${channel.id}/messages`)
+        .then((d) => {
+          const by = new Map((d.messages ?? []).map((x) => [x.id, x.readBy]));
+          setMessages((prev) => prev.map((x) => (by.has(x.id) ? { ...x, readBy: by.get(x.id) } : x)));
+        })
+        .catch(() => {});
+    },
   });
 
   const older = async () => {
@@ -184,6 +194,15 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
                   {tokenize(m.body).map((tok, i) => tok.kind === "room"
                     ? <button key={i} type="button" onClick={() => setRoom(tok.number)} className="-my-3 inline-block px-0.5 py-3 font-semibold text-navy underline underline-offset-2">#{tok.number}</button>
                     : tok.kind === "mention" ? <span key={i} className="font-semibold text-gold-soft">{tok.text}</span> : <span key={i}>{tok.text}</span>)}
+                </p>
+              )}
+              {/* Betrieb L2 (Punkt 10): Lesebestätigung der eigenen Nachricht — Text + Zeichen, nie nur Farbe */}
+              {mine && m.readBy && m.readBy.total > 0 && (
+                <p className="mt-1 text-xs text-graphite/70" data-testid="chat-receipt">
+                  <span aria-hidden="true">{m.readBy.read >= m.readBy.total ? "✓✓ " : "✓ "}</span>
+                  {channel.kind === "DIRECT"
+                    ? (m.readBy.read > 0 ? t("chat.readDirect") : t("chat.delivered"))
+                    : t("chat.readBy", { read: m.readBy.read, total: m.readBy.total })}
                 </p>
               )}
               {canRetract && (

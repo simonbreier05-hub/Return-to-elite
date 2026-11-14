@@ -8,6 +8,7 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import PurgePanel from "@/components/PurgePanel";
 import HousekeeperSettingsPanel from "@/components/HousekeeperSettingsPanel";
+import { RecurringTasksPanel } from "@/components/roles/RecurringTasksPanel";
 import LearnedRulesPanel from "@/components/LearnedRulesPanel";
 import type { TKey } from "@/lib/i18n/translations";
 
@@ -184,6 +185,8 @@ export default function SettingsView() {
       </section>
 
       <HousekeeperSettingsPanel />
+      {/* Betrieb L2 (Punkt 9): wiederkehrende Hausmann-Aufgaben — Glas-Baustein auf eigener Glas-Fläche */}
+      <div className="theme-glass bg-atmosphere mb-4 rounded-2xl p-3"><RecurringTasksPanel /></div>
       <LearnedRulesPanel />
 
       <PurgePanel />

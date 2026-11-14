@@ -12,7 +12,7 @@ import { getGuestSystemUserId } from "@/lib/guestServer";
  */
 
 export type GuestStatus = "RECEIVED" | "IN_PROGRESS" | "DONE" | "CANCELLED";
-export type GuestRequestKind = "DND" | "CLEAN_REQUEST" | "CONTACT" | "DEFECT" | "NOTE";
+export type GuestRequestKind = "DND" | "CLEAN_REQUEST" | "CONTACT" | "DEFECT" | "NOTE" | "GREEN"; // GREEN = Betrieb L2 Green Option
 
 export interface GuestStatusItem {
   id: string;

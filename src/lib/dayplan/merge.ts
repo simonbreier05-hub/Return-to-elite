@@ -3,7 +3,8 @@ import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { generateOpaqueToken } from "@/lib/guestToken";
-import { getPlanningCreditSettings } from "@/lib/settings";
+import { getPlanningCreditSettings, getSettings } from "@/lib/settings";
+import { lateCheckoutFrom, mergedLateCheckout } from "./lateCheckout";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import type { ArrivalRow, DepartureRow, GuestName, InHouseRow, ParseIssue, TraceRow } from "@/lib/import/types";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
@@ -136,6 +137,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   }
   changedAssigned = typeChanges.filter((c) => !!roomByNumber.get(c.number)?.assignedToId).length;
   for (const [number, old] of oldByRoom) if (!newByRoom.has(number) && !old.typeOverridden) await prisma.dayRoomPlan.delete({ where: { id: old.id } });
+  const lcoAfter = (await getSettings()).lateCheckoutAfterMinutes; // Betrieb L2: Late Check-out aus dem Report
   for (const r of derived.rooms) {
     const room = roomByNumber.get(r.room)!;
     const old = oldByRoom.get(r.room);
@@ -143,6 +145,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
       laundryDue: r.laundryDue, nights: r.nights, vip: r.vip, eta: r.eta,
       stayId: r.stay ? stayIdByKey.get(`${r.room}|${r.stay}`) ?? null : null,
       arrivingStayId: r.arrivingStay ? stayIdByKey.get(`${r.room}|${r.arrivingStay}`) ?? null : null,
+      ...mergedLateCheckout(old, lateCheckoutFrom(r.depTime, lcoAfter)),
     };
     if (old?.typeOverridden) await prisma.dayRoomPlan.update({ where: { id: old.id }, data: { ...base, derivedType: r.cleaningType } });
     else if (old) await prisma.dayRoomPlan.update({ where: { id: old.id }, data: { ...base, cleaningType: r.cleaningType } });

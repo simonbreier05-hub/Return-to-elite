@@ -18,23 +18,20 @@ export interface ReleaseRoom {
 
 /**
  * Freigabe-Warteschlange (Zimmer CLEAN → prüfen und freigeben oder zum Nachbessern zurück) als Glas-Karte.
- * Gleiche Aktionen wie bisher; „Alle freigeben“ erst ab zwei Zimmern.
+ * Betrieb L2 (Punkt 5, Meeting 13.11.): jedes Zimmer wird einzeln abgenommen — „Alle freigeben“ gibt es nicht mehr.
+ * Ablehnen = Nacharbeit an dieselbe Kraft mit Pflicht-Grund (`REWORK_NOTE_REQUIRED`).
  */
 export function ReleaseQueueCard({
   rooms,
   busyRoomId,
-  bulkBusy,
   onRelease,
   onRework,
-  onReleaseAll,
   onOpen,
 }: {
   rooms: ReleaseRoom[];
   busyRoomId: string | null;
-  bulkBusy: boolean;
   onRelease: (id: string) => void;
   onRework: (id: string) => void;
-  onReleaseAll: () => void;
   onOpen: (id: string) => void;
 }) {
   const { t } = useLocale();
@@ -44,11 +41,6 @@ export function ReleaseQueueCard({
         <h2 id="sup-release-title" className="text-title-22 text-text-primary">
           {t("supervisor.releaseQueueTitle")} <span className="text-accent-text">{rooms.length}</span>
         </h2>
-        {rooms.length > 1 && (
-          <Button icon="check" onClick={onReleaseAll} disabled={bulkBusy}>
-            {bulkBusy ? t("supervisor.releasing") : withoutLeadingSymbol(t("supervisor.releaseAll", { count: rooms.length }))}
-          </Button>
-        )}
       </div>
       {rooms.length === 0 && <p className="text-body-16 text-text-muted">{t("supervisor.nothingWaiting")}</p>}
       <ul className="flex flex-col gap-3">

@@ -23,7 +23,7 @@ import type { GuestLegalLinkUrls } from "@/lib/guestLegalLinks";
 import { DEFECT_CATEGORIES, type DefectCategory } from "@/lib/domain";
 import { CLEAN_TIMINGS, CONTACT_DEPARTMENTS, DND_WINDOWS, type CleanTiming, type DndWindow } from "@/lib/guest";
 
-type ModalKind = "dnd" | "dndCancel" | "clean" | "defect" | "contact" | "requests" | null;
+type ModalKind = "dnd" | "dndCancel" | "clean" | "defect" | "contact" | "green" | "requests" | null;
 type T = ReturnType<typeof useGuestLocale>["t"];
 
 function parseDetail(json: string | null): Record<string, string> {
@@ -120,6 +120,7 @@ function GuestScreen({
     ? [t("dndActive.short"), dndDetail.window ? t(`dndWindow.${dndDetail.window}` as GuestTKey) : null].filter(Boolean).join(" · ")
     : undefined;
 
+  const greenToday = items.some((i) => i.kind === "GREEN" && new Date(i.createdAt).toDateString() === new Date().toDateString());
   const tiles: { kind: Exclude<ModalKind, null>; icon: IconName; title: string; ariaLabel: string; active?: boolean; hint?: string }[] = [
     activeDnd
       ? {
@@ -134,6 +135,10 @@ function GuestScreen({
     { kind: "clean", icon: "bed-single", title: t("tiles.clean.title"), ariaLabel: `${t("tiles.clean.title")}: ${t("tiles.clean.hint")}` },
     { kind: "defect", icon: "wrench", title: t("tiles.defect.title"), ariaLabel: `${t("tiles.defect.title")}: ${t("tiles.defect.hint")}` },
     { kind: "contact", icon: "message", title: t("tiles.contact.title"), ariaLabel: `${t("tiles.contact.title")}: ${t("tiles.contact.hint")}` },
+    // Betrieb L2 (Punkt 11): Green Option — heute kein Wäschewechsel (gilt nur für heute)
+    greenToday
+      ? { kind: "green", icon: "leaf", title: t("tiles.green.title"), hint: t("green.chosen"), ariaLabel: `${t("tiles.green.title")}: ${t("green.chosen")}`, active: true }
+      : { kind: "green", icon: "leaf", title: t("tiles.green.title"), ariaLabel: `${t("tiles.green.title")}: ${t("tiles.green.hint")}` },
   ];
 
   return (
@@ -218,6 +223,9 @@ function GuestScreen({
           onClose={() => setModal(null)}
           onSubmit={(label) => announce(t("toast.contact", { department: label }))}
         />
+      )}
+      {modal === "green" && (
+        <GreenModal actionBase={actionBase} offline={offline} already={greenToday} onClose={() => setModal(null)} onSubmit={() => announce(t("toast.green"))} />
       )}
       {modal === "requests" && <RequestsModal items={items} onClose={() => setModal(null)} />}
     </div>
@@ -378,6 +386,54 @@ function DndModal({
 }
 
 /** Rückfrage vor „Bitte nicht stören zurücknehmen“ — ersetzt das frühere `window.confirm` (gleiche Funktion, Glas-Fenster). */
+/** Betrieb L2 (Punkt 11): Green Option — heute keinen Wäschewechsel. Ein Tipp bestätigt, offline wird nachgesendet. */
+function GreenModal({
+  actionBase,
+  offline,
+  already,
+  onClose,
+  onSubmit,
+}: {
+  actionBase: string;
+  offline: OfflineEnqueue;
+  already: boolean;
+  onClose: () => void;
+  onSubmit: () => void;
+}) {
+  const { t } = useGuestLocale();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const confirm = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await api(`${actionBase}/green`, { body: {} });
+      onSubmit();
+    } catch (e) {
+      if (e instanceof NetworkError) {
+        offline.enqueue({ url: `${actionBase}/green`, body: {}, label: t("tiles.green.title") });
+        onSubmit();
+        return;
+      }
+      setError(e instanceof ApiError ? e.message : t("error.generic"));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <GuestModal title={t("tiles.green.title")} subtitle={already ? t("green.chosen") : t("green.confirmQuestion")} onClose={onClose}>
+      <ModalError error={error} />
+      {!already && (
+        <ConfirmButton busy={busy} onClick={confirm}>
+          {t("green.confirm")}
+        </ConfirmButton>
+      )}
+    </GuestModal>
+  );
+}
+
 function DndCancelModal({
   actionBase,
   offline,
@@ -619,6 +675,8 @@ function requestItemLabel(t: T, item: GuestStatusItem): string {
       return item.detail ? t(`defectCategory.${item.detail}` as GuestTKey) : t("status.kind.DEFECT");
     case "NOTE":
       return item.detail && item.detail.length > 60 ? `${item.detail.slice(0, 60)}…` : (item.detail ?? "");
+    case "GREEN":
+      return t("tiles.green.hint");
   }
 }
 

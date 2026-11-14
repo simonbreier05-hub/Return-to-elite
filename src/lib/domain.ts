@@ -293,6 +293,10 @@ export const DEFAULT_SETTINGS = {
   floorSuggestMinDays: 3,
   // Warnung „Stufe 1 auf anspruchsvoller Etage": ab diesem Anteil anspruchsvoller Zimmer (VIP, Suite, Allergiker, viele Traces).
   floorDemandingWarnShare: 0.3,
+  // Betrieb L2 (Punkt 3): Abreise gilt als Late Check-out, wenn sie nach so vielen Minuten nach Mitternacht liegt (660 = 11:00).
+  lateCheckoutAfterMinutes: 660,
+  // Betrieb L2 (Punkt 4): ab dieser vollen Stunde (Berlin) Erinnerung bei DND „Karte ans Zimmer hängen – nicht gereinigt“.
+  dndReminderHour: 12,
   // H3 Lernen aus Planungsänderungen (src/lib/learning/patterns.ts): Muster ab learnMinDays der letzten learnWindow Planungstage,
   // Auslaufen nach learnExpireDays Planungstagen ohne Beobachtung, Tage mit > learnStaffDropShare weniger Personal zählen nicht.
   learnWindow: 5,

@@ -4,7 +4,7 @@ import { berlinDate } from "@/lib/dayplan/time";
 import { keyed } from "@/lib/i18n/notificationText";
 
 /** Was sich an einem Zimmer geändert hat (Zuteilung/Verschiebung melden `notifyReassignment`/`notifyBulkReassignment`). */
-export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY" | "REWORK" | "DEFECT_FIXED" | "EXCURSION" | "EXCURSION_SOON";
+export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY" | "REWORK" | "DEFECT_FIXED" | "EXCURSION" | "EXCURSION_SOON" | "CHECKED_OUT" | "LATE_CHECKOUT" | "DND_REMINDER";
 
 const TEXT: Record<RoomChangeKind, string> = {
   NOTE: "neue Notiz",
@@ -17,12 +17,16 @@ const TEXT: Record<RoomChangeKind, string> = {
   DEFECT_FIXED: "Mangel behoben",
   EXCURSION: "Gast ist außer Haus (Ausflug eingetragen)",
   EXCURSION_SOON: "Gast kommt bald zurück",
+  // Betrieb L2
+  CHECKED_OUT: "Gast ausgecheckt — Zimmer kann gereinigt werden",
+  LATE_CHECKOUT: "Late Check-out geändert",
+  DND_REMINDER: "Bitte nicht stören — Karte ans Zimmer hängen: nicht gereinigt",
 };
 
 /** Eigene Meldungsart (Glocke/Pop-up-Kopf) für die neuen Anlässe aus Paket O1; alles andere bleibt „Zimmer geändert“. */
-const TYPE: Partial<Record<RoomChangeKind, string>> = { REWORK: "ROOM_REWORK", DEFECT_FIXED: "DEFECT_FIXED", EXCURSION: "EXCURSION", EXCURSION_SOON: "EXCURSION" };
+const TYPE: Partial<Record<RoomChangeKind, string>> = { REWORK: "ROOM_REWORK", DEFECT_FIXED: "DEFECT_FIXED", EXCURSION: "EXCURSION", EXCURSION_SOON: "EXCURSION", CHECKED_OUT: "GUEST_CHECKED_OUT", DND_REMINDER: "DND_REMINDER" };
 /** Dringend (Pop-up bleibt bis Antippen, doppelter Ton). */
-const URGENT: ReadonlySet<RoomChangeKind> = new Set(["DND", "PRIORITY", "REWORK"]);
+const URGENT: ReadonlySet<RoomChangeKind> = new Set(["DND", "PRIORITY", "REWORK", "CHECKED_OUT", "DND_REMINDER"]); // Betrieb L2: Pop-up + Ton, beeinflusst den Arbeitsfluss
 
 /** Meldetext: nur Zimmer, Etage und Art der Änderung — nie Notiz-/Trace-Text, nie Gastdaten. */
 export function roomChangeMessage(room: { number: string; floor: number }, kind: RoomChangeKind): string {

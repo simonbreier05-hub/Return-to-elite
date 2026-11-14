@@ -27,6 +27,7 @@ import {
   Play,
   RefreshCw,
   Search,
+  Leaf,
   Shirt,
   Star,
   TriangleAlert,
@@ -64,6 +65,7 @@ export const ICONS = {
   moon: Moon,
   zap: Zap,
   wrench: Wrench,
+  leaf: Leaf, // Betrieb L2: Green Option (Gast)
   shirt: Shirt,
   play: Play,
   "log-in": LogIn,

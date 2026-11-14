@@ -2,7 +2,9 @@ import { prisma } from "@/lib/db";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 import { getRoomTypeCredits, getSettings } from "@/lib/settings";
 import type { RoomType } from "@/lib/domain";
-import { computeRoomCredit } from "@/lib/rooms/roomCredit";
+import { computeRoomCredit, creditMinutes } from "@/lib/rooms/roomCredit";
+import { greenRoomsOn } from "@/lib/guest/green";
+import { dndReminderDue } from "@/lib/rooms/dndReminder";
 import { shortGuestName, timesInText } from "./guestName";
 import { activePauses, type PauseView } from "@/lib/work/pauseData";
 import { isCheckedOut, parseCleanWish } from "@/lib/planung/listOrder";
@@ -56,6 +58,16 @@ export interface RoomRow {
   cleanAfter: string | null;
   /** Planung L1 (Regel 7): abreisender Gast ist ausgecheckt (nur bei Turns von Bedeutung). */
   checkedOut: boolean;
+  /** Betrieb L2 (Punkt 2): Start der Reinigung (ISO, `Room.statusSince` bei IN_PROGRESS), sonst null. */
+  startedAt: string | null;
+  /** Betrieb L2 (Punkt 2): geschätzte Dauer = Credit × minutesPerCredit. */
+  estMinutes: number;
+  /** Betrieb L2 (Punkt 3): Late Check-out „HH:MM“ (Report oder Front Office), sonst null. */
+  lateCheckout: string | null;
+  /** Betrieb L2 (Punkt 4): DND ab dndReminderHour noch nicht gereinigt — „Karte ans Zimmer hängen“. */
+  dndCard: boolean;
+  /** Betrieb L2 (Punkt 11): Gast hat heute die Green Option gewählt — Wäschewechsel entfällt (`laundry` ist dann false). */
+  green: boolean;
 }
 
 /** Welcher Aufenthalt zählt für die Anzeige: Anreise/Turn → der anreisende Gast, sonst der bleibende bzw. abreisende. */
@@ -66,7 +78,8 @@ const stayIdFor = (p: { cleaningType: string; stayId: string | null; arrivingSta
  * Zeilen der Arbeitslisten für einen Tag (gemeinsame Quelle für Zimmermädchen- und Supervisor-Liste).
  * `depts` begrenzt die Traces auf Abteilungen (Housekeeper: nur HOUSEKEEPING).
  */
-export async function loadRoomRows(date: string, where: { roomIds?: string[]; assignedToId?: string; floors?: number[] }, depts: string[] | null, opts: { extra?: boolean } = {}): Promise<RoomRow[]> {
+export async function loadRoomRows(date: string, where: { roomIds?: string[]; assignedToId?: string; floors?: number[] }, depts: string[] | null, opts: { extra?: boolean; now?: Date } = {}): Promise<RoomRow[]> {
+  const now = opts.now ?? new Date();
   const [settings, typeCredits] = await Promise.all([getSettings(), getRoomTypeCredits()]);
   const rooms = await prisma.room.findMany({
     where: {
@@ -107,19 +120,22 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   for (const g of await prisma.guestRequest.findMany({ where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true, detail: true }, orderBy: { createdAt: "asc" } })) {
     cleanWish.set(g.roomId, parseCleanWish(g.detail)); // der jüngste offene Wunsch gilt
   }
+  // Betrieb L2 (Punkt 11): Green Option heute → kein Wäschewechsel
+  const green = await greenRoomsOn(date, ids);
 
   return rooms.map((r) => {
     const p = planBy.get(r.id);
     const stay = p ? stayBy.get(stayIdFor(p) ?? "") : undefined;
     const kind = (p?.cleaningType as Kind | undefined) ?? null;
+    const credits = kind === "ARRIVAL" || !kind ? 0 : computeRoomCredit({ type: r.type as RoomType, credits: typeCredits, roomCredit: r.credit });
     return {
       id: r.id, number: r.number, floor: r.floor, status: r.status, routeOrder: r.routeOrder, assignedToId: r.assignedToId, assignedOn: r.assignedOn,
-      occupancy: r.occupancy, blockReason: r.blockReason, kind, laundry: !!p?.laundryDue, vip: !!(p?.vip || stay?.vip), eta: p?.eta ?? null,
+      occupancy: r.occupancy, blockReason: r.blockReason, kind, laundry: !!p?.laundryDue && !green.has(r.id), vip: !!(p?.vip || stay?.vip), eta: p?.eta ?? null,
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
       lang: stay?.language ?? null,
       pax: stay ? stay.adults + stay.children : null,
       dnd: dnd.has(r.id) || r.blockReason === "DND",
-      credits: kind === "ARRIVAL" || !kind ? 0 : computeRoomCredit({ type: r.type as RoomType, credits: typeCredits, roomCredit: r.credit }),
+      credits,
       traces: traceBy.get(r.id) ?? [],
       type: r.type, defects: defectCount.get(r.id) ?? 0, wish: wishBy.get(r.id) ?? null,
       pause: r.status === "IN_PROGRESS" ? pauses.get(r.id) ?? null : null,
@@ -129,6 +145,11 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       cleanAfter: cleanWish.get(r.id)?.cleanAfter ?? null,
       // nur echte Meldung (POST /api/rooms/[id]/checkout bzw. Opera-Code) — nie aus „frei“ geraten (Standardwert VACANT)
       checkedOut: isCheckedOut(p?.stayId ? stayBy.get(p.stayId) : null),
+      startedAt: r.status === "IN_PROGRESS" ? r.statusSince.toISOString() : null,
+      estMinutes: creditMinutes(credits, settings.minutesPerCredit),
+      lateCheckout: p?.lateCheckout ?? null,
+      green: !!p?.laundryDue && green.has(r.id),
+      dndCard: dndReminderDue({ dnd: dnd.has(r.id) || r.blockReason === "DND", status: r.status, toClean: !!kind && kind !== "ARRIVAL" }, now, settings.dndReminderHour),
     };
   });
 }

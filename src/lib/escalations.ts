@@ -4,6 +4,8 @@ import { getSettings } from "./settings";
 import type { Role } from "./domain";
 import { keyed } from "@/lib/i18n/notificationText";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
+import { berlinHour, dndReminderDue } from "@/lib/rooms/dndReminder";
+import { berlinDate } from "@/lib/dayplan/time";
 
 /**
  * Escalation engine — executed every minute by the ticker in server.js
@@ -15,6 +17,7 @@ import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
  *  - WELFARE_CHECK:  DND older than welfareCheckMinutes → welfare check
  *  - ETA_AT_RISK:    arrival ETA within etaWarningMinutes, room not INSPECTED
  *  - RELEASE_QUEUE_BACKLOG: too many CLEAN rooms waiting for inspection
+ *  - DND_REMINDER (Betrieb L2): DND ab dndReminderHour noch nicht gereinigt → Housekeeper + Supervisor, einmal je Zimmer/Tag
  */
 
 async function notifyOnce(entry: {
@@ -106,6 +109,32 @@ export async function runEscalations(now = new Date()) {
   for (const e of soon) {
     const who = await notifyHousekeeperOfRoomChange({ roomId: e.roomId, kind: "EXCURSION_SOON", now, dedupeKey: `EXCURSION_SOON:${e.id}` });
     if (who) created.push("EXCURSION");
+  }
+
+  // --- Betrieb L2 (Punkt 4): DND ab dndReminderHour noch nicht gereinigt → Karte hängen; einmal je Zimmer und Tag ----
+  const date = berlinDate(now);
+  if (berlinHour(now) >= settings.dndReminderHour) {
+    const plans = await prisma.dayRoomPlan.findMany({
+      where: { date, cleaningType: { not: "ARRIVAL" } },
+      select: { room: { select: { id: true, number: true, floor: true, status: true, blockReason: true } } },
+    });
+    const guestDnd = new Set((await prisma.guestRequest.findMany({
+      where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: plans.map((p) => p.room.id) } }, select: { roomId: true },
+    })).map((g) => g.roomId));
+    for (const { room } of plans) {
+      const dnd = guestDnd.has(room.id) || (room.status === "BLOCKED" && room.blockReason === "DND");
+      if (!dndReminderDue({ dnd, status: room.status, toClean: true }, now, settings.dndReminderHour)) continue;
+      const key = `DND_REMINDER:${date}:${room.id}`;
+      const who = await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "DND_REMINDER", now, dedupeKey: key });
+      if (who) created.push("DND_REMINDER");
+      const n = await notifyOnce({
+        type: "DND_REMINDER", level: "warning", targetRole: "supervisor", roomId: room.id,
+        message: `Zimmer ${room.number} (Etage ${room.floor}): Bitte nicht stören — nicht gereinigt, Karte ans Zimmer.`,
+        ...keyed("notify.dndReminder", { n: room.number, floor: room.floor }),
+        dedupeKey: `${key}:SUP`,
+      });
+      if (n) created.push(n.type);
+    }
   }
 
   // --- Release queue backlog --------------------------------------------

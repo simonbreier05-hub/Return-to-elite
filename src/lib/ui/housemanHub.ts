@@ -5,6 +5,7 @@
  */
 import type { TKey } from "@/lib/i18n/translations";
 import { berlinDate } from "@/lib/dayplan/time";
+import { compareHousemanItems } from "@/lib/houseman/order";
 import type { PauseView } from "./engineeringHub";
 import type { Tone } from "./tone";
 
@@ -31,6 +32,8 @@ export interface HmItemView {
   requestedBy: string | null;
   waitsForDeparture: boolean;
   pause: PauseView | null;
+  /** Betrieb L2 (Punkt 9): Anreisezeit des Gastes „HH:MM“ — Sortierung nach Anreise, sonst Zimmernummer. */
+  eta: string | null;
 }
 
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
@@ -64,6 +67,7 @@ export function traceItem(raw: unknown): HmItemView | null {
     requestedBy: null,
     waitsForDeparture: r.waitsForDeparture === true,
     pause: pauseOf(r.pause),
+    eta: str(r.eta),
   };
 }
 
@@ -91,6 +95,7 @@ export function taskItem(raw: unknown): HmItemView | null {
     requestedBy: str(obj(r.createdBy).name),
     waitsForDeparture: false,
     pause: pauseOf(r.pause),
+    eta: str(r.eta),
   };
 }
 
@@ -107,8 +112,8 @@ export function mergeHousemanItems(traces: unknown[], tasks: unknown[], now: Dat
     .map(taskItem)
     .filter((x): x is HmItemView => !!x)
     .filter((t) => t.status === "OPEN" || (t.doneAt !== null && !Number.isNaN(new Date(t.doneAt).getTime()) && berlinDate(new Date(t.doneAt)) === today));
-  const all = [...tr, ...tk];
-  return [...all.filter((i) => i.status === "OPEN"), ...all.filter((i) => i.status === "DONE")];
+  // Betrieb L2 (Punkt 9): offen zuerst, nach Anreisezeit, sonst Zimmernummer (gleiche Regel wie der Server)
+  return [...tr, ...tk].sort(compareHousemanItems);
 }
 
 export const HM_FILTERS = ["all", "open", "traces", "done"] as const;
