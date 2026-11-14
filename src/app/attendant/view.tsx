@@ -28,6 +28,8 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import { hhmm } from "@/lib/i18n/format";
+import { listTier } from "@/lib/planung/listOrder";
+import { berlinHHMM } from "@/lib/dayplan/time";
 
 interface Note {
   id: string;
@@ -255,15 +257,25 @@ export default function AttendantView() {
       defects: (r.defects ?? []).filter((x) => x.workOrder?.status !== "RESOLVED").length,
       eta: d?.eta ?? (r.arrivals ?? []).find((a) => a.eta)?.eta ?? null,
       early: (r.arrivals ?? []).some((a) => a.neededNow) || reasons.some((x) => x.signal === "needed_now" || x.signal === "early_check_in"),
-      urgent: reasons.some((x) => x.signal === "needed_now" || x.signal === "vip"),
+      urgent: reasons.some((x) => x.signal === "needed_now" || x.signal === "vip") || !!d?.rush || !!d?.serviceNow,
+      cleanAfter: d?.cleanAfter ?? null,
     };
   }, [dayById, reasonsOf]);
+
+  // Planung L1 (Regel 7): Stufe aus der Tagesliste (Rush, Service Now, Turn ausgecheckt, Bleiber, …) vor der Route
+  const tierOf = useCallback((r: Room) => {
+    const d = dayById.get(r.id);
+    return listTier({
+      kind: d?.kind ?? null, rush: !!d?.rush || (r.arrivals ?? []).some((a) => a.neededNow), serviceNow: !!d?.serviceNow,
+      cleanAfter: d?.cleanAfter ?? null, checkedOut: !!d?.checkedOut,
+    }, berlinHHMM(new Date()));
+  }, [dayById]);
 
   const groups = useMemo(() => {
     const by: Record<HkGroup, Room[]> = { NOW: [], NEXT: [], DONE: [], OTHER: [] };
     for (const r of rooms) by[hkGroupOf(r.status)].push(r);
-    return { NOW: orderRoute(by.NOW, score), NEXT: orderRoute(by.NEXT, score), DONE: by.DONE, OTHER: by.OTHER };
-  }, [rooms, score]);
+    return { NOW: orderRoute(by.NOW, score, tierOf), NEXT: orderRoute(by.NEXT, score, tierOf), DONE: by.DONE, OTHER: by.OTHER };
+  }, [rooms, score, tierOf]);
   const routeChunks = useMemo(() => chunkByFloor(groups.NEXT), [groups.NEXT]);
   const routeLoad = routeLoadLabel(groups.NOW.length + groups.NEXT.length + groups.DONE.length);
 

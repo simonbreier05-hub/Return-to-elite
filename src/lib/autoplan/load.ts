@@ -8,11 +8,13 @@ import { savedTeamFor } from "@/lib/planung/savedTeam";
 import { estimateSpeeds } from "./speed";
 import type { LiveInput } from "./redistribute";
 import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, PlanRoom, RoomState } from "./types";
+import { parseRestrictions } from "./types";
 import type { SettingsShape } from "@/lib/domain";
-import { bandCenter, roomBand } from "@/lib/planung/floorTeam";
+import { bandTarget, roomBand } from "@/lib/planung/floorTeam";
 import { parseAssignedFloors } from "@/lib/floors";
 import { activePatterns } from "@/lib/learning/store";
 import { planningMinutesFor } from "@/lib/workdata/load";
+import { lastCleanerByStay, type StayRef } from "@/lib/learning/stayContinuity";
 
 import { SUITE_TYPES } from "./types";
 export { SUITE_TYPES };
@@ -38,11 +40,16 @@ export interface DayData {
 const stateOf = (status: string): RoomState => (status === "IN_PROGRESS" ? "STARTED" : status === "CLEAN" || status === "INSPECTED" ? "DONE" : "TODO");
 
 /**
- * Credit-Band einer Kraft (nur Gegenprobe, Plan-1b): ihr Zimmer-Band × durchschnittlicher Credit je Zimmer des Tages.
- * Wer viele Suiten hat (höhere Credits), landet so bei weniger Zimmern. Eigene Credit-Ziele je Typ gibt es nicht mehr.
+ * Credit-Band einer Kraft (Gegenprobe zur Zimmerzahl). Planung L1 (Meeting 13.11.): Credit-Ziel = Zimmer-Ziel der Kraft
+ * (Obergrenze ihres Bands, also je nach Status Vollzeit/Teilzeit/Azubi) × durchschnittlicher Credit des Tages, Toleranz
+ * ± `tolerance` (Setting `creditTolerance`, Standard 1,5). Ohne Toleranz wie bisher: Zimmer-Band × Ø Credit.
  */
-export function bandFor(rooms: { lo: number; hi: number }, avgCredit: number): { lo: number; hi: number } {
+export function bandFor(rooms: { lo: number; hi: number }, avgCredit: number, tolerance?: number): { lo: number; hi: number } {
   const r = (n: number) => Math.round(n * 100) / 100;
+  if (tolerance !== undefined && tolerance > 0) {
+    const target = rooms.hi * avgCredit;
+    return { lo: r(Math.max(0, target - tolerance)), hi: r(target + tolerance) };
+  }
   return { lo: r(rooms.lo * avgCredit), hi: r(rooms.hi * avgCredit) };
 }
 
@@ -77,6 +84,8 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
   const rooms: PlanRoom[] = [];
   const current: Assignment = {};
   const roomState: DayData["roomState"] = {};
+  /** Planung L1 (Regel 13): Bleiber-Zimmer → Aufenthalt (nur Ids). */
+  const stayOfRoom = new Map<string, string>();
   for (const p of plan) {
     const r = p.room;
     if (NOT_CLEANED.has(r.status)) continue;
@@ -100,6 +109,7 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     });
     current[r.id] = assignee;
     roomState[r.id] = { number: r.number, state, assignedToId: r.assignedToId, assignedOn: r.assignedOn };
+    if (kind === "STAYOVER" && p.stayId) stayOfRoom.set(r.id, p.stayId);
   }
 
   // Gestern: Etagen der letzten bestätigten Zuteilung vor diesem Tag
@@ -123,18 +133,47 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     return {
     id: u.id, name: u.name, type: (u.hkType as HkType), level: Math.min(3, Math.max(1, u.hkLevel)) as 1 | 2 | 3,
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
-    ...bandFor(band, avgCredit),
+    ...bandFor(band, avgCredit, settings.creditTolerance),
     roomsLo: band.lo, roomsHi: band.hi,
+    restrictions: parseRestrictions(u.hkRestrictions),
     todayFloors: u.floorsOn === date ? parseAssignedFloors(u.assignedFloors) : [],
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!team || team.includes(u.id)),
   };
   });
   const learnedNotes = await applyLearned(date, rooms, hks);
+  await applyStayContinuity(date, rooms, stayOfRoom, new Set(users.map((u) => u.id))).catch(() => undefined);
   // H3: gemessene Zeiten (nur wenn „Messdaten in Planung verwenden" an ist) — Credits bleiben die Basis
   const minutes = await planningMinutesFor(date, hks.map((h) => h.id)).catch(() => ({} as Record<string, never>));
   for (const h of hks) if (minutes[h.id]) (h as PlanHousekeeper).minutesByKind = minutes[h.id];
   return { date, rooms, current, hks, settings, weights, fullTimeTarget, roomState, learnedNotes };
+}
+
+/**
+ * Planung L1 (Regel 13): Bleiber bekommen als weiche Präferenz die Kraft, die beim selben Aufenthalt zuletzt gereinigt hat
+ * (abgeleitet aus Stay + Logbuch, siehe `src/lib/learning/stayContinuity.ts`). Feste Zuteilungen bleiben unberührt.
+ */
+async function applyStayContinuity(date: string, rooms: PlanRoom[], stayOfRoom: Map<string, string>, attendantIds: Set<string>): Promise<void> {
+  if (!stayOfRoom.size) return;
+  const stays = await prisma.stay.findMany({ where: { id: { in: [...new Set(stayOfRoom.values())] } }, select: { id: true, checkIn: true } });
+  const checkInOf = new Map(stays.map((s) => [s.id, s.checkIn]));
+  const refs: StayRef[] = [];
+  for (const [roomId, stayId] of stayOfRoom) {
+    const checkIn = checkInOf.get(stayId);
+    if (checkIn) refs.push({ roomId, stayId, checkIn });
+  }
+  if (!refs.length) return;
+  const since = new Date(Math.min(...refs.map((r) => r.checkIn.getTime())));
+  const dayStart = berlinToUtc(date, "00:00");
+  const events = await prisma.auditLog.findMany({
+    where: { action: "STATUS_CHANGE", toStatus: "CLEAN", roomId: { in: refs.map((r) => r.roomId) }, userId: { not: null }, createdAt: { gte: since, lt: dayStart } },
+    select: { roomId: true, userId: true, createdAt: true },
+  });
+  const last = lastCleanerByStay(refs, events.map((e) => ({ roomId: e.roomId!, userId: e.userId!, at: e.createdAt })), dayStart, attendantIds);
+  for (const r of rooms) {
+    const hk = last.get(r.id);
+    if (hk && !r.fixedTo) r.stayHk = hk;
+  }
 }
 
 /**
@@ -172,8 +211,9 @@ export function morningInput(d: DayData): PlanInput {
   return {
     rooms, housekeepers: d.hks.filter((h) => h.present).map(({ present: _p, absent: _a, ...h }) => (void _p, void _a, h)),
     weights: d.weights, maxFloors: d.settings.autoplanMaxFloors, fullTimeTarget: d.fullTimeTarget,
-    fullTimeRooms: bandCenter(roomBand("VOLLZEIT", d.settings as unknown as Record<string, number>)),
+    fullTimeRooms: bandTarget(roomBand("VOLLZEIT", d.settings as unknown as Record<string, number>)),
     ...(d.hks.some((h) => h.minutesByKind) ? { shiftMinutes: d.settings.shiftMinutes } : {}),
+    maxSuites: d.settings.maxSuitesPerHk, suiteMinCredit: d.settings.suiteMinCredit,
   };
 }
 

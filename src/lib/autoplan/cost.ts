@@ -1,5 +1,5 @@
 import { CENTER_PULL, LEVEL1_DEMANDING_PENALTY, NUMBER_JUMP_GAP, UNASSIGNED_PENALTY } from "./weights";
-import type { PlanHousekeeper, PlanInput, PlanRoom } from "./types";
+import { isSuite, restrictionHit, type PlanHousekeeper, type PlanInput, type PlanRoom } from "./types";
 
 /** H3: geschätzte Minuten eines Zimmers für eine Person (Suite vor Art; Bleiber mit Wäsche = LAUNDRY). */
 export function roomMinutes(h: PlanHousekeeper, r: PlanRoom): number {
@@ -27,9 +27,15 @@ export interface Compiled {
   pref: Set<number>[];
   /** Heutige Etagen laut Etagenzuweisung (leer = keine). */
   today: Set<number>[];
+  /** Planung L1 (vorberechnet, damit die Kostenfunktion schnell bleibt): 1 = Zimmer zählt als Suite. */
+  suite: Uint8Array;
+  /** Planung L1: [Zimmer × Kraft] 1 = Zimmer verletzt eine Einschränkung der Kraft; null = niemand hat Einschränkungen. */
+  restricted: Uint8Array | null;
+  /** Planung L1 (Regel 13): Index der Kraft vom selben Aufenthalt je Zimmer, -1 = keine. */
+  stayHk: Int16Array;
 }
 
-export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "levelMismatch" | "rooms" | "assignedFloor" | "learned" | "overtime" | "traineeSuite";
+export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "levelMismatch" | "rooms" | "assignedFloor" | "learned" | "overtime" | "traineeSuite" | "suiteCap" | "restriction" | "stayContinuity";
 export interface CostOptions {
   /** Nur die Regeln (Etagen, Interconnecting, Stammetage, Sprünge) — für Umverteilung nach Restzeit. */
   rulesOnly?: boolean;
@@ -48,10 +54,18 @@ export function compile(input: PlanInput): Compiled {
   }));
   const centers = input.housekeepers.map((h) => (h.lo + h.hi) / 2);
   const roomCenters = input.housekeepers.map((h, k) => (h.roomsLo !== undefined && h.roomsHi !== undefined ? (h.roomsLo + h.roomsHi) / 2 : centers[k]));
+  const H = input.housekeepers.length;
+  const suite = Uint8Array.from(rooms, (r) => (isSuite(r, input.suiteMinCredit) ? 1 : 0));
+  const anyRestricted = input.housekeepers.some((h) => h.restrictions?.length);
+  const restricted = anyRestricted ? new Uint8Array(rooms.length * H) : null;
+  if (restricted) rooms.forEach((r, i) => input.housekeepers.forEach((h, k) => { if (restrictionHit(h, r, input.suiteMinCredit)) restricted[i * H + k] = 1; }));
+  const stayHk = Int16Array.from(rooms, (r) => (r.stayHk !== undefined && hkIdx.has(r.stayHk) ? hkIdx.get(r.stayHk)! : -1));
   return {
+    suite, restricted, stayHk,
     input, rooms, order, roomIdx, hkIdx, pairs, num, centers, centerSum: centers.reduce((a, b) => a + b, 0) || 1,
     roomCenters, roomCenterSum: roomCenters.reduce((a, b) => a + b, 0) || 1,
-    pref: input.housekeepers.map((h) => (h.todayFloors?.length ? new Set<number>() : new Set([...h.homeFloors, ...h.yesterdayFloors]))),
+    // Planung L1: Springer (EXTERN) haben keine Präferenz-Etagen — sie gehen dorthin, wo Bedarf ist
+    pref: input.housekeepers.map((h) => (h.todayFloors?.length || h.type === "EXTERN" ? new Set<number>() : new Set([...h.homeFloors, ...h.yesterdayFloors]))),
     today: input.housekeepers.map((h) => new Set(h.todayFloors ?? [])),
   };
 }
@@ -80,7 +94,8 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   const H = hks.length;
   const credits = new Float64Array(H), turn = new Int32Array(H), deep = new Int32Array(H), stay = new Int32Array(H), linen = new Int32Array(H), dem = new Int32Array(H);
   const mask = new Int32Array(H), last = new Int32Array(H).fill(-1), count = new Int32Array(H), minutes = new Float64Array(H);
-  let homeMis = 0, jumps = 0, unassigned = 0, levelMis = 0, todayMis = 0, learnedMis = 0, traineeSuites = 0;
+  const suites = new Int32Array(H);
+  let homeMis = 0, jumps = 0, unassigned = 0, levelMis = 0, todayMis = 0, learnedMis = 0, traineeSuites = 0, restrictionHits = 0, stayMis = 0;
 
   for (const i of c.order) {
     const a = assign[i];
@@ -96,6 +111,9 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     if (r.kind === "STAYOVER") { if (r.laundry) linen[a]++; else stay[a]++; } else if (r.kind === "TURN") turn[a]++; else deep[a]++;
     if (r.demanding.length) { dem[a]++; if (hks[a].level < 2) levelMis++; }
     if (hks[a].type === "AZUBI" && r.demanding.includes("SUITE")) traineeSuites++;
+    if (c.suite[i]) suites[a]++;
+    if (c.restricted && c.restricted[i * H + a]) restrictionHits++;
+    if (c.stayHk[i] >= 0 && c.stayHk[i] !== a) stayMis++;
     mask[a] |= 1 << r.floor;
     const pref = c.pref[a];
     if (pref.size && !pref.has(r.floor)) homeMis++;
@@ -107,7 +125,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     last[a] = i;
   }
 
-  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, levelMismatch: 0, rooms: 0, assignedFloor: 0, learned: 0, overtime: 0, traineeSuite: 0 };
+  const parts: Record<CostPart, number> = { extraFloor: 0, credits: 0, categoryFairness: 0, demandingFairness: 0, interconnectSplit: 0, homeFloor: 0, jump: 0, unassigned: 0, levelMismatch: 0, rooms: 0, assignedFloor: 0, learned: 0, overtime: 0, traineeSuite: 0, suiteCap: 0, restriction: 0, stayContinuity: 0 };
   for (let h = 0; h < H; h++) {
     const extra = popcount(mask[h]) - maxFloors;
     if (extra > 0) parts.extraFloor += extra * w.extraFloor;
@@ -120,6 +138,11 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   parts.unassigned = unassigned * UNASSIGNED_PENALTY;
   parts.levelMismatch = levelMis * LEVEL1_DEMANDING_PENALTY;
   parts.traineeSuite = traineeSuites * (w.traineeSuite ?? 0);
+  parts.restriction = restrictionHits * (w.restriction ?? 0);
+  parts.stayContinuity = stayMis * (w.stayContinuity ?? 0);
+  // Planung L1 (Regel 4): Suiten über dem Maximum je Kraft — weich
+  const maxSuites = c.input.maxSuites;
+  if (maxSuites !== undefined) for (let h = 0; h < H; h++) if (suites[h] > maxSuites) parts.suiteCap += (suites[h] - maxSuites) * (w.suiteCap ?? 0);
 
   if (!opts.rulesOnly) {
     for (let h = 0; h < H; h++) {

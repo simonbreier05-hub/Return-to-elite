@@ -1,17 +1,16 @@
 import type { PlanRoom } from "./types";
 
 /**
- * Reihenfolge in der Route bei Zeitdruck (Interview): 1. Same-Day-Turn (nach Anreisezeit),
- * 2. frühe Anreise, 3. VIP, 4. Bleiber (Linen change, Tidy), 5. Deep clean (Abreise ohne Anreise) — Plan-1b: niedrigste Priorität. Innerhalb einer Stufe Etage → Nummer,
- * damit die Route trotzdem ein vernünftiger Gang bleibt.
- * "Frühe Anreise" = Turn mit bekannter, früher Anreisezeit: sie stehen durch die ETA-Sortierung
- * innerhalb der Turns ganz vorn; Zimmer ohne bekannte ETA (Arrivals-Liste fehlt) kommen danach.
+ * Reihenfolge der Route beim Planen (Planung L1, Meeting 13.11.2026 — VIP ist keine eigene Stufe mehr):
+ * 1. Turn (nach Anreisezeit, frühe Anreisen zuerst), 2. Bleiber (mit oder ohne Wäschewechsel), 3. Abreise/Deep clean.
+ * Innerhalb einer Stufe Etage → Nummer, damit die Route ein vernünftiger Gang bleibt.
+ * Die Live-Reihenfolge der Housekeeper-Liste (Rush, Service Now, „Turn nur wenn ausgecheckt“, „Reinigung ab …“) steht in
+ * `src/lib/planung/listOrder.ts` — sie kennt Signale, die es beim Planen am Morgen noch nicht gibt.
  */
 function tier(r: PlanRoom): number {
   if (r.kind === "TURN") return 0;
-  if (r.vip) return 1;
-  if (r.kind === "STAYOVER") return 2;
-  return 3; // DEPARTURE = Deep clean: niemand wartet auf das Zimmer
+  if (r.kind === "STAYOVER") return 1;
+  return 2; // DEPARTURE = Deep clean: niemand wartet auf das Zimmer
 }
 
 const etaKey = (eta: string | null) => (eta ?? "99:99");

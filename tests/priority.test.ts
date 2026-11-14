@@ -164,10 +164,18 @@ describe("predictCleaningMinutes — baseline ML hook", () => {
     expect(suite).toBeLessThan(pent);
   });
 
-  it("checkout clean takes longer than stayover service", () => {
+  // Planung L1 (Meeting 13.11.2026): die alte Regel „Bleiber = 0,7 Abreise“ entfällt — Abreise und Bleiber gleich lang.
+  it("checkout and stayover take the same time (old 0.7 stayover rule removed)", () => {
     const checkout = predictCleaningMinutes({ type: "DELUXE", isCheckoutToday: true });
     const stayover = predictCleaningMinutes({ type: "DELUXE", isCheckoutToday: false });
-    expect(checkout).toBeGreaterThan(stayover);
+    expect(checkout).toBe(stayover);
+  });
+
+  it("with a known credit: credit × 40 min, whatever the kind of clean", () => {
+    const m = (credit: number, isCheckoutToday = false) => predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday, credit });
+    expect([m(1), m(1.5), m(1.75), m(2), m(3.5)]).toEqual([40, 60, 70, 80, 140]);
+    expect(m(1.5, true)).toBe(m(1.5, false));
+    expect(predictCleaningMinutes({ type: "CLASSIC", isCheckoutToday: false, credit: 2 }, {}, 30)).toBe(60);
   });
 
   it("longer stays and more guests increase the estimate", () => {

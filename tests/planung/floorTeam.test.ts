@@ -97,17 +97,18 @@ describe("Live-Kennzahl je Etage", () => {
 
 describe("Zimmer-Zielband je Typ (Plan-1b)", () => {
   const s = DEFAULT_SETTINGS as unknown as Record<string, number>;
-  it("Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8; Stufe spielt keine Rolle mehr", () => {
-    expect(roomBand("VOLLZEIT", s)).toEqual({ lo: 10, hi: 13 });
-    expect(roomBand("TEILZEIT", s)).toEqual({ lo: 6, hi: 9 });
-    expect(roomBand("AZUBI", s)).toEqual({ lo: 6, hi: 8 });
-    expect(roomBand(undefined, s)).toEqual({ lo: 10, hi: 13 });
+  // Planung L1 (Meeting 13.11.2026): Ziel = Obergrenze, möglichst nicht überschreiten — Vollzeit 11, Teilzeit/Azubi 7
+  it("Vollzeit 10–11, Teilzeit 6–7, Azubi 6–7; Stufe spielt keine Rolle", () => {
+    expect(roomBand("VOLLZEIT", s)).toEqual({ lo: 10, hi: 11 });
+    expect(roomBand("TEILZEIT", s)).toEqual({ lo: 6, hi: 7 });
+    expect(roomBand("AZUBI", s)).toEqual({ lo: 6, hi: 7 });
+    expect(roomBand(undefined, s)).toEqual({ lo: 10, hi: 11 });
   });
-  it("persönliches Tagesziel (dailyTarget) = Zimmerzahl ± 1 und ersetzt das Typ-Band", () => {
-    expect(roomBand("AZUBI", s, 7)).toEqual({ lo: 6, hi: 8 });
-    expect(roomBand("VOLLZEIT", s, 12)).toEqual({ lo: 11, hi: 13 });
-    expect(roomBand("VOLLZEIT", s, null)).toEqual({ lo: 10, hi: 13 });
-    expect(roomBand("VOLLZEIT", s, 0)).toEqual({ lo: 10, hi: 13 });
+  it("persönliches Tagesziel (dailyTarget) = Obergrenze, 1 Zimmer Spielraum darunter; ersetzt das Typ-Band", () => {
+    expect(roomBand("AZUBI", s, 7)).toEqual({ lo: 6, hi: 7 });
+    expect(roomBand("VOLLZEIT", s, 12)).toEqual({ lo: 11, hi: 12 });
+    expect(roomBand("VOLLZEIT", s, null)).toEqual({ lo: 10, hi: 11 });
+    expect(roomBand("VOLLZEIT", s, 0)).toEqual({ lo: 10, hi: 11 });
   });
 });
 

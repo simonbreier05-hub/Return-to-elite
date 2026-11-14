@@ -16,14 +16,22 @@ const PatchSchema = z.object({
   status: z.enum(["EXPECTED", "CHECKED_IN", "CANCELLED"]).optional(),
 });
 
-/** PATCH /api/arrivals/[id] — front office edits ETA/flags/check-in. */
+/**
+ * PATCH /api/arrivals/[id] — front office edits ETA/flags/check-in.
+ * Planung L1 (Regel 10): Rush/Sofort (`neededNow`) dürfen Front Office **und Supervisor** setzen (Duty Manager immer);
+ * der Supervisor darf hier nur dieses eine Feld ändern. Das Zimmer springt in der Housekeeper-Liste ganz nach oben
+ * (`src/lib/planung/listOrder.ts`), die Kraft bekommt eine Meldung (unten, `notifyHousekeeperOfRoomChange`).
+ */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(["front_office"]);
+  const auth = await requireRole(["front_office", "supervisor"]);
   if (!auth.ok) return auth.response;
   const { id } = await params;
 
   const parsed = PatchSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid payload.", code: "INVALID_INPUT" }, { status: 400 });
+  if (auth.session.role === "supervisor" && Object.keys(parsed.data).some((k) => k !== "neededNow")) {
+    return NextResponse.json({ error: "Supervisor dürfen nur „Sofort“ setzen.", code: "FORBIDDEN" }, { status: 403 });
+  }
 
   const existing = await prisma.arrival.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Arrival not found.", code: "ARRIVAL_NOT_FOUND" }, { status: 404 });

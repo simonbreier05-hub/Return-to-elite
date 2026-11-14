@@ -5,6 +5,7 @@ import type { RoomType } from "@/lib/domain";
 import { computeRoomCredit } from "@/lib/rooms/roomCredit";
 import { shortGuestName, timesInText } from "./guestName";
 import { activePauses, type PauseView } from "@/lib/work/pauseData";
+import { isCheckedOut, parseCleanWish } from "@/lib/planung/listOrder";
 
 /** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
@@ -47,6 +48,14 @@ export interface RoomRow {
   pause: PauseView | null;
   /** H2: offene Hinweise des Teams zum Zimmer (RoomNote OPEN, nicht vom Gast), z. B. aus der Planungsphase — auch für Housekeeper. */
   hints: { id: string; body: string }[];
+  /** Planung L1 (Regel 10): Rush/Sofort — `Arrival.neededNow` (nur Front Office/Supervisor setzen es). */
+  rush: boolean;
+  /** Planung L1 (Regel 7): offener Gastwunsch „Reinigung jetzt“. Nur das Signal, kein Text. */
+  serviceNow: boolean;
+  /** Planung L1 (Regel 9): Gastwunsch „Reinigung ab HH:MM“ — Zimmer rückt nach hinten, Uhrzeit sichtbar. */
+  cleanAfter: string | null;
+  /** Planung L1 (Regel 7): abreisender Gast ist ausgecheckt (nur bei Turns von Bedeutung). */
+  checkedOut: boolean;
 }
 
 /** Welcher Aufenthalt zählt für die Anzeige: Anreise/Turn → der anreisende Gast, sonst der bleibende bzw. abreisende. */
@@ -70,7 +79,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   const ids = rooms.map((r) => r.id);
   const plans = await prisma.dayRoomPlan.findMany({ where: { date, roomId: { in: ids } } });
   const planBy = new Map(plans.map((p) => [p.roomId, p]));
-  const stayIds = plans.map((p) => stayIdFor(p)).filter((x): x is string => !!x);
+  // auch der abreisende Aufenthalt eines Turns (für „ausgecheckt?“, Regel 7)
+  const stayIds = [...new Set(plans.flatMap((p) => [stayIdFor(p), p.stayId]).filter((x): x is string => !!x))];
   const stays = await prisma.stay.findMany({ where: { id: { in: stayIds } } });
   const stayBy = new Map(stays.map((s) => [s.id, s]));
   const traces = await prisma.trace.findMany({ where: { roomId: { in: ids }, date, ...(depts ? { dept: { in: depts } } : {}) }, orderBy: { createdAt: "asc" } });
@@ -91,6 +101,13 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
 
   const pauses = await activePauses("ROOM", rooms.filter((r) => r.status === "IN_PROGRESS").map((r) => r.id));
 
+  // Planung L1 (Regeln 7, 9, 10): Signale für die Reihenfolge — nur Ja/Nein bzw. Uhrzeit, nie Gastnamen oder Text
+  const rush = new Set((await prisma.arrival.findMany({ where: { roomId: { in: ids }, neededNow: true, status: "EXPECTED" }, select: { roomId: true } })).map((a) => a.roomId));
+  const cleanWish = new Map<string, ReturnType<typeof parseCleanWish>>();
+  for (const g of await prisma.guestRequest.findMany({ where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true, detail: true }, orderBy: { createdAt: "asc" } })) {
+    cleanWish.set(g.roomId, parseCleanWish(g.detail)); // der jüngste offene Wunsch gilt
+  }
+
   return rooms.map((r) => {
     const p = planBy.get(r.id);
     const stay = p ? stayBy.get(stayIdFor(p) ?? "") : undefined;
@@ -107,6 +124,11 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       type: r.type, defects: defectCount.get(r.id) ?? 0, wish: wishBy.get(r.id) ?? null,
       pause: r.status === "IN_PROGRESS" ? pauses.get(r.id) ?? null : null,
       hints: hintsBy.get(r.id) ?? [],
+      rush: rush.has(r.id),
+      serviceNow: cleanWish.get(r.id)?.serviceNow ?? false,
+      cleanAfter: cleanWish.get(r.id)?.cleanAfter ?? null,
+      // nur echte Meldung (POST /api/rooms/[id]/checkout bzw. Opera-Code) — nie aus „frei“ geraten (Standardwert VACANT)
+      checkedOut: isCheckedOut(p?.stayId ? stayBy.get(p.stayId) : null),
     };
   });
 }

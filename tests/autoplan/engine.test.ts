@@ -144,7 +144,8 @@ describe("mehr Kräfte als Arbeit", () => {
 });
 
 describe("Route", () => {
-  it("Plan-1b: Turn (nach Anreisezeit) → VIP → Bleiber → Deep clean (Abreise ohne Anreise) zuletzt", () => {
+  // Planung L1 (Entscheidung 14.11.2026): VIP ist keine eigene Stufe mehr — Turn → Bleiber → Deep clean.
+  it("Planung L1: Turn (nach Anreisezeit) → Bleiber → Deep clean (Abreise ohne Anreise) zuletzt; VIP ohne eigene Stufe", () => {
     const base = { section: "1A", laundry: false, credits: 1, demanding: [], traces: 0, interconnect: [], state: "TODO", fixedTo: null } as const;
     const mk = (id: string, floor: number, kind: PlanRoom["kind"], extra: Partial<PlanRoom> = {}): PlanRoom =>
       ({ ...base, id, number: `${floor}0${id}`, floor, kind, vip: false, eta: null, ...extra }) as PlanRoom;
@@ -152,14 +153,14 @@ describe("Route", () => {
       mk("1", 1, "STAYOVER"), mk("2", 1, "DEPARTURE"), mk("3", 2, "STAYOVER", { vip: true }),
       mk("4", 3, "TURN", { eta: "15:00" }), mk("5", 4, "TURN", { eta: "11:00" }), mk("6", 5, "DEPARTURE", { vip: true }),
     ]);
-    expect(route.map((r) => r.id)).toEqual(["5", "4", "3", "6", "1", "2"]);
+    expect(route.map((r) => r.id)).toEqual(["5", "4", "1", "3", "2", "6"]);
   });
 
   it("Vorschlag liefert die Route in dieser Reihenfolge", () => {
     const res = proposePlan(makeInput(makeDay(94), TEAM()));
     const rooms = new Map(makeDay(94).map((x) => [x.id, x]));
     for (const rt of res.routes) {
-      const tiers = rt.roomIds.map((id) => { const x = rooms.get(id)!; return x.kind === "TURN" ? 0 : x.vip ? 1 : x.kind === "STAYOVER" ? 2 : 3; });
+      const tiers = rt.roomIds.map((id) => { const x = rooms.get(id)!; return x.kind === "TURN" ? 0 : x.kind === "STAYOVER" ? 1 : 2; });
       expect(tiers).toEqual([...tiers].sort((a, b) => a - b));
     }
   });

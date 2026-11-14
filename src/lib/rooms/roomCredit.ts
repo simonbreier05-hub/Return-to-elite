@@ -17,3 +17,11 @@ export function computeRoomCredit({ type, credits, roomCredit }: RoomCreditInput
   if (typeof roomCredit === "number" && Number.isFinite(roomCredit) && roomCredit > 0) return roomCredit;
   return credits[type] ?? 1;
 }
+
+/**
+ * Planung L1 (Meeting 13.11.): Zeit eines Zimmers = Credit × Minuten je Credit (Setting `minutesPerCredit`, Standard 40):
+ * 1 = 40 min, 1,5 = 60, 1,75 = 70, 2 = 80, 3,5 = 140. Gilt für jede Art gleich — „Bleiber = 0,7 Abreise“ gibt es nicht mehr.
+ */
+export function creditMinutes(credit: number, minutesPerCredit: number): number {
+  return Math.round(credit * minutesPerCredit);
+}

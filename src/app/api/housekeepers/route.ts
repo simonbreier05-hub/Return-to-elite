@@ -13,9 +13,11 @@ export async function GET() {
   const today = berlinDate(new Date());
   const users = await prisma.user.findMany({
     where: { role: "room_attendant" }, orderBy: { name: "asc" },
-    select: { id: true, name: true, hkType: true, hkLevel: true, homeFloors: true, dailyTarget: true, hkActive: true, absentDate: true },
+    select: { id: true, name: true, hkType: true, hkLevel: true, homeFloors: true, dailyTarget: true, hkActive: true, absentDate: true, hkRestrictions: true },
   });
   return NextResponse.json({
     housekeepers: users.map(({ absentDate, ...u }) => ({ ...u, absentToday: absentDate === today })),
+    // Planung L1 (Regel 6): die Stufe darf nur der Duty Manager ändern — die Oberfläche sperrt das Feld sonst
+    canEditLevel: auth.session.role === "duty_manager",
   });
 }

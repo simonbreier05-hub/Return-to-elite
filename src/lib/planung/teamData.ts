@@ -5,7 +5,7 @@ import { parseAssignedFloors } from "@/lib/floors";
 import { assignFloors } from "@/lib/users/assignFloors";
 import { loadDay } from "@/lib/autoplan/load";
 import { getSettings } from "@/lib/settings";
-import { bandCenter, roomBand } from "./floorTeam";
+import { bandTarget, roomBand } from "./floorTeam";
 import { PLAN_FLOORS, pickDefaultTeam, type SavedTeam, type TeamSelection } from "./team";
 import { supervisorBadges, type HouseSupervisor } from "./model";
 
@@ -49,9 +49,9 @@ export async function getTeamState(date: string): Promise<TeamState> {
     prisma.user.findMany({ where: { role: "houseman" }, orderBy: { name: "asc" }, select: { id: true, name: true } }),
   ]);
   const hk: HkMember[] = hks.map((u) => {
-    // Plan-1b: Ziel in Zimmern (Mitte des Bands je Typ), Bedarf = Zimmer des Tages
+    // Planung L1: Ziel in Zimmern = Obergrenze des Bands je Typ (11 / 7 / 7), Bedarf = Zimmer des Tages
     const band = roomBand(u.hkType, settings as unknown as Record<string, number>, u.dailyTarget);
-    const target = Math.round(bandCenter(band) * 10) / 10;
+    const target = bandTarget(band);
     return { id: u.id, name: u.name, kind: u.hkType, level: Math.min(3, Math.max(1, u.hkLevel)), target, roomsLo: band.lo, roomsHi: band.hi };
   });
   const badges = supervisorBadges(sups);

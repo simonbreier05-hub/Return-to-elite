@@ -100,11 +100,17 @@ describe("Zuteilungsvorschlag und Umverteilung (Wegwerf-DB)", () => {
     // der bestätigte Plan bleibt: Umverteilung gibt es nur für einen bestätigten Plan (mit dessen Kräften)
   });
 
-  it("Ausfall: ein Tap erzeugt einen konkreten Vorschlag; Ablehnen ist dauerhaft, Änderung der Lage nicht", async () => {
+  it("Ausfall: Standard kein Vorschlag (Regel 11); eingeschaltet ein konkreter Vorschlag; Ablehnen ist dauerhaft, Änderung der Lage nicht", async () => {
     // Zimmer von Bea: eins begonnen
     const bea = await prisma.room.findMany({ where: { assignedToId: hkId.b }, orderBy: { number: "asc" } });
     const begun = bea[0];
     await prisma.room.update({ where: { id: begun.id }, data: { status: "IN_PROGRESS" } });
+    // Planung L1 (Regel 11): Standard = bei Krankmeldung nichts automatisch neu verteilen, auch kein Vorschlag
+    await setAbsent(hkId.b, true, sup.userId);
+    expect((await listSuggestions(DATE)).suggestions.some((x) => x.kind === "ABSENT")).toBe(false);
+    expect(await prisma.room.count({ where: { assignedToId: hkId.b } })).toBe(bea.length); // nichts verschoben
+    // eingeschaltet (Setting redistributeOnAbsence = 1): wie bisher ein konkreter Vorschlag, den der Supervisor entscheidet
+    await prisma.setting.upsert({ where: { key: "redistributeOnAbsence" }, create: { key: "redistributeOnAbsence", value: "1" }, update: { value: "1" } });
     const r = await setAbsent(hkId.b, true, sup.userId);
     expect(r.created).toBeGreaterThanOrEqual(1); // Ausfall (+ ggf. offenes Zimmer aus dem Vortest)
     const list = await listSuggestions(DATE);

@@ -16,6 +16,9 @@ export const AUTOPLAN_WEIGHTS = {
   overtime: 3, // H3: je 10 Minuten über Schichtende (geschätzt aus Messdaten)
   learned: 10, // H3: je Zimmer gegen ein gelerntes Muster (Person / Mindeststufe) — weich, harte Regeln gewinnen
   traineeSuite: 40, // Plan-1b: je Junior Suite/Suite bei einem Azubi (Azubis vor allem Standard/Deluxe) — weich, nie eine Sperre
+  suiteCap: 60, // Planung L1: je Suite über das Maximum je Kraft (Setting maxSuitesPerHk) — weich, Warnung
+  restriction: 80, // Planung L1: je Zimmer gegen eine Einschränkung der Kraft (z. B. keine Suiten) — weich, Warnung
+  stayContinuity: 8, // Planung L1: je Bleiber, der nicht bei der Kraft vom selben Aufenthalt landet — weich, überschreibbar
 } as const;
 
 export type AutoplanWeights = { -readonly [K in keyof typeof AUTOPLAN_WEIGHTS]: number };

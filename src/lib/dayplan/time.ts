@@ -10,6 +10,11 @@ export function berlinToUtc(date: string, hhmm: string): Date {
   return new Date(guess.getTime() - (asUtc - guess.getTime()));
 }
 
+/** Uhrzeit „HH:MM“ (24 h) in Berlin — z. B. für „Reinigung ab 13:00“ (Planung L1). */
+export function berlinHHMM(now: Date): string {
+  return now.toLocaleTimeString("en-GB", { timeZone: "Europe/Berlin", hour: "2-digit", minute: "2-digit", hourCycle: "h23" });
+}
+
 /** Kalendertag (YYYY-MM-DD) in Berlin. */
 export function berlinDate(now: Date): string {
   return now.toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });

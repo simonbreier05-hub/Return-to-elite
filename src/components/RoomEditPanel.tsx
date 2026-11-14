@@ -27,7 +27,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
 function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () => void | Promise<void> }) {
   const { t, fmt } = useLocale();
   const { msg, ooo, setOoo, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
-    setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd } = useRoomEdit(room, onChanged);
+    setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd, canCheckOut, checkOut } = useRoomEdit(room, onChanged);
   const editRow = (kind: "trace" | "note", id: string) => editing && editing.kind === kind && editing.id === id && (
     <div className="mt-1 flex flex-col gap-2 sm:flex-row">
       <input className={field} value={editing.text} maxLength={kind === "trace" ? 300 : 1000} onChange={(e) => setEditing({ ...editing, text: e.target.value })} aria-label={t(kind === "trace" ? "roomEdit.traceText" : "roomEdit.noteEdit")} />
@@ -67,6 +67,7 @@ function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () =>
           ? <TwoTapButton onConfirm={() => setDnd(false)}>{t("roomEdit.dndClear")}</TwoTapButton>
           : <TwoTapButton disabled={!room.canBlock} onConfirm={() => setDnd(true)}>{t("roomEdit.dndSet")}</TwoTapButton>}
         {guestDnd && <div className="mt-2"><TwoTapButton onConfirm={clearGuestDnd}>{t("roomEdit.guestDndClear")}</TwoTapButton></div>}
+        {canCheckOut && <div className="mt-2"><TwoTapButton onConfirm={checkOut}>{t("roomEdit.checkedOut")}</TwoTapButton></div>}
       </section>
 
       <section>

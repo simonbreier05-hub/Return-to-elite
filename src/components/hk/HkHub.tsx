@@ -92,13 +92,14 @@ export function HkHub(p: HkHubProps) {
     const v = i.view;
     const ui = hkRowStatus(v);
     const pill = kindPill(v.kind);
-    const markers = hkMarkers(v).map((m) => ({ kind: m, label: t(MARKER_UI[m].labelKey) }));
+    const markers = hkMarkers(v).map((m) => ({ kind: m, label: t(MARKER_UI[m].labelKey, m === "later" ? { time: v.cleanAfter ?? "" } : undefined) }));
     const state = p.selectedId === v.id ? "selected" : i.group === "DONE" ? "done" : "default";
     const common = {
       room: v.number,
       guest: i.guest ?? undefined,
       lang: langCode(i.lang) ?? undefined,
-      pill: pill ? { label: t(pill.labelKey), tone: pill.tone } : undefined,
+      // Planung L1 (Regel 9): „Reinigung ab HH:MM“ steht sichtbar an der Art-Pille, nicht nur als Symbol
+      pill: pill ? { label: v.cleanAfter ? `${t(pill.labelKey)} · ${t("ui.marker.later", { time: v.cleanAfter })}` : t(pill.labelKey), tone: pill.tone } : undefined,
       status: { value: ui, label: t(STATUS_UI[ui].labelKey) },
       state,
       onClick: () => p.onSelect(v.id),

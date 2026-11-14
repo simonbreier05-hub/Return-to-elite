@@ -6,7 +6,8 @@ import type { TKey } from "@/lib/i18n/translations";
 import type { IconName } from "./icons";
 import type { Tone } from "./tone";
 
-export const MARKERS = ["priority", "dnd", "defect", "laundry", "arrival", "vip", "pause"] as const;
+/** `later` = Planung L1 (Regel 9): Gastwunsch „Reinigung ab HH:MM“ — Text mit Uhrzeit (`ui.marker.later`, {{time}}). */
+export const MARKERS = ["priority", "dnd", "defect", "laundry", "arrival", "vip", "pause", "later"] as const;
 export type MarkerKind = (typeof MARKERS)[number];
 
 export interface MarkerUi {
@@ -23,6 +24,7 @@ export const MARKER_UI: Record<MarkerKind, MarkerUi> = {
   arrival: { icon: "log-in", tone: "accent", labelKey: "ui.marker.arrival" },
   vip: { icon: "star", tone: "accent", labelKey: "ui.marker.vip" },
   pause: { icon: "pause", tone: "warning", labelKey: "ui.marker.pause" },
+  later: { icon: "clock", tone: "info", labelKey: "ui.marker.later" },
 };
 
 /** RoomRow zeigt höchstens zwei Marker (Figma `21:144`), RoomRowCompact einen (`39:1948`). */
