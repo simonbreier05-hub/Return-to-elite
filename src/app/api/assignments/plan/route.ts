@@ -155,8 +155,9 @@ export async function POST(req: NextRequest) {
       // than a stayover; see splitForCapacity for where this matters.
       isUrgentTurnover: departureIds.has(room.id) && room.arrivals.length > 0,
       estimatedMinutes: predictCleaningMinutes(
-        { type: room.type, isCheckoutToday: departureIds.has(room.id), baseCleanMinutes: room.baseCleanMinutes },
-        { stayLengthNights: 2 }
+        { type: room.type, isCheckoutToday: departureIds.has(room.id), baseCleanMinutes: room.baseCleanMinutes, credit: room.credit },
+        { stayLengthNights: 2 },
+        settings.minutesPerCredit,
       ),
       priorityScore,
     }));

@@ -24,11 +24,12 @@ describe("Reinigungsart", () => {
 });
 
 describe("Status je Kraft (Zimmerzahl)", () => {
-  it("Spannen je Typ aus den Einstellungen: Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8; unbekannt = Vollzeit", () => {
-    expect(bandOf("VOLLZEIT")).toEqual({ lo: 10, hi: 13 });
-    expect(bandOf("TEILZEIT")).toEqual({ lo: 6, hi: 9 });
-    expect(bandOf("AZUBI")).toEqual({ lo: 6, hi: 8 });
-    expect(bandOf(undefined)).toEqual({ lo: 10, hi: 13 });
+  // Planung L1 (Meeting 13.11.2026): Ziel Vollzeit 11, Teilzeit/Azubi 7 (Obergrenze)
+  it("Spannen je Typ aus den Einstellungen: Vollzeit 10–11, Teilzeit 6–7, Azubi 6–7; unbekannt = Vollzeit", () => {
+    expect(bandOf("VOLLZEIT")).toEqual({ lo: 10, hi: 11 });
+    expect(bandOf("TEILZEIT")).toEqual({ lo: 6, hi: 7 });
+    expect(bandOf("AZUBI")).toEqual({ lo: 6, hi: 7 });
+    expect(bandOf(undefined)).toEqual({ lo: 10, hi: 11 });
     // Hausregel aus den Einstellungen gewinnt (dieselbe Quelle wie der Zuteilungsvorschlag)
     expect(bandOf("TEILZEIT", { roomsTzMin: 5, roomsTzMax: 8 })).toEqual({ lo: 5, hi: 8 });
   });

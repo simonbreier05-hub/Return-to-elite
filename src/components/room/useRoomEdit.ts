@@ -50,7 +50,10 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
   const guestDnd = room.guestRequests.find((g) => g.kind === "DND");
   const clearGuestDnd = () => guestDnd && run(() => api(`/api/guest-requests/${guestDnd.id}`, { method: "PATCH", body: { status: "DONE" } }));
   const isDnd = room.status === "BLOCKED" && room.blockReason === "DND";
+  // Planung L1 (Regel 7): Abreise heute → „Gast ausgecheckt“ melden; erst dann rückt ein Turn vor die Bleiber
+  const canCheckOut = room.day?.kind === "SAME_DAY_TURN" || room.day?.kind === "DEPARTURE";
+  const checkOut = () => run(() => api(`/api/rooms/${room.id}/checkout`, { body: {} }));
   return { msg, ooo, setOoo, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
-    setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd };
+    setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd, canCheckOut, checkOut };
 }
 

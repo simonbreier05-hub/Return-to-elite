@@ -43,12 +43,15 @@ model User {
   floorsOn      String?
   // M2b — Stammdaten für den Zuteilungsvorschlag. Beschäftigtendaten: nur Supervisor/Duty Manager
   // dürfen sie sehen, nie Housekeeper; nie in Logs (siehe docs/autoplan.md).
-  hkType       String   @default("VOLLZEIT") // VOLLZEIT | TEILZEIT | AZUBI
+  hkType       String   @default("VOLLZEIT") // VOLLZEIT | TEILZEIT | AZUBI | EXTERN (Springer/Aushilfe, Planung L1)
   hkLevel      Int      @default(2) // Stufe 1..3 (1 = nie anspruchsvolle Zimmer)
   homeFloors   String   @default("") // Stammetagen, 0–2, komma-getrennt
   dailyTarget  Float? // überschreibt das Tagesziel des Typs (Credits)
   hkActive     Boolean  @default(true)
   absentDate   String? // "YYYY-MM-DD": an diesem Tag abwesend (ein Tap)
+  // Planung L1 (additiv): Einschränkungen je Person als feste Codes, komma-getrennt (NO_SUITE | NO_VIP | NO_ALLERGY), nie Freitext.
+  // Beschäftigtendaten wie hkLevel: nur hinter requireRole(["supervisor"]), nie in Logs.
+  hkRestrictions String   @default("")
   createdAt     DateTime  @default(now())
 
   assignedRooms   Room[]      @relation("RoomAssignee")

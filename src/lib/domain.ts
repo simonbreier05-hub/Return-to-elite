@@ -260,10 +260,12 @@ export const DEFAULT_SETTINGS = {
   guestStayDeleteDays: 30,
   // M2b — Zuteilungsvorschlag (docs/autoplan.md). Gewichte der Kostenfunktion: Setting "autoplanWeight.<name>".
   autoplanMaxFloors: 2, // höchstens so viele Etagen je Housekeeper (weich)
-  stayoverFactor: 0.5, // Plan-1b: nur noch Zeitfaktor — Tidy dauert ca. halb so lang wie ein Turn (Startschätzung Arbeitsdaten)
-  stayoverLaundryFactor: 1, // Plan-1b: nur noch Zeitfaktor — Linen change dauert so lang wie ein Turn
+  // Planung L1 (Meeting 13.11.): Zeit hängt nur am Credit (1 Credit = minutesPerCredit Minuten), nicht an der Art — die alte
+  // Regel „Bleiber = 0,7 Abreise“ entfällt. Die Faktoren bleiben einstellbar, Standard 1 = gleiche Zeit je Credit.
+  stayoverFactor: 1,
+  stayoverLaundryFactor: 1,
   autoplanManyTraces: 2, // ab so vielen offenen Traces gilt ein Zimmer als anspruchsvoll
-  minutesPerCredit: 25, // Start-Schätzung, bis aus den heutigen Zeitstempeln berechnet wird
+  minutesPerCredit: 40, // Planung L1: 1 Credit = 40 min (1,5 = 60 · 1,75 = 70 · 2 = 80 · 3,5 = 140); Start-Schätzung bis Messwerte da sind
   earlyFinishMinutes: 45, // "früher fertig": geschätzte Restzeit darunter
   redistributionMaxMoves: 4, // höchstens so viele Zimmer je Umverteilungsvorschlag
   // Chat-Hub: Nachrichten werden so viele Tage nach dem Senden gelöscht (stündlich + Nachtlöschung, src/lib/chat/retention.ts).
@@ -271,9 +273,20 @@ export const DEFAULT_SETTINGS = {
   statusRewindMinutes: 10, // Housekeeper darf den eigenen letzten Statusschritt so lange zurückspulen (src/lib/rooms/rewind.ts)
   // Plan-1b (Antwort Simon Nov. 2026): Zimmerzahl ist das Hauptziel, je Typ (nicht mehr je Stufe):
   // Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8 Zimmer. Credits beschreiben nur noch die Zimmerkategorie (Gegenprobe).
-  roomsVzMin: 10, roomsVzMax: 13,
-  roomsTzMin: 6, roomsTzMax: 9,
-  roomsAzMin: 6, roomsAzMax: 8,
+  // Planung L1 (Meeting 13.11.): „Max“ = Ziel, möglichst nicht überschreiten (weich): Vollzeit 11, Teilzeit/Azubi 7 Zimmer.
+  // „Min“ = Untergrenze ohne Warnung. Springer (EXTERN) rechnen wie Vollzeit.
+  roomsVzMin: 10, roomsVzMax: 11,
+  roomsTzMin: 6, roomsTzMax: 7,
+  roomsAzMin: 6, roomsAzMax: 7,
+  // Planung L1: Credit-Ziel der Kraft = Zimmer-Ziel × Ø Credit des Tages, Toleranz ± creditTolerance.
+  creditTolerance: 1.5,
+  // Planung L1: höchstens so viele Suiten je Housekeeper (weich, Warnung). Suite = Zimmer ab suiteMinCredit Credits
+  // (Standard 1,5 = Junior Suite und größer).
+  maxSuitesPerHk: 2,
+  suiteMinCredit: 1.5,
+  // Planung L1 (Regel 11): 1 = bei Krankmeldung automatisch einen Umverteilungs-Vorschlag erzeugen; 0 (Standard) = aus,
+  // der Supervisor verteilt von Hand.
+  redistributeOnAbsence: 0,
   // Etagen-Vorschlag aus tatsächlichen Einsätzen (src/lib/planung/floorTeam.ts):
   // Etage vorschlagen, wenn die Person an ≥ floorSuggestMinDays der letzten floorSuggestWindow Einsatztage dort war.
   floorSuggestWindow: 5,

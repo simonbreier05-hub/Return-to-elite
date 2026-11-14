@@ -34,6 +34,8 @@ export interface HkRoomView {
   early: boolean;
   /** Dringend laut Priorität (`needed_now` oder `vip`) — gleiche Regel wie der bisherige Prioritätssprung. */
   urgent: boolean;
+  /** Planung L1 (Regel 9): Gastwunsch „Reinigung ab HH:MM“ — Uhrzeit wird angezeigt. */
+  cleanAfter?: string | null;
 }
 
 /** Status-Anzeige einer Zeile: Pause überdeckt (ändert nie den Status), Gast-DND zeigt „DND“ an offenen Zimmern. */
@@ -67,6 +69,7 @@ export function hkMarkers(r: HkRoomView): MarkerKind[] {
   const shown = hkRowStatus(r);
   const out: MarkerKind[] = [];
   if (r.urgent || r.early) out.push("priority");
+  if (r.cleanAfter) out.push("later"); // Regel 9: Uhrzeit immer sichtbar (vor den übrigen Markern)
   if (r.dnd && shown !== "dnd") out.push("dnd");
   if (r.defects > 0 && shown !== "defect") out.push("defect");
   if (r.paused && shown !== "paused") out.push("pause");

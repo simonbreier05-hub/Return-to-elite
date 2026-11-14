@@ -89,8 +89,9 @@ export async function GET(req: NextRequest) {
         }
       );
       const estimatedMinutes = predictCleaningMinutes(
-        { type: room.type, isCheckoutToday: room.isCheckoutToday, baseCleanMinutes: room.baseCleanMinutes },
-        { stayLengthNights: 2 } // TODO(ml): pull real guest profile from PMS
+        { type: room.type, isCheckoutToday: room.isCheckoutToday, baseCleanMinutes: room.baseCleanMinutes, credit: room.credit },
+        { stayLengthNights: 2 }, // TODO(ml): pull real guest profile from PMS
+        settings.minutesPerCredit,
       );
       return {
         roomId: room.id,

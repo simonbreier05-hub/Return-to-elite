@@ -61,11 +61,27 @@ beforeAll(async () => {
 afterAll(async () => { await prisma.$disconnect(); rmSync(dir, { recursive: true, force: true }); });
 
 describe("Zimmermädchen-Liste", () => {
-  it("liefert nur die eigenen Zimmer in Laufplan-Reihenfolge, ohne alte Zuteilungen", async () => {
+  // Planung L1 (Regel 7): Stufe vor Laufplan — Bleiber (202, 203 nach routeOrder) → Turn noch belegt (204) → Abreise (201)
+  it("liefert nur die eigenen Zimmer, Stufe vor Laufplan-Reihenfolge, ohne alte Zuteilungen", async () => {
     getSessionMock.mockReset(); getSessionMock.mockResolvedValue({ userId: ids.anna, name: "anna Test", role: "room_attendant" });
     const body = await (await housekeeperGet()).json();
-    expect(body.rooms.map((r: { number: string }) => r.number)).toEqual(["202", "201", "203", "204"]);
+    expect(body.rooms.map((r: { number: string }) => r.number)).toEqual(["202", "203", "204", "201"]);
     expect(body.date).toBe(D);
+  });
+
+  it("Planung L1 (Regel 7): Turn rückt erst nach dem Checkout vor die Bleiber", async () => {
+    getSessionMock.mockReset(); getSessionMock.mockResolvedValue({ userId: ids.anna, name: "anna Test", role: "room_attendant" });
+    const r204 = await prisma.room.findUniqueOrThrow({ where: { number: "204" } });
+    const plan = await prisma.dayRoomPlan.findFirstOrThrow({ where: { date: D, roomId: r204.id } });
+    const before = await prisma.stay.findUniqueOrThrow({ where: { id: plan.stayId! } });
+    await prisma.stay.update({ where: { id: before.id }, data: { status: "CHECKED_OUT" } });
+    try {
+      const body = await (await housekeeperGet()).json();
+      expect(body.rooms.map((r: { number: string }) => r.number)).toEqual(["204", "202", "203", "201"]);
+      expect(JSON.stringify(body)).not.toContain("Klaus"); // weiterhin keine Vornamen
+    } finally {
+      await prisma.stay.update({ where: { id: before.id }, data: { status: before.status } });
+    }
   });
 
   it("Gastname: Anrede + Titel + Nachname; ohne Anrede nur Nachname; nie Vornamen; Personenzahl", async () => {

@@ -57,6 +57,11 @@ const Body = z.object({
   roomsTzMax: z.number().int().min(1).max(30).optional(),
   roomsAzMin: z.number().int().min(1).max(30).optional(),
   roomsAzMax: z.number().int().min(1).max(30).optional(),
+  // Planung L1
+  creditTolerance: z.number().min(0.1).max(10).optional(),
+  maxSuitesPerHk: z.number().int().min(1).max(20).optional(),
+  suiteMinCredit: z.number().min(1).max(10).optional(),
+  redistributeOnAbsence: z.number().int().min(0).max(1).optional(),
   floorSuggestWindow: z.number().int().min(1).max(30).optional(),
   floorSuggestMinDays: z.number().int().min(1).max(30).optional(),
   floorDemandingWarnShare: z.number().min(0).max(1).optional(),

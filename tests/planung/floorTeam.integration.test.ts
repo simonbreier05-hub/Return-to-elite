@@ -62,7 +62,7 @@ describe("Etagenzuweisung Team (Wegwerf-DB)", () => {
     expect(s.suggestions).toEqual([{ userId: ids.anna, floor: 2, reason: { floor: 2, days: 4, of: 5, lastSeen: "2026-11-01" } }]);
     expect(s.assign[ids.sup]).toEqual([1, 2, 3, 4, 5]); // bestehende Supervisor-Etagen laufen unverändert weiter
     const ben = s.people.find((p) => p.id === ids.ben)!;
-    expect(ben).toMatchObject({ level: 1, roomsLo: 6, roomsHi: 9 }); // Plan-1b: Teilzeit 6–9, unabhängig von der Stufe
+    expect(ben).toMatchObject({ level: 1, roomsLo: 6, roomsHi: 7 }); // Planung L1: Teilzeit-Ziel 7 (6–7), unabhängig von der Stufe
   });
 
   it("Speichern: jede Etage braucht einen Supervisor", async () => {
@@ -86,7 +86,7 @@ describe("Etagenzuweisung Team (Wegwerf-DB)", () => {
     const d = await loadDay(DATE);
     const anna = d.hks.find((h) => h.id === ids.anna)!;
     expect(anna.todayFloors).toEqual([2]);
-    expect(anna).toMatchObject({ roomsLo: 10, roomsHi: 13 }); // Plan-1b: Vollzeit 10–13
+    expect(anna).toMatchObject({ roomsLo: 10, roomsHi: 11 }); // Planung L1: Vollzeit-Ziel 11 (10–11)
     expect(d.hks.find((h) => h.id === ids.neu)!.todayFloors).toEqual([]);
     // Etagen von gestern gelten heute nicht mehr
     expect((await loadDay("2026-11-03")).hks.find((h) => h.id === ids.anna)!.todayFloors).toEqual([]);

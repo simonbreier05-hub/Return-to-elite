@@ -4,12 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { AUTOPLAN_WEIGHTS } from "@/lib/autoplan/weights";
+import { HK_RESTRICTIONS, HK_TYPES } from "@/lib/autoplan/types";
 import { DEFAULT_LINEN_CYCLE_DAYS, DEFAULT_SETTINGS, ROOM_TYPES } from "@/lib/domain";
 import type { TKey } from "@/lib/i18n/translations";
 
-interface Hk { id: string; name: string; hkType: string; hkLevel: number; homeFloors: string; dailyTarget: number | null; hkActive: boolean }
-type SettingKey = "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves" | "statusRewindMinutes" | "roomsVzMin" | "roomsVzMax" | "roomsTzMin" | "roomsTzMax" | "roomsAzMin" | "roomsAzMax" | "floorSuggestWindow" | "floorSuggestMinDays" | "floorDemandingWarnShare" | "learnWindow" | "learnMinDays" | "learnExpireDays" | "learnStaffDropShare" | "workdataMinSamples" | "workdataRetentionDays" | "shiftMinutes";
-const SETTING_KEYS: SettingKey[] = ["autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves", "statusRewindMinutes", "roomsVzMin", "roomsVzMax", "roomsTzMin", "roomsTzMax", "roomsAzMin", "roomsAzMax", "floorSuggestWindow", "floorSuggestMinDays", "floorDemandingWarnShare", "learnWindow", "learnMinDays", "learnExpireDays", "learnStaffDropShare", "workdataMinSamples", "workdataRetentionDays", "shiftMinutes"];
+interface Hk { id: string; name: string; hkType: string; hkLevel: number; homeFloors: string; dailyTarget: number | null; hkActive: boolean; hkRestrictions?: string }
+type SettingKey = "autoplanMaxFloors" | "stayoverFactor" | "stayoverLaundryFactor" | "autoplanManyTraces" | "minutesPerCredit" | "earlyFinishMinutes" | "redistributionMaxMoves" | "statusRewindMinutes" | "roomsVzMin" | "roomsVzMax" | "roomsTzMin" | "roomsTzMax" | "roomsAzMin" | "roomsAzMax" | "creditTolerance" | "maxSuitesPerHk" | "suiteMinCredit" | "redistributeOnAbsence" | "floorSuggestWindow" | "floorSuggestMinDays" | "floorDemandingWarnShare" | "learnWindow" | "learnMinDays" | "learnExpireDays" | "learnStaffDropShare" | "workdataMinSamples" | "workdataRetentionDays" | "shiftMinutes";
+const SETTING_KEYS: SettingKey[] = ["autoplanMaxFloors", "stayoverFactor", "stayoverLaundryFactor", "autoplanManyTraces", "minutesPerCredit", "earlyFinishMinutes", "redistributionMaxMoves", "statusRewindMinutes", "roomsVzMin", "roomsVzMax", "roomsTzMin", "roomsTzMax", "roomsAzMin", "roomsAzMax", "creditTolerance", "maxSuitesPerHk", "suiteMinCredit", "redistributeOnAbsence", "floorSuggestWindow", "floorSuggestMinDays", "floorDemandingWarnShare", "learnWindow", "learnMinDays", "learnExpireDays", "learnStaffDropShare", "workdataMinSamples", "workdataRetentionDays", "shiftMinutes"];
 const WEIGHT_KEYS = Object.keys(AUTOPLAN_WEIGHTS) as (keyof typeof AUTOPLAN_WEIGHTS)[];
 
 /** Einstellungen: Stammdaten der Housekeeper (Typ, Stufe, Stammetagen, Tagesziel) und Regeln/Gewichte des Zuteilungsvorschlags. Nur Supervisor/Duty Manager. */
@@ -22,9 +23,11 @@ export default function HousekeeperSettingsPanel() {
   const [typeMap, setTypeMap] = useState<Record<string, string>>({});
   const [typeSeen, setTypeSeen] = useState<Record<string, number>>({});
   const [saved, setSaved] = useState(false);
+  // Planung L1 (Regel 6): Stufe nur Duty Manager — Supervisor sehen sie, ändern sie nicht
+  const [canEditLevel, setCanEditLevel] = useState(false);
 
   const load = useCallback(() => {
-    api<{ housekeepers: Hk[] }>("/api/housekeepers").then((d) => setHks(d.housekeepers)).catch(() => {});
+    api<{ housekeepers: Hk[]; canEditLevel?: boolean }>("/api/housekeepers").then((d) => { setHks(d.housekeepers); setCanEditLevel(!!d.canEditLevel); }).catch(() => {});
     api<{ settings: Record<string, number>; autoplanWeights: Record<string, number>; planningCredits?: { linenCycleDays: number }; roomTypeMap?: Record<string, string>; roomTypeSeen?: Record<string, number> }>("/api/settings").then((d) => { setTypeMap(d.roomTypeMap ?? {}); setTypeSeen(d.roomTypeSeen ?? {}); setSettings(d.settings); setWeights(d.autoplanWeights); if (d.planningCredits) setLinenCycleDays(d.planningCredits.linenCycleDays); }).catch(() => {});
   }, []);
   useEffect(load, [load]);
@@ -44,7 +47,7 @@ export default function HousekeeperSettingsPanel() {
         <table className="w-full text-start text-sm">
           <thead className="text-xs text-graphite/60">
             <tr><th className="pe-3">{t("hk.colName")}</th><th className="pe-3">{t("hk.colType")}</th><th className="pe-3">{t("hk.colLevel")}</th>
-              <th className="pe-3">{t("hk.colHome")}</th><th className="pe-3">{t("hk.colTarget")}</th><th>{t("hk.colActive")}</th></tr>
+              <th className="pe-3">{t("hk.colHome")}</th><th className="pe-3">{t("hk.colTarget")}</th><th className="pe-3">{t("hk.colRestrict")}</th><th>{t("hk.colActive")}</th></tr>
           </thead>
           <tbody>
             {hks.map((h) => (
@@ -52,11 +55,11 @@ export default function HousekeeperSettingsPanel() {
                 <td className="py-2 pe-3 font-medium">{h.name}</td>
                 <td className="pe-3">
                   <select className={input} value={h.hkType} onChange={(e) => patchHk(h.id, { hkType: e.target.value })}>
-                    {(["VOLLZEIT", "TEILZEIT", "AZUBI"] as const).map((x) => <option key={x} value={x}>{t(`hk.${x}` as TKey)}</option>)}
+                    {HK_TYPES.map((x) => <option key={x} value={x}>{t(`hk.${x}` as TKey)}</option>)}
                   </select>
                 </td>
                 <td className="pe-3">
-                  <select className={input} value={h.hkLevel} title={t("hk.levelHint")} onChange={(e) => patchHk(h.id, { hkLevel: Number(e.target.value) })}>
+                  <select className={input} value={h.hkLevel} disabled={!canEditLevel} title={canEditLevel ? t("hk.levelHint") : t("hk.levelDmOnly")} onChange={(e) => patchHk(h.id, { hkLevel: Number(e.target.value) })}>
                     {[1, 2, 3].map((n) => <option key={n} value={n}>{n}</option>)}
                   </select>
                 </td>
@@ -67,6 +70,21 @@ export default function HousekeeperSettingsPanel() {
                 <td className="pe-3">
                   <input className={`${input} w-20`} type="number" step="1" min={0} max={30} defaultValue={h.dailyTarget ?? ""}
                     onBlur={(e) => patchHk(h.id, { dailyTarget: e.target.value === "" ? null : Number(e.target.value) })} />
+                </td>
+                <td className="pe-3">
+                  {/* Planung L1 (Regel 5): Einschränkungen je Person — weich (Warnung im Plan), nie eine Sperre */}
+                  <div className="flex flex-wrap gap-x-3 gap-y-1">
+                    {HK_RESTRICTIONS.map((code) => {
+                      const cur = (h.hkRestrictions ?? "").split(",").filter(Boolean);
+                      return (
+                        <label key={code} className="tap inline-flex items-center gap-1 text-xs">
+                          <input type="checkbox" className="h-5 w-5" checked={cur.includes(code)}
+                            onChange={(e) => patchHk(h.id, { hkRestrictions: e.target.checked ? [...cur, code] : cur.filter((x) => x !== code) })} />
+                          {t(`hk.restrict.${code}` as TKey)}
+                        </label>
+                      );
+                    })}
+                  </div>
                 </td>
                 <td><input type="checkbox" className="h-5 w-5" checked={h.hkActive} onChange={(e) => patchHk(h.id, { hkActive: e.target.checked })} /></td>
               </tr>

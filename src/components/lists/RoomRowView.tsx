@@ -25,6 +25,12 @@ export interface ListRoom {
   changed?: boolean;
   /** Aktive Pause (Grund, seit, von wem) — Supervisor/Duty Manager sehen sie in jeder Liste. */
   pause?: PauseInfo | null;
+  /** Planung L1: Signale der Listen-Reihenfolge (`src/lib/planung/listOrder.ts`). */
+  rush?: boolean;
+  serviceNow?: boolean;
+  /** Gastwunsch „Reinigung ab HH:MM“ — wird angezeigt. */
+  cleanAfter?: string | null;
+  checkedOut?: boolean;
 }
 
 const LABEL_ICON = { TURN: IconClock, DEPARTURE: IconBroom, STAYOVER: IconMoon, ARRIVAL: IconSuitcase, NONE: null } as const;

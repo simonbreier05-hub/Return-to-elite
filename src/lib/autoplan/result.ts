@@ -1,6 +1,6 @@
 import { compile, cost, roomMinutes, type Compiled } from "./cost";
 import { orderRoute } from "./route";
-import type { Assignment, HkMetrics, PlanInput, PlanResult, PlanRoom, PlanWarning } from "./types";
+import { isSuite, restrictionHit, type Assignment, type HkMetrics, type PlanInput, type PlanResult, type PlanRoom, type PlanWarning } from "./types";
 
 const DEMANDING_LABEL = { VIP: "VIP", SUITE: "Suite", ALLERGY: "Allergiker-Zimmer", TRACES: "viele Traces" } as const;
 /** Bis zu dieser Abweichung vom Zielband (Credits) gibt es keine Warnung — ein Zimmer lässt sich nicht teilen. */
@@ -56,6 +56,7 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     if (k < 0) { reasons[r.id] = ["Offen — bitte selbst zuteilen"]; return; }
     const h = input.housekeepers[k];
     if (r.learnedReason && (r.preferHk === h.id || (r.minLevel && h.level >= r.minLevel))) list.push(r.learnedReason);
+    if (r.stayHk === h.id) list.push("Gleicher Aufenthalt: hat dieses Zimmer schon bei diesem Gast gereinigt");
     if (r.kind === "TURN") list.push("Same-Day-Turn: zuerst in der Route");
     if (r.demanding.length) list.push(`${r.demanding.map((d) => DEMANDING_LABEL[d]).join(", ")}: Stufe ${h.level}`);
     if (h.todayFloors?.includes(r.floor)) list.push(`Etage ${r.floor} laut Etagenzuweisung`);
@@ -103,6 +104,26 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
         message: `${name} arbeitet auf ${m.floors.length} Etagen (${m.floors.join(", ")}). Erlaubt sind ${input.maxFloors}.` });
     }
   }
+  // Planung L1 (Regel 4): mehr Suiten als erlaubt — nur Warnung, nie Sperre
+  if (input.maxSuites !== undefined) {
+    input.housekeepers.forEach((h, k) => {
+      const suites = byHk[k].filter((r) => isSuite(r, input.suiteMinCredit));
+      if (suites.length > input.maxSuites!) {
+        warnings.push({ code: "TOO_MANY_SUITES", severity: "WARNING", hkId: h.id, roomIds: suites.map((r) => r.id),
+          message: `${h.name} hat ${suites.length} Suiten (${suites.map((r) => r.number).join(", ")}). Höchstens ${input.maxSuites} sind vorgesehen.` });
+      }
+    });
+  }
+  // Planung L1 (Regel 5): Einschränkung der Kraft verletzt — nur Warnung, Zuteilen bleibt möglich
+  const RESTRICTION_LABEL = { NO_SUITE: "keine Suiten", NO_VIP: "keine VIP-Zimmer", NO_ALLERGY: "keine Allergiker-Zimmer" } as const;
+  c.rooms.forEach((r, i) => {
+    const k = idx[i];
+    const hit = k >= 0 ? restrictionHit(input.housekeepers[k], r, input.suiteMinCredit) : null;
+    if (hit) {
+      warnings.push({ code: "RESTRICTION", severity: "WARNING", roomIds: [r.id], hkId: input.housekeepers[k].id,
+        message: `${input.housekeepers[k].name} hat Zimmer ${r.number}, ist aber eingetragen mit „${RESTRICTION_LABEL[hit]}“ — bitte prüfen.` });
+    }
+  });
   c.rooms.forEach((r, i) => {
     const k = idx[i];
     if (k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length) {

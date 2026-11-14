@@ -98,6 +98,7 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
             <TwoTapButton disabled={!room.canBlock} onConfirm={() => e.setDnd(true)}>{t("roomEdit.dndSet")}</TwoTapButton>
           )}
           {e.guestDnd && <TwoTapButton onConfirm={e.clearGuestDnd}>{t("roomEdit.guestDndClear")}</TwoTapButton>}
+          {e.canCheckOut && <TwoTapButton onConfirm={e.checkOut}>{t("roomEdit.checkedOut")}</TwoTapButton>}
         </div>
       </div>
 

@@ -7,7 +7,19 @@ import type { AutoplanWeights } from "./weights";
 export type WorkKind = "TURN" | "DEPARTURE" | "STAYOVER";
 export type DemandingReason = "VIP" | "SUITE" | "ALLERGY" | "TRACES";
 export type RoomState = "TODO" | "STARTED" | "DONE";
-export type HkType = "VOLLZEIT" | "TEILZEIT" | "AZUBI";
+/** EXTERN = Springer/externe Aushilfe (Planung L1): ohne Präferenz-Etagen, geht dorthin, wo Bedarf ist; Band wie Vollzeit. */
+export type HkType = "VOLLZEIT" | "TEILZEIT" | "AZUBI" | "EXTERN";
+export const HK_TYPES = ["VOLLZEIT", "TEILZEIT", "AZUBI", "EXTERN"] as const;
+
+/** Planung L1: Einschränkungen je Person (feste Codes, weich — Strafterm + Warnung, nie eine Sperre). */
+export const HK_RESTRICTIONS = ["NO_SUITE", "NO_VIP", "NO_ALLERGY"] as const;
+export type HkRestriction = (typeof HK_RESTRICTIONS)[number];
+
+/** Liest `User.hkRestrictions` (komma-getrennt); unbekannte Codes fallen weg. */
+export function parseRestrictions(csv: string | null | undefined): HkRestriction[] {
+  const known = new Set<string>(HK_RESTRICTIONS);
+  return [...new Set((csv ?? "").split(",").map((x) => x.trim()).filter((x) => known.has(x)))] as HkRestriction[];
+}
 
 export interface PlanRoom {
   id: string;
@@ -34,6 +46,8 @@ export interface PlanRoom {
   minLevel?: number;
   /** H3: Begründung für die Anzeige, z. B. „gelernt: an 4 von 5 Planungstagen so geändert". */
   learnedReason?: string;
+  /** Planung L1 (Regel 13): Bleiber — diese Kraft hat beim selben Aufenthalt schon gereinigt (weich, Gewicht `stayContinuity`). */
+  stayHk?: string;
 }
 
 export interface PlanHousekeeper {
@@ -54,6 +68,8 @@ export interface PlanHousekeeper {
   todayFloors?: number[];
   /** H3: gemessene bzw. geschätzte Minuten je Reinigungsart (nur wenn „Messdaten in Planung verwenden" an ist). */
   minutesByKind?: { TURN: number; DEPARTURE: number; STAYOVER: number; LAUNDRY: number; SUITE: number };
+  /** Planung L1: Einschränkungen (z. B. keine Suiten) — weich. */
+  restrictions?: HkRestriction[];
 }
 
 export interface PlanInput {
@@ -67,6 +83,25 @@ export interface PlanInput {
   fullTimeRooms?: number;
   /** H3: Schichtlänge in Minuten (Warnung/Gewicht „nicht vor Schichtende fertig"). */
   shiftMinutes?: number;
+  /** Planung L1 (Regel 4): höchstens so viele Suiten je Kraft (weich, Warnung). Fehlt → keine Grenze. */
+  maxSuites?: number;
+  /** Planung L1: ab diesem Credit zählt ein Zimmer als Suite (Standard 1,5). Fehlt → Zimmertyp (`demanding` SUITE). */
+  suiteMinCredit?: number;
+}
+
+/** Planung L1: Zählt das Zimmer als Suite? Nach Credit (Zimmerliste v2.1), ohne Schwelle nach Zimmertyp. */
+export function isSuite(r: Pick<PlanRoom, "credits" | "demanding">, suiteMinCredit?: number): boolean {
+  return suiteMinCredit ? r.credits >= suiteMinCredit : r.demanding.includes("SUITE");
+}
+
+/** Planung L1: verletzt dieses Zimmer eine Einschränkung der Kraft? (gibt den Code zurück) */
+export function restrictionHit(h: Pick<PlanHousekeeper, "restrictions">, r: Pick<PlanRoom, "credits" | "demanding">, suiteMinCredit?: number): HkRestriction | null {
+  for (const x of h.restrictions ?? []) {
+    if (x === "NO_SUITE" && isSuite(r, suiteMinCredit)) return x;
+    if (x === "NO_VIP" && r.demanding.includes("VIP")) return x;
+    if (x === "NO_ALLERGY" && r.demanding.includes("ALLERGY")) return x;
+  }
+  return null;
 }
 
 /** roomId → housekeeperId (oder null = offen). */

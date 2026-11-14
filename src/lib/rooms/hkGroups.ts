@@ -39,8 +39,15 @@ export const ACTION_TARGET: Partial<Record<Exclude<HkAction, null>, string>> = {
 /**
  * Empfohlene Route: eine gespeicherte Reihenfolge (`routeOrder`, aus dem Tagesplan oder per Ziehen) gewinnt; Zimmer ohne
  * Reihenfolge folgen dahinter nach Priorität, Etage, Abschnitt.
+ * Planung L1 (Regel 7): mit `tierOf` (= `listTier` aus `src/lib/planung/listOrder.ts`) entscheidet zuerst die Stufe
+ * (Rush, Service Now, Turn ausgecheckt, Bleiber, Turn noch belegt, Abreise, „Reinigung ab …“) — die Route gilt je Stufe.
  */
-export function orderRoute<T extends { id: string; number: string; floor: number; section?: string | null; routeOrder?: number | null }>(rooms: T[], score: (id: string) => number): T[] {
+export function orderRoute<T extends { id: string; number: string; floor: number; section?: string | null; routeOrder?: number | null }>(rooms: T[], score: (id: string) => number, tierOf?: (r: T) => number): T[] {
+  if (tierOf) {
+    const tiers = new Map<number, T[]>();
+    for (const r of rooms) { const t = tierOf(r); tiers.set(t, [...(tiers.get(t) ?? []), r]); }
+    return [...tiers.keys()].sort((a, b) => a - b).flatMap((t) => orderRoute(tiers.get(t)!, score));
+  }
   const ordered = rooms.filter((r) => r.routeOrder != null).sort((a, b) => a.routeOrder! - b.routeOrder! || a.number.localeCompare(b.number));
   const rest = defaultRouteOrder(rooms.filter((r) => r.routeOrder == null).map((r) => ({ id: r.id, number: r.number, floor: r.floor, section: r.section ?? "", priorityScore: score(r.id) })));
   const byId = new Map(rooms.map((r) => [r.id, r]));

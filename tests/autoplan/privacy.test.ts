@@ -5,7 +5,8 @@ import { describe, expect, it } from "vitest";
 /** Typ und Stufe der Housekeeper sind Beschäftigtendaten: nur Supervisor/Duty Manager, nie Housekeeper, nie in Logs. */
 const ROOT = path.join(__dirname, "..", "..", "src");
 const walk = (d: string): string[] => readdirSync(d).flatMap((f) => { const p = path.join(d, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
-const FIELD = /\b(hkLevel|hkType|homeFloors|dailyTarget)\b/;
+// Planung L1: Einschränkungen je Person (hkRestrictions) sind ebenso Beschäftigtendaten
+const FIELD = /\b(hkLevel|hkType|homeFloors|dailyTarget|hkRestrictions)\b/;
 
 // Dateien, die diese Felder bewusst kennen (alle hinter requireRole(["supervisor"]) bzw. reine Rechenlogik)
 const ALLOWED = [

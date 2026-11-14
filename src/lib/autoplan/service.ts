@@ -177,6 +177,9 @@ export async function checkRedistribution(date: string): Promise<{ created: numb
   const live = await loadLive(d);
   const found: (Suggestion & { sig: string })[] = suggestRedistribution(live)
     .filter((s) => s.moves.length > 0)
+    // Planung L1 (Regel 11): Krankmeldung → nichts automatisch neu verteilen, auch keinen Vorschlag; der Supervisor
+    // verteilt von Hand. Einschaltbar mit Setting redistributeOnAbsence = 1.
+    .filter((s) => s.kind !== "ABSENT" || d.settings.redistributeOnAbsence === 1)
     .map((s) => ({ ...s, sig: hashSig(suggestionSignature(s)) }));
   const existing = await prisma.redistributionSuggestion.findMany({ where: { date, status: { in: ["OPEN", "REJECTED"] } } });
   const known = new Set(existing.map((e) => e.signature));

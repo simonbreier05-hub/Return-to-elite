@@ -191,14 +191,15 @@ export function floorWarnings(loads: FloorLoad[], people: Person[], assign: Floo
 }
 
 /**
- * Zimmer-Zielband je Typ (Plan-1b, Antwort Simon Nov. 2026: Vollzeit 10–13, Teilzeit 6–9, Azubi 6–8; Werte aus den
- * Einstellungen `rooms{Vz|Tz|Az}{Min|Max}`). Die Stufe ändert das Band nicht mehr — sie wirkt nur noch bei anspruchsvollen Zimmern.
+ * Zimmer-Zielband je Typ (Einstellungen `rooms{Vz|Tz|Az}{Min|Max}`). Planung L1 (Meeting 13.11.): `Max` ist das Ziel
+ * (Vollzeit 11, Teilzeit/Azubi 7) und soll möglichst nicht überschritten werden — das Band liegt darum *unter* dem Ziel.
+ * Springer (EXTERN) rechnen wie Vollzeit. Die Stufe ändert das Band nicht — sie wirkt nur bei anspruchsvollen Zimmern.
  */
 export function roomBand(type: string | null | undefined, s: Record<string, number>, personalTarget?: number | null): { lo: number; hi: number } {
-  // Persönliches Tagesziel der Kraft = Zimmerzahl (Plan-1b): gilt ± DAILY_TARGET_TOLERANCE statt des Typ-Bands
+  // Persönliches Tagesziel der Kraft = Zimmerzahl: Ziel ist die Obergrenze, darunter DAILY_TARGET_TOLERANCE Spielraum
   if (personalTarget && personalTarget > 0) {
     const t = Math.round(personalTarget);
-    return { lo: Math.max(0, t - DAILY_TARGET_TOLERANCE), hi: t + DAILY_TARGET_TOLERANCE };
+    return { lo: Math.max(0, t - DAILY_TARGET_TOLERANCE), hi: t };
   }
   const key = type === "TEILZEIT" ? "roomsTz" : type === "AZUBI" ? "roomsAz" : "roomsVz";
   const lo = s[`${key}Min`] ?? 0, hi = s[`${key}Max`] ?? lo;
@@ -208,7 +209,10 @@ export function roomBand(type: string | null | undefined, s: Record<string, numb
 /** Spielraum um ein persönliches Tagesziel in Zimmern (ein Zimmer lässt sich nicht teilen). */
 export const DAILY_TARGET_TOLERANCE = 1;
 
-/** Mitte des Zimmer-Bands (für „Bedarf an Personal“: Zimmer ÷ Mitte). */
+/** Planung L1: Ziel einer Kraft in Zimmern = Obergrenze des Bands (für „Bedarf an Personal“: Zimmer ÷ Ziel Vollzeit). */
+export const bandTarget = (b: { lo: number; hi: number }) => b.hi;
+
+/** Mitte des Zimmer-Bands (Anteil einer Kraft an jeder Art in der Fairness-Rechnung). */
 export const bandCenter = (b: { lo: number; hi: number }) => (b.lo + b.hi) / 2;
 
 /** Zuteilung gegen den vorherigen Stand: je Person vorher/nachher (für das AuditLog, ohne Namen). */
