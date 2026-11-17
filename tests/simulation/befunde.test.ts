@@ -78,7 +78,7 @@ describe("H4 Sperren: „außer Betrieb“ endet", () => {
     expect(LEGAL_TRANSITIONS.OUT_OF_SERVICE).toContain("DIRTY");
   });
 
-  it.fails("der Minutentakt (escalations.ts) wertet das Ende der Sperre (oooUntil) aus", () => {
+  it("der Minutentakt (escalations.ts) wertet das Ende der Sperre (oooUntil) aus", () => {
     expect(src("src/lib/escalations.ts")).toMatch(/oooUntil/);
   });
 

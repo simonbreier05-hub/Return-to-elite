@@ -1,5 +1,6 @@
 "use client";
 
+import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -180,6 +181,7 @@ export default function DutyManagerView() {
               notices={
                 <>
                   <HubMissingNotice hub={hub} planner glass />
+                  <BlockedRoomsCard role="duty_manager" />
                   {HOTEL.unconfirmedFloors.length > 0 && (
                     <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
                   )}

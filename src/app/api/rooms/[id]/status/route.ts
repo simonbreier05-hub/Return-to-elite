@@ -17,6 +17,8 @@ const BodySchema = z.object({
   blockReason: BlockReasonSchema.optional(),
   note: z.string().max(1000).optional(),
   oooUntil: z.coerce.date().optional(),
+  oooReason: z.string().max(200).optional(), // F2: Pflicht bei OUT_OF_ORDER (geprüft in applyStatusChange)
+  confirmOccupied: z.boolean().optional(),
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

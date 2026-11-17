@@ -12,7 +12,7 @@ const OFFERED: RoomStatus[] = ["DIRTY", "IN_PROGRESS", "CLEAN", "INSPECTED", "GR
 
 export interface RoomDetail {
   id: string; number: string; floor: number; section: string; type: string;
-  status: RoomStatus; blockReason: string | null; oooUntil: string | null; reworkNote: string | null; occupancy: string | null;
+  status: RoomStatus; blockReason: string | null; oooUntil: string | null; /** F2: Sperrgrund (alle Rollen, die das Zimmer sehen) */ oooReason: string | null; reworkNote: string | null; occupancy: string | null;
   isCheckoutToday: boolean;
   assignedTo: { id: string; name: string; dailyNumber: number | null } | null;
   /** Tagesplan-Infos (nur wenn es einen Plan für heute gibt). */
@@ -64,7 +64,7 @@ export async function getRoomDetail(idOrNumber: string, role: string, viewer?: {
   const assigned = hubReady && assignedToday(room.assignedOn, today) ? room.assignedTo : null;
   return {
     id: room.id, number: room.number, floor: room.floor, section: room.section, type: room.type,
-    status: room.status as RoomStatus, blockReason: room.blockReason, oooUntil: room.oooUntil?.toISOString() ?? null,
+    status: room.status as RoomStatus, blockReason: room.blockReason, oooUntil: room.oooUntil?.toISOString() ?? null, oooReason: room.oooReason ?? null,
     reworkNote: room.reworkNote, occupancy: room.occupancy, isCheckoutToday: hubReady && room.isCheckoutToday,
     assignedTo: assigned,
     day: row && row.kind ? { kind: row.kind, laundry: row.laundry, vip: row.vip, eta: row.eta, guest: row.guest, pax: row.pax, credits: row.credits } : null,

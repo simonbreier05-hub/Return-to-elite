@@ -39,13 +39,15 @@ export const LEGAL_TRANSITIONS: Record<RoomStatus, RoomStatus[]> = {
  */
 export const ROLE_ALLOWED_TARGETS: Record<Role, RoomStatus[]> = {
   room_attendant: ["IN_PROGRESS", "CLEAN", "BLOCKED", "DEFECT_REPORTED", "DIRTY", "GREEN_OPT_OUT"],
+  // F2 (Entscheidung 16.11.): „Nicht im Service“ (OUT_OF_SERVICE) wird nicht mehr angeboten — es gibt nur „Außer Betrieb“.
+  // Der Wert bleibt in LEGAL_TRANSITIONS/Schema (additiv), damit Altbestände wieder in Betrieb genommen werden können.
   supervisor: [...([
     "DIRTY", "IN_PROGRESS", "CLEAN", "INSPECTED", "PICKUP", "BLOCKED",
-    "DEFECT_REPORTED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT",
+    "DEFECT_REPORTED", "OUT_OF_ORDER", "GREEN_OPT_OUT",
   ] as RoomStatus[])],
   duty_manager: [...([
     "DIRTY", "IN_PROGRESS", "CLEAN", "INSPECTED", "PICKUP", "BLOCKED",
-    "DEFECT_REPORTED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "GREEN_OPT_OUT",
+    "DEFECT_REPORTED", "OUT_OF_ORDER", "GREEN_OPT_OUT",
   ] as RoomStatus[])],
   // Betrieb L2 (Punkt 7): Technik darf ein Zimmer außer Betrieb setzen (mit Endzeit, REQUIRES_OOO_END); sonst über Arbeitsaufträge
   engineering: ["DEFECT_REPORTED", "OUT_OF_ORDER"],
@@ -63,6 +65,9 @@ export type TransitionCheck =
  * layer can map it to HTTP 403 (forbidden for role) / 409 (illegal transition)
  * and write an audit entry either way.
  */
+/** Gesperrt (nicht verkaufbar). OUT_OF_SERVICE ist Altbestand (F2) und wird wie „Außer Betrieb“ behandelt. */
+export const SELL_BLOCKED: ReadonlySet<RoomStatus> = new Set<RoomStatus>(["OUT_OF_ORDER", "OUT_OF_SERVICE"]);
+
 export function checkTransition(role: Role, from: RoomStatus, to: RoomStatus): TransitionCheck {
   if (!ROLE_ALLOWED_TARGETS[role].includes(to)) {
     return {
@@ -73,6 +78,10 @@ export function checkTransition(role: Role, from: RoomStatus, to: RoomStatus): T
           ? "Only a supervisor or duty manager may release a room (set INSPECTED)."
           : `Role '${role}' is not permitted to set status '${to}'.`,
     };
+  }
+  // F2 (entschieden): Wieder in Betrieb nehmen (aus einer Sperre heraus) dürfen nur Supervisor und Duty Manager — auch nicht der Techniker.
+  if (SELL_BLOCKED.has(from) && from !== to && role !== "supervisor" && role !== "duty_manager") {
+    return { ok: false, code: 403, error: "Only a supervisor or duty manager may put a room back into service.", reason: "REACTIVATE_FORBIDDEN" };
   }
   if (from === to) {
     return { ok: false, code: 409, error: `Room is already '${from}'.`, reason: "ALREADY_IN_STATUS" };

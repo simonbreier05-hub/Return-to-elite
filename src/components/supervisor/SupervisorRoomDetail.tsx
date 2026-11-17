@@ -22,6 +22,7 @@ export interface SupDetailRoom {
   blockReason?: string | null;
   reworkNote?: string | null;
   oooUntil?: string | null;
+  oooReason?: string | null;
   assignedLabel: string | null;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
@@ -61,7 +62,7 @@ export function SupervisorRoomDetail({
           <StatusChip status={ui} label={t(`status.${room.status}` as TKey)} />
           {room.blockReason && <Pill tone="danger">{t(`blockReason.${room.blockReason}` as TKey)}</Pill>}
         </div>
-        {room.oooUntil && <p className="text-body-16 text-text-secondary">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}</p>}
+        {room.oooUntil && <p className="text-body-16 text-text-secondary">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}{room.oooReason ? ` · ${t("blocked.reason")}: ${room.oooReason}` : ""}</p>}
         {room.reworkNote && room.status === "PICKUP" && <Banner tone="warning" icon="refresh" title={t("attendant.reworkNote")} detail={room.reworkNote} />}
       </div>
 
@@ -83,17 +84,13 @@ export function SupervisorRoomDetail({
         )}
         {outOfOrder ? (
           <Button variant="secondary" icon="refresh" block onClick={() => onAct("DIRTY")} disabled={busy}>
-            {withoutLeadingSymbol(t("supervisor.returnToInventory"))}
+            {t("blocked.release")}
           </Button>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" icon="wrench" className="px-4!" onClick={() => onOpenDialog("ooo")} disabled={busy}>
-              {withoutLeadingSymbol(t("supervisor.setOoo"))}
-            </Button>
-            <Button variant="secondary" icon="x" className="px-4!" onClick={() => onAct("OUT_OF_SERVICE")} disabled={busy}>
-              {withoutLeadingSymbol(t("supervisor.setOos"))}
-            </Button>
-          </div>
+          // F2 (entschieden): „Nicht im Service“ entfällt — nur noch „Außer Betrieb“ (mit Grund und Ende)
+          <Button variant="secondary" icon="wrench" block onClick={() => onOpenDialog("ooo")} disabled={busy}>
+            {withoutLeadingSymbol(t("supervisor.setOoo"))}
+          </Button>
         )}
         <Button variant="secondary" icon="list" block onClick={() => onOpenDialog("roomTask")}>
           {withoutLeadingSymbol(t("supervisor.houseTaskBtn"))}
@@ -178,9 +175,10 @@ export function ReworkDialog({ number, onClose, onSubmit }: { number: string; on
 const OOO_PRESET_HOURS = [4, 12, 24, 48, 72, 168];
 
 /** Außer Betrieb bis … (Status OUT_OF_ORDER mit `oooUntil`) — gleiche Vorgaben wie bisher. */
-export function OooDialog({ number, onClose, onSubmit }: { number: string; onClose: () => void; onSubmit: (until: Date) => void }) {
+export function OooDialog({ number, onClose, onSubmit }: { number: string; onClose: () => void; onSubmit: (until: Date, reason: string) => void }) {
   const { t } = useLocale();
   const [hours, setHours] = useState<number>(48);
+  const [reason, setReason] = useState(""); // F2: Pflicht, kurzer Text, keine Gastdaten
   const until = new Date(Date.now() + hours * 3600_000);
   const presetLabel = (h: number) => (h < 24 ? `${h} h` : h % 24 === 0 ? `${h / 24} d` : `${h} h`);
   return (
@@ -193,6 +191,7 @@ export function OooDialog({ number, onClose, onSubmit }: { number: string; onClo
         ))}
       </div>
       <Field label={t("supervisor.customHours")} type="number" min={1} value={hours} onChange={(e) => setHours(Math.max(1, Number(e.target.value) || 1))} />
+      <Field label={t("blocked.reason")} value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} />
       <p className="text-body-16 text-text-secondary">
         {t("supervisor.backInInventory")} <strong className="text-text-primary">{dateTime(until)}</strong>
       </p>
@@ -200,7 +199,7 @@ export function OooDialog({ number, onClose, onSubmit }: { number: string; onClo
         <Button variant="secondary" icon="x" onClick={onClose}>
           {t("common.cancel")}
         </Button>
-        <Button icon="wrench" onClick={() => onSubmit(until)}>
+        <Button icon="wrench" disabled={!reason.trim()} onClick={() => onSubmit(until, reason.trim())}>
           {withoutLeadingSymbol(t("supervisor.setOutOfOrder"))}
         </Button>
       </div>

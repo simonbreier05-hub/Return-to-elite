@@ -38,7 +38,7 @@ export interface EngineeringHubProps {
   /** Betrieb L2 (Punkt 7): beim „Erledigt“ optional die Notiz aus dem Bestätigungsdialog (als Nachricht am Auftrag). */
   onAdvance: (wo: WorkOrderView, note?: string) => void;
   /** Betrieb L2 (Punkt 7): Zimmer außer Betrieb setzen (bis `untilIso`). */
-  onSetOutOfOrder?: (roomId: string, untilIso: string) => void;
+  onSetOutOfOrder?: (roomId: string, untilIso: string, reason: string) => void;
   busyId: string | null;
   actionError: string | null;
   loading: boolean;
@@ -64,6 +64,7 @@ export function EngineeringHub(p: EngineeringHubProps) {
   const [confirmFor, setConfirmFor] = useState<WorkOrderView | null>(() => p.orders.find((o) => o.id === p.confirmPreviewId) ?? null);
   const [doneNote, setDoneNote] = useState("");
   const [oooUntil, setOooUntil] = useState("");
+  const [oooReason, setOooReason] = useState("");
 
   const sorted = useMemo(() => sortWorkOrders(p.orders), [p.orders]);
   const counts = useMemo(() => engFilterCounts(sorted), [sorted]);
@@ -127,8 +128,9 @@ export function EngineeringHub(p: EngineeringHubProps) {
           {/* Betrieb L2 (Punkt 7): Technik darf das Zimmer außer Betrieb setzen — mit Endzeit, zweiter Tipp speichert */}
           {sel.room.id && p.onSetOutOfOrder && sel.status !== "RESOLVED" && (
             <div className="flex flex-wrap items-end gap-3" data-testid="eng-ooo">
+              <div className="w-56"><Field label={t("blocked.reason")} value={oooReason} maxLength={200} onChange={(e) => setOooReason(e.target.value)} /></div>
               <div className="w-56"><Field label={t("engineering.oooUntil")} type="datetime-local" value={oooUntil} onChange={(e) => setOooUntil(e.target.value)} /></div>
-              <TwoTapButton disabled={!oooUntil || p.busyId === sel.id} onConfirm={() => { p.onSetOutOfOrder!(sel.room.id!, new Date(oooUntil).toISOString()); setOooUntil(""); }}>{t("engineering.setOoo")}</TwoTapButton>
+              <TwoTapButton disabled={!oooUntil || !oooReason.trim() || p.busyId === sel.id} onConfirm={() => { p.onSetOutOfOrder!(sel.room.id!, new Date(oooUntil).toISOString(), oooReason.trim()); setOooUntil(""); setOooReason(""); }}>{t("engineering.setOoo")}</TwoTapButton>
             </div>
           )}
           {sel.room.number && (
@@ -182,15 +184,16 @@ export function EngineeringHub(p: EngineeringHubProps) {
         message={confirmFor ? `${confirmFor.room.number ? t("hkHub.roomTitle", { n: confirmFor.room.number }) : unknown} · ${confirmFor.note || categoryLabel(confirmFor)}` : undefined}
         confirmLabel={t("roleHub.confirm")}
         busy={!!confirmFor && p.busyId === confirmFor.id}
+        confirmDisabled={!doneNote.trim()}
         onCancel={() => setConfirmFor(null)}
         onConfirm={() => {
-          if (confirmFor) p.onAdvance(confirmFor, doneNote.trim() || undefined);
+          if (confirmFor && doneNote.trim()) p.onAdvance(confirmFor, doneNote.trim());
           setDoneNote("");
           setConfirmFor(null);
         }}
       >
         {t("roleHub.doneConfirmHint")}
-        {/* Betrieb L2 (Punkt 7): Notiz zum Erledigen (optional) — landet als Nachricht am Auftrag, nie in Logbuch/Meldung */}
+        {/* F2 (M4): Notiz zum Erledigen ist Pflicht (was wurde gemacht) — am Auftrag gespeichert und als Nachricht im Verlauf, nie in einer Meldung */}
         <div className="mt-3">
           <Field label={t("engineering.doneNote")} value={doneNote} maxLength={500} onChange={(e) => setDoneNote(e.target.value)} />
         </div>

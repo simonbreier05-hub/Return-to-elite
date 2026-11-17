@@ -1,5 +1,6 @@
 "use client";
 
+import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -177,6 +178,7 @@ export default function FrontOfficeView() {
         notices={
           <>
             {released && <Banner tone="info" icon="bell" title={released} />}
+            <BlockedRoomsCard role="front_office" />
             <PriorityBanner
               items={[
                 { count: neededNowNotReady, label: t("priority.neededNowArrivals"), icon: "warning", tone: "urgent" },

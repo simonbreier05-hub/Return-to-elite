@@ -69,8 +69,14 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
         <SectionLabel as="h3" icon="refresh" title={t("roomEdit.status")} />
         <p className="text-label text-text-muted">{t("roomEdit.statusHint")}</p>
         <div className="flex flex-wrap gap-2">
+          {e.isBlocked && room.allowedStatuses.includes("DIRTY") && (
+            <TwoTapButton onConfirm={() => e.setStatus("DIRTY")}>
+              <Glyph name="check" size={18} />
+              {t("blocked.release")}
+            </TwoTapButton>
+          )}
           {room.allowedStatuses.map((s) =>
-            s === "OUT_OF_ORDER" ? null : (
+            s === "OUT_OF_ORDER" || (e.isBlocked && s === "DIRTY") ? null : (
               <TwoTapButton key={s} onConfirm={() => e.setStatus(s)}>
                 <Glyph name={statusTargetIcon(s as RoomStatus)} size={18} />
                 {t("roomEdit.statusSet", { status: t(`status.${s}` as TKey) })}
@@ -80,11 +86,19 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
         </div>
         {room.allowedStatuses.includes("OUT_OF_ORDER") && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Field className="min-w-0 flex-1" label={t("blocked.reason")} value={e.oooReason} maxLength={200} onChange={(ev) => e.setOooReason(ev.target.value)} />
             <Field className="min-w-0 flex-1" type="datetime-local" label={t("roomEdit.oooUntil")} value={e.ooo} onChange={(ev) => e.setOoo(ev.target.value)} />
-            <TwoTapButton disabled={!e.ooo} onConfirm={() => e.setStatus("OUT_OF_ORDER")}>
+            <TwoTapButton disabled={!e.ooo || !e.oooReason.trim()} onConfirm={() => e.setStatus("OUT_OF_ORDER")}>
               <Glyph name="wrench" size={18} />
               {t("roomEdit.statusSet", { status: t("status.OUT_OF_ORDER") })}
             </TwoTapButton>
+          </div>
+        )}
+        {e.occupiedPrompt && (
+          <div role="alert" className="flex flex-col gap-2 rounded-(--glass-radius-md) bg-status-warning-bg p-3 sm:flex-row sm:items-center">
+            <p className="text-body-16 flex-1 text-text-primary">{t("blocked.confirmOccupied")}</p>
+            <TwoTapButton onConfirm={() => e.setStatus("OUT_OF_ORDER", true)}>{t("blocked.confirmBlock")}</TwoTapButton>
+            <button type="button" className={linkBtn} onClick={() => e.setOccupiedPrompt(null)}>{t("roomEdit.cancel")}</button>
           </div>
         )}
       </div>

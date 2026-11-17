@@ -29,6 +29,15 @@ export async function proposeForDate(date: string, userId: string, attendantIds?
   if (!input.housekeepers.length) throw new Error("Keine anwesenden Housekeeper ausgewählt.");
   const result = proposePlan(input);
   for (const message of d.learnedNotes) result.warnings.push({ code: "LEARNED_SKIPPED", severity: "INFO", message });
+  // F2: Anreise in ein gesperrtes Zimmer — Vorschlag und Bestätigungsdialog warnen (das Zimmer wird nicht verplant)
+  const blockedArrivals = await prisma.dayRoomPlan.findMany({
+    where: { date, cleaningType: { in: ["ARRIVAL", "SAME_DAY_TURN"] }, room: { status: { in: ["OUT_OF_ORDER", "OUT_OF_SERVICE"] } } },
+    select: { roomId: true, room: { select: { number: true } } },
+  });
+  if (blockedArrivals.length) result.warnings.unshift({
+    code: "BLOCKED_ARRIVAL", severity: "WARNING", roomIds: blockedArrivals.map((b) => b.roomId),
+    message: `Anreise in gesperrtes Zimmer: ${blockedArrivals.map((b) => b.room.number).sort().join(", ")} — bitte Zimmer tauschen oder Sperre aufheben.`,
+  });
   await prisma.autoPlanProposal.updateMany({ where: { date, status: "DRAFT" }, data: { status: "SUPERSEDED" } });
   const payload: ProposalPayload = { input, result, generatedAt: new Date().toISOString() };
   const row = await prisma.autoPlanProposal.create({ data: { date, createdById: userId, payload: JSON.stringify(payload) } });

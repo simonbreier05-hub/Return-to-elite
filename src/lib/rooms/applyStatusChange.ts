@@ -3,7 +3,8 @@ import { berlinDate } from "@/lib/dayplan/time";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domain";
-import { checkTransition } from "@/lib/stateMachine";
+import { checkTransition, SELL_BLOCKED } from "@/lib/stateMachine";
+import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
 import { endPauseOnChange } from "@/lib/work/pauseData";
@@ -28,6 +29,10 @@ export interface StatusChangeInput {
   blockReason?: BlockReason;
   note?: string;
   oooUntil?: Date;
+  /** F2: Sperrgrund (Pflicht bei OUT_OF_ORDER, kurzer Text, keine Gastdaten). */
+  oooReason?: string;
+  /** F2: Sperre eines belegten Zimmers bzw. eines Zimmers mit Anreise heute ist bestätigt (sonst 409 mit Rückfrage). */
+  confirmOccupied?: boolean;
 }
 
 export type StatusChangeResult =
@@ -40,6 +45,16 @@ function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["
     data,
     include: { assignedTo: { select: { id: true, name: true } } },
   });
+}
+
+/** F2: Ist das Zimmer belegt (Board) oder kommt heute ein Gast (erwartete Anreise / Tagesplan Anreise oder Turn)? */
+export async function occupancyOf(room: { id: string; occupancy: string }, now = new Date()): Promise<{ occupied: boolean; arrivalToday: boolean }> {
+  const date = berlinDate(now);
+  const [arrival, plan] = await Promise.all([
+    prisma.arrival.findFirst({ where: { roomId: room.id, status: "EXPECTED" }, select: { id: true } }),
+    prisma.dayRoomPlan.findFirst({ where: { date, roomId: room.id, cleaningType: { in: ["ARRIVAL", "SAME_DAY_TURN"] } }, select: { id: true } }),
+  ]);
+  return { occupied: room.occupancy === "OCCUPIED", arrivalToday: !!arrival || !!plan };
 }
 
 export async function applyStatusChange(
@@ -108,6 +123,18 @@ export async function applyStatusChange(
   if (to === "OUT_OF_ORDER" && !input.oooUntil) {
     return { ok: false, status: 400, error: "OUT_OF_ORDER requires an end time (oooUntil).", code: "OOO_END_REQUIRED" };
   }
+  const oooReason = input.oooReason?.trim().slice(0, 200) ?? "";
+  if (to === "OUT_OF_ORDER" && !oooReason) {
+    return { ok: false, status: 400, error: "OUT_OF_ORDER requires a reason.", code: "OOO_REASON_REQUIRED" };
+  }
+  // F2 (entschieden): ein belegtes Zimmer bzw. eines mit Anreise heute wird nie still gesperrt — erst Rückfrage, dann Meldung.
+  const occupancyRisk = to === "OUT_OF_ORDER" ? await occupancyOf(room) : { occupied: false, arrivalToday: false };
+  if ((occupancyRisk.occupied || occupancyRisk.arrivalToday) && !input.confirmOccupied) {
+    return {
+      ok: false, status: 409, code: "OCCUPIED_CONFIRM_REQUIRED",
+      error: occupancyRisk.occupied ? `Room ${room.number} is occupied — confirm the block.` : `Room ${room.number} has an arrival today — confirm the block.`,
+    };
+  }
 
   const now = new Date();
   const updated = await updateRoom(room.id, {
@@ -117,6 +144,8 @@ export async function applyStatusChange(
     blockedSince: to === "BLOCKED" ? now : null,
     reworkNote: to === "PICKUP" ? input.note : to === "IN_PROGRESS" ? room.reworkNote : null,
     oooUntil: to === "OUT_OF_ORDER" ? input.oooUntil : null,
+    oooReason: to === "OUT_OF_ORDER" ? oooReason : null,
+    oooSince: to === "OUT_OF_ORDER" ? now : null,
     // Released means today's backlog on this room is over — a plan applied
     // later today can still defer it again if it comes back into play.
     deferredSince: to === "INSPECTED" ? null : undefined,
@@ -128,7 +157,7 @@ export async function applyStatusChange(
     roomId: room.id,
     fromStatus: from,
     toStatus: to,
-    meta: { blockReason: input.blockReason, note: input.note, oooUntil: input.oooUntil, role: session.role },
+    meta: { blockReason: input.blockReason, note: input.note, oooUntil: input.oooUntil, oooReason: to === "OUT_OF_ORDER" ? oooReason : undefined, reactivated: SELL_BLOCKED.has(from) && !SELL_BLOCKED.has(to) || undefined, role: session.role },
   });
 
   // Eine Pause gilt nur für den Zustand, in dem sie gesetzt wurde: jede Statusänderung beendet sie.
@@ -184,6 +213,17 @@ export async function applyStatusChange(
   // Ablehnung/Nacharbeit: die heute zuständige Kraft erfährt es sofort (Pop-up + Ton). Nur Zimmer + Etage —
   // der Grund steht als Freitext im Zimmer (reworkNote), nie in der Meldung.
   if (to === "PICKUP") await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "REWORK", actorId: session.userId, now });
+
+  // F2: Sperre eines belegten Zimmers / mit Anreise heute → dringend an DM, Supervisor der Etage, zugeteilte Housekeeperin;
+  // bei Anreise heute zusätzlich Front Office („Anreise in gesperrtes Zimmer“). Nur Zimmer, Grund, Dauer.
+  if (to === "OUT_OF_ORDER" && (occupancyRisk.occupied || occupancyRisk.arrivalToday)) {
+    const until = input.oooUntil!.toLocaleString("de-DE", { timeZone: "Europe/Berlin", dateStyle: "short", timeStyle: "short" });
+    await notifyFloorLeads({
+      roomId: room.id, type: "ROOM_BLOCKED_OCCUPIED", level: "warning", housekeeper: true, frontOffice: occupancyRisk.arrivalToday, skipUserId: session.userId, now,
+      message: `Zimmer ${room.number} außer Betrieb bis ${until}: ${oooReason}${occupancyRisk.arrivalToday ? " — Anreise heute" : " — Gast im Zimmer"}`,
+      key: occupancyRisk.arrivalToday ? "notify.oooArrival" : "notify.oooOccupied", vars: { n: room.number, reason: oooReason, until },
+    }).catch(() => 0);
+  }
 
   broadcast("room:update", { room: updated });
   broadcast("room:status", { roomId: room.id, number: room.number, from, to, by: session.name });

@@ -1,7 +1,9 @@
 "use client";
 
+import BlockedRoomsCard from "@/components/BlockedRoomsCard";
+import EngineeringBlockRoom from "@/components/roles/EngineeringBlockRoom";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/components/api";
+import { api, ApiError } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import PriorityBanner from "@/components/PriorityBanner";
 import RoomDetailModal from "@/components/RoomDetailModal";
@@ -69,7 +71,7 @@ export default function EngineeringView() {
     try {
       // Betrieb L2 (Punkt 7): Notiz aus dem Bestätigungsdialog zuerst als Nachricht am Auftrag (gleicher Weg wie der Verlauf)
       if (note && wo.room.id) await api(`/api/rooms/${wo.room.id}/notes`, { body: { body: note, kind: "MESSAGE", task: { type: "WORKORDER", id: wo.id } } });
-      const res = await api<{ workOrder?: unknown }>(`/api/workorders/${wo.id}`, { method: "PATCH", body: { status: next.to } });
+      const res = await api<{ workOrder?: unknown }>(`/api/workorders/${wo.id}`, { method: "PATCH", body: { status: next.to, ...(note ? { note } : {}) } });
       if (res?.workOrder) upsert(res.workOrder);
     } catch (e) {
       setError(errorText(e, t));
@@ -79,11 +81,21 @@ export default function EngineeringView() {
   };
 
   // Betrieb L2 (Punkt 7): Technik setzt ein Zimmer außer Betrieb (gleicher Status-Weg wie überall, Server prüft die Rolle)
-  const setOutOfOrder = async (roomId: string, untilIso: string) => {
+  // F2: mit Grund; belegtes Zimmer / Anreise heute → Rückfrage, erst dann sperren
+  const setOutOfOrder = async (roomId: string, untilIso: string, reason: string) => {
     setError(null);
+    const body = { status: "OUT_OF_ORDER", oooUntil: untilIso, oooReason: reason };
     try {
-      await api(`/api/rooms/${roomId}/status`, { body: { status: "OUT_OF_ORDER", oooUntil: untilIso } });
+      await api(`/api/rooms/${roomId}/status`, { body });
     } catch (e) {
+      if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") {
+        if (window.confirm(`${e.message}
+
+${t("blocked.confirmOccupied")}`)) {
+          try { await api(`/api/rooms/${roomId}/status`, { body: { ...body, confirmOccupied: true } }); } catch (e2) { setError(errorText(e2, t)); }
+        }
+        return;
+      }
       setError(errorText(e, t));
     }
   };
@@ -102,7 +114,7 @@ export default function EngineeringView() {
           setError(null);
         }}
         onAdvance={advance}
-        onSetOutOfOrder={(roomId, untilIso) => void setOutOfOrder(roomId, untilIso)}
+        onSetOutOfOrder={(roomId, untilIso, reason) => void setOutOfOrder(roomId, untilIso, reason)}
         busyId={busyId}
         actionError={error}
         loading={orders === null && !loadError}
@@ -111,12 +123,16 @@ export default function EngineeringView() {
         onPauseChanged={(id, pause) => setOrders((prev) => prev && prev.map((o) => (o.id === id ? { ...o, pause: pause ? { reason: pause.reason, since: pause.since, byName: pause.byName } : null } : o)))}
         onOpenRoom={(n) => roomLookup.open(n)}
         notices={
+          <>
+          <EngineeringBlockRoom onBlock={setOutOfOrder} />
+          <BlockedRoomsCard role="engineering" />
           <PriorityBanner
             items={[
               { count: openUnacked, label: t("priority.openWorkOrders"), icon: "warning", tone: "urgent" },
               { count: ackNotStarted, label: t("priority.ackWorkOrders"), icon: "clock", tone: "watch" },
             ]}
           />
+          </>
         }
       />
       {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}

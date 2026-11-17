@@ -6,6 +6,7 @@ import { keyed } from "@/lib/i18n/notificationText";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { berlinHour, dndReminderDue } from "@/lib/rooms/dndReminder";
 import { berlinDate } from "@/lib/dayplan/time";
+import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 
 /**
  * Escalation engine — executed every minute by the ticker in server.js
@@ -40,6 +41,21 @@ async function notifyOnce(entry: {
 export async function runEscalations(now = new Date()) {
   const settings = await getSettings();
   const created: string[] = [];
+
+  // --- F2: abgelaufene Sperre (Annahme: endet nicht von selbst) — Erinnerung an Supervisor der Etage + DM,
+  // einmal sofort nach Ablauf, danach einmal täglich ab 06:00 (Berlin), bis jemand die Sperre aufhebt oder verlängert.
+  const expired = await prisma.room.findMany({ where: { status: { in: ["OUT_OF_ORDER", "OUT_OF_SERVICE"] }, oooUntil: { lt: now } }, select: { id: true, number: true, oooUntil: true } });
+  for (const room of expired) {
+    const base = `OOO_EXPIRED:${room.id}:${room.oooUntil!.getTime()}`;
+    const earlier = await prisma.notification.findFirst({ where: { dedupeKey: { startsWith: base } }, select: { id: true } });
+    if (earlier && berlinHour(now) < 6) continue;
+    const n = await notifyFloorLeads({
+      roomId: room.id, type: "OOO_EXPIRED", level: "warning", now,
+      message: `Sperre ${room.number} abgelaufen — wieder in Betrieb?`, key: "notify.oooExpired", vars: { n: room.number },
+      dedupeKey: `${base}:${berlinDate(now)}`,
+    });
+    if (n) created.push("OOO_EXPIRED");
+  }
 
   // --- BLOCKED rooms: re-check + welfare check --------------------------
   const blocked = await prisma.room.findMany({ where: { status: "BLOCKED" } });

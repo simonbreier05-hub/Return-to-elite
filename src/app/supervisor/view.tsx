@@ -1,8 +1,9 @@
 "use client";
 
+import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/components/api";
+import { api, ApiError } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Collapsible from "@/components/Collapsible";
@@ -482,7 +483,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         selectedRoomId={selectedId}
         onOpenRoom={setSelectedId}
         onMoveRooms={() => router.push("/floor-plan")}
-        notices={notices}
+        notices={<>{notices}<BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} /></>}
         release={release}
         below={below}
         detailOpen={!!detailRoom}
@@ -535,9 +536,20 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         <OooDialog
           number={dialog.room.number}
           onClose={() => setDialog(null)}
-          onSubmit={async (until) => {
+          onSubmit={async (until, reason) => {
             setDialog(null);
-            await act(dialog.room, "OUT_OF_ORDER", { oooUntil: until.toISOString() });
+            const body = { oooUntil: until.toISOString(), oooReason: reason };
+            // F2: belegtes Zimmer / Anreise heute → Rückfrage mit Klartext, erst dann sperren (Server: 409 OCCUPIED_CONFIRM_REQUIRED)
+            try {
+              await api(`/api/rooms/${dialog.room.id}/status`, { body: { status: "OUT_OF_ORDER", ...body } });
+              await load();
+            } catch (e) {
+              if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED" && window.confirm(`${e.message}
+
+${t("blocked.confirmOccupied")}`)) {
+                await act(dialog.room, "OUT_OF_ORDER", { ...body, confirmOccupied: true });
+              } else if (!(e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED")) setError(`${dialog.room.number}: ${errorText(e, t)}`);
+            }
           }}
         />
       )}

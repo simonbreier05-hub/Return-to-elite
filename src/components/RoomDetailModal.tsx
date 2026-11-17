@@ -27,6 +27,8 @@ export interface SearchedRoom {
   blockReason?: string | null;
   reworkNote?: string | null;
   oooUntil?: string | null;
+  /** F2: Sperrgrund */
+  oooReason?: string | null;
   isCheckoutToday: boolean;
   openNotesCount: number;
   assignedTo?: { id: string; name: string; dailyNumber?: number | null } | null;
@@ -121,6 +123,7 @@ export default function RoomDetailModal({
       {room.oooUntil && (
         <p className="mt-1 text-xs text-graphite/60">
           {t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}
+          {room.oooReason ? ` · ${t("blocked.reason")}: ${room.oooReason}` : ""}
         </p>
       )}
       {room.reworkNote && room.status === "PICKUP" && (

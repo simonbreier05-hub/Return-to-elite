@@ -21,6 +21,7 @@ import { sanitizeGuestText } from "@/lib/guestSanitize";
 import { keyed } from "@/lib/i18n/notificationText";
 import { GREEN_KIND, greenRoomsOn } from "@/lib/guest/green";
 import { berlinDate } from "@/lib/dayplan/time";
+import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 
 /**
  * The five guest write actions, shared by both access paths
@@ -103,23 +104,16 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
   if (!parsed.success) return NextResponse.json({ error: "Invalid time window.", code: "INVALID_INPUT" }, { status: 400 });
 
   const guestUserId = await getGuestSystemUserId();
-  const [notification, guestRequest] = await Promise.all([
-    prisma.notification.create({
-      data: {
-        type: "GUEST_REQUEST",
-        level: "info",
-        targetRole: "supervisor",
-        roomId: room.id,
-        message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
-        ...keyed("notify.guestDnd", { n: room.number, windowKey: `dndWindow.${parsed.data.window}` }),
-      },
-    }),
-    prisma.guestRequest.create({
-      data: { roomId: room.id, kind: "DND", detail: JSON.stringify({ window: parsed.data.window }) },
-    }),
-  ]);
+  const guestRequest = await prisma.guestRequest.create({
+    data: { roomId: room.id, kind: "DND", detail: JSON.stringify({ window: parsed.data.window }) },
+  });
+  // F2 (entschieden): DND eines belegten Zimmers sehen DM, Supervisor der Etage und die zugeteilte Housekeeperin (unten)
+  await notifyFloorLeads({
+    roomId: room.id, type: "GUEST_REQUEST", level: "info",
+    message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
+    key: "notify.guestDnd", vars: { n: room.number, windowKey: `dndWindow.${parsed.data.window}` },
+  });
   await audit({ action: "GUEST_DND_REQUESTED", userId: guestUserId, roomId: room.id, meta: { window: parsed.data.window } });
-  broadcast("notification:new", { notification });
   broadcast("guestrequest:new", { guestRequest });
   await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "DND" });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });

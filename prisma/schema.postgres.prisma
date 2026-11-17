@@ -95,6 +95,9 @@ model Room {
   blockedSince     DateTime?
   reworkNote       String? // supervisor note when sending CLEAN back to PICKUP
   oooUntil         DateTime? // end time for OUT_OF_ORDER
+  // F2 (additiv): Sperrgrund (Pflicht bei OUT_OF_ORDER, kurzer Text, keine Gastdaten) und Beginn der Sperre
+  oooReason        String?
+  oooSince         DateTime?
   baseCleanMinutes Int       @default(30) // baseline used by predictCleaningMinutes
   assignedToId     String?
   assignedTo       User?     @relation("RoomAssignee", fields: [assignedToId], references: [id])
@@ -319,6 +322,7 @@ model WorkOrder {
   ackAt        DateTime?
   startedAt    DateTime?
   resolvedAt   DateTime?
+  resolutionNote String? // F2 (additiv, M4): Pflicht-Notiz des Technikers bei „Erledigt“ (was wurde gemacht) — keine Gastdaten
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
