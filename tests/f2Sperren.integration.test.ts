@@ -69,7 +69,8 @@ describe("Belegtes Zimmer / Anreise heute", () => {
     expect(await block("eng", "engineering", "302")).toMatchObject({ ok: false, status: 409, code: "OCCUPIED_CONFIRM_REQUIRED" });
     expect((await block("eng", "engineering", "302", { confirmOccupied: true })).ok).toBe(true);
     const ns = await prisma.notification.findMany({ where: { type: "ROOM_BLOCKED_OCCUPIED", roomId: room["302"] } });
-    expect(ns.map((n) => n.targetUserId).sort()).toEqual([ids.anna, ids.sup3].sort()); // nicht sup4 (andere Etage)
+    expect(ns.filter((n) => n.targetUserId).map((n) => n.targetUserId).sort()).toEqual([ids.anna, ids.sup3].sort()); // nicht sup4 (andere Etage)
+    expect(ns.filter((n) => n.targetRole === "duty_manager")).toHaveLength(1); // eigene DM-Meldung → Pop-up + Ton
     expect(ns.every((n) => n.level === "warning" && n.message.includes("Wasserschaden Bad") && n.message.includes("Gast im Zimmer"))).toBe(true);
   });
 
@@ -100,7 +101,8 @@ describe("Wieder in Betrieb", () => {
     expect((await call({ status: "RESOLVED", note: "Siphon getauscht" })).status).toBe(200);
     expect((await prisma.workOrder.findUniqueOrThrow({ where: { id: wo.id } })).resolutionNote).toBe("Siphon getauscht");
     const n = await prisma.notification.findMany({ where: { type: "OOO_READY", roomId: room["304"] } });
-    expect(n.map((x) => x.targetUserId)).toEqual([ids.sup3]);
+    expect(n.filter((x) => x.targetRole === "supervisor").map((x) => x.targetUserId)).toEqual([ids.sup3]);
+    expect(n.filter((x) => x.targetRole === "duty_manager")).toHaveLength(1);
     expect(n[0].level).toBe("warning");
     expect((await loadBlockedRooms()).find((b) => b.number === "304")?.readyForRelease).toBe(true);
   });
@@ -111,7 +113,7 @@ describe("Abgelaufene Sperre und Änderungen durch den DM", () => {
     await prisma.room.update({ where: { id: room["305"] }, data: { status: "OUT_OF_ORDER", oooReason: "Teppich", oooUntil: new Date(Date.now() - 3_600_000) } });
     await runEscalations(new Date());
     await runEscalations(new Date());
-    expect(await prisma.notification.count({ where: { type: "OOO_EXPIRED", roomId: room["305"] } })).toBe(1); // ein Supervisor der Etage 3
+    expect(await prisma.notification.count({ where: { type: "OOO_EXPIRED", roomId: room["305"] } })).toBe(2); // Supervisor der Etage 3 + Duty Manager, kein zweites Mal
     expect((await prisma.room.findUniqueOrThrow({ where: { id: room["305"] } })).status).toBe("OUT_OF_ORDER");
   });
 
@@ -124,5 +126,17 @@ describe("Abgelaufene Sperre und Änderungen durch den DM", () => {
     expect((await call({ reason: "Teppich wird erneuert", until: end.toISOString() })).status).toBe(200);
     expect(await prisma.room.findUniqueOrThrow({ where: { id: room["305"] } })).toMatchObject({ oooReason: "Teppich wird erneuert", oooUntil: end });
     expect(await prisma.auditLog.count({ where: { action: "OOO_UPDATED", roomId: room["305"] } })).toBe(1);
+  });
+});
+
+describe("Nachbesserung (Review)", () => {
+  it("„Bereit zur Freigabe“ zählt nur Aufträge dieser Sperre; alte Anreisen lösen keine Rückfrage aus", async () => {
+    const r = (await prisma.room.create({ data: { number: "306", floor: 3, section: "3A", type: "STANDARD", status: "DIRTY" } })).id;
+    const old = await prisma.defect.create({ data: { roomId: r, category: "OTHER", note: "alt", reportedById: ids.sup3 } });
+    await prisma.workOrder.create({ data: { defectId: old.id, status: "RESOLVED", resolvedAt: new Date(Date.now() - 86_400_000) } });
+    await prisma.arrival.create({ data: { roomId: r, guestName: "Alt, Test", status: "EXPECTED", eta: new Date(Date.now() - 3 * 86_400_000), createdById: ids.sup3 } });
+    const res = await applyStatusChange(sess("sup3", "supervisor"), r, { status: "OUT_OF_ORDER", oooUntil: until(), oooReason: "Neu" });
+    expect(res.ok).toBe(true); // keine Rückfrage wegen der alten Anreise
+    expect((await loadBlockedRooms()).find((b) => b.id === r)?.readyForRelease).toBe(false);
   });
 });

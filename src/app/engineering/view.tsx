@@ -89,9 +89,7 @@ export default function EngineeringView() {
       await api(`/api/rooms/${roomId}/status`, { body });
     } catch (e) {
       if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") {
-        if (window.confirm(`${e.message}
-
-${t("blocked.confirmOccupied")}`)) {
+        if (window.confirm(t("blocked.confirmOccupied"))) {
           try { await api(`/api/rooms/${roomId}/status`, { body: { ...body, confirmOccupied: true } }); } catch (e2) { setError(errorText(e2, t)); }
         }
         return;

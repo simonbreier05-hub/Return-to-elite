@@ -5,6 +5,7 @@ import { broadcast } from "@/lib/realtime";
 import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domain";
 import { checkTransition, SELL_BLOCKED } from "@/lib/stateMachine";
 import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
+import { arrivalTodayWhere } from "@/lib/rooms/blockedRooms";
 import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
 import { endPauseOnChange } from "@/lib/work/pauseData";
@@ -51,7 +52,7 @@ function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["
 export async function occupancyOf(room: { id: string; occupancy: string }, now = new Date()): Promise<{ occupied: boolean; arrivalToday: boolean }> {
   const date = berlinDate(now);
   const [arrival, plan] = await Promise.all([
-    prisma.arrival.findFirst({ where: { roomId: room.id, status: "EXPECTED" }, select: { id: true } }),
+    prisma.arrival.findFirst({ where: { roomId: room.id, ...arrivalTodayWhere(now) }, select: { id: true } }),
     prisma.dayRoomPlan.findFirst({ where: { date, roomId: room.id, cleaningType: { in: ["ARRIVAL", "SAME_DAY_TURN"] } }, select: { id: true } }),
   ]);
   return { occupied: room.occupancy === "OCCUPIED", arrivalToday: !!arrival || !!plan };

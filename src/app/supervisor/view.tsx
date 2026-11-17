@@ -544,9 +544,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
               await api(`/api/rooms/${dialog.room.id}/status`, { body: { status: "OUT_OF_ORDER", ...body } });
               await load();
             } catch (e) {
-              if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED" && window.confirm(`${e.message}
-
-${t("blocked.confirmOccupied")}`)) {
+              if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED" && window.confirm(t("blocked.confirmOccupied"))) {
                 await act(dialog.room, "OUT_OF_ORDER", { ...body, confirmOccupied: true });
               } else if (!(e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED")) setError(`${dialog.room.number}: ${errorText(e, t)}`);
             }

@@ -26,7 +26,7 @@ import { legacyTraceKey, TRACE_KEY_PREFIX, traceKey } from "@/lib/dayplan/traceK
  */
 
 /** Meta-Schlüssel im Protokoll, die Freitext oder Namen enthalten können. */
-export const AUDIT_PII_KEYS = ["guestName", "guestLastName", "name", "text", "note", "body", "message"] as const;
+export const AUDIT_PII_KEYS = ["guestName", "guestLastName", "name", "text", "note", "body", "message", "oooReason"] as const;
 
 /** Alle Namensfelder eines Aufenthalts leeren (Mitarbeiter-Anzeige + Begrüßung „Anrede Titel Nachname“). */
 const STAY_NAME_CLEARED = { guestName: "", guestSalutation: null, guestTitle: null, guestLastName: null };
@@ -101,6 +101,8 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
 
   const cutoff = new Date(now.getTime() - settings.guestStayDeleteDays * 86_400_000);
   counts.staysDeleted = (await prisma.stay.deleteMany({ where: { checkOut: { lt: cutoff } } })).count;
+  // F2: Freitext-Notiz der Technik zum erledigten Auftrag nach derselben Frist leeren (Sperrgrund wird beim Wieder-in-Betrieb geleert)
+  counts.workOrderNotes = (await prisma.workOrder.updateMany({ where: { resolutionNote: { not: null }, resolvedAt: { lt: cutoff } }, data: { resolutionNote: null } })).count;
 
   // Bestehende Regel (Gäste-Fotos, geschlossene Anfragen) im selben Lauf.
   try {

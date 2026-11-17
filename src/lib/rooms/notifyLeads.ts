@@ -7,7 +7,7 @@ import type { TKey } from "@/lib/i18n/translations";
 
 /**
  * F2: Meldung an die Verantwortlichen eines Zimmers — Supervisor der Etage (gibt es keinen, alle Supervisoren) und
- * Duty Manager (sieht jede Meldung, `api/notifications`), auf Wunsch auch die heute zugeteilte Housekeeperin und das Front Office.
+ * Duty Manager (eigene Meldung für Pop-up und Ton), auf Wunsch auch die heute zugeteilte Housekeeperin und das Front Office.
  * Nur Zimmer, Grund, Dauer — nie Gastdaten. `dedupeKey`: höchstens eine Meldung je Schlüssel (Ticker). Liefert die Anzahl.
  */
 export async function notifyFloorLeads(opts: {
@@ -26,6 +26,8 @@ export async function notifyFloorLeads(opts: {
     targets.push({ targetRole: "room_attendant", targetUserId: room.assignedToId });
   }
   if (opts.frontOffice) targets.push({ targetRole: "front_office", targetUserId: null });
+  // Entscheidung 16.11.: auch der Duty Manager bekommt Pop-up + Ton — dafür braucht er eine eigene Meldung (`isMine` in ui/notify.ts)
+  targets.push({ targetRole: "duty_manager", targetUserId: null });
   let n = 0;
   for (const [i, t] of targets.entries()) {
     const notification = await prisma.notification.create({

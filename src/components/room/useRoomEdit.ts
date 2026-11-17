@@ -33,14 +33,15 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
 
   const run = async (fn: () => Promise<unknown>) => {
     setMsg(null);
-    try { await fn(); setMsg({ ok: true, text: t("roomEdit.saved") }); await onChanged(); }
+    // `false` = nicht gespeichert (z. B. Rückfrage offen) — dann kein „Gespeichert“
+    try { if ((await fn()) === false) return; setMsg({ ok: true, text: t("roomEdit.saved") }); await onChanged(); }
     catch (e) { setMsg({ ok: false, text: errorText(e, t, "roomEdit.failed") }); }
   };
   const setStatus = (status: string, confirmOccupied = false) => run(async () => {
     try {
       await api(`/api/rooms/${room.id}/status`, { body: { status, ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString(), oooReason: oooReason.trim(), confirmOccupied } : {}) } });
       setOccupiedPrompt(null);
-    } catch (e) { if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") { setOccupiedPrompt(e.message); return; } throw e; }
+    } catch (e) { if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") { setOccupiedPrompt(e.message); return false; } throw e; }
   });
   /** F2: gesperrtes Zimmer wieder in Betrieb nehmen (nur Supervisor/Duty Manager — Server prüft) */
   const isBlocked = room.status === "OUT_OF_ORDER" || room.status === "OUT_OF_SERVICE";

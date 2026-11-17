@@ -29,6 +29,7 @@ export default function BlockedRoomsCard({ role }: { role: "duty_manager" | "sup
   const run = async (fn: () => Promise<unknown>) => { setMsg(null); try { await fn(); setEdit(null); await load(); } catch (e) { setMsg(errorText(e, t, "roomEdit.failed")); } };
   const when = (iso: string | null) => (iso ? fmt.dateTime(new Date(iso)) : "—");
   if (!rooms) return null;
+  if (!rooms.length && (role === "front_office" || role === "engineering")) return null; // dort nur, wenn es etwas zu sehen gibt
   return (
     <GlassCard as="section" aria-labelledby="blocked-title" className="flex flex-col gap-3" data-testid="blocked-rooms">
       <SectionLabel as="h2" icon="wrench" title={t("blocked.title", { n: rooms.length })} />

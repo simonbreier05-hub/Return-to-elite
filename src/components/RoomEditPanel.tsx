@@ -26,7 +26,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
 
 function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () => void | Promise<void> }) {
   const { t, fmt } = useLocale();
-  const { msg, ooo, setOoo, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
+  const { msg, ooo, setOoo, oooReason, setOooReason, occupiedPrompt, setOccupiedPrompt, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
     setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd, canCheckOut, checkOut } = useRoomEdit(room, onChanged);
   const editRow = (kind: "trace" | "note", id: string) => editing && editing.kind === kind && editing.id === id && (
     <div className="mt-1 flex flex-col gap-2 sm:flex-row">
@@ -54,9 +54,18 @@ function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () =>
         </div>
         {room.allowedStatuses.includes("OUT_OF_ORDER") && (
           <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="text-sm" htmlFor="ooo-reason">{t("blocked.reason")}</label>
+            <input id="ooo-reason" className={`${field} sm:w-auto`} maxLength={200} value={oooReason} onChange={(e) => setOooReason(e.target.value)} />
             <label className="text-sm" htmlFor="ooo-until">{t("roomEdit.oooUntil")}</label>
             <input id="ooo-until" type="datetime-local" className={`${field} sm:w-auto`} value={ooo} onChange={(e) => setOoo(e.target.value)} />
-            <TwoTapButton disabled={!ooo} onConfirm={() => setStatus("OUT_OF_ORDER")}>{t("roomEdit.statusSet", { status: t("status.OUT_OF_ORDER") })}</TwoTapButton>
+            <TwoTapButton disabled={!ooo || !oooReason.trim()} onConfirm={() => setStatus("OUT_OF_ORDER")}>{t("roomEdit.statusSet", { status: t("status.OUT_OF_ORDER") })}</TwoTapButton>
+          </div>
+        )}
+        {occupiedPrompt && (
+          <div role="alert" className="mt-2 flex flex-col gap-2 rounded-lg bg-gold-soft/30 p-2 sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm">{t("blocked.confirmOccupied")}</p>
+            <TwoTapButton onConfirm={() => setStatus("OUT_OF_ORDER", true)}>{t("blocked.confirmBlock")}</TwoTapButton>
+            <button type="button" className="min-h-11 px-2 text-sm underline" onClick={() => setOccupiedPrompt(null)}>{t("roomEdit.cancel")}</button>
           </div>
         )}
       </section>

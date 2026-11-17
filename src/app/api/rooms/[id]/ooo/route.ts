@@ -31,7 +31,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     include: { assignedTo: { select: { id: true, name: true } } },
   });
   await audit({ action: "OOO_UPDATED", userId: auth.session.userId, roomId: id, fromStatus: room.status, toStatus: "OUT_OF_ORDER",
-    meta: { reason: parsed.data.reason, until: parsed.data.until, before: { reason: room.oooReason, until: room.oooUntil } } });
+    meta: { oooReason: parsed.data.reason, until: parsed.data.until, before: { oooReason: room.oooReason, until: room.oooUntil } } });
   broadcast("room:update", { room: updated });
   return NextResponse.json({ room: updated });
 }
