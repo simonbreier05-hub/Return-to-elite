@@ -71,6 +71,9 @@ export interface RoomRow {
   dndCard: boolean;
   /** Betrieb L2 (Punkt 11): Gast hat heute die Green Option gewählt — Wäschewechsel entfällt (`laundry` ist dann false). */
   green: boolean;
+  /** F3 Teil 4 (H9): altes Zimmer eines Zimmerwechsels → Zielnummer (bis freigegeben), Zielzimmer ← Herkunft (für den Tag). */
+  roomChangeTo: string | null;
+  roomChangeFrom: string | null;
 }
 
 /** Welcher Aufenthalt zählt für die Anzeige: Anreise/Turn → der anreisende Gast, sonst der bleibende bzw. abreisende. */
@@ -153,6 +156,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       estMinutes: creditMinutes(credits, settings.minutesPerCredit),
       lateCheckout: p?.lateCheckout ?? null,
       green: !!p?.laundryDue && green.has(r.id),
+      roomChangeTo: p?.roomChangeTo && r.status !== "INSPECTED" ? p.roomChangeTo : null,
+      roomChangeFrom: p?.roomChangeFrom ?? null,
       dndCard: dndReminderDue({ dnd: dnd.has(r.id) || r.blockReason === "DND", status: r.status, toClean: !!kind && kind !== "ARRIVAL" }, now, settings.dndReminderHour),
     };
   });

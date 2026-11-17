@@ -1,5 +1,7 @@
 "use client";
 
+import RoomActionsCard from "@/components/roles/RoomActionsCard";
+import RoomChangeForm from "@/components/roles/RoomChangeForm";
 import FrontOfficeDnd from "@/components/roles/FrontOfficeDnd";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -183,6 +185,7 @@ export default function FrontOfficeView() {
             {released && <Banner tone="info" icon="bell" title={released} />}
             <BlockedRoomsCard role="front_office" />
             <FrontOfficeDnd />
+            <RoomActionsCard roomChange={<RoomChangeForm />} />
             <PriorityBanner
               items={[
                 { count: neededNowNotReady, label: t("priority.neededNowArrivals"), icon: "warning", tone: "urgent" },

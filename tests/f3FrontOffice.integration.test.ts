@@ -133,3 +133,78 @@ describe("Teil 2 — Check-out zurücknehmen, DND aufheben (H7, M22)", () => {
     expect((await guestRequestPatch(req({ status: "DONE" }, "PATCH"), ctx(dnd.id))).status).toBe(403);
   });
 });
+
+import { POST as earlyPost } from "@/app/api/rooms/[id]/early-departure/route";
+import { POST as roomChangePost } from "@/app/api/rooms/[id]/room-change/route";
+import { GET as departuresGet } from "@/app/api/front-office/departures/route";
+import { resolveGuestAccessByRoomCode } from "@/lib/guestServer";
+import { loadRoomRows } from "@/lib/lists/dayRows";
+
+describe("Teil 3 — Vorzeitige Abreise (H8)", () => {
+  it("Bleiber reist heute ab: Art Abreise (Handeingabe), Meldung an die Housekeeperin; andere Rollen 403", async () => {
+    const s = await stay(room["203"], "Frühabreisetest", -1, 3, "IN_HOUSE");
+    await prisma.dayRoomPlan.create({ data: { date: TODAY, roomId: room["203"], cleaningType: "STAYOVER", stayId: s.id } });
+    await prisma.room.update({ where: { id: room["203"] }, data: { occupancy: "OCCUPIED", assignedToId: ids.anna, assignedOn: TODAY } });
+    as("anna", "room_attendant");
+    expect((await earlyPost(req(), ctx(room["203"]))).status).toBe(403);
+    as("fo", "front_office");
+    expect((await earlyPost(req(), ctx(room["203"]))).status).toBe(200);
+    expect(await prisma.dayRoomPlan.findUniqueOrThrow({ where: { date_roomId: { date: TODAY, roomId: room["203"] } } })).toMatchObject({ cleaningType: "DEPARTURE", typeOverridden: true, derivedType: "STAYOVER" });
+    expect(await prisma.notification.count({ where: { type: "LIST_UPDATED", targetUserId: ids.anna } })).toBe(1);
+    // danach normaler Check-out
+    expect((await checkoutPost(req(), ctx(room["203"]))).status).toBe(200);
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: s.id } })).status).toBe("CHECKED_OUT");
+  });
+});
+
+describe("Teil 4 — Zimmerwechsel (H9, B5 neu)", () => {
+  it("FO wechselt 204 → 205: Aufenthalt wandert, alter Code neutral, neuer grüßt; Kennzeichen, Wünsche, Meldungen", async () => {
+    const s = await stay(room["204"], "Wechseltest", -1, 2, "IN_HOUSE");
+    await prisma.dayRoomPlan.create({ data: { date: TODAY, roomId: room["204"], cleaningType: "STAYOVER", stayId: s.id } });
+    await prisma.room.update({ where: { id: room["204"] }, data: { occupancy: "OCCUPIED", status: "INSPECTED", guestAccessCode: "code204", assignedToId: ids.anna, assignedOn: TODAY } });
+    await prisma.room.update({ where: { id: room["205"] }, data: { occupancy: "VACANT", status: "INSPECTED", guestAccessCode: "code205" } });
+    await prisma.room.update({ where: { id: room["206"] }, data: { occupancy: "VACANT", status: "DIRTY" } }); // nicht geprüft → kein Ziel
+    const wish = await prisma.guestRequest.create({ data: { roomId: room["204"], kind: "CLEAN_REQUEST", detail: "{}" } });
+    const note = await prisma.roomNote.create({ data: { roomId: room["204"], authorId: ids.sup, body: "Fenster klemmt" } });
+    expect((await resolveGuestAccessByRoomCode("code204"))?.stay.id).toBe(s.id);
+
+    for (const [k, role] of [["anna", "room_attendant"], ["con", "concierge"], ["hm", "houseman"], ["eng", "engineering"]] as const) {
+      as(k, role);
+      expect((await roomChangePost(req({ toRoomId: room["205"], reason: "Lärm" }), ctx(room["204"]))).status).toBe(403);
+    }
+    as("fo", "front_office");
+    expect((await roomChangePost(req({ toRoomId: room["206"], reason: "Lärm" }), ctx(room["204"]))).status).toBe(409); // Ziel nicht geprüft
+    expect((await roomChangePost(req({ toRoomId: room["205"], reason: "Lärm" }), ctx(room["204"]))).status).toBe(200);
+
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: s.id } })).roomId).toBe(room["205"]);
+    expect(await resolveGuestAccessByRoomCode("code204")).toBeNull(); // altes Zimmer sofort neutral
+    expect((await resolveGuestAccessByRoomCode("code205"))?.stay.id).toBe(s.id); // neues grüßt den Gast
+    expect(await prisma.room.findUniqueOrThrow({ where: { id: room["204"] } })).toMatchObject({ status: "DIRTY", occupancy: "VACANT" });
+    expect(await prisma.room.findUniqueOrThrow({ where: { id: room["205"] } })).toMatchObject({ occupancy: "OCCUPIED" });
+    expect((await prisma.guestRequest.findUniqueOrThrow({ where: { id: wish.id } })).roomId).toBe(room["205"]); // Wunsch wandert mit
+    expect((await prisma.roomNote.findUniqueOrThrow({ where: { id: note.id } })).roomId).toBe(room["204"]); // Notiz bleibt
+
+    const rows = await loadRoomRows(TODAY, { roomIds: [room["204"], room["205"]] }, null);
+    expect(rows.find((r) => r.id === room["204"])).toMatchObject({ kind: "DEPARTURE", roomChangeTo: "205" });
+    expect(rows.find((r) => r.id === room["205"])).toMatchObject({ kind: "STAYOVER", roomChangeFrom: "204" });
+    const ns = await prisma.notification.findMany({ where: { type: "ROOM_CHANGE" } });
+    expect(new Set(ns.map((n) => n.targetRole))).toEqual(new Set(["supervisor", "duty_manager", "front_office", "room_attendant"]));
+    expect(ns.every((n) => !n.message.includes("Wechseltest"))).toBe(true);
+    expect(await prisma.auditLog.count({ where: { action: "ROOM_CHANGE" } })).toBe(1);
+    // altes Zimmer ist kein Check-out in der FO-Liste
+    const deps = await (await departuresGet()).json();
+    expect(deps.departures?.some?.((d: { roomId: string }) => d.roomId === room["204"]) ?? false).toBe(false);
+
+    // Kennzeichen bleibt bis zur Freigabe
+    await prisma.room.update({ where: { id: room["204"] }, data: { status: "INSPECTED" } });
+    expect((await loadRoomRows(TODAY, { roomIds: [room["204"]] }, null))[0].roomChangeTo).toBeNull();
+  });
+
+  it("Supervisor und DM dürfen ebenfalls wechseln; Nachimport macht den Wechsel nicht rückgängig (Handeingabe)", async () => {
+    await prisma.room.update({ where: { id: room["206"] }, data: { status: "INSPECTED" } });
+    as("sup", "supervisor");
+    expect((await roomChangePost(req({ toRoomId: room["206"], reason: "Klima defekt" }), ctx(room["205"]))).status).toBe(200);
+    const p = await prisma.dayRoomPlan.findUniqueOrThrow({ where: { date_roomId: { date: TODAY, roomId: room["205"] } } });
+    expect(p).toMatchObject({ cleaningType: "DEPARTURE", typeOverridden: true, roomChangeTo: "206" });
+  });
+});

@@ -1,5 +1,7 @@
 "use client";
 
+import RoomActionsCard from "@/components/roles/RoomActionsCard";
+import RoomChangeForm from "@/components/roles/RoomChangeForm";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
@@ -182,6 +184,7 @@ export default function DutyManagerView() {
                 <>
                   <HubMissingNotice hub={hub} planner glass />
                   <BlockedRoomsCard role="duty_manager" />
+                  <RoomActionsCard roomChange={<RoomChangeForm />} />
                   {HOTEL.unconfirmedFloors.length > 0 && (
                     <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
                   )}

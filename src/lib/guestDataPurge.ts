@@ -26,7 +26,7 @@ import { legacyTraceKey, TRACE_KEY_PREFIX, traceKey } from "@/lib/dayplan/traceK
  */
 
 /** Meta-Schlüssel im Protokoll, die Freitext oder Namen enthalten können. */
-export const AUDIT_PII_KEYS = ["guestName", "guestLastName", "name", "text", "note", "body", "message", "oooReason"] as const;
+export const AUDIT_PII_KEYS = ["guestName", "guestLastName", "name", "text", "note", "body", "message", "oooReason", "reasonText"] as const;
 
 /** Alle Namensfelder eines Aufenthalts leeren (Mitarbeiter-Anzeige + Begrüßung „Anrede Titel Nachname“). */
 const STAY_NAME_CLEARED = { guestName: "", guestSalutation: null, guestTitle: null, guestLastName: null };

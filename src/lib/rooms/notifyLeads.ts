@@ -13,6 +13,8 @@ import type { TKey } from "@/lib/i18n/translations";
 export async function notifyFloorLeads(opts: {
   roomId: string; type: string; level: "info" | "warning" | "critical"; message: string; key: TKey; vars?: Record<string, string | number>;
   dedupeKey?: string; housekeeper?: boolean; frontOffice?: boolean; skipUserId?: string | null; now?: Date;
+  /** Eigene DM-Meldung (Standard: ja). `false`, wenn dasselbe Ereignis den DM schon über einen anderen Aufruf erreicht. */
+  dmCopy?: boolean;
 }): Promise<number> {
   const room = await prisma.room.findUnique({ where: { id: opts.roomId }, select: { id: true, number: true, floor: true, assignedToId: true, assignedOn: true } });
   if (!room) return 0;
@@ -27,7 +29,7 @@ export async function notifyFloorLeads(opts: {
   }
   if (opts.frontOffice) targets.push({ targetRole: "front_office", targetUserId: null });
   // Entscheidung 16.11.: auch der Duty Manager bekommt Pop-up + Ton — dafür braucht er eine eigene Meldung (`isMine` in ui/notify.ts)
-  targets.push({ targetRole: "duty_manager", targetUserId: null });
+  if (opts.dmCopy !== false) targets.push({ targetRole: "duty_manager", targetUserId: null });
   let n = 0;
   for (const [i, t] of targets.entries()) {
     const notification = await prisma.notification.create({

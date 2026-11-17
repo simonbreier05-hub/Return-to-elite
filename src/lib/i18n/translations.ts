@@ -854,6 +854,8 @@ const en = {
     },
   },
   lists: {
+    roomChangeTo: "Room change → {{n}}",
+    roomChangeFrom: "from {{n}}",
     workRunning: "In progress since {{start}} · {{elapsed}} min · approx. {{remaining}} min left",
     workOver: "In progress since {{start}} · {{elapsed}} min · {{over}} min over estimate",
     lateCheckout: "Late check-out {{time}}",
@@ -1642,6 +1644,7 @@ const en = {
     tileEMPTY: "empty",
   },
   notify: {
+    roomChangeMoved: "Room change {{from}} → {{to}}",
     changeCHECKOUT_REVERTED: "check-out undone — guest is still in the room, do not clean",
     checkoutReverted: "Room {{n}} (floor {{floor}}): check-out undone — guest is still in the room.",
     arrivalConflict: "Room {{n}}: arrival {{eta}} before the previous guest leaves (late check-out {{lco}}) — please decide.",
@@ -1999,6 +2002,21 @@ const en = {
     stillInLate: "Room {{n}}: according to Front Office the guest is still in the room, late check-out {{time}}. Continue anyway?",
     conflict: "Conflict: arrival before departure",
     checkinBlocked: "Check-in only after the previous guest has checked out.",
+  },
+  roomActions: {
+    changeTitle: "Room change",
+    changeFrom: "From room",
+    changeTo: "To room",
+    changePick: "Choose ({{n}} free)",
+    changeReason: "Reason (no guest data)",
+    changeGo: "Change room",
+    changeConfirmTitle: "Move guest from {{from}} to {{to}}?",
+    changeConfirmText: "Room {{from}} becomes dirty (departure), room {{to}} occupied (stayover). The guest screen of {{to}} greets the guest from now on, {{from}} turns neutral.",
+    changeDone: "Room change {{from}} → {{to}} done.",
+    title: "Room actions",
+    earlyDeparture: "Leaves today (early)",
+    earlyHint: "Only for a stayover: becomes a departure today, then check out as usual.",
+    earlyDone: "Room {{n}} leaves today — now a departure.",
   },
 } as const;
 
@@ -2845,6 +2863,8 @@ const de = {
     },
   },
   lists: {
+    roomChangeTo: "Zimmerwechsel → {{n}}",
+    roomChangeFrom: "von {{n}}",
     workRunning: "In Arbeit seit {{start}} · {{elapsed}} Min. · noch ca. {{remaining}} Min.",
     workOver: "In Arbeit seit {{start}} · {{elapsed}} Min. · {{over}} Min. über der Schätzung",
     lateCheckout: "Late Check-out {{time}}",
@@ -3633,6 +3653,7 @@ const de = {
     tileEMPTY: "leer",
   },
   notify: {
+    roomChangeMoved: "Zimmerwechsel {{from}} → {{to}}",
     changeCHECKOUT_REVERTED: "Check-out zurückgenommen — Gast ist noch im Zimmer, bitte nicht reinigen",
     checkoutReverted: "Zimmer {{n}} (Etage {{floor}}): Check-out zurückgenommen — Gast ist noch im Zimmer.",
     arrivalConflict: "Zimmer {{n}}: Anreise {{eta}} vor Abreise des Vorgasts (Late Check-out {{lco}}) — bitte entscheiden.",
@@ -3990,6 +4011,21 @@ const de = {
     stillInLate: "Zimmer {{n}}: Gast laut Front Office noch im Zimmer, Late Check-out {{time}}. Trotzdem fortfahren?",
     conflict: "Konflikt: Anreise vor Abreise",
     checkinBlocked: "Einchecken erst, wenn der Vorgast ausgecheckt hat.",
+  },
+  roomActions: {
+    changeTitle: "Zimmerwechsel",
+    changeFrom: "Von Zimmer",
+    changeTo: "Nach Zimmer",
+    changePick: "Wählen ({{n}} frei)",
+    changeReason: "Grund (ohne Gastdaten)",
+    changeGo: "Zimmer wechseln",
+    changeConfirmTitle: "Gast von {{from}} nach {{to}} umziehen?",
+    changeConfirmText: "Zimmer {{from}} wird schmutzig (Abreise), Zimmer {{to}} belegt (Bleiber). Der Gastbildschirm von {{to}} begrüßt den Gast ab sofort, {{from}} wird neutral.",
+    changeDone: "Zimmerwechsel {{from}} → {{to}} erledigt.",
+    title: "Zimmer-Aktionen",
+    earlyDeparture: "Reist heute ab (vorzeitig)",
+    earlyHint: "Nur für einen Bleiber: wird heute zur Abreise, danach wie gewohnt auschecken.",
+    earlyDone: "Zimmer {{n}} reist heute ab — jetzt Abreise.",
   },
 } satisfies Dict;
 

@@ -16,7 +16,8 @@ export async function GET() {
   const hub = await hubDay();
   if (!hub.ready || !hub.date) return NextResponse.json({ date: null, departures: [] });
   const plans = await prisma.dayRoomPlan.findMany({
-    where: { date: hub.date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN"] } },
+    // F3 Teil 4: altes Zimmer eines Zimmerwechsels ist kein Check-out (der Gast ist umgezogen)
+    where: { date: hub.date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN"] }, roomChangeTo: null },
     include: { room: { select: { id: true, number: true, floor: true, status: true } } },
   });
   const stays = await prisma.stay.findMany({ where: { id: { in: plans.map((p) => p.stayId).filter((x): x is string => !!x) } } });

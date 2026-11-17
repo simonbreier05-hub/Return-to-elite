@@ -174,6 +174,9 @@ function GlassSupervisorList({ data, open, toggle, flash, stand, error, roomRef,
       ? { label: t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }), tone: "warning" }
       : { label: t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin }), tone: "info" });
     if (room.lateCheckout) extra.push({ label: t("lists.lateCheckout", { time: room.lateCheckout }), tone: "warning" });
+    // F3 Teil 4 (H9): Zimmerwechsel sichtbar — altes Zimmer bis zur Freigabe, Zielzimmer für den Tag
+    if (room.roomChangeTo) extra.push({ label: t("lists.roomChangeTo", { n: room.roomChangeTo }), tone: "warning" });
+    if (room.roomChangeFrom) extra.push({ label: t("lists.roomChangeFrom", { n: room.roomChangeFrom }), tone: "info" });
     if (room.checkedOut && (room.kind === "SAME_DAY_TURN" || room.kind === "DEPARTURE")) extra.push({ label: t("lists.checkedOut"), tone: "success" });
     if (room.dndCard) extra.push({ label: t("lists.dndCard"), tone: "warning" });
     if (room.green) extra.push({ label: t("lists.green"), tone: "success" });

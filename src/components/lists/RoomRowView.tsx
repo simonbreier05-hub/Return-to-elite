@@ -32,6 +32,9 @@ export interface ListRoom {
   serviceNow?: boolean;
   /** Gastwunsch „Reinigung ab HH:MM“ — wird angezeigt. */
   cleanAfter?: string | null;
+  /** F3 Teil 4: Zimmerwechsel → Ziel (altes Zimmer, bis freigegeben) bzw. von Herkunft (Zielzimmer). */
+  roomChangeTo?: string | null;
+  roomChangeFrom?: string | null;
   checkedOut?: boolean;
   /** Betrieb L2: Start der Reinigung (ISO) und geschätzte Dauer (Credit × Minuten je Credit). */
   startedAt?: string | null;
@@ -119,6 +122,8 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             {room.checkedOut && (room.kind === "SAME_DAY_TURN" || room.kind === "DEPARTURE") && <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-status-clean`}><span aria-hidden>✓</span>{t("lists.checkedOut")}</span>}
             {room.dndCard && <span className={`${chip} border-status-blocked/40 bg-status-blocked/10 text-status-blocked`}><IconBan className="h-3.5 w-3.5" />{t("lists.dndCard")}</span>}
             {room.green && <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-status-clean`}><span aria-hidden>🌿</span>{t("lists.green")}</span>}
+            {room.roomChangeTo && <span className={`${chip} border-gold bg-gold-soft/40 text-charcoal`}><span aria-hidden>⇄</span>{t("lists.roomChangeTo", { n: room.roomChangeTo })}</span>}
+            {room.roomChangeFrom && <span className={`${chip} border-status-inspected/40 bg-status-inspected/10 text-status-inspected`}><span aria-hidden>⇄</span>{t("lists.roomChangeFrom", { n: room.roomChangeFrom })}</span>}
             {room.lang && <span className={`${chip} border-charcoal/15 bg-white text-graphite`} title={t("lists.guestLanguage")}><span aria-hidden>🗣</span>{room.lang.toUpperCase()}</span>}
             {badges}
           </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import RoomActionsCard from "@/components/roles/RoomActionsCard";
+import RoomChangeForm from "@/components/roles/RoomChangeForm";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -490,7 +492,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         selectedRoomId={selectedId}
         onOpenRoom={setSelectedId}
         onMoveRooms={() => router.push("/floor-plan")}
-        notices={<>{notices}<BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} /></>}
+        notices={<>{notices}<BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} /><RoomActionsCard roomChange={<RoomChangeForm />} /></>}
         release={release}
         below={below}
         detailOpen={!!detailRoom}

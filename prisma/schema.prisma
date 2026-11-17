@@ -542,6 +542,10 @@ model DayRoomPlan {
   // oder vom Front Office von Hand gesetzt (lateCheckoutManual). Keine Gastdaten.
   lateCheckout       String?
   lateCheckoutManual Boolean  @default(false)
+  // F3 Teil 4 (additiv, H9): Zimmerwechsel am Tag — altes Zimmer trägt das Ziel („Zimmerwechsel → 418“, bis freigegeben),
+  // das Zielzimmer die Herkunft („von 312“). Nur Zimmernummern, keine Gastdaten.
+  roomChangeTo   String?
+  roomChangeFrom String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

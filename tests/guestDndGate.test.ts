@@ -27,6 +27,8 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
 vi.mock("@/lib/pms/MockPMSConnector", () => ({ pms: { pushRoomStatus: vi.fn() } }));
+// F3 Teil 1: „Vorgast noch im Zimmer?“ — in diesen Fällen nie (eigene Tests in tests/f3FrontOffice.integration.test.ts)
+vi.mock("@/lib/rooms/previousGuest", () => ({ previousGuest: async () => ({ present: false, lateCheckout: null, reason: null }), previousGuestText: () => "" }));
 
 import { applyStatusChange } from "@/lib/rooms/applyStatusChange";
 
