@@ -83,8 +83,10 @@ describe("Mit Tagesplan aus dem Planungshub", () => {
     expect(byNo["201"]).toMatchObject({ isCheckoutToday: false, occupancy: "OCCUPIED" });
     expect(byNo["202"]).toMatchObject({ isCheckoutToday: false, occupancy: "OCCUPIED" });
     expect(byNo["203"]).toMatchObject({ isCheckoutToday: false, occupancy: "VACANT" });
-    // Zimmerstatus: sauber, nur nachweislich belegte (Bleiber 201, In-House 202) schmutzig
-    expect(Object.fromEntries(Object.entries(byNo).map(([n, r]) => [n, r.status]))).toEqual({ "201": "DIRTY", "202": "DIRTY", "203": "INSPECTED" });
+    // Zimmerstatus: nachweislich belegte (Bleiber 201, In-House 202) schmutzig; 203 war gestern schmutzig und ist nicht
+    // gereinigt worden → bleibt schmutzig und steht als „Rest vom Vortag“ im Plan (F1, Befund K1 — früher fälschlich INSPECTED)
+    expect(Object.fromEntries(Object.entries(byNo).map(([n, r]) => [n, r.status]))).toEqual({ "201": "DIRTY", "202": "DIRTY", "203": "DIRTY" });
+    expect((await prisma.dayRoomPlan.findUniqueOrThrow({ where: { date_roomId: { date: D, roomId: ids["203"] } } })).cleaningType).toBe("CARRYOVER");
     expect(await hubDay()).toEqual({ date: D, ready: true });
   });
 
@@ -111,11 +113,13 @@ describe("Zimmerstatus aus dem Hub", () => {
   it("Nachimport am selben Tag: neue Abreise wird schmutzig, bereits bearbeitete Zimmer bleiben", async () => {
     // 202 wurde heute schon bearbeitet (Status geändert, nicht mehr unser gesetzter Stand), 203 kommt neu als Abreise dazu
     await prisma.room.update({ where: { id: ids["202"] }, data: { status: "IN_PROGRESS", statusSince: new Date() } });
-    await prisma.dayRoomPlan.create({ data: { date: D, roomId: ids["203"], cleaningType: "DEPARTURE" } });
+    // 203 stand als „Rest vom Vortag“ im Plan (F1) — der Nachimport macht daraus eine Abreise
+    await prisma.dayRoomPlan.upsert({ where: { date_roomId: { date: D, roomId: ids["203"] } }, create: { date: D, roomId: ids["203"], cleaningType: "DEPARTURE" }, update: { cleaningType: "DEPARTURE" } });
     await prisma.dayRoomPlan.deleteMany({ where: { date: D, roomId: ids["201"] } }); // 201 reist nicht mehr als Bleiber → nur noch Anreise-frei
     await applyDayPlanToBoard(D, ids.sup);
     const st = Object.fromEntries((await prisma.room.findMany()).map((r) => [r.number, r.status]));
-    expect(st).toEqual({ "201": "INSPECTED", "202": "IN_PROGRESS", "203": "DIRTY" });
+    // 201 steht seit dem Vortag auf DIRTY und wurde nie gereinigt → bleibt schmutzig (F1, K1), statt ungereinigt „geprüft“ zu werden
+    expect(st).toEqual({ "201": "DIRTY", "202": "IN_PROGRESS", "203": "DIRTY" });
   });
 
   it("außer Betrieb bleibt außer Betrieb; Zimmer von gestern (BLOCKED) werden zurückgesetzt", async () => {

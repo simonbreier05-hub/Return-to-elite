@@ -24,6 +24,8 @@ export interface HouseData {
   floors: HouseFloor[];
   /** Etage → Supervisor-Badge (leer = gestrichelter Kreis). */
   supervisors: Record<number, HouseSupervisor | undefined>;
+  /** F1 (K1): Zimmernummern „seit gestern nicht gereinigt“ (Tagesplan-Art CARRYOVER) — Hinweis über dem Haus. */
+  carryover: string[];
 }
 
 /** Etage 5 oben, Etage 1 unten. */

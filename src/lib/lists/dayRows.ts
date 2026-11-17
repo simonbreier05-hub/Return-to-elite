@@ -8,13 +8,16 @@ import { dndReminderDue } from "@/lib/rooms/dndReminder";
 import { shortGuestName, timesInText } from "./guestName";
 import { activePauses, type PauseView } from "@/lib/work/pauseData";
 import { isCheckedOut, parseCleanWish } from "@/lib/planung/listOrder";
+import { unplannedKind } from "@/lib/dayplan/dayNumbers";
+import { isStartedStatus } from "@/lib/rooms/startedStatus";
 
 /** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
   return latestPlanDate();
 }
 
-export type Kind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL";
+/** F1: CARRYOVER = Rest vom Vortag (Tagesplan), EXTRA = ohne Tagesplan-Eintrag, heute zugeteilt (K3) — beide wie Abreise gereinigt. */
+export type Kind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | "CARRYOVER" | "EXTRA";
 
 export interface TraceView { id: string; code: string; text: string; dept: string; status: string }
 
@@ -126,7 +129,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   return rooms.map((r) => {
     const p = planBy.get(r.id);
     const stay = p ? stayBy.get(stayIdFor(p) ?? "") : undefined;
-    const kind = (p?.cleaningType as Kind | undefined) ?? null;
+    const kind = (p?.cleaningType as Kind | undefined)
+      ?? unplannedKind({ status: r.status, assignedToId: r.assignedToId, assignedToday: r.assignedOn === date || isStartedStatus(r.status) });
     const credits = kind === "ARRIVAL" || !kind ? 0 : computeRoomCredit({ type: r.type as RoomType, credits: typeCredits, roomCredit: r.credit });
     return {
       id: r.id, number: r.number, floor: r.floor, status: r.status, routeOrder: r.routeOrder, assignedToId: r.assignedToId, assignedOn: r.assignedOn,

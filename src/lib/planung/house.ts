@@ -2,7 +2,8 @@ import { prisma } from "@/lib/db";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 import { supervisorBadges, type HouseData, type HouseTile, type TileKind } from "./model";
 
-const KIND: Record<string, TileKind> = { DEPARTURE: "DEPARTURE", SAME_DAY_TURN: "TURN", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
+// F1: Rest vom Vortag wird wie eine Abreise gereinigt (Kachel Abreise); der Hinweis darüber nennt die Zimmer.
+const KIND: Record<string, TileKind> = { DEPARTURE: "DEPARTURE", SAME_DAY_TURN: "TURN", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL", CARRYOVER: "DEPARTURE" };
 
 /**
  * Haus-Ansicht: eine Kachel je Zimmer, Art laut `DayRoomPlan`. Eine gemeinsame Abfrage für Kacheln,
@@ -39,5 +40,6 @@ export async function getHouseData(date?: string | null): Promise<HouseData> {
     hasData: plan.length > 0,
     floors: [...floors.entries()].sort(([a], [b]) => a - b).map(([floor, tiles]) => ({ floor, tiles })),
     supervisors,
+    carryover: rooms.filter((r) => byRoom.get(r.id)?.cleaningType === "CARRYOVER").map((r) => r.number),
   };
 }

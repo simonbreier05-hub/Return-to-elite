@@ -13,6 +13,10 @@ import { notifyListUpdate, type NewTrace, type RoomChange } from "@/lib/rooms/no
 import { compareWithForecast, deriveDayPlan, type DayCleaningType, type DayFiguresDerived } from "./derive";
 import { berlinToUtc } from "./time";
 import { planBoardStatus, type StatusMarker } from "./boardStatus";
+import { keyed } from "@/lib/i18n/notificationText";
+
+/** F1 (K1, Entscheidung Frage 3): Art „Rest vom Vortag“ — gestern nicht fertig, heute ohne eigenen Grund im Plan. Reinigung wie Abreise. */
+export const CARRYOVER = "CARRYOVER";
 import { legacyTraceKey, traceKey } from "./traceKey";
 import { getTraceDeptMap, TRACE_DEPT_DEFAULTS } from "./traceDept";
 
@@ -127,20 +131,21 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   let changedAssigned = 0;
   const changedRooms = [...new Set([
     ...derived.rooms.filter((r) => oldByRoom.get(r.room)?.cleaningType !== r.cleaningType).map((r) => r.room),
-    ...[...oldByRoom.keys()].filter((n) => !newByRoom.has(n)),
+    ...[...oldByRoom.entries()].filter(([n, o]) => !newByRoom.has(n) && o.cleaningType !== CARRYOVER).map(([n]) => n),
   ])];
   // Geänderte Arten (ohne manuell überschriebene) für die Meldungen an die Betroffenen — nach dem Schreiben, einmal je Person
   const typeChanges: RoomChange[] = [];
   for (const [number, old] of oldByRoom) {
     const nu = newByRoom.get(number);
     if (old.typeOverridden) continue;
+    if (old.cleaningType === CARRYOVER) continue; // F1: Rest vom Vortag bleibt stehen bzw. bekommt seine heutige Art — keine „entfällt“-Meldung
     const r = roomByNumber.get(number);
     if (!r) continue;
     if (!nu) typeChanges.push({ number, floor: r.floor, roomId: old.roomId, from: old.cleaningType, to: "—" });
     else if (nu.cleaningType !== old.cleaningType) typeChanges.push({ number, floor: r.floor, roomId: old.roomId, from: old.cleaningType, to: nu.cleaningType });
   }
   changedAssigned = typeChanges.filter((c) => !!roomByNumber.get(c.number)?.assignedToId).length;
-  for (const [number, old] of oldByRoom) if (!newByRoom.has(number) && !old.typeOverridden) await prisma.dayRoomPlan.delete({ where: { id: old.id } });
+  for (const [number, old] of oldByRoom) if (!newByRoom.has(number) && !old.typeOverridden && old.cleaningType !== CARRYOVER) await prisma.dayRoomPlan.delete({ where: { id: old.id } });
   const lcoAfter = (await getSettings()).lateCheckoutAfterMinutes; // Betrieb L2: Late Check-out aus dem Report
   for (const r of derived.rooms) {
     const room = roomByNumber.get(r.room)!;
@@ -222,7 +227,7 @@ async function initRoomStatus(date: string, plan: { roomId: string; cleaningType
   const key = `boardInit:${date}`;
   const stored = await prisma.setting.findUnique({ where: { key } });
   const old: StatusMarker = stored ? JSON.parse(stored.value) : {};
-  const { updates, marker } = planBoardStatus({ rooms, needsCleaning: needs, needsCheck: check, marker: old, dayStart: berlinToUtc(date, "00:00") });
+  const { updates, marker, carryover } = planBoardStatus({ rooms, needsCleaning: needs, needsCheck: check, marker: old, dayStart: berlinToUtc(date, "00:00") });
   const now = new Date();
   for (const u of updates) {
     const room = await prisma.room.update({ where: { id: u.id }, data: { status: u.status, statusSince: now, blockReason: null, blockedSince: null, reworkNote: null } });
@@ -237,6 +242,37 @@ async function initRoomStatus(date: string, plan: { roomId: string; cleaningType
     const toCheck = updates.filter((u) => u.status === "CLEAN").length;
     await audit({ action: "BOARD_STATUS_INIT", userId, meta: { date, dirty, toCheck, inspected: updates.length - dirty - toCheck } });
   }
+  return recordCarryover(date, carryover, plan, rooms);
+}
+
+/**
+ * F1: Rest vom Vortag sichtbar machen — eigener Tagesplan-Eintrag (Art CARRYOVER) für Zimmer ohne heutigen Eintrag, damit sie
+ * in Zuteilungsvorschlag, Tageszahlen und Listen mitzählen. Einträge bleiben den ganzen Tag stehen (auch wenn das Zimmer gereinigt ist).
+ * Der Duty Manager bekommt eine Warnung (nur Zimmernummern, keine Gastdaten; je Stand einmal). Liefert die Zimmernummern.
+ */
+async function recordCarryover(date: string, ids: string[], plan: { roomId: string }[], rooms: { id: string; number: string }[]): Promise<string[]> {
+  const planned = new Set(plan.map((p) => p.roomId));
+  for (const roomId of ids) {
+    if (planned.has(roomId)) continue; // z. B. Anreise in ein gestern nicht gereinigtes Zimmer: behält seine Art
+    await prisma.dayRoomPlan.upsert({ where: { date_roomId: { date, roomId } }, create: { date, roomId, cleaningType: CARRYOVER }, update: {} });
+  }
+  const all = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: CARRYOVER }, select: { roomId: true } });
+  const numberOf = new Map(rooms.map((r) => [r.id, r.number]));
+  const numbers = [...new Set([...all.map((p) => p.roomId), ...ids])].map((id) => numberOf.get(id)).filter((n): n is string => !!n)
+    .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+  if (numbers.length) {
+    const dedupeKey = `CARRYOVER:${date}:${numbers.join(",")}`;
+    if (!(await prisma.notification.findFirst({ where: { dedupeKey } }))) {
+      const list = numbers.join(", ");
+      const notification = await prisma.notification.create({ data: {
+        type: "CARRYOVER", level: "warning", targetRole: "duty_manager",
+        message: `${numbers.length} Zimmer seit gestern nicht gereinigt: ${list}`,
+        ...keyed("notify.carryover", { count: numbers.length, rooms: list }), dedupeKey,
+      } });
+      broadcast("notification:new", { notification });
+    }
+  }
+  return numbers;
 }
 
 /**
@@ -262,7 +298,8 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
   for (const p of plan) {
     const checkout = p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN";
     const arrivingStay = p.arrivingStayId ? await prisma.stay.findUnique({ where: { id: p.arrivingStayId } }) : null;
-    const occupied = p.cleaningType !== "ARRIVAL" || arrivingStay?.status === "IN_HOUSE";
+    const occupied = p.cleaningType === CARRYOVER ? inHouseRooms.has(p.room.number) // F1: Rest vom Vortag ist nur laut In-House belegt
+      : p.cleaningType !== "ARRIVAL" || arrivingStay?.status === "IN_HOUSE";
     const data: { isCheckoutToday: boolean; occupancy: string } = { isCheckoutToday: checkout, occupancy: occupied ? "OCCUPIED" : "VACANT" };
     // Wäschewechsel-Datum wird nie aus der Anreise erfunden: Room.lastLinenChangeAt kommt nur aus einem erfassten Wechsel.
     if (p.room.isCheckoutToday !== data.isCheckoutToday || p.room.occupancy !== data.occupancy) {
@@ -280,7 +317,8 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
     changed++;
   }
 
-  await initRoomStatus(date, plan, inHouseRooms, userId);
+  const carryover = await initRoomStatus(date, plan, inHouseRooms, userId);
+  if (carryover.length) notes.push(`${carryover.length} Zimmer seit gestern nicht gereinigt: ${carryover.join(", ")}.`);
 
   // Erwartete Anreisen (Arrival) aus der Liste; manuell angelegte bleiben, frühere Import-Anreisen werden ersetzt.
   await prisma.arrival.deleteMany({ where: { source: "IMPORT", status: "EXPECTED" } });
@@ -296,7 +334,7 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
   }
   await audit({ action: "DAY_PLAN_APPLIED", userId, meta: { date, rooms: plan.length, changedRooms: changed, arrivalsCreated } });
   broadcast("arrival:update", {});
-  return { rooms: plan.length, changedRooms: changed, arrivalsCreated, notes };
+  return { rooms: plan.length, changedRooms: changed, arrivalsCreated, notes, carryover };
 }
 
 /** Reinigungsart eines Zimmers manuell ändern (Supervisor); der Listen-Wert bleibt in derivedType erhalten. */

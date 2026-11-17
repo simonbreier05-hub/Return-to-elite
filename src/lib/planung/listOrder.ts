@@ -14,7 +14,7 @@
  * VIP ist keine eigene Stufe (Entscheidung 14.11.). Innerhalb einer Stufe bleibt die gespeicherte Route (`routeOrder`).
  */
 
-export type ListKind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL";
+export type ListKind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | "CARRYOVER" | "EXTRA";
 
 export const LIST_TIER = {
   RUSH: 0,
@@ -47,6 +47,8 @@ export function listTier(r: ListOrderInput, nowHHMM: string): number {
   switch (r.kind) {
     case "SAME_DAY_TURN": return r.checkedOut ? LIST_TIER.TURN : LIST_TIER.TURN_WAITING;
     case "ARRIVAL": return LIST_TIER.TURN; // Anreise in ein nicht gereinigtes, leeres Zimmer: niemand muss erst auschecken
+    case "CARRYOVER": return LIST_TIER.TURN; // F1: seit gestern offen — leer, sofort machbar, steht oben
+    case "EXTRA": return LIST_TIER.DEPARTURE;
     case "STAYOVER": return LIST_TIER.STAYOVER;
     case "DEPARTURE": return LIST_TIER.DEPARTURE;
     default: return LIST_TIER.STAYOVER;

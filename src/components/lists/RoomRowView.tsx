@@ -14,7 +14,7 @@ import { hhmm } from "@/lib/i18n/format";
 export interface ListTrace { id: string; code: string; text: string; dept: string; status: string }
 export interface ListRoom {
   id: string; number: string; floor: number; status: string;
-  kind: "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | null;
+  kind: "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | "CARRYOVER" | "EXTRA" | null;
   laundry: boolean; vip: boolean; eta: string | null; guest: string | null; pax: number | null; dnd: boolean; credits: number;
   /** Sprache des Aufenthalts (z. B. „en“) — Sprach-Chip im Housekeeper-Hub (D2). */
   lang?: string | null;
@@ -44,7 +44,7 @@ export interface ListRoom {
   green?: boolean;
 }
 
-const LABEL_ICON = { TURN: IconClock, DEPARTURE: IconBroom, STAYOVER: IconMoon, ARRIVAL: IconSuitcase, NONE: null } as const;
+const LABEL_ICON = { CARRYOVER: IconBroom, TURN: IconClock, DEPARTURE: IconBroom, EXTRA: IconBroom, STAYOVER: IconMoon, ARRIVAL: IconSuitcase, NONE: null } as const;
 /**
  * Gedämpfte Farben je Hauptlabel (immer zusammen mit Icon + Text). Betrieb L2 (Meeting 13.11.): Bleiber Grün, Abreise Rot,
  * Anreise Blau, Turn Blau/Rot (blaue Pille, roter Rand). Gleiche Zuordnung wie `KIND_PILL` im Glas-Design.
@@ -55,6 +55,9 @@ export const LABEL_STYLE: Record<MainLabel, { chip: string; edge: string }> = {
   STAYOVER: { chip: "border-status-clean/40 bg-status-clean/10 text-status-clean", edge: "border-s-status-clean" },
   ARRIVAL: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected", edge: "border-s-status-inspected" },
   NONE: { chip: "border-charcoal/15 bg-ivory text-charcoal", edge: "border-s-charcoal/15" },
+  // F1: seit gestern offen — Gold (Achtung), Rand Rot wie Abreise; Zusatz ohne Tagesplan — neutral, Rand Rot
+  CARRYOVER: { chip: "border-gold bg-gold-soft/40 text-charcoal font-semibold", edge: "border-s-status-dirty" },
+  EXTRA: { chip: "border-charcoal/25 bg-ivory text-charcoal", edge: "border-s-status-dirty" },
 };
 const chip = "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.7rem] font-medium";
 

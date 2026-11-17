@@ -104,6 +104,12 @@ export default function HouseMap({
           })}
         </div>
 
+        {house.carryover?.length > 0 && (
+          <p role="status" data-testid="carryover-hint" className="mt-4 rounded-xl border border-status-warning-fg/50 bg-status-warning-bg px-3 py-2 text-body-16 text-status-warning-fg">
+            <span aria-hidden>⚠ </span>{t("planungTool.carryover", { count: house.carryover.length, rooms: house.carryover.join(", ") })}
+          </p>
+        )}
+
         <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1 border-t border-line-1 pt-3 text-label text-pl-muted" aria-label={t("lists.legendTitle")}>
           {(["DEPARTURE", "TURN", "STAYOVER", "ARRIVAL", "EMPTY"] as const).map((k) => (
             <li key={k} className="flex items-center gap-1.5">

@@ -21,7 +21,7 @@ const dayStart = new Date("2026-11-19T00:00:00+01:00");
 const yesterday = new Date("2026-11-18T10:00:00+01:00");
 
 describe("K1 Morgenstatus: gestern nicht gereinigt darf nicht „geprüft“ werden", () => {
-  it.fails("ein gestern schmutzig gebliebenes Zimmer ohne Eintrag im heutigen Plan bleibt schmutzig", () => {
+  it("ein gestern schmutzig gebliebenes Zimmer ohne Eintrag im heutigen Plan bleibt schmutzig", () => {
     const { updates } = planBoardStatus({
       rooms: [{ id: "r126", status: "DIRTY", statusSince: yesterday }],
       needsCleaning: new Set(), marker: {}, dayStart,
@@ -55,7 +55,7 @@ describe("K3 Tageszahlen: nachträglich zugeteilte Zimmer ohne Tagesplan-Eintrag
     expect(computeDayNumbers({ rows: [row({})], inventory: 145 }).toClean).toBe(1);
   });
 
-  it.fails("ein heute zugeteiltes, schmutziges Zimmer ohne Tagesplan-Art zählt als zu reinigen", () => {
+  it("ein heute zugeteiltes, schmutziges Zimmer ohne Tagesplan-Art zählt als zu reinigen", () => {
     // Heute: solche Zimmer haben keine Art (in der Liste `kind: null`) und fallen aus allen Zahlen (Tag 4: 70 statt 96).
     const rows = [row({ kind: null as unknown as DayNumberRow["kind"] })];
     expect(computeDayNumbers({ rows, inventory: 145 }).toClean).toBe(1);
