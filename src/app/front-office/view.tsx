@@ -90,7 +90,8 @@ export default function FrontOfficeView() {
 
   useSocket({
     "app:resync": () => void load(),
-    "arrival:update": (p: { arrival?: Record<string, unknown> } | undefined) => upsert(p?.arrival),
+    // S1: Live-Nachricht ohne Gastnamen — die Liste lädt die Anreisen über die geschützte API neu.
+    "arrival:update": () => void load(),
     // Ein Statuswechsel betrifft nur das Zimmer in der jeweiligen Anreise.
     "dayplan:updated": () => void loadDepartures(),
     "room:update": (p: { room?: { id?: string; status?: string } } | undefined) => {

@@ -21,20 +21,28 @@ export function getClientIp(req: NextRequest): string {
 
 export type RateLimitResult = { ok: true } | { ok: false; retryAfterSeconds: number };
 
+/**
+ * S1: zusätzlich eine Obergrenze je Zimmer-Code über alle Geräte/IPs — ein fotografierter Code kann so auch mit
+ * wechselnden Adressen nicht beliebig viele Anfragen erzeugen.
+ */
+export const GUEST_ROOM_LIMIT_PER_HOUR = 20;
+
 export async function checkGuestRateLimit(roomId: string, ip: string, now: Date = new Date()): Promise<RateLimitResult> {
   const { guestRateLimitPerHour: limit } = await getSettings();
-  const key = `${roomId}:${ip}`;
   const nowMs = now.getTime();
   const windowStart = nowMs - WINDOW_MS;
-  const recent = (hits.get(key) ?? []).filter((t) => t > windowStart);
+  const ipKey = `${roomId}:${ip}`;
+  const roomKey = `room:${roomId}`;
+  const recentIp = (hits.get(ipKey) ?? []).filter((t) => t > windowStart);
+  const recentRoom = (hits.get(roomKey) ?? []).filter((t) => t > windowStart);
 
-  if (recent.length >= limit) {
-    hits.set(key, recent);
-    return { ok: false, retryAfterSeconds: Math.ceil((recent[0] + WINDOW_MS - nowMs) / 1000) };
-  }
+  const blocked = recentIp.length >= limit ? recentIp : recentRoom.length >= GUEST_ROOM_LIMIT_PER_HOUR ? recentRoom : null;
+  hits.set(ipKey, recentIp);
+  hits.set(roomKey, recentRoom);
+  if (blocked) return { ok: false, retryAfterSeconds: Math.ceil((blocked[0] + WINDOW_MS - nowMs) / 1000) };
 
-  recent.push(nowMs);
-  hits.set(key, recent);
+  recentIp.push(nowMs);
+  recentRoom.push(nowMs);
   return { ok: true };
 }
 

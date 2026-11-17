@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api } from "@/components/api";
+import { api, ApiError } from "@/components/api";
+import type { GuestGreeting } from "@/lib/guestGreeting";
 
 export interface GuestStatusItem {
   id: string;
@@ -12,6 +13,7 @@ export interface GuestStatusItem {
 }
 
 interface FeedResponse {
+  greeting: GuestGreeting | null;
   items: GuestStatusItem[];
   activeDnd: { id: string; detail: string | null } | null;
 }
@@ -19,26 +21,36 @@ interface FeedResponse {
 const POLL_MS = 15_000;
 
 /**
- * Polls this room's own request status (Prompt G2 Teil 3:
- * "Live-Aktualisierung") — see the comment on
- * src/app/api/guest/r/[roomCode]/status/route.ts for why this polls a
- * narrow, access-checked endpoint instead of subscribing to the staff
- * Socket.IO broadcast. Runs continuously in the background (not just while
- * a "my requests" panel is open) so the DND tile can flip to "active" the
- * moment a request lands, without the guest having to go looking for it.
+ * Polls this room's own request status (Prompt G2 Teil 3: "Live-Aktualisierung") — a narrow, access-checked
+ * endpoint, never the staff Socket.IO channel (which only accepts logged-in staff since S1). Runs continuously
+ * in the background so the DND tile can flip to "active" the moment a request lands.
+ *
+ * S1: Die Antwort trägt auch die Begrüßung („Anrede Titel Nachname“ des gerade aktiven Aufenthalts). Sie lebt nur
+ * im Speicher dieser Seite — nie im Browser-Speicher. Antwortet der Server 404 (Aufenthalt beendet: Check-out,
+ * Zimmerwechsel, …), meldet der Hook `ended` und die Seite wechselt auf die neutrale Ansicht ohne Namen.
  */
-export function useGuestStatusFeed(actionBase: string) {
+export function useGuestStatusFeed(actionBase: string, initialGreeting: GuestGreeting | null = null) {
   const [items, setItems] = useState<GuestStatusItem[]>([]);
   const [activeDnd, setActiveDnd] = useState<{ id: string; detail: string | null } | null>(null);
+  const [greeting, setGreeting] = useState<GuestGreeting | null>(initialGreeting);
+  const [ended, setEnded] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const data = await api<FeedResponse>(`${actionBase}/status`);
       setItems(data.items);
       setActiveDnd(data.activeDnd);
-    } catch {
-      // Silent — this is a background refresh; a real failure already
-      // surfaced from whatever write action the guest just attempted.
+      setGreeting(data.greeting ?? null);
+      setEnded(false);
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 404) {
+        // Aufenthalt vorbei: Namen und Verlauf sofort vergessen.
+        setGreeting(null);
+        setItems([]);
+        setActiveDnd(null);
+        setEnded(true);
+      }
+      // Sonst still — ein Hintergrund-Abruf; echte Fehler zeigt die jeweilige Aktion.
     }
   }, [actionBase]);
 
@@ -48,5 +60,5 @@ export function useGuestStatusFeed(actionBase: string) {
     return () => clearInterval(timer);
   }, [refresh]);
 
-  return { items, activeDnd, refresh };
+  return { items, activeDnd, greeting, ended, refresh };
 }

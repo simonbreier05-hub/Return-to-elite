@@ -1,6 +1,7 @@
 import GuestView from "@/components/guest/GuestView";
 import GuestUnavailable from "@/components/guest/GuestUnavailable";
 import { getGuestLegalLinks } from "@/lib/guestLegalLinks";
+import { greetingFromStay } from "@/lib/guestGreeting";
 import { resolveGuestAccessByRoomCode } from "@/lib/guestServer";
 
 export const dynamic = "force-dynamic";
@@ -22,6 +23,7 @@ export default async function GuestRoomCodePage({ params }: { params: Promise<{ 
       floor={access.room.floor}
       actionBase={`/api/guest/r/${roomCode}`}
       stayLanguage={access.stay.language}
+      greeting={greetingFromStay(access.stay)}
       legalLinks={legalLinks}
     />
   );

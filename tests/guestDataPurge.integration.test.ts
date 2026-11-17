@@ -27,8 +27,10 @@ import { loadList, parseList } from "@/lib/import/readFile";
 import { todayScenario } from "@/lib/import/sample/scenario";
 import { applyBatch, sha256, storeBatch } from "@/lib/import/store";
 import { GUEST_SYSTEM_EMAIL } from "@/lib/guest";
+import { berlinDate } from "@/lib/dayplan/time";
 
-const TODAY = "2026-10-06";
+// Relativ zu heute: ein festes Datum läuft nach guestStayDeleteDays (30 Tage) ab, dann löscht die Nachtlöschung alle Aufenthalte.
+const TODAY = berlinDate(new Date());
 const ROOMS = Array.from({ length: 20 }, (_, i) => String(101 + i));
 const sc = todayScenario(TODAY, ROOMS, 145);
 let userId = "", attendantId = "";

@@ -1,6 +1,7 @@
 import type { PrismaClient } from "@prisma/client";
 import { FLOOR_PLAN } from "../floorplan/hotelDeRome";
 import { planRoomListSync, ROOM_LIST, type ExistingRoom, type RoomListPlan } from "./roomList";
+import { generateOpaqueToken } from "../guestToken";
 
 /**
  * Wendet die offizielle Zimmerliste auf die DB an (DB-Teil zu `planRoomListSync`). Nur additiv:
@@ -34,7 +35,28 @@ export async function syncRoomList(prisma: PrismaClient, { apply }: { apply: boo
     }
     if (plan.deactivate.length) await tx.room.updateMany({ where: { number: { in: plan.deactivate } }, data: { active: false } });
   }, { timeout: 60_000 });
+  await ensureAllRoomAccessCodes(prisma);
   return plan;
+}
+
+/**
+ * S1: Jedes Zimmer hat seinen festen Gastcode (QR/NFC) schon ab Seed bzw. Zimmerlisten-Abgleich — nicht erst, wenn
+ * jemand die Code-Seite öffnet. Vergibt nur fehlende Codes; vorhandene (gedruckte) Codes bleiben unverändert.
+ */
+export async function ensureAllRoomAccessCodes(prisma: PrismaClient): Promise<number> {
+  const missing = await prisma.room.findMany({ where: { guestAccessCode: null }, select: { id: true } });
+  for (const r of missing) {
+    for (let attempt = 0; ; attempt++) {
+      try {
+        await prisma.room.update({ where: { id: r.id }, data: { guestAccessCode: generateOpaqueToken() } });
+        break;
+      } catch (err) {
+        const clash = typeof err === "object" && err !== null && (err as { code?: string }).code === "P2002";
+        if (!clash || attempt >= 4) throw err;
+      }
+    }
+  }
+  return missing.length;
 }
 
 export const ROOM_LIST_TOTALS = {

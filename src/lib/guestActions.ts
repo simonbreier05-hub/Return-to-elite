@@ -77,7 +77,8 @@ async function handleGreen(room: GuestActionRoom): Promise<NextResponse> {
         ...keyed("notify.guestGreen", { n: room.number }),
       },
     }),
-    prisma.guestRequest.create({ data: { roomId: room.id, kind: GREEN_KIND, status: "DONE", detail: JSON.stringify({ date: today }) } }),
+    // createdAt aus derselben Uhr wie `today` (nicht DB-now) — greenRoomsOn filtert über createdAt
+    prisma.guestRequest.create({ data: { roomId: room.id, kind: GREEN_KIND, status: "DONE", detail: JSON.stringify({ date: today }), createdAt: new Date() } }),
   ]);
   await audit({ action: "GUEST_GREEN_OPTION", userId: guestUserId, roomId: room.id, meta: { date: today } });
   broadcast("notification:new", { notification });

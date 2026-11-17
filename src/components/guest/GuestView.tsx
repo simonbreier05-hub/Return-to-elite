@@ -15,6 +15,8 @@ import GuestModal from "./GuestModal";
 import GuestLanguageSwitcher from "./GuestLanguageSwitcher";
 import GuestOfflineBar from "./GuestOfflineBar";
 import GuestLegalLinks from "./GuestLegalLinks";
+import GuestUnavailable from "./GuestUnavailable";
+import { formatGreeting, type GuestGreeting } from "@/lib/guestGreeting";
 import { useGuestOfflineQueue } from "./useGuestOfflineQueue";
 import { useGuestStatusFeed, type GuestStatusItem } from "./useGuestStatusFeed";
 import { GuestLocaleProvider, useGuestLocale } from "@/lib/guestI18n/GuestLocaleContext";
@@ -59,6 +61,7 @@ export default function GuestView({
   floor,
   actionBase,
   stayLanguage,
+  greeting,
   legalLinks,
 }: {
   roomNumber: string;
@@ -66,11 +69,13 @@ export default function GuestView({
   /** e.g. "/api/guest/r/<roomCode>" or "/api/guest/s/<stayToken>" — never the real room number. */
   actionBase: string;
   stayLanguage?: string | null;
+  /** S1: „Anrede Titel Nachname“ des gerade aktiven Aufenthalts (frisch vom Server, nie aus dem Browser-Speicher). */
+  greeting?: GuestGreeting | null;
   legalLinks?: GuestLegalLinkUrls;
 }) {
   return (
     <GuestLocaleProvider initialLocale={stayLanguage}>
-      <GuestScreen roomNumber={roomNumber} floor={floor} actionBase={actionBase} legalLinks={legalLinks} />
+      <GuestScreen roomNumber={roomNumber} floor={floor} actionBase={actionBase} initialGreeting={greeting ?? null} legalLinks={legalLinks} />
     </GuestLocaleProvider>
   );
 }
@@ -79,11 +84,13 @@ function GuestScreen({
   roomNumber,
   floor,
   actionBase,
+  initialGreeting,
   legalLinks,
 }: {
   roomNumber: string;
   floor: number;
   actionBase: string;
+  initialGreeting: GuestGreeting | null;
   legalLinks?: GuestLegalLinkUrls;
 }) {
   const { t, locale } = useGuestLocale();
@@ -91,7 +98,7 @@ function GuestScreen({
   const [toast, setToast] = useState<string | null>(null);
   const [toastError, setToastError] = useState(false);
   const offline = useGuestOfflineQueue();
-  const { items, activeDnd, refresh } = useGuestStatusFeed(actionBase);
+  const { items, activeDnd, greeting, ended, refresh } = useGuestStatusFeed(actionBase, initialGreeting);
 
   const showToast = (message: string, isError = false) => {
     setToast(message);
@@ -141,6 +148,9 @@ function GuestScreen({
       : { kind: "green", icon: "leaf", title: t("tiles.green.title"), ariaLabel: `${t("tiles.green.title")}: ${t("tiles.green.hint")}` },
   ];
 
+  // S1: Aufenthalt beendet (Check-out, Zimmerwechsel …) — sofort die neutrale Seite ohne Namen, keine Aktionen mehr.
+  if (ended) return <GuestUnavailable legalLinks={legalLinks} />;
+
   return (
     <div className="relative min-h-dvh overflow-hidden">
       <HeaderPhoto />
@@ -153,7 +163,9 @@ function GuestScreen({
           <p className="text-label text-text-secondary" suppressHydrationWarning>
             {today}
           </p>
-          <h1 className="text-title-28 text-text-primary">{t("header.welcome")}</h1>
+          <h1 className="text-title-28 text-text-primary">
+            {greeting ? t("header.welcomeName", { name: formatGreeting(greeting, locale) }) : t("header.welcome")}
+          </h1>
           <p className="text-body-16 text-text-secondary">{t("header.subtitle")}</p>
           <p className="text-label mt-1 text-text-muted">{t("header.roomFloor", { number: roomNumber, floor })}</p>
         </header>

@@ -1412,6 +1412,7 @@
     "notify.roomAssignedToYou": "اتاق {{n}} (طبقه {{floor}}) به شما داده شد.",
     "notify.guestGreen": "اتاق {{n}}: مهمان Green Option را انتخاب کرد — امروز تعویض ملحفه نیست.",
     "notify.guestCheckedOut": "اتاق {{n}} (طبقه {{floor}}): مهمان تسویه کرد.",
+    "notify.guestStayConflict": "اتاق {{n}}: دو اقامت هم‌زمان «در هتل» — صفحهٔ مهمان خنثی می‌ماند. لطفاً ورود داده/تسویه را بررسی کنید.",
     "notify.dndReminder": "اتاق {{n}} (طبقه {{floor}}): مزاحم نشوید — تمیز نشد، کارت را به در آویزان کنید.",
     "notify.changeCHECKED_OUT": "مهمان تسویه کرد — اتاق را می‌توان تمیز کرد",
     "notify.changeLATE_CHECKOUT": "زمان خروج دیرهنگام تغییر کرد",
