@@ -1,0 +1,101 @@
+{
+ "tag": 3,
+ "team": [
+  "maria",
+  "petra",
+  "lucia",
+  "sena",
+  "joanna"
+ ],
+ "gruppen": {
+  "1": [
+   "maria",
+   "petra"
+  ],
+  "2": [
+   "lucia",
+   "sena"
+  ],
+  "3": [
+   "joanna"
+  ]
+ },
+ "krank": "sena",
+ "wlan": "joanna",
+ "pause": "petra",
+ "dnd": "136",
+ "ab13": "221",
+ "serviceNow": "231",
+ "mangel": "322",
+ "zimmerwechsel": {
+  "von": "514",
+  "nach": null
+ },
+ "rushFo": "208",
+ "rushSup": "218",
+ "checkouts10": [
+  "101",
+  "104",
+  "105",
+  "109",
+  "110",
+  "115",
+  "125",
+  "130",
+  "134",
+  "202",
+  "203",
+  "204",
+  "209",
+  "219",
+  "234",
+  "304"
+ ],
+ "checkouts11": [
+  "308",
+  "309",
+  "325",
+  "327",
+  "330",
+  "332",
+  "415",
+  "425",
+  "428",
+  "430",
+  "433",
+  "434",
+  "436",
+  "519",
+  "529"
+ ],
+ "lateVonHand": [
+  "533"
+ ],
+ "gaeste": [
+  {
+   "room": "136",
+   "role": "DND",
+   "lang": "zh-CN"
+  },
+  {
+   "room": "221",
+   "role": "ab 13 Uhr",
+   "lang": "ar-SA"
+  },
+  {
+   "room": "231",
+   "role": "Service Now",
+   "lang": "de-DE"
+  },
+  {
+   "room": "322",
+   "role": "Mangel mit Foto",
+   "lang": "en-US"
+  },
+  {
+   "room": "114",
+   "role": "Anreise-Gast",
+   "lang": "fr-FR"
+  }
+ ]
+}

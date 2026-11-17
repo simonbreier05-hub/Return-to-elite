@@ -1,0 +1,177 @@
+{
+ "liste": "forecast",
+ "tag": 4,
+ "datum": "2026-11-19",
+ "zeilen": [
+  {
+   "date": "2026-11-16",
+   "occ": 123,
+   "arr": 35,
+   "dep": 40,
+   "ooo": 0,
+   "persons": 235,
+   "occPct": 84.83,
+   "abschnitt": "History"
+  },
+  {
+   "date": "2026-11-17",
+   "occ": 85,
+   "arr": 37,
+   "dep": 75,
+   "ooo": 0,
+   "persons": 169,
+   "occPct": 58.62,
+   "abschnitt": "History"
+  },
+  {
+   "date": "2026-11-18",
+   "occ": 73,
+   "arr": 26,
+   "dep": 38,
+   "ooo": 0,
+   "persons": 142,
+   "occPct": 50.34,
+   "abschnitt": "History"
+  },
+  {
+   "date": "2026-11-19",
+   "occ": 58,
+   "arr": 15,
+   "dep": 30,
+   "ooo": 0,
+   "persons": 114,
+   "occPct": 40,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-20",
+   "occ": 68,
+   "arr": 30,
+   "dep": 20,
+   "ooo": 0,
+   "persons": 138,
+   "occPct": 46.9,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-21",
+   "occ": 100,
+   "arr": 13,
+   "dep": 24,
+   "ooo": 0,
+   "persons": 174,
+   "occPct": 68.97,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-22",
+   "occ": 92,
+   "arr": 14,
+   "dep": 27,
+   "ooo": 0,
+   "persons": 146,
+   "occPct": 63.45,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-23",
+   "occ": 87,
+   "arr": 15,
+   "dep": 25,
+   "ooo": 0,
+   "persons": 126,
+   "occPct": 60,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-24",
+   "occ": 53,
+   "arr": 16,
+   "dep": 30,
+   "ooo": 0,
+   "persons": 96,
+   "occPct": 36.55,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-25",
+   "occ": 48,
+   "arr": 17,
+   "dep": 27,
+   "ooo": 0,
+   "persons": 75,
+   "occPct": 33.1,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-26",
+   "occ": 55,
+   "arr": 18,
+   "dep": 16,
+   "ooo": 0,
+   "persons": 78,
+   "occPct": 37.93,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-27",
+   "occ": 62,
+   "arr": 19,
+   "dep": 10,
+   "ooo": 0,
+   "persons": 81,
+   "occPct": 42.76,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-28",
+   "occ": 44,
+   "arr": 20,
+   "dep": 11,
+   "ooo": 0,
+   "persons": 84,
+   "occPct": 30.34,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-29",
+   "occ": 51,
+   "arr": 12,
+   "dep": 12,
+   "ooo": 0,
+   "persons": 87,
+   "occPct": 35.17,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-11-30",
+   "occ": 58,
+   "arr": 13,
+   "dep": 13,
+   "ooo": 0,
+   "persons": 90,
+   "occPct": 40,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-12-01",
+   "occ": 40,
+   "arr": 14,
+   "dep": 14,
+   "ooo": 0,
+   "persons": 93,
+   "occPct": 27.59,
+   "abschnitt": "Forecast"
+  },
+  {
+   "date": "2026-12-02",
+   "occ": 47,
+   "arr": 15,
+   "dep": 15,
+   "ooo": 0,
+   "persons": 96,
+   "occPct": 32.41,
+   "abschnitt": "Forecast"
+  }
+ ]
+}

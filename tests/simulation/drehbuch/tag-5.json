@@ -1,0 +1,93 @@
+{
+ "tag": 5,
+ "team": [
+  "maria",
+  "petra",
+  "fatima",
+  "aylin",
+  "lucia",
+  "grace",
+  "elena",
+  "joanna"
+ ],
+ "gruppen": {
+  "1": [
+   "maria",
+   "petra",
+   "fatima"
+  ],
+  "2": [
+   "aylin",
+   "lucia",
+   "grace"
+  ],
+  "3": [
+   "elena",
+   "joanna"
+  ]
+ },
+ "krank": "lucia",
+ "wlan": "elena",
+ "pause": "grace",
+ "dnd": "122",
+ "ab13": "212",
+ "serviceNow": "318",
+ "mangel": "337",
+ "zimmerwechsel": {
+  "von": "315",
+  "nach": "219",
+  "hinweis": "Listen zeigen den Gast noch im alten Zimmer; Freigabe nur Supervisor/DM (B5)."
+ },
+ "rushFo": "102",
+ "rushSup": "229",
+ "checkouts10": [
+  "102",
+  "118",
+  "119",
+  "129",
+  "207",
+  "223",
+  "228",
+  "231"
+ ],
+ "checkouts11": [
+  "301",
+  "312",
+  "338",
+  "415",
+  "417",
+  "420",
+  "524",
+  "530"
+ ],
+ "lateVonHand": [
+  "535"
+ ],
+ "gaeste": [
+  {
+   "room": "122",
+   "role": "DND",
+   "lang": "de-DE"
+  },
+  {
+   "room": "212",
+   "role": "ab 13 Uhr",
+   "lang": "en-US"
+  },
+  {
+   "room": "318",
+   "role": "Service Now",
+   "lang": "fr-FR"
+  },
+  {
+   "room": "337",
+   "role": "Mangel mit Foto",
+   "lang": "es-ES"
+  },
+  {
+   "room": "111",
+   "role": "Anreise-Gast",
+   "lang": "zh-CN"
+  }
+ ]
+}

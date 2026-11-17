@@ -1,0 +1,220 @@
+{
+ "tag": 5,
+ "date": "2026-11-20",
+ "wochentag": "Fr",
+ "abreisen": 20,
+ "davonTurns": 4,
+ "anreisen": 30,
+ "bleiber": 38,
+ "belegtHeuteNacht": 68,
+ "auslastungPct": 47.55,
+ "zuReinigen": 58,
+ "waeschewechsel": 4,
+ "personenHeuteNacht": 138,
+ "vipAnreisen": 4,
+ "vipAnreisenEtage5": 1,
+ "suitenAbreisen": 0,
+ "grosseSuitenAbreisen": 0,
+ "allergikerAbreisen": 0,
+ "lateCheckoutImReport": 2,
+ "ausgechecktImReport": 1,
+ "traces": {
+  "zeilen": 62,
+  "offen": 43,
+  "erledigt": 19,
+  "offenJeAbteilung": {
+   "HOUSEMAN": 18,
+   "HOUSEKEEPING": 16,
+   "ENGINEERING": 4,
+   "FRONT_OFFICE": 5
+  }
+ },
+ "departuresListe": {
+  "heute": 20,
+  "morgen": 13,
+  "uebermorgen": 15,
+  "zeilen": 48
+ },
+ "inhouseListe": {
+  "zeilen": 68,
+  "ckin": 38,
+  "resv": 30
+ },
+ "zimmer": {
+  "abreisen": [
+   "102",
+   "118",
+   "119",
+   "129",
+   "207",
+   "223",
+   "228",
+   "229",
+   "231",
+   "301",
+   "312",
+   "338",
+   "414",
+   "415",
+   "417",
+   "420",
+   "431",
+   "524",
+   "530",
+   "535"
+  ],
+  "turns": [
+   "102",
+   "229",
+   "414",
+   "420"
+  ],
+  "anreisen": [
+   "102",
+   "111",
+   "114",
+   "117",
+   "121",
+   "123",
+   "124",
+   "127",
+   "210",
+   "211",
+   "215",
+   "221",
+   "224",
+   "227",
+   "229",
+   "237",
+   "308",
+   "317",
+   "321",
+   "322",
+   "335",
+   "401",
+   "414",
+   "418",
+   "420",
+   "422",
+   "437",
+   "515",
+   "522",
+   "532"
+  ],
+  "bleiber": [
+   "112",
+   "116",
+   "120",
+   "122",
+   "126",
+   "132",
+   "135",
+   "137",
+   "205",
+   "212",
+   "214",
+   "217",
+   "218",
+   "220",
+   "222",
+   "226",
+   "235",
+   "310",
+   "314",
+   "315",
+   "316",
+   "318",
+   "319",
+   "320",
+   "323",
+   "327",
+   "328",
+   "336",
+   "337",
+   "402",
+   "412",
+   "419",
+   "421",
+   "423",
+   "426",
+   "521",
+   "525",
+   "531"
+  ],
+  "waeschewechsel": [
+   "214",
+   "226",
+   "320",
+   "426"
+  ],
+  "vipAnreisen": [
+   "124",
+   "229",
+   "335",
+   "515"
+  ],
+  "lateCheckoutImReport": [
+   "229",
+   "414"
+  ],
+  "ausgechecktImReport": [
+   "431"
+  ],
+  "suitenAbreisen": [],
+  "tag1Langbleiber": [
+   "112",
+   "132",
+   "217",
+   "310",
+   "316",
+   "323"
+  ],
+  "tag1LangbleiberWaesche": []
+ },
+ "manuellImTagesverlauf": {
+  "ausserBetrieb": [
+   "424",
+   "517"
+  ],
+  "zimmerwechsel": {
+   "von": "315",
+   "nach": "219",
+   "hinweis": "Listen zeigen den Gast noch im alten Zimmer; Freigabe nur Supervisor/DM (B5)."
+  },
+  "randfaelle": [
+   {
+    "datei": "FEHLER_departures_20-11-26_spalte-fehlt.pdf",
+    "was": "Spalte „Dep. Date“ fehlt",
+    "sollImParser": [
+     "ROW_UNREADABLE"
+    ],
+    "sollInDerApp": "kritischer Befund, Übernehmen gesperrt, verständliche Meldung"
+   },
+   {
+    "datei": "FEHLER_traces_20-11-26_spalte-fehlt.csv",
+    "was": "Pflichtspalte „Room No.“ fehlt",
+    "sollImParser": [
+     "COLUMN_MISSING"
+    ],
+    "sollInDerApp": "kritischer Befund COLUMN_MISSING, Übernehmen gesperrt"
+   },
+   {
+    "datei": "DOPPELT_inhouse_20-11-26.pdf",
+    "was": "dieselbe In-House-Liste ein zweites Mal",
+    "sollInDerApp": "ersetzt den Stand, keine doppelten Zimmer/Aufenthalte, Plan und Handzuteilungen bleiben"
+   },
+   {
+    "datei": "VORTAG_arrivals_19-11-26.pdf",
+    "was": "Arrivals von gestern aus Versehen",
+    "sollImParser": [
+     "LIST_NOT_TODAY (Warnung)"
+    ],
+    "sollInDerApp": "als veraltet erkannt, zählt nicht ohne „Trotzdem verwenden“"
+   }
+  ]
+ },
+ "erwarteteHinweise": [
+  "PERIOD_SHORT (Departures decken nur 3 Tage ab — wie im Hotel üblich)",
+  "DATE_FORMAT_DIFFERS als Hinweis (TT/MM/JJ)"
+ ]
+}

@@ -1,0 +1,6416 @@
+{
+ "hinweis": "Erfundener Hausbestand der Simulation — keine echten Gäste.",
+ "tage": [
+  "Mo 2026-11-16",
+  "Di 2026-11-17",
+  "Mi 2026-11-18",
+  "Do 2026-11-19",
+  "Fr 2026-11-20"
+ ],
+ "ausserBetriebTag5": [
+  "424",
+  "517"
+ ],
+ "zimmerwechselTag5": {
+  "from": "315",
+  "to": "219",
+  "guestId": 126
+ },
+ "lateCheckoutVonHandTag2": [
+  "223",
+  "532"
+ ],
+ "greenOptionTag4": "132",
+ "tag1Langbleiber": [
+  "112",
+  "119",
+  "132",
+  "207",
+  "217",
+  "310",
+  "316",
+  "323",
+  "414",
+  "431",
+  "530",
+  "535"
+ ],
+ "gaeste": [
+  {
+   "id": 1,
+   "anzeige": "Mr. Test 001",
+   "opera": "Test 001, Paul Mr.",
+   "sprache": "FR",
+   "zimmer": "304",
+   "etage": 3,
+   "credit": 3.5,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 2,
+   "anzeige": "Mrs. Test 002",
+   "opera": "Test 002, Gerda Mrs.",
+   "sprache": "RU",
+   "zimmer": "101",
+   "etage": 1,
+   "credit": 2,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 3,
+   "anzeige": "Herr Test 003",
+   "opera": "Test 003, Bernd Herr",
+   "sprache": "DE",
+   "zimmer": "104",
+   "etage": 1,
+   "credit": 2,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 4,
+   "anzeige": "Ms. Test 004",
+   "opera": "Test 004, Eva Ms.",
+   "sprache": "ES",
+   "zimmer": "204",
+   "etage": 2,
+   "credit": 1.75,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 5,
+   "anzeige": "Mr. Test 005",
+   "opera": "Test 005, Leo Mr.",
+   "sprache": "JA",
+   "zimmer": "302",
+   "etage": 3,
+   "credit": 1.75,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 6,
+   "anzeige": "Frau Test 006",
+   "opera": "Test 006, Ida Frau",
+   "sprache": "DE",
+   "zimmer": "526",
+   "etage": 5,
+   "credit": 1.75,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 7,
+   "anzeige": "Mr. Test 007",
+   "opera": "Test 007, Jonas Mr.",
+   "sprache": "IT",
+   "zimmer": "218",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": "14:00",
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 14:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 8,
+   "anzeige": "Ms. Test 008",
+   "opera": "Test 008, Karin Ms.",
+   "sprache": "TR",
+   "zimmer": "219",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 9,
+   "anzeige": "Herr Dr. Test 009",
+   "opera": "Test 009, Max Dr. Herr",
+   "sprache": "DE",
+   "zimmer": "110",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    },
+    {
+     "tag": 2,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 10,
+   "anzeige": "Frau Test 010",
+   "opera": "Test 010, Carla Frau",
+   "sprache": "DE",
+   "zimmer": "125",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 11,
+   "anzeige": "Herr Test 011",
+   "opera": "Test 011, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "202",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 12,
+   "anzeige": "Ms. Test 012",
+   "opera": "Test 012, Lena Ms.",
+   "sprache": "EN",
+   "zimmer": "203",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    },
+    {
+     "tag": 2,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 13,
+   "anzeige": "Mr. Test 013",
+   "opera": "Test 013, Franz Mr.",
+   "sprache": "EN",
+   "zimmer": "309",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 14,
+   "anzeige": "Mrs. Test 014",
+   "opera": "Test 014, Nora Mrs.",
+   "sprache": "EN",
+   "zimmer": "325",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 15,
+   "anzeige": "Mr. Test 015",
+   "opera": "Test 015, Paul Mr.",
+   "sprache": "EN",
+   "zimmer": "425",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 16,
+   "anzeige": "Ms. Test 016",
+   "opera": "Test 016, Mia Ms.",
+   "sprache": "ZH",
+   "zimmer": "428",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 17,
+   "anzeige": "Herr Test 017",
+   "opera": "Test 017, Bernd Herr",
+   "sprache": "DE",
+   "zimmer": "515",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 18,
+   "anzeige": "Mrs. Dr. Test 018",
+   "opera": "Test 018, Anna Dr. Mrs.",
+   "sprache": "EN",
+   "zimmer": "517",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 19,
+   "anzeige": "Mr. Test 019",
+   "opera": "Test 019, Leo Mr.",
+   "sprache": "AR",
+   "zimmer": "518",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": "14:00",
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    },
+    {
+     "tag": 2,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 14:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 20,
+   "anzeige": "Frau Test 020",
+   "opera": "Test 020, Gerda Frau",
+   "sprache": "DE",
+   "zimmer": "519",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": "13:00",
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 13:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 21,
+   "anzeige": "Mr. Test 021",
+   "opera": "Test 021, Jonas Mr.",
+   "sprache": "FR",
+   "zimmer": "521",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 22,
+   "anzeige": "Mrs. Test 022",
+   "opera": "Test 022, Eva Mrs.",
+   "sprache": "RU",
+   "zimmer": "522",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 23,
+   "anzeige": "Test 023",
+   "opera": "Test 023, Max",
+   "sprache": "DE",
+   "zimmer": "523",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": "15:00",
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 15:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 24,
+   "anzeige": "Ms. Test 024",
+   "opera": "Test 024, Ida Ms.",
+   "sprache": "ES",
+   "zimmer": "524",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 25,
+   "anzeige": "Mr. Test 025",
+   "opera": "Test 025, Emil Mr.",
+   "sprache": "JA",
+   "zimmer": "435",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 26,
+   "anzeige": "Frau Test 026",
+   "opera": "Test 026, Karin Frau",
+   "sprache": "DE",
+   "zimmer": "338",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 27,
+   "anzeige": "Mr. Dr. Test 027",
+   "opera": "Test 027, Franz Dr. Mr.",
+   "sprache": "IT",
+   "zimmer": "422",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 28,
+   "anzeige": "Ms. Test 028",
+   "opera": "Test 028, Carla Ms.",
+   "sprache": "TR",
+   "zimmer": "237",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 29,
+   "anzeige": "Herr Test 029",
+   "opera": "Test 029, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "206",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 30,
+   "anzeige": "Frau Test 030",
+   "opera": "Test 030, Lena Frau",
+   "sprache": "DE",
+   "zimmer": "329",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 31,
+   "anzeige": "Herr Prof. Test 031",
+   "opera": "Test 031, Bernd Prof. Herr",
+   "sprache": "DE",
+   "zimmer": "121",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 32,
+   "anzeige": "Ms. Test 032",
+   "opera": "Test 032, Nora Ms.",
+   "sprache": "EN",
+   "zimmer": "418",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 33,
+   "anzeige": "Mr. Test 033",
+   "opera": "Test 033, Leo Mr.",
+   "sprache": "EN",
+   "zimmer": "223",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 34,
+   "anzeige": "Mrs. Test 034",
+   "opera": "Test 034, Mia Mrs.",
+   "sprache": "EN",
+   "zimmer": "532",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 35,
+   "anzeige": "Mr. Test 035",
+   "opera": "Test 035, Jonas Mr.",
+   "sprache": "EN",
+   "zimmer": "331",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 36,
+   "anzeige": "Ms. Dr. Test 036",
+   "opera": "Test 036, Anna Dr. Ms.",
+   "sprache": "ZH",
+   "zimmer": "232",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 37,
+   "anzeige": "Herr Test 037",
+   "opera": "Test 037, Max Herr",
+   "sprache": "DE",
+   "zimmer": "436",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 38,
+   "anzeige": "Mrs. Test 038",
+   "opera": "Test 038, Gerda Mrs.",
+   "sprache": "EN",
+   "zimmer": "321",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 39,
+   "anzeige": "Mr. Test 039",
+   "opera": "Test 039, Emil Mr.",
+   "sprache": "AR",
+   "zimmer": "328",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 40,
+   "anzeige": "Frau Test 040",
+   "opera": "Test 040, Eva Frau",
+   "sprache": "DE",
+   "zimmer": "314",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 41,
+   "anzeige": "Mr. Test 041",
+   "opera": "Test 041, Franz Mr.",
+   "sprache": "FR",
+   "zimmer": "332",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 42,
+   "anzeige": "Mrs. Test 042",
+   "opera": "Test 042, Ida Mrs.",
+   "sprache": "RU",
+   "zimmer": "102",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 2,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 43,
+   "anzeige": "Herr Test 043",
+   "opera": "Test 043, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "336",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 44,
+   "anzeige": "Ms. Test 044",
+   "opera": "Test 044, Karin Ms.",
+   "sprache": "ES",
+   "zimmer": "116",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 45,
+   "anzeige": "Mr. Dr. Test 045",
+   "opera": "Test 045, Bernd Dr. Mr.",
+   "sprache": "JA",
+   "zimmer": "133",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 46,
+   "anzeige": "Test 046",
+   "opera": "Test 046, Carla",
+   "sprache": "DE",
+   "zimmer": "117",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 47,
+   "anzeige": "Mr. Test 047",
+   "opera": "Test 047, Leo Mr.",
+   "sprache": "IT",
+   "zimmer": "333",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 48,
+   "anzeige": "Ms. Test 048",
+   "opera": "Test 048, Lena Ms.",
+   "sprache": "TR",
+   "zimmer": "109",
+   "etage": 1,
+   "credit": 2,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 49,
+   "anzeige": "Herr Test 049",
+   "opera": "Test 049, Jonas Herr",
+   "sprache": "DE",
+   "zimmer": "227",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 50,
+   "anzeige": "Frau Test 050",
+   "opera": "Test 050, Nora Frau",
+   "sprache": "DE",
+   "zimmer": "419",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 51,
+   "anzeige": "Herr Test 051",
+   "opera": "Test 051, Max Herr",
+   "sprache": "DE",
+   "zimmer": "437",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 52,
+   "anzeige": "Ms. Test 052",
+   "opera": "Test 052, Mia Ms.",
+   "sprache": "EN",
+   "zimmer": "114",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 53,
+   "anzeige": "Mr. Test 053",
+   "opera": "Test 053, Emil Mr.",
+   "sprache": "EN",
+   "zimmer": "318",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 54,
+   "anzeige": "Mrs. Dr. Test 054",
+   "opera": "Test 054, Anna Dr. Mrs.",
+   "sprache": "EN",
+   "zimmer": "233",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 55,
+   "anzeige": "Mr. Test 055",
+   "opera": "Test 055, Franz Mr.",
+   "sprache": "EN",
+   "zimmer": "514",
+   "etage": 5,
+   "credit": 1.5,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 56,
+   "anzeige": "Ms. Test 056",
+   "opera": "Test 056, Gerda Ms.",
+   "sprache": "ZH",
+   "zimmer": "215",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 57,
+   "anzeige": "Herr Test 057",
+   "opera": "Test 057, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "402",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 58,
+   "anzeige": "Mrs. Test 058",
+   "opera": "Test 058, Eva Mrs.",
+   "sprache": "EN",
+   "zimmer": "128",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 59,
+   "anzeige": "Mr. Test 059",
+   "opera": "Test 059, Bernd Mr.",
+   "sprache": "AR",
+   "zimmer": "225",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 60,
+   "anzeige": "Frau Test 060",
+   "opera": "Test 060, Ida Frau",
+   "sprache": "DE",
+   "zimmer": "317",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 61,
+   "anzeige": "Mr. Test 061",
+   "opera": "Test 061, Leo Mr.",
+   "sprache": "FR",
+   "zimmer": "123",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 62,
+   "anzeige": "Mrs. Prof. Test 062",
+   "opera": "Test 062, Karin Prof. Mrs.",
+   "sprache": "RU",
+   "zimmer": "426",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 63,
+   "anzeige": "Herr Dr. Test 063",
+   "opera": "Test 063, Jonas Dr. Herr",
+   "sprache": "DE",
+   "zimmer": "230",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 64,
+   "anzeige": "Ms. Test 064",
+   "opera": "Test 064, Carla Ms.",
+   "sprache": "ES",
+   "zimmer": "423",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 65,
+   "anzeige": "Mr. Test 065",
+   "opera": "Test 065, Max Mr.",
+   "sprache": "JA",
+   "zimmer": "135",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 66,
+   "anzeige": "Frau Test 066",
+   "opera": "Test 066, Lena Frau",
+   "sprache": "DE",
+   "zimmer": "335",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 67,
+   "anzeige": "Mr. Test 067",
+   "opera": "Test 067, Emil Mr.",
+   "sprache": "IT",
+   "zimmer": "432",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 68,
+   "anzeige": "Ms. Test 068",
+   "opera": "Test 068, Nora Ms.",
+   "sprache": "TR",
+   "zimmer": "326",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 69,
+   "anzeige": "Test 069",
+   "opera": "Test 069, Franz",
+   "sprache": "DE",
+   "zimmer": "210",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 70,
+   "anzeige": "Frau Test 070",
+   "opera": "Test 070, Mia Frau",
+   "sprache": "DE",
+   "zimmer": "434",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 71,
+   "anzeige": "Herr Test 071",
+   "opera": "Test 071, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "231",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 72,
+   "anzeige": "Ms. Dr. Test 072",
+   "opera": "Test 072, Anna Dr. Ms.",
+   "sprache": "EN",
+   "zimmer": "414",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": "14:00",
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 14:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 73,
+   "anzeige": "Mr. Test 073",
+   "opera": "Test 073, Bernd Mr.",
+   "sprache": "EN",
+   "zimmer": "535",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": "13:00",
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 13:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 74,
+   "anzeige": "Mrs. Test 074",
+   "opera": "Test 074, Gerda Mrs.",
+   "sprache": "EN",
+   "zimmer": "323",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": "15:00",
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 15:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 75,
+   "anzeige": "Mr. Test 075",
+   "opera": "Test 075, Leo Mr.",
+   "sprache": "EN",
+   "zimmer": "207",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 76,
+   "anzeige": "Ms. Test 076",
+   "opera": "Test 076, Eva Ms.",
+   "sprache": "ZH",
+   "zimmer": "118",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 77,
+   "anzeige": "Herr Test 077",
+   "opera": "Test 077, Jonas Herr",
+   "sprache": "DE",
+   "zimmer": "234",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 78,
+   "anzeige": "Mrs. Test 078",
+   "opera": "Test 078, Ida Mrs.",
+   "sprache": "EN",
+   "zimmer": "417",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 79,
+   "anzeige": "Mr. Test 079",
+   "opera": "Test 079, Max Mr.",
+   "sprache": "AR",
+   "zimmer": "105",
+   "etage": 1,
+   "credit": 2,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 80,
+   "anzeige": "Frau Test 080",
+   "opera": "Test 080, Karin Frau",
+   "sprache": "DE",
+   "zimmer": "130",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 81,
+   "anzeige": "Mr. Dr. Test 081",
+   "opera": "Test 081, Emil Dr. Mr.",
+   "sprache": "FR",
+   "zimmer": "209",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 82,
+   "anzeige": "Mrs. Test 082",
+   "opera": "Test 082, Carla Mrs.",
+   "sprache": "RU",
+   "zimmer": "433",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 83,
+   "anzeige": "Herr Test 083",
+   "opera": "Test 083, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "337",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 84,
+   "anzeige": "Ms. Test 084",
+   "opera": "Test 084, Lena Ms.",
+   "sprache": "ES",
+   "zimmer": "330",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 2,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 85,
+   "anzeige": "Mr. Test 085",
+   "opera": "Test 085, Paul Mr.",
+   "sprache": "JA",
+   "zimmer": "322",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 86,
+   "anzeige": "Frau Test 086",
+   "opera": "Test 086, Nora Frau",
+   "sprache": "DE",
+   "zimmer": "208",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 87,
+   "anzeige": "Mr. Test 087",
+   "opera": "Test 087, Bernd Mr.",
+   "sprache": "IT",
+   "zimmer": "132",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 88,
+   "anzeige": "Ms. Test 088",
+   "opera": "Test 088, Mia Ms.",
+   "sprache": "TR",
+   "zimmer": "319",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 89,
+   "anzeige": "Herr Test 089",
+   "opera": "Test 089, Leo Herr",
+   "sprache": "DE",
+   "zimmer": "531",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 90,
+   "anzeige": "Frau Dr. Test 090",
+   "opera": "Test 090, Anna Dr. Frau",
+   "sprache": "DE",
+   "zimmer": "134",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 91,
+   "anzeige": "Herr Test 091",
+   "opera": "Test 091, Jonas Herr",
+   "sprache": "DE",
+   "zimmer": "416",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 92,
+   "anzeige": "Test 092",
+   "opera": "Test 092, Gerda",
+   "sprache": "EN",
+   "zimmer": "533",
+   "etage": 5,
+   "credit": 1.75,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 93,
+   "anzeige": "Mr. Prof. Test 093",
+   "opera": "Test 093, Max Prof. Mr.",
+   "sprache": "EN",
+   "zimmer": "412",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 94,
+   "anzeige": "Mrs. Test 094",
+   "opera": "Test 094, Eva Mrs.",
+   "sprache": "EN",
+   "zimmer": "221",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 95,
+   "anzeige": "Mr. Test 095",
+   "opera": "Test 095, Emil Mr.",
+   "sprache": "EN",
+   "zimmer": "534",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 96,
+   "anzeige": "Ms. Test 096",
+   "opera": "Test 096, Ida Ms.",
+   "sprache": "ZH",
+   "zimmer": "401",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 97,
+   "anzeige": "Herr Test 097",
+   "opera": "Test 097, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "226",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 98,
+   "anzeige": "Mrs. Test 098",
+   "opera": "Test 098, Karin Mrs.",
+   "sprache": "EN",
+   "zimmer": "530",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 99,
+   "anzeige": "Mr. Dr. Test 099",
+   "opera": "Test 099, Paul Dr. Mr.",
+   "sprache": "AR",
+   "zimmer": "415",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 100,
+   "anzeige": "Frau Test 100",
+   "opera": "Test 100, Carla Frau",
+   "sprache": "DE",
+   "zimmer": "228",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 101,
+   "anzeige": "Mr. Test 101",
+   "opera": "Test 101, Bernd Mr.",
+   "sprache": "FR",
+   "zimmer": "320",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 102,
+   "anzeige": "Mrs. Test 102",
+   "opera": "Test 102, Lena Mrs.",
+   "sprache": "RU",
+   "zimmer": "308",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 103,
+   "anzeige": "Herr Test 103",
+   "opera": "Test 103, Leo Herr",
+   "sprache": "DE",
+   "zimmer": "212",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 104,
+   "anzeige": "Ms. Test 104",
+   "opera": "Test 104, Nora Ms.",
+   "sprache": "ES",
+   "zimmer": "327",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 105,
+   "anzeige": "Mr. Test 105",
+   "opera": "Test 105, Jonas Mr.",
+   "sprache": "JA",
+   "zimmer": "229",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 106,
+   "anzeige": "Frau Test 106",
+   "opera": "Test 106, Mia Frau",
+   "sprache": "DE",
+   "zimmer": "235",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 107,
+   "anzeige": "Mr. Test 107",
+   "opera": "Test 107, Max Mr.",
+   "sprache": "IT",
+   "zimmer": "216",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 108,
+   "anzeige": "Ms. Dr. Test 108",
+   "opera": "Test 108, Anna Dr. Ms.",
+   "sprache": "TR",
+   "zimmer": "201",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-16",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 109,
+   "anzeige": "Herr Test 109",
+   "opera": "Test 109, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "136",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 110,
+   "anzeige": "Frau Test 110",
+   "opera": "Test 110, Gerda Frau",
+   "sprache": "DE",
+   "zimmer": "236",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 111,
+   "anzeige": "Herr Test 111",
+   "opera": "Test 111, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "124",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 112,
+   "anzeige": "Ms. Test 112",
+   "opera": "Test 112, Eva Ms.",
+   "sprache": "EN",
+   "zimmer": "334",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 113,
+   "anzeige": "Mr. Test 113",
+   "opera": "Test 113, Paul Mr.",
+   "sprache": "EN",
+   "zimmer": "211",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 114,
+   "anzeige": "Mrs. Test 114",
+   "opera": "Test 114, Ida Mrs.",
+   "sprache": "EN",
+   "zimmer": "131",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 115,
+   "anzeige": "Test 115",
+   "opera": "Test 115, Bernd",
+   "sprache": "EN",
+   "zimmer": "111",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 116,
+   "anzeige": "Ms. Test 116",
+   "opera": "Test 116, Karin Ms.",
+   "sprache": "ZH",
+   "zimmer": "311",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 117,
+   "anzeige": "Herr Dr. Test 117",
+   "opera": "Test 117, Leo Dr. Herr",
+   "sprache": "DE",
+   "zimmer": "301",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    },
+    {
+     "tag": 3,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 118,
+   "anzeige": "Mrs. Test 118",
+   "opera": "Test 118, Carla Mrs.",
+   "sprache": "EN",
+   "zimmer": "129",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 119,
+   "anzeige": "Mr. Test 119",
+   "opera": "Test 119, Jonas Mr.",
+   "sprache": "AR",
+   "zimmer": "312",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 120,
+   "anzeige": "Frau Test 120",
+   "opera": "Test 120, Lena Frau",
+   "sprache": "DE",
+   "zimmer": "127",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-12",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": "2026-11-17",
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 121,
+   "anzeige": "Mr. Test 121",
+   "opera": "Test 121, Max Mr.",
+   "sprache": "FR",
+   "zimmer": "126",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-11",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": "2026-11-17",
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 122,
+   "anzeige": "Mrs. Test 122",
+   "opera": "Test 122, Nora Mrs.",
+   "sprache": "RU",
+   "zimmer": "424",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-10",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": "2026-11-17",
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 123,
+   "anzeige": "Herr Test 123",
+   "opera": "Test 123, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "525",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-09",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": "2026-11-17",
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 124,
+   "anzeige": "Ms. Prof. Test 124",
+   "opera": "Test 124, Mia Prof. Ms.",
+   "sprache": "ES",
+   "zimmer": "429",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-08",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": "2026-11-17",
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 125,
+   "anzeige": "Mr. Test 125",
+   "opera": "Test 125, Franz Mr.",
+   "sprache": "JA",
+   "zimmer": "220",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-07",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 126,
+   "anzeige": "Frau Dr. Test 126",
+   "opera": "Test 126, Anna Dr. Frau",
+   "sprache": "DE",
+   "zimmer": "315",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-15",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 2,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move to 219 today, luggage transfer 11:00"
+    }
+   ]
+  },
+  {
+   "id": 127,
+   "anzeige": "Mr. Test 127",
+   "opera": "Test 127, Paul Mr.",
+   "sprache": "IT",
+   "zimmer": "214",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-14",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 128,
+   "anzeige": "Ms. Test 128",
+   "opera": "Test 128, Gerda Ms.",
+   "sprache": "TR",
+   "zimmer": "222",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-13",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 129,
+   "anzeige": "Herr Test 129",
+   "opera": "Test 129, Bernd Herr",
+   "sprache": "DE",
+   "zimmer": "132",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    }
+   ]
+  },
+  {
+   "id": 130,
+   "anzeige": "Frau Test 130",
+   "opera": "Test 130, Eva Frau",
+   "sprache": "DE",
+   "zimmer": "430",
+   "etage": 4,
+   "credit": 1.75,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 131,
+   "anzeige": "Herr Test 131",
+   "opera": "Test 131, Leo Herr",
+   "sprache": "DE",
+   "zimmer": "319",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 132,
+   "anzeige": "Ms. Test 132",
+   "opera": "Test 132, Ida Ms.",
+   "sprache": "EN",
+   "zimmer": "122",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 133,
+   "anzeige": "Mr. Test 133",
+   "opera": "Test 133, Jonas Mr.",
+   "sprache": "EN",
+   "zimmer": "535",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    },
+    {
+     "tag": 4,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 134,
+   "anzeige": "Mrs. Test 134",
+   "opera": "Test 134, Karin Mrs.",
+   "sprache": "EN",
+   "zimmer": "421",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 135,
+   "anzeige": "Mr. Dr. Test 135",
+   "opera": "Test 135, Max Dr. Mr.",
+   "sprache": "EN",
+   "zimmer": "414",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": "14:00",
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    },
+    {
+     "tag": 5,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 14:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 136,
+   "anzeige": "Ms. Test 136",
+   "opera": "Test 136, Carla Ms.",
+   "sprache": "ZH",
+   "zimmer": "310",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 137,
+   "anzeige": "Herr Test 137",
+   "opera": "Test 137, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "235",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 138,
+   "anzeige": "Test 138",
+   "opera": "Test 138, Lena",
+   "sprache": "EN",
+   "zimmer": "431",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 139,
+   "anzeige": "Mr. Test 139",
+   "opera": "Test 139, Franz Mr.",
+   "sprache": "AR",
+   "zimmer": "234",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    },
+    {
+     "tag": 2,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 140,
+   "anzeige": "Frau Test 140",
+   "opera": "Test 140, Nora Frau",
+   "sprache": "DE",
+   "zimmer": "112",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    }
+   ]
+  },
+  {
+   "id": 141,
+   "anzeige": "Mr. Test 141",
+   "opera": "Test 141, Paul Mr.",
+   "sprache": "FR",
+   "zimmer": "216",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 142,
+   "anzeige": "Mrs. Test 142",
+   "opera": "Test 142, Mia Mrs.",
+   "sprache": "RU",
+   "zimmer": "529",
+   "etage": 5,
+   "credit": 1.75,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 143,
+   "anzeige": "Herr Test 143",
+   "opera": "Test 143, Bernd Herr",
+   "sprache": "DE",
+   "zimmer": "531",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 144,
+   "anzeige": "Ms. Dr. Test 144",
+   "opera": "Test 144, Anna Dr. Ms.",
+   "sprache": "ES",
+   "zimmer": "324",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 145,
+   "anzeige": "Mr. Test 145",
+   "opera": "Test 145, Leo Mr.",
+   "sprache": "JA",
+   "zimmer": "118",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 146,
+   "anzeige": "Frau Test 146",
+   "opera": "Test 146, Gerda Frau",
+   "sprache": "DE",
+   "zimmer": "120",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 147,
+   "anzeige": "Mr. Test 147",
+   "opera": "Test 147, Jonas Mr.",
+   "sprache": "IT",
+   "zimmer": "207",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 148,
+   "anzeige": "Ms. Test 148",
+   "opera": "Test 148, Eva Ms.",
+   "sprache": "TR",
+   "zimmer": "420",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 149,
+   "anzeige": "Herr Test 149",
+   "opera": "Test 149, Max Herr",
+   "sprache": "DE",
+   "zimmer": "417",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 150,
+   "anzeige": "Frau Test 150",
+   "opera": "Test 150, Ida Frau",
+   "sprache": "DE",
+   "zimmer": "224",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 151,
+   "anzeige": "Herr Test 151",
+   "opera": "Test 151, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "130",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    }
+   ]
+  },
+  {
+   "id": 152,
+   "anzeige": "Ms. Test 152",
+   "opera": "Test 152, Karin Ms.",
+   "sprache": "EN",
+   "zimmer": "205",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 153,
+   "anzeige": "Mr. Dr. Test 153",
+   "opera": "Test 153, Franz Dr. Mr.",
+   "sprache": "EN",
+   "zimmer": "412",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 154,
+   "anzeige": "Mrs. Test 154",
+   "opera": "Test 154, Carla Mrs.",
+   "sprache": "EN",
+   "zimmer": "316",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 155,
+   "anzeige": "Mr. Prof. Test 155",
+   "opera": "Test 155, Paul Prof. Mr.",
+   "sprache": "EN",
+   "zimmer": "534",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 156,
+   "anzeige": "Ms. Test 156",
+   "opera": "Test 156, Lena Ms.",
+   "sprache": "ZH",
+   "zimmer": "217",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 157,
+   "anzeige": "Herr Test 157",
+   "opera": "Test 157, Bernd Herr",
+   "sprache": "DE",
+   "zimmer": "212",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 158,
+   "anzeige": "Mrs. Test 158",
+   "opera": "Test 158, Nora Mrs.",
+   "sprache": "EN",
+   "zimmer": "115",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 159,
+   "anzeige": "Mr. Test 159",
+   "opera": "Test 159, Leo Mr.",
+   "sprache": "AR",
+   "zimmer": "337",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 160,
+   "anzeige": "Frau Test 160",
+   "opera": "Test 160, Mia Frau",
+   "sprache": "DE",
+   "zimmer": "119",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 1,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    }
+   ]
+  },
+  {
+   "id": 161,
+   "anzeige": "Test 161",
+   "opera": "Test 161, Jonas",
+   "sprache": "FR",
+   "zimmer": "530",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 162,
+   "anzeige": "Mrs. Dr. Test 162",
+   "opera": "Test 162, Anna Dr. Mrs.",
+   "sprache": "RU",
+   "zimmer": "137",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-17",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 163,
+   "anzeige": "Herr Test 163",
+   "opera": "Test 163, Max Herr",
+   "sprache": "DE",
+   "zimmer": "323",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-16",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 1,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 164,
+   "anzeige": "Ms. Test 164",
+   "opera": "Test 164, Gerda Ms.",
+   "sprache": "ES",
+   "zimmer": "524",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "11:00",
+   "lateCheckout": "13:00",
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 3,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 13:00 confirmed"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 165,
+   "anzeige": "Mr. Test 165",
+   "opera": "Test 165, Emil Mr.",
+   "sprache": "JA",
+   "zimmer": "519",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "12:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 166,
+   "anzeige": "Frau Test 166",
+   "opera": "Test 166, Eva Frau",
+   "sprache": "DE",
+   "zimmer": "518",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 167,
+   "anzeige": "Mr. Test 167",
+   "opera": "Test 167, Franz Mr.",
+   "sprache": "IT",
+   "zimmer": "523",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "11:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 168,
+   "anzeige": "Ms. Test 168",
+   "opera": "Test 168, Ida Ms.",
+   "sprache": "TR",
+   "zimmer": "514",
+   "etage": 5,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V3",
+   "erwachsene": 1,
+   "kinder": 2,
+   "anreisezeit": "12:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 169,
+   "anzeige": "Herr Test 169",
+   "opera": "Test 169, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "532",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V3",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "13:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 3,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 170,
+   "anzeige": "Frau Test 170",
+   "opera": "Test 170, Karin Frau",
+   "sprache": "DE",
+   "zimmer": "435",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 171,
+   "anzeige": "Herr Dr. Test 171",
+   "opera": "Test 171, Bernd Dr. Herr",
+   "sprache": "DE",
+   "zimmer": "210",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 172,
+   "anzeige": "Ms. Test 172",
+   "opera": "Test 172, Carla Ms.",
+   "sprache": "EN",
+   "zimmer": "426",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 173,
+   "anzeige": "Mr. Test 173",
+   "opera": "Test 173, Leo Mr.",
+   "sprache": "EN",
+   "zimmer": "533",
+   "etage": 5,
+   "credit": 1.75,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 174,
+   "anzeige": "Mrs. Test 174",
+   "opera": "Test 174, Lena Mrs.",
+   "sprache": "EN",
+   "zimmer": "332",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 175,
+   "anzeige": "Mr. Test 175",
+   "opera": "Test 175, Jonas Mr.",
+   "sprache": "EN",
+   "zimmer": "433",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 176,
+   "anzeige": "Ms. Test 176",
+   "opera": "Test 176, Nora Ms.",
+   "sprache": "ZH",
+   "zimmer": "224",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 177,
+   "anzeige": "Herr Test 177",
+   "opera": "Test 177, Max Herr",
+   "sprache": "DE",
+   "zimmer": "226",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    },
+    {
+     "tag": 5,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 178,
+   "anzeige": "Mrs. Test 178",
+   "opera": "Test 178, Mia Mrs.",
+   "sprache": "EN",
+   "zimmer": "436",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 179,
+   "anzeige": "Mr. Test 179",
+   "opera": "Test 179, Emil Mr.",
+   "sprache": "AR",
+   "zimmer": "330",
+   "etage": 3,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 180,
+   "anzeige": "Frau Dr. Test 180",
+   "opera": "Test 180, Anna Dr. Frau",
+   "sprache": "DE",
+   "zimmer": "437",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 181,
+   "anzeige": "Mr. Test 181",
+   "opera": "Test 181, Franz Mr.",
+   "sprache": "FR",
+   "zimmer": "209",
+   "etage": 2,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 182,
+   "anzeige": "Mrs. Test 182",
+   "opera": "Test 182, Gerda Mrs.",
+   "sprache": "RU",
+   "zimmer": "123",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 183,
+   "anzeige": "Herr Test 183",
+   "opera": "Test 183, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "231",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 184,
+   "anzeige": "Test 184",
+   "opera": "Test 184, Eva",
+   "sprache": "ES",
+   "zimmer": "109",
+   "etage": 1,
+   "credit": 2,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 185,
+   "anzeige": "Mr. Test 185",
+   "opera": "Test 185, Bernd Mr.",
+   "sprache": "JA",
+   "zimmer": "221",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 186,
+   "anzeige": "Frau Prof. Test 186",
+   "opera": "Test 186, Ida Prof. Frau",
+   "sprache": "DE",
+   "zimmer": "237",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    }
+   ]
+  },
+  {
+   "id": 187,
+   "anzeige": "Mr. Test 187",
+   "opera": "Test 187, Leo Mr.",
+   "sprache": "IT",
+   "zimmer": "416",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 188,
+   "anzeige": "Ms. Test 188",
+   "opera": "Test 188, Karin Ms.",
+   "sprache": "TR",
+   "zimmer": "320",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 3,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 189,
+   "anzeige": "Herr Dr. Test 189",
+   "opera": "Test 189, Jonas Dr. Herr",
+   "sprache": "DE",
+   "zimmer": "322",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 190,
+   "anzeige": "Frau Test 190",
+   "opera": "Test 190, Carla Frau",
+   "sprache": "DE",
+   "zimmer": "134",
+   "etage": 1,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 191,
+   "anzeige": "Herr Test 191",
+   "opera": "Test 191, Max Herr",
+   "sprache": "DE",
+   "zimmer": "105",
+   "etage": 1,
+   "credit": 2,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 192,
+   "anzeige": "Ms. Test 192",
+   "opera": "Test 192, Lena Ms.",
+   "sprache": "EN",
+   "zimmer": "434",
+   "etage": 4,
+   "credit": 1.5,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 193,
+   "anzeige": "Mr. Test 193",
+   "opera": "Test 193, Emil Mr.",
+   "sprache": "EN",
+   "zimmer": "228",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 194,
+   "anzeige": "Mrs. Test 194",
+   "opera": "Test 194, Nora Mrs.",
+   "sprache": "EN",
+   "zimmer": "201",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 195,
+   "anzeige": "Mr. Test 195",
+   "opera": "Test 195, Franz Mr.",
+   "sprache": "EN",
+   "zimmer": "229",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": "13:00",
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    },
+    {
+     "tag": 5,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 13:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 196,
+   "anzeige": "Ms. Test 196",
+   "opera": "Test 196, Mia Ms.",
+   "sprache": "ZH",
+   "zimmer": "208",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "17:20",
+   "lateCheckout": "15:00",
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 3,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 15:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 197,
+   "anzeige": "Herr Test 197",
+   "opera": "Test 197, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "327",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 198,
+   "anzeige": "Mrs. Dr. Test 198",
+   "opera": "Test 198, Anna Dr. Mrs.",
+   "sprache": "EN",
+   "zimmer": "401",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": "12:30",
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 2,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    },
+    {
+     "tag": 3,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 12:30 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 199,
+   "anzeige": "Mr. Test 199",
+   "opera": "Test 199, Bernd Mr.",
+   "sprache": "AR",
+   "zimmer": "308",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 200,
+   "anzeige": "Frau Test 200",
+   "opera": "Test 200, Gerda Frau",
+   "sprache": "DE",
+   "zimmer": "415",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-17",
+   "abreise": "2026-11-18",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 2,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 201,
+   "anzeige": "Mr. Test 201",
+   "opera": "Test 201, Leo Mr.",
+   "sprache": "FR",
+   "zimmer": "208",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 202,
+   "anzeige": "Mrs. Test 202",
+   "opera": "Test 202, Eva Mrs.",
+   "sprache": "RU",
+   "zimmer": "420",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 203,
+   "anzeige": "Herr Test 203",
+   "opera": "Test 203, Jonas Herr",
+   "sprache": "DE",
+   "zimmer": "218",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 204,
+   "anzeige": "Ms. Test 204",
+   "opera": "Test 204, Ida Ms.",
+   "sprache": "ES",
+   "zimmer": "417",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 205,
+   "anzeige": "Mr. Test 205",
+   "opera": "Test 205, Max Mr.",
+   "sprache": "JA",
+   "zimmer": "415",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    }
+   ]
+  },
+  {
+   "id": 206,
+   "anzeige": "Frau Test 206",
+   "opera": "Test 206, Karin Frau",
+   "sprache": "DE",
+   "zimmer": "120",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    }
+   ]
+  },
+  {
+   "id": 207,
+   "anzeige": "Dr. Test 207",
+   "opera": "Test 207, Emil Dr.",
+   "sprache": "IT",
+   "zimmer": "401",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 208,
+   "anzeige": "Ms. Test 208",
+   "opera": "Test 208, Carla Ms.",
+   "sprache": "TR",
+   "zimmer": "314",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 4,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 209,
+   "anzeige": "Herr Test 209",
+   "opera": "Test 209, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "524",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": "14:00",
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 4,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 14:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 210,
+   "anzeige": "Frau Test 210",
+   "opera": "Test 210, Lena Frau",
+   "sprache": "DE",
+   "zimmer": "135",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 2,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 211,
+   "anzeige": "Herr Test 211",
+   "opera": "Test 211, Paul Herr",
+   "sprache": "DE",
+   "zimmer": "319",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 212,
+   "anzeige": "Ms. Test 212",
+   "opera": "Test 212, Nora Ms.",
+   "sprache": "EN",
+   "zimmer": "118",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 213,
+   "anzeige": "Mr. Test 213",
+   "opera": "Test 213, Bernd Mr.",
+   "sprache": "EN",
+   "zimmer": "122",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 214,
+   "anzeige": "Mrs. Test 214",
+   "opera": "Test 214, Mia Mrs.",
+   "sprache": "EN",
+   "zimmer": "515",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    }
+   ]
+  },
+  {
+   "id": 215,
+   "anzeige": "Mr. Test 215",
+   "opera": "Test 215, Leo Mr.",
+   "sprache": "EN",
+   "zimmer": "114",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 216,
+   "anzeige": "Ms. Dr. Test 216",
+   "opera": "Test 216, Anna Dr. Ms.",
+   "sprache": "ZH",
+   "zimmer": "328",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 217,
+   "anzeige": "Herr Prof. Test 217",
+   "opera": "Test 217, Jonas Prof. Herr",
+   "sprache": "DE",
+   "zimmer": "318",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 218,
+   "anzeige": "Mrs. Test 218",
+   "opera": "Test 218, Gerda Mrs.",
+   "sprache": "EN",
+   "zimmer": "205",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": "13:00",
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    },
+    {
+     "tag": 4,
+     "abteilung": "FO",
+     "code": "LCO",
+     "text": "Late check-out until 13:00 confirmed"
+    }
+   ]
+  },
+  {
+   "id": 219,
+   "anzeige": "Mr. Test 219",
+   "opera": "Test 219, Max Mr.",
+   "sprache": "AR",
+   "zimmer": "235",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 220,
+   "anzeige": "Frau Test 220",
+   "opera": "Test 220, Eva Frau",
+   "sprache": "DE",
+   "zimmer": "337",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 221,
+   "anzeige": "Mr. Test 221",
+   "opera": "Test 221, Emil Mr.",
+   "sprache": "FR",
+   "zimmer": "338",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 3,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 222,
+   "anzeige": "Mrs. Test 222",
+   "opera": "Test 222, Ida Mrs.",
+   "sprache": "RU",
+   "zimmer": "418",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 223,
+   "anzeige": "Herr Test 223",
+   "opera": "Test 223, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "421",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    }
+   ]
+  },
+  {
+   "id": 224,
+   "anzeige": "Ms. Test 224",
+   "opera": "Test 224, Karin Ms.",
+   "sprache": "ES",
+   "zimmer": "412",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    }
+   ]
+  },
+  {
+   "id": 225,
+   "anzeige": "Mr. Dr. Test 225",
+   "opera": "Test 225, Paul Dr. Mr.",
+   "sprache": "JA",
+   "zimmer": "223",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 4,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 226,
+   "anzeige": "Frau Test 226",
+   "opera": "Test 226, Carla Frau",
+   "sprache": "DE",
+   "zimmer": "324",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-18",
+   "abreise": "2026-11-19",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 3,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 227,
+   "anzeige": "Mr. Test 227",
+   "opera": "Test 227, Bernd Mr.",
+   "sprache": "IT",
+   "zimmer": "524",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin back to king after departure"
+    }
+   ]
+  },
+  {
+   "id": 228,
+   "anzeige": "Ms. Test 228",
+   "opera": "Test 228, Lena Ms.",
+   "sprache": "TR",
+   "zimmer": "126",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "ENG",
+     "code": "ENG",
+     "text": "Minibar door loose"
+    }
+   ]
+  },
+  {
+   "id": 229,
+   "anzeige": "Herr Test 229",
+   "opera": "Test 229, Leo Herr",
+   "sprache": "DE",
+   "zimmer": "205",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 230,
+   "anzeige": "Test 230",
+   "opera": "Test 230, Nora",
+   "sprache": "DE",
+   "zimmer": "419",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 231,
+   "anzeige": "Herr Test 231",
+   "opera": "Test 231, Jonas Herr",
+   "sprache": "DE",
+   "zimmer": "137",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 232,
+   "anzeige": "Ms. Test 232",
+   "opera": "Test 232, Mia Ms.",
+   "sprache": "EN",
+   "zimmer": "521",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 233,
+   "anzeige": "Mr. Test 233",
+   "opera": "Test 233, Max Mr.",
+   "sprache": "EN",
+   "zimmer": "531",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    },
+    {
+     "tag": 5,
+     "abteilung": "FO",
+     "code": "FO",
+     "text": "Room move requested (noise), offer alternative"
+    }
+   ]
+  },
+  {
+   "id": 234,
+   "anzeige": "Mrs. Dr. Test 234",
+   "opera": "Test 234, Anna Dr. Mrs.",
+   "sprache": "EN",
+   "zimmer": "336",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Guest requests cleaning after 13:00"
+    }
+   ]
+  },
+  {
+   "id": 235,
+   "anzeige": "Mr. Test 235",
+   "opera": "Test 235, Emil Mr.",
+   "sprache": "EN",
+   "zimmer": "423",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 236,
+   "anzeige": "Ms. Test 236",
+   "opera": "Test 236, Gerda Ms.",
+   "sprache": "ZH",
+   "zimmer": "116",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 237,
+   "anzeige": "Herr Test 237",
+   "opera": "Test 237, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "212",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 238,
+   "anzeige": "Mrs. Test 238",
+   "opera": "Test 238, Eva Mrs.",
+   "sprache": "EN",
+   "zimmer": "402",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 239,
+   "anzeige": "Mr. Test 239",
+   "opera": "Test 239, Paul Mr.",
+   "sprache": "AR",
+   "zimmer": "102",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-20",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 240,
+   "anzeige": "Frau Test 240",
+   "opera": "Test 240, Ida Frau",
+   "sprache": "DE",
+   "zimmer": "525",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 4,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    }
+   ]
+  },
+  {
+   "id": 241,
+   "anzeige": "Mr. Test 241",
+   "opera": "Test 241, Bernd Mr.",
+   "sprache": "FR",
+   "zimmer": "327",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-19",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 242,
+   "anzeige": "Mrs. Test 242",
+   "opera": "Test 242, Karin Mrs.",
+   "sprache": "RU",
+   "zimmer": "229",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 243,
+   "anzeige": "Herr Dr. Test 243",
+   "opera": "Test 243, Leo Dr. Herr",
+   "sprache": "DE",
+   "zimmer": "522",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 244,
+   "anzeige": "Ms. Test 244",
+   "opera": "Test 244, Carla Ms.",
+   "sprache": "ES",
+   "zimmer": "414",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 245,
+   "anzeige": "Mr. Test 245",
+   "opera": "Test 245, Jonas Mr.",
+   "sprache": "JA",
+   "zimmer": "111",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 246,
+   "anzeige": "Frau Test 246",
+   "opera": "Test 246, Lena Frau",
+   "sprache": "DE",
+   "zimmer": "102",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    }
+   ]
+  },
+  {
+   "id": 247,
+   "anzeige": "Mr. Test 247",
+   "opera": "Test 247, Max Mr.",
+   "sprache": "IT",
+   "zimmer": "308",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    }
+   ]
+  },
+  {
+   "id": 248,
+   "anzeige": "Ms. Prof. Test 248",
+   "opera": "Test 248, Nora Prof. Ms.",
+   "sprache": "TR",
+   "zimmer": "420",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 249,
+   "anzeige": "Herr Test 249",
+   "opera": "Test 249, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "532",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "14:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 250,
+   "anzeige": "Frau Test 250",
+   "opera": "Test 250, Mia Frau",
+   "sprache": "DE",
+   "zimmer": "114",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "15:50",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 251,
+   "anzeige": "Herr Test 251",
+   "opera": "Test 251, Franz Herr",
+   "sprache": "DE",
+   "zimmer": "121",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 252,
+   "anzeige": "Ms. Dr. Test 252",
+   "opera": "Test 252, Anna Dr. Ms.",
+   "sprache": "EN",
+   "zimmer": "317",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 2,
+   "anreisezeit": "17:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 253,
+   "anzeige": "Test 253",
+   "opera": "Test 253, Paul",
+   "sprache": "EN",
+   "zimmer": "515",
+   "etage": 5,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:05",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 254,
+   "anzeige": "Mrs. Test 254",
+   "opera": "Test 254, Gerda Mrs.",
+   "sprache": "EN",
+   "zimmer": "224",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:10",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 255,
+   "anzeige": "Mr. Test 255",
+   "opera": "Test 255, Bernd Mr.",
+   "sprache": "EN",
+   "zimmer": "335",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": "V2",
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "20:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot (Babybett) please"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 256,
+   "anzeige": "Ms. Test 256",
+   "opera": "Test 256, Eva Ms.",
+   "sprache": "ZH",
+   "zimmer": "422",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 1,
+   "anreisezeit": "13:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    }
+   ]
+  },
+  {
+   "id": 257,
+   "anzeige": "Herr Test 257",
+   "opera": "Test 257, Leo Herr",
+   "sprache": "DE",
+   "zimmer": "210",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:25",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    }
+   ]
+  },
+  {
+   "id": 258,
+   "anzeige": "Mrs. Test 258",
+   "opera": "Test 258, Ida Mrs.",
+   "sprache": "EN",
+   "zimmer": "215",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "15:30",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 259,
+   "anzeige": "Mr. Test 259",
+   "opera": "Test 259, Jonas Mr.",
+   "sprache": "AR",
+   "zimmer": "237",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "16:35",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 260,
+   "anzeige": "Frau Test 260",
+   "opera": "Test 260, Karin Frau",
+   "sprache": "DE",
+   "zimmer": "117",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:40",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 261,
+   "anzeige": "Mr. Dr. Test 261",
+   "opera": "Test 261, Max Dr. Mr.",
+   "sprache": "FR",
+   "zimmer": "123",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "18:45",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 262,
+   "anzeige": "Mrs. Test 262",
+   "opera": "Test 262, Carla Mrs.",
+   "sprache": "RU",
+   "zimmer": "127",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "19:50",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    }
+   ]
+  },
+  {
+   "id": 263,
+   "anzeige": "Herr Test 263",
+   "opera": "Test 263, Emil Herr",
+   "sprache": "DE",
+   "zimmer": "221",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:55",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 264,
+   "anzeige": "Ms. Test 264",
+   "opera": "Test 264, Lena Ms.",
+   "sprache": "ES",
+   "zimmer": "124",
+   "etage": 1,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": "V1",
+   "erwachsene": 1,
+   "kinder": 1,
+   "anreisezeit": "13:00",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 1 child"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Baby cot for child, 2 years old"
+    },
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "VIP amenity: fruit plate and welcome card"
+    }
+   ]
+  },
+  {
+   "id": 265,
+   "anzeige": "Mr. Test 265",
+   "opera": "Test 265, Franz Mr.",
+   "sprache": "JA",
+   "zimmer": "437",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "14:05",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 266,
+   "anzeige": "Frau Test 266",
+   "opera": "Test 266, Nora Frau",
+   "sprache": "DE",
+   "zimmer": "401",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 2,
+   "anreisezeit": "15:10",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "XBED",
+     "text": "Extra bed for 2 children"
+    }
+   ]
+  },
+  {
+   "id": 267,
+   "anzeige": "Mr. Test 267",
+   "opera": "Test 267, Paul Mr.",
+   "sprache": "IT",
+   "zimmer": "211",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-23",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "16:15",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HM",
+     "code": "TWIN",
+     "text": "Twin beds please"
+    }
+   ]
+  },
+  {
+   "id": 268,
+   "anzeige": "Ms. Test 268",
+   "opera": "Test 268, Mia Ms.",
+   "sprache": "TR",
+   "zimmer": "227",
+   "etage": 2,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-24",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "17:20",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Allergy: feather-free bedding, no down pillows"
+    }
+   ]
+  },
+  {
+   "id": 269,
+   "anzeige": "Herr Test 269",
+   "opera": "Test 269, Bernd Herr",
+   "sprache": "DE",
+   "zimmer": "322",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-25",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "18:25",
+   "lateCheckout": null,
+   "traces": []
+  },
+  {
+   "id": 270,
+   "anzeige": "Frau Dr. Test 270",
+   "opera": "Test 270, Anna Dr. Frau",
+   "sprache": "DE",
+   "zimmer": "321",
+   "etage": 3,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-21",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 1,
+   "kinder": 0,
+   "anreisezeit": "19:30",
+   "lateCheckout": null,
+   "traces": [
+    {
+     "tag": 5,
+     "abteilung": "HK",
+     "code": "HK",
+     "text": "Extra towels and bathrobes"
+    }
+   ]
+  },
+  {
+   "id": 271,
+   "anzeige": "Herr Test 271",
+   "opera": "Test 271, Leo Herr",
+   "sprache": "DE",
+   "zimmer": "418",
+   "etage": 4,
+   "credit": 1,
+   "anreise": "2026-11-20",
+   "abreise": "2026-11-22",
+   "vorzeitigAbgereist": null,
+   "vip": null,
+   "erwachsene": 2,
+   "kinder": 0,
+   "anreisezeit": "20:35",
+   "lateCheckout": null,
+   "traces": []
+  }
+ ]
+}

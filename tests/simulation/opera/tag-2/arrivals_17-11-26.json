@@ -1,0 +1,629 @@
+{
+ "liste": "arrivals",
+ "tag": 2,
+ "datum": "2026-11-17",
+ "zeilen": [
+  {
+   "room": "105",
+   "name": "Test 191, Max Herr",
+   "company": "Beispiel AG",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DST",
+   "status": "RESV",
+   "arrTime": "20:55",
+   "trace": null
+  },
+  {
+   "room": "109",
+   "name": "Test 184, Eva",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 1,
+   "roomType": "DST",
+   "status": "RESV",
+   "arrTime": "13:20",
+   "trace": {
+    "code": "TWIN",
+    "date": "2026-11-17",
+    "text": "Twin beds please"
+   }
+  },
+  {
+   "room": "123",
+   "name": "Test 182, Gerda Mrs.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 2,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "19:10",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Allergy: feather-free bedding, no down pillows"
+   }
+  },
+  {
+   "room": "134",
+   "name": "Test 190, Carla Frau",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "19:50",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Allergy: feather-free bedding, no down pillows"
+   }
+  },
+  {
+   "room": "201",
+   "name": "Test 194, Nora Mrs.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "15:10",
+   "trace": {
+    "code": "TWIN",
+    "date": "2026-11-17",
+    "text": "Twin beds please"
+   }
+  },
+  {
+   "room": "208",
+   "name": "Test 196, Mia Ms.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 2,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "17:20",
+   "trace": {
+    "code": "XBED",
+    "date": "2026-11-17",
+    "text": "Extra bed for 2 children"
+   }
+  },
+  {
+   "room": "209",
+   "name": "Test 181, Franz Mr.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "18:05",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Extra towels and bathrobes"
+   }
+  },
+  {
+   "room": "210",
+   "name": "Test 171, Bernd Dr. Herr",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "16:15",
+   "trace": null
+  },
+  {
+   "room": "221",
+   "name": "Test 185, Bernd Mr.",
+   "company": "Muster GmbH",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "14:25",
+   "trace": null
+  },
+  {
+   "room": "224",
+   "name": "Test 176, Nora Ms.",
+   "company": "",
+   "vip": "V1",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 1,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "13:40",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "226",
+   "name": "Test 177, Max Herr",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-23",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "14:45",
+   "trace": {
+    "code": "XBED",
+    "date": "2026-11-17",
+    "text": "Baby cot (Babybett) please"
+   }
+  },
+  {
+   "room": "228",
+   "name": "Test 193, Emil Mr.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-20",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "14:05",
+   "trace": null
+  },
+  {
+   "room": "229",
+   "name": "Test 195, Franz Mr.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-20",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "16:15",
+   "trace": {
+    "code": "XBED",
+    "date": "2026-11-17",
+    "text": "Baby cot (Babybett) please"
+   }
+  },
+  {
+   "room": "231",
+   "name": "Test 183, Paul Herr",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-20",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "20:15",
+   "trace": null
+  },
+  {
+   "room": "237",
+   "name": "Test 186, Ida Prof. Frau",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "15:30",
+   "trace": {
+    "code": "XBED",
+    "date": "2026-11-17",
+    "text": "Baby cot for child, 2 years old"
+   }
+  },
+  {
+   "room": "308",
+   "name": "Test 199, Bernd Mr.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "20:35",
+   "trace": {
+    "code": "TWIN",
+    "date": "2026-11-17",
+    "text": "Twin beds please"
+   }
+  },
+  {
+   "room": "320",
+   "name": "Test 188, Karin Ms.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-24",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "17:40",
+   "trace": {
+    "code": "XBED",
+    "date": "2026-11-17",
+    "text": "Extra bed for 1 child"
+   }
+  },
+  {
+   "room": "322",
+   "name": "Test 189, Jonas Dr. Herr",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "18:45",
+   "trace": {
+    "code": "TWIN",
+    "date": "2026-11-17",
+    "text": "Twin beds please"
+   }
+  },
+  {
+   "room": "327",
+   "name": "Test 197, Paul Herr",
+   "company": "Demo KG",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "18:25",
+   "trace": null
+  },
+  {
+   "room": "330",
+   "name": "Test 179, Emil Mr.",
+   "company": "Demo KG",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "16:55",
+   "trace": {
+    "code": "TWIN",
+    "date": "2026-11-17",
+    "text": "Twin beds please"
+   }
+  },
+  {
+   "room": "332",
+   "name": "Test 174, Lena Mrs.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "19:30",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Allergy: feather-free bedding, no down pillows"
+   }
+  },
+  {
+   "room": "401",
+   "name": "Test 198, Anna Dr. Mrs.",
+   "company": "",
+   "vip": "V1",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "19:30",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Allergy: feather-free bedding, no down pillows"
+   }
+  },
+  {
+   "room": "415",
+   "name": "Test 200, Gerda Frau",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 1,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "13:40",
+   "trace": {
+    "code": "XBED",
+    "date": "2026-11-17",
+    "text": "Extra bed for 1 child"
+   }
+  },
+  {
+   "room": "416",
+   "name": "Test 187, Leo Mr.",
+   "company": "",
+   "vip": "V1",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "16:35",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "426",
+   "name": "Test 172, Carla Ms.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-23",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "17:20",
+   "trace": null
+  },
+  {
+   "room": "433",
+   "name": "Test 175, Jonas Mr.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "20:35",
+   "trace": null
+  },
+  {
+   "room": "434",
+   "name": "Test 192, Lena Ms.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 1,
+   "chl": 1,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "13:00",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Extra towels and bathrobes"
+   }
+  },
+  {
+   "room": "435",
+   "name": "Test 170, Karin Frau",
+   "company": "",
+   "vip": "V2",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "15:10",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Extra towels and bathrobes"
+   }
+  },
+  {
+   "room": "436",
+   "name": "Test 178, Mia Mrs.",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "15:50",
+   "trace": null
+  },
+  {
+   "room": "437",
+   "name": "Test 180, Anna Dr. Frau",
+   "company": "",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "17:00",
+   "trace": null
+  },
+  {
+   "room": "514",
+   "name": "Test 168, Ida Ms.",
+   "company": "",
+   "vip": "V3",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 1,
+   "chl": 2,
+   "roomType": "JSK",
+   "status": "RESV",
+   "arrTime": "12:00",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "518",
+   "name": "Test 166, Eva Frau",
+   "company": "",
+   "vip": "V2",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "13:00",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "Allergy: feather-free bedding, no down pillows"
+   }
+  },
+  {
+   "room": "519",
+   "name": "Test 165, Emil Mr.",
+   "company": "",
+   "vip": "V1",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 1,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "12:30",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "523",
+   "name": "Test 167, Franz Mr.",
+   "company": "Muster GmbH",
+   "vip": "V2",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "CLK",
+   "status": "RESV",
+   "arrTime": "11:30",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "524",
+   "name": "Test 164, Gerda Ms.",
+   "company": "",
+   "vip": "V1",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "11:00",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "532",
+   "name": "Test 169, Paul Herr",
+   "company": "",
+   "vip": "V3",
+   "arr": "2026-11-17",
+   "dep": "2026-11-19",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "DLK",
+   "status": "RESV",
+   "arrTime": "13:30",
+   "trace": {
+    "code": "HK",
+    "date": "2026-11-17",
+    "text": "VIP amenity: fruit plate and welcome card"
+   }
+  },
+  {
+   "room": "533",
+   "name": "Test 173, Leo Mr.",
+   "company": "Beispiel AG",
+   "vip": "",
+   "arr": "2026-11-17",
+   "dep": "2026-11-18",
+   "adl": 2,
+   "chl": 0,
+   "roomType": "STE",
+   "status": "RESV",
+   "arrTime": "18:25",
+   "trace": null
+  }
+ ]
+}
