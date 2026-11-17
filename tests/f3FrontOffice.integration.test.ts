@@ -90,3 +90,46 @@ describe("Teil 1 — Gast noch im Zimmer (K4, H10)", () => {
     expect((await arrivalPatch(req({ status: "CHECKED_IN" }, "PATCH"), ctx(ids.arrival201))).status).toBe(200);
   });
 });
+
+import { DELETE as checkoutDelete } from "@/app/api/rooms/[id]/checkout/route";
+import { PATCH as guestRequestPatch } from "@/app/api/guest-requests/[id]/route";
+
+describe("Teil 2 — Check-out zurücknehmen, DND aufheben (H7, M22)", () => {
+  it("Rücknahme stellt den Stand wieder her: Aufenthalt im Haus, Zimmer belegt, Logbuch, Korrekturmeldung", async () => {
+    const dep = await stay(room["202"], "Rücknahmetest", -2, 0, "IN_HOUSE");
+    await prisma.dayRoomPlan.create({ data: { date: TODAY, roomId: room["202"], cleaningType: "DEPARTURE", stayId: dep.id } });
+    await prisma.room.update({ where: { id: room["202"] }, data: { occupancy: "OCCUPIED", assignedToId: ids.anna, assignedOn: TODAY } });
+    as("fo", "front_office");
+    expect((await checkoutPost(req(), ctx(room["202"]))).status).toBe(200);
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: dep.id } })).status).toBe("CHECKED_OUT");
+    for (const [k, role] of [["anna", "room_attendant"], ["con", "concierge"], ["hm", "houseman"], ["eng", "engineering"]] as const) {
+      as(k, role);
+      expect((await checkoutDelete(req(undefined, "DELETE"), ctx(room["202"]))).status).toBe(403);
+    }
+    as("sup", "supervisor");
+    expect((await checkoutDelete(req(undefined, "DELETE"), ctx(room["202"]))).status).toBe(200);
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: dep.id } })).status).toBe("IN_HOUSE");
+    expect((await prisma.room.findUniqueOrThrow({ where: { id: room["202"] } })).occupancy).toBe("OCCUPIED");
+    expect(await prisma.auditLog.count({ where: { action: "GUEST_CHECKOUT_REVERTED", roomId: room["202"] } })).toBe(1);
+    expect(await prisma.notification.count({ where: { type: "GUEST_CHECKOUT_REVERTED", roomId: room["202"], targetUserId: ids.anna } })).toBe(1);
+  });
+
+  it("Rücknahme geht nicht, wenn der neue Gast eines Turns schon eingecheckt ist", async () => {
+    await prisma.stay.updateMany({ where: { roomId: room["201"], guestLastName: "Anreisetest" }, data: { status: "IN_HOUSE" } });
+    as("dm", "duty_manager");
+    const res = await checkoutDelete(req(undefined, "DELETE"), ctx(room["201"]));
+    expect(res.status).toBe(409);
+    expect((await res.json()).code).toBe("NEW_GUEST_CHECKED_IN");
+  });
+
+  it("Front Office hebt ein Gast-DND auf (Logbuch, Housekeeperin gemeldet), darf aber sonst keine Gastwünsche ändern", async () => {
+    const dnd = await prisma.guestRequest.create({ data: { roomId: room["202"], kind: "DND", detail: "{}" } });
+    const wish = await prisma.guestRequest.create({ data: { roomId: room["202"], kind: "CLEAN_REQUEST", detail: "{}" } });
+    as("fo", "front_office");
+    expect((await guestRequestPatch(req({ status: "DONE" }, "PATCH"), ctx(wish.id))).status).toBe(403);
+    expect((await guestRequestPatch(req({ status: "DONE" }, "PATCH"), ctx(dnd.id))).status).toBe(200);
+    expect(await prisma.auditLog.count({ where: { action: "GUEST_DND_LIFTED", roomId: room["202"] } })).toBe(1);
+    as("anna", "room_attendant");
+    expect((await guestRequestPatch(req({ status: "DONE" }, "PATCH"), ctx(dnd.id))).status).toBe(403);
+  });
+});

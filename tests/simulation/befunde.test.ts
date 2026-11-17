@@ -89,7 +89,7 @@ describe("H4 Sperren: „außer Betrieb“ endet", () => {
 });
 
 describe("H7 Check-out lässt sich zurücknehmen", () => {
-  it.fails("die Check-out-Route kennt ein Zurücknehmen (DELETE)", () => {
+  it("die Check-out-Route kennt ein Zurücknehmen (DELETE)", () => {
     expect(src("src/app/api/rooms/[id]/checkout/route.ts")).toMatch(/export async function DELETE/);
   });
 });

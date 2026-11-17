@@ -4,6 +4,7 @@ import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
 /**
  * PATCH /api/guest-requests/[id] — supervisor assigns and/or updates the
@@ -24,7 +25,8 @@ const Body = z
   });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(["supervisor"]);
+  // F3 Teil 2 (Annahme, nicht entschieden): Front Office darf ein „Bitte nicht stören“ des Gastes aufheben — nur das (DND → DONE)
+  const auth = await requireRole(["supervisor", "front_office"]);
   if (!auth.ok) return auth.response;
   const { id } = await params;
 
@@ -33,6 +35,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const existing = await prisma.guestRequest.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Guest request not found." }, { status: 404 });
+  const foLiftsDnd = auth.session.role === "front_office";
+  if (foLiftsDnd && (existing.kind !== "DND" || parsed.data.status !== "DONE" || parsed.data.assignedToId !== undefined)) {
+    return NextResponse.json({ error: "Front Office may only lift a guest's Do Not Disturb.", code: "FORBIDDEN" }, { status: 403 });
+  }
 
   if (parsed.data.assignedToId != null) {
     const assignee = await prisma.user.findUnique({ where: { id: parsed.data.assignedToId } });
@@ -52,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   });
 
   await audit({
-    action: "GUEST_REQUEST_UPDATED",
+    action: foLiftsDnd ? "GUEST_DND_LIFTED" : "GUEST_REQUEST_UPDATED",
     userId: auth.session.userId,
     roomId: existing.roomId,
     fromStatus: existing.status,
@@ -60,6 +66,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     meta: { assignedToId: parsed.data.assignedToId },
   });
   broadcast("guestrequest:update", { guestRequest: updated });
+  if (existing.kind === "DND" && parsed.data.status === "DONE" && existing.status !== "DONE") {
+    await notifyHousekeeperOfRoomChange({ roomId: existing.roomId, kind: "DND_ENDED", actorId: auth.session.userId }).catch(() => null);
+  }
 
   return NextResponse.json({ guestRequest: updated });
 }

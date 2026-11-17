@@ -1,5 +1,6 @@
 "use client";
 
+import FrontOfficeDnd from "@/components/roles/FrontOfficeDnd";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
@@ -172,6 +173,8 @@ export default function FrontOfficeView() {
             busyId={depBusy}
             error={depError}
             onCheckout={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { body: {} }))}
+            onCheckoutMany={(roomIds) => void depAction(roomIds[0], async () => { for (const id of roomIds) await api(`/api/rooms/${id}/checkout`, { body: {} }); })}
+            onRevert={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { method: "DELETE" }))}
             onLateCheckout={(roomId, time) => void depAction(roomId, () => api(`/api/rooms/${roomId}/late-checkout`, { method: "PATCH", body: { time } }))}
           />
         }
@@ -179,6 +182,7 @@ export default function FrontOfficeView() {
           <>
             {released && <Banner tone="info" icon="bell" title={released} />}
             <BlockedRoomsCard role="front_office" />
+            <FrontOfficeDnd />
             <PriorityBanner
               items={[
                 { count: neededNowNotReady, label: t("priority.neededNowArrivals"), icon: "warning", tone: "urgent" },
