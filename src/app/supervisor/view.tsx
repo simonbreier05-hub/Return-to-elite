@@ -178,20 +178,15 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         prev.map((a) => (a.id === p.userId ? { ...a, currentRoomId: p.roomId, lastSeenAt: new Date().toISOString() } : a))
       );
     },
-    "note:new": (p: { note: Note }) => {
-      setRooms((prev) =>
-        prev.map((r) =>
-          r.id === p.note.roomId ? { ...r, notes: [p.note, ...r.notes].slice(0, 3), openNotesCount: r.openNotesCount + 1 } : r
-        )
-      );
-    },
+    // S1: Live-Nachricht ohne Notiztext — den Text lädt die geschützte API nach.
+    "note:new": () => refetchSoon(),
     // A toggle may land on a note outside the 3-item preview window, so the
     // preview is patched directly for instant feedback but openNotesCount —
     // an aggregate over the *full* thread — is left to the coalesced refetch.
     "note:update": (p: { note: Note }) => {
       setRooms((prev) =>
         prev.map((r) =>
-          r.id === p.note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === p.note.id ? p.note : n)) } : r
+          r.id === p.note.roomId ? { ...r, notes: r.notes.map((n) => (n.id === p.note.id ? { ...n, ...p.note } : n)) } : r
         )
       );
       refetchSoon();

@@ -1634,6 +1634,7 @@ const en = {
   notify: {
     guestGreen: "Room {{n}}: guest chose the Green Option — no linen change today.",
     guestCheckedOut: "Room {{n}} (floor {{floor}}): guest checked out.",
+    guestStayConflict: "Room {{n}}: two stays in house at the same time — guest screen stays neutral. Please check import/check-out.",
     dndReminder: "Room {{n}} (floor {{floor}}): Do not disturb — not cleaned, hang the card on the door.",
     changeCHECKED_OUT: "guest checked out — room can be cleaned",
     changeLATE_CHECKOUT: "late check-out changed",
@@ -3580,6 +3581,7 @@ const de = {
   notify: {
     guestGreen: "Zimmer {{n}}: Gast hat die Green Option gewählt — heute kein Wäschewechsel.",
     guestCheckedOut: "Zimmer {{n}} (Etage {{floor}}): Gast ausgecheckt.",
+    guestStayConflict: "Zimmer {{n}}: zwei Aufenthalte gleichzeitig „im Haus“ — Gastbildschirm bleibt neutral. Bitte Import/Check-out prüfen.",
     dndReminder: "Zimmer {{n}} (Etage {{floor}}): Bitte nicht stören — nicht gereinigt, Karte ans Zimmer hängen.",
     changeCHECKED_OUT: "Gast ausgecheckt — Zimmer kann gereinigt werden",
     changeLATE_CHECKOUT: "Late Check-out geändert",

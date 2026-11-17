@@ -16,6 +16,7 @@ import { legacyTraceKey, TRACE_KEY_PREFIX, traceKey } from "@/lib/dayplan/traceK
  *
  * Datenkarte (siehe docs/datenschutz-loeschkonzept.md):
  *   Stay.guestName, Arrival.guestName            → ""   (Zeile bleibt; Stay nach guestStayDeleteDays ganz weg)
+ *   Stay.guestSalutation/.guestTitle/.guestLastName → NULL (S1: Begrüßung auf dem Gastbildschirm)
  *   Excursion.guestName / .note                  → NULL
  *   Trace.text                                   → ""   (Zeile + HMAC-Schlüssel bleiben: "erledigt"/"Aufgabe angelegt" gehen nicht verloren)
  *   ImportRow (Roh-Zwischenablage)               → gelöscht
@@ -25,7 +26,10 @@ import { legacyTraceKey, TRACE_KEY_PREFIX, traceKey } from "@/lib/dayplan/traceK
  */
 
 /** Meta-Schlüssel im Protokoll, die Freitext oder Namen enthalten können. */
-export const AUDIT_PII_KEYS = ["guestName", "name", "text", "note", "body", "message"] as const;
+export const AUDIT_PII_KEYS = ["guestName", "guestLastName", "name", "text", "note", "body", "message"] as const;
+
+/** Alle Namensfelder eines Aufenthalts leeren (Mitarbeiter-Anzeige + Begrüßung „Anrede Titel Nachname“). */
+const STAY_NAME_CLEARED = { guestName: "", guestSalutation: null, guestTitle: null, guestLastName: null };
 
 /** Letzter geplanter Löschzeitpunkt (Berlin, `hour`:00), der nicht in der Zukunft liegt. */
 export function latestScheduledPurge(now: Date, hour: number): Date {
@@ -80,7 +84,10 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
   const guestSystemUserId = await getGuestSystemUserId().catch(() => null);
   const counts: PurgeCounts = {};
 
-  counts.stayNames = (await prisma.stay.updateMany({ where: { guestName: { not: "" }, source: { not: "DEMO" } }, data: { guestName: "" } })).count; // DEMO = Gast-Vorschau (301), erfundener Name
+  counts.stayNames = (await prisma.stay.updateMany({
+    where: { source: { not: "DEMO" }, OR: [{ guestName: { not: "" } }, { guestLastName: { not: null } }, { guestTitle: { not: null } }, { guestSalutation: { not: null } }] },
+    data: STAY_NAME_CLEARED,
+  })).count; // DEMO = Gast-Vorschau (301), erfundener Name
   counts.arrivalNames = (await prisma.arrival.updateMany({ where: { guestName: { not: "" } }, data: { guestName: "" } })).count;
   counts.excursions = (await prisma.excursion.updateMany({
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },
@@ -143,7 +150,7 @@ export async function purgeStay(stayId: string, userId: string) {
   const from = new Date(stay.checkIn.getTime() - 7 * 86_400_000);
   const isoFrom = from.toISOString().slice(0, 10), isoTo = stay.checkOut.toISOString().slice(0, 10);
   const counts: PurgeCounts = {};
-  counts.stayNames = (await prisma.stay.updateMany({ where: { id: stayId }, data: { guestName: "" } })).count;
+  counts.stayNames = (await prisma.stay.updateMany({ where: { id: stayId }, data: STAY_NAME_CLEARED })).count;
   counts.arrivalNames = (await prisma.arrival.updateMany({
     where: { roomId: stay.roomId, createdAt: { gte: from, lte: new Date(stay.checkOut.getTime() + 86_400_000) } }, data: { guestName: "" },
   })).count;

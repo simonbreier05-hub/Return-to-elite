@@ -11,7 +11,7 @@ export async function ensureDemoStay(prisma: PrismaClient) {
   if (await prisma.stay.findFirst({ where: { roomId: room.id, source: "DEMO" } })) return;
   await prisma.stay.create({
     data: {
-      roomId: room.id, guestName: "Alex Guest", language: "de", source: "DEMO",
+      roomId: room.id, guestName: "Alex Guest", guestSalutation: "MR", guestLastName: "Guest", language: "de", source: "DEMO",
       checkIn: new Date("2026-01-01T12:00:00Z"), checkOut: new Date("2099-12-31T10:00:00Z"),
       status: "IN_HOUSE", stayToken: generateOpaqueToken(),
     },

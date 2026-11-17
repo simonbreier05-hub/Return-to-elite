@@ -10,7 +10,7 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
  */
 
 const roomFindUnique = vi.fn();
-const stayFindFirst = vi.fn();
+const stayFindMany = vi.fn();
 const stayFindUnique = vi.fn();
 const getSettingsMock = vi.fn();
 
@@ -18,7 +18,7 @@ vi.mock("@/lib/db", () => ({
   prisma: {
     room: { findUnique: (...args: unknown[]) => roomFindUnique(...args) },
     stay: {
-      findFirst: (...args: unknown[]) => stayFindFirst(...args),
+      findMany: (...args: unknown[]) => stayFindMany(...args),
       findUnique: (...args: unknown[]) => stayFindUnique(...args),
     },
   },
@@ -32,20 +32,21 @@ const room412 = { id: "room-412", number: "412", floor: 4, guestAccessCode: "cod
 describe("resolveGuestAccessByRoomCode", () => {
   beforeEach(() => {
     roomFindUnique.mockReset();
-    stayFindFirst.mockReset();
+    stayFindMany.mockReset();
   });
 
   it("resolves the room's code straight to its current (IN_HOUSE) stay", async () => {
     roomFindUnique.mockResolvedValue(room412);
     const stay = { id: "stay-1", roomId: "room-412", status: "IN_HOUSE", guestName: "Alex Guest" };
-    stayFindFirst.mockResolvedValue(stay);
+    stayFindMany.mockResolvedValue([stay]);
 
     const access = await resolveGuestAccessByRoomCode("code-412");
 
     expect(roomFindUnique).toHaveBeenCalledWith({ where: { guestAccessCode: "code-412" } });
-    expect(stayFindFirst).toHaveBeenCalledWith({
+    expect(stayFindMany).toHaveBeenCalledWith({
       where: { roomId: "room-412", status: "IN_HOUSE" },
       orderBy: { checkIn: "desc" },
+      take: 3,
     });
     expect(access).toEqual({ room: room412, stay });
   });
@@ -54,12 +55,12 @@ describe("resolveGuestAccessByRoomCode", () => {
     roomFindUnique.mockResolvedValue(null);
     const access = await resolveGuestAccessByRoomCode("does-not-exist");
     expect(access).toBeNull();
-    expect(stayFindFirst).not.toHaveBeenCalled();
+    expect(stayFindMany).not.toHaveBeenCalled();
   });
 
   it("resolves to null when the room has no active (IN_HOUSE) stay right now", async () => {
     roomFindUnique.mockResolvedValue(room412);
-    stayFindFirst.mockResolvedValue(null);
+    stayFindMany.mockResolvedValue([]);
     await expect(resolveGuestAccessByRoomCode("code-412")).resolves.toBeNull();
   });
 });
@@ -109,7 +110,9 @@ describe("resolveGuestAccessByStayToken", () => {
   });
 
   it("resolves to null before the arrival day even starts", async () => {
-    vi.useFakeTimers().setSystemTime(new Date("2026-06-09T23:00:00Z"));
+    // Betriebstag = Kalendertag in Berlin (CLAUDE.md): 21:00 UTC = 23:00 Berlin am 9.6., also noch vor dem Anreisetag.
+    // (Vorher 23:00 UTC — das ist in Berlin schon 01:00 am Anreisetag; der Test war nur in UTC grün.)
+    vi.useFakeTimers().setSystemTime(new Date("2026-06-09T21:00:00Z"));
     stayFindUnique.mockResolvedValue({
       id: "stay-1",
       status: "EXPECTED",

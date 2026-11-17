@@ -1412,6 +1412,7 @@
     "notify.roomAssignedToYou": "La camera {{n}} (piano {{floor}}) ti è stata assegnata.",
     "notify.guestGreen": "Camera {{n}}: l'ospite ha scelto la Green Option — oggi nessun cambio biancheria.",
     "notify.guestCheckedOut": "Camera {{n}} (piano {{floor}}): ospite partito.",
+    "notify.guestStayConflict": "Camera {{n}}: due soggiorni contemporaneamente in casa — lo schermo ospite resta neutro. Controllare import/check-out.",
     "notify.dndReminder": "Camera {{n}} (piano {{floor}}): Non disturbare — non pulita, appendere il cartellino alla porta.",
     "notify.changeCHECKED_OUT": "ospite partito — la camera può essere pulita",
     "notify.changeLATE_CHECKOUT": "late check-out modificato",

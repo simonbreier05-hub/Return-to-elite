@@ -194,7 +194,12 @@ model Stay {
   id        String   @id @default(cuid())
   roomId    String
   room      Room     @relation(fields: [roomId], references: [id])
-  guestName String // only the first name is ever shown on the guest screen — see src/lib/guest.ts
+  guestName String // Anzeige für Mitarbeiter („Anrede Titel Nachname“ aus dem Import bzw. frei eingegeben)
+  // S1 (additiv): Begrüßung auf dem Gastbildschirm „Anrede Titel Nachname“ — Anrede neutral gespeichert (MR | MRS | MS),
+  // angezeigt deutsch oder englisch je nach Sprache des Gastes (src/lib/guestGreeting.ts). Leer = nur „Willkommen“.
+  guestSalutation String?
+  guestTitle      String?
+  guestLastName   String?
   language  String   @default("de") // "de" | "en" — guest UI language preference
   checkIn   DateTime // arrival date
   checkOut  DateTime // departure date; stayToken expires checkOut + grace period (Setting, default 2h)

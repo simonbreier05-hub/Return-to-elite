@@ -63,11 +63,11 @@ describe("K3 Tageszahlen: nachträglich zugeteilte Zimmer ohne Tagesplan-Eintrag
 });
 
 describe("K2 Live-Kanal: nur für angemeldete Geräte", () => {
-  it.fails("server.js prüft die Anmeldung, bevor ein Gerät Live-Nachrichten bekommt", () => {
+  it("server.js prüft die Anmeldung, bevor ein Gerät Live-Nachrichten bekommt", () => {
     expect(src("server.js")).toMatch(/io\.use\(/);
   });
 
-  it.fails("realtime.ts sendet keine Rundnachricht an alle (io.emit) mehr", () => {
+  it("realtime.ts sendet keine Rundnachricht an alle (io.emit) mehr", () => {
     expect(src("src/lib/realtime.ts")).not.toMatch(/\bio\.emit\(/);
   });
 });

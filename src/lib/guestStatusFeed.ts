@@ -33,12 +33,22 @@ const WORK_ORDER_TO_GUEST_STATUS: Record<string, GuestStatus> = {
 };
 const NOTE_TO_GUEST_STATUS: Record<string, GuestStatus> = { OPEN: "RECEIVED", DONE: "DONE" };
 
-export async function getGuestStatusFeed(roomId: string): Promise<{
+/**
+ * S1: Der Verlauf beginnt frühestens mit dem letzten Check-out in diesem Zimmer — ein neuer Gast sieht nie die
+ * Anfragen oder Notizen des Vorgasts (Same-Day-Turn). Quelle: Logbuch GUEST_CHECKED_OUT (Check-out-Route).
+ */
+export async function getGuestStatusFeed(roomId: string, now: Date = new Date()): Promise<{
   items: GuestStatusItem[];
   activeDnd: { id: string; detail: string | null } | null;
 }> {
   const guestUserId = await getGuestSystemUserId();
-  const since = new Date(Date.now() - FEED_WINDOW_MS);
+  const lastCheckout = await prisma.auditLog.findFirst({
+    where: { roomId, action: "GUEST_CHECKED_OUT" },
+    orderBy: { createdAt: "desc" },
+    select: { createdAt: true },
+  });
+  const windowStart = now.getTime() - FEED_WINDOW_MS;
+  const since = new Date(Math.max(windowStart, lastCheckout?.createdAt.getTime() ?? 0));
 
   const [requests, notes, defects] = await Promise.all([
     prisma.guestRequest.findMany({

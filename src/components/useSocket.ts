@@ -7,9 +7,16 @@ let socket: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socket) {
-    socket = io({ path: "/socket.io" });
+    // S1: der Server nimmt nur Verbindungen mit gültigem Sitzungs-Cookie an (socketAuth.js) — gleiche Origin, Cookie geht mit.
+    socket = io({ path: "/socket.io", withCredentials: true });
   }
   return socket;
+}
+
+/** Nach dem Abmelden: Verbindung schließen; die nächste Anmeldung baut eine neue mit ihrem eigenen Cookie auf. */
+export function resetSocket() {
+  socket?.disconnect();
+  socket = null;
 }
 
 /**

@@ -17,6 +17,7 @@ vi.mock("@/lib/db", () => ({
     guestRequest: { findMany: (...args: unknown[]) => guestRequestFindMany(...args) },
     roomNote: { findMany: (...args: unknown[]) => roomNoteFindMany(...args) },
     defect: { findMany: (...args: unknown[]) => defectFindMany(...args) },
+    auditLog: { findFirst: async () => null }, // S1: Verlauf ab letztem Check-out — hier keiner
   },
 }));
 vi.mock("@/lib/guestServer", () => ({ getGuestSystemUserId: async () => "guest-system-user-id" }));

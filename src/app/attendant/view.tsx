@@ -155,18 +155,15 @@ export default function AttendantView() {
     },
     "trace:update": () => refreshListSoon(),
     "work:pause": () => refreshRoomsSoon(),
-    "note:new": (p: { note?: Note } | undefined) => {
-      const note = p?.note;
-      if (!note?.roomId) return;
-      setRooms((prev) => prev.map((r) => (r.id === note.roomId ? { ...r, notes: [note, ...(r.notes ?? [])].slice(0, 3), openNotesCount: (r.openNotesCount ?? 0) + 1 } : r)));
-    },
+    // S1: Live-Nachricht ohne Notiztext — den Text lädt die geschützte API nach.
+    "note:new": () => refreshRoomsSoon(),
     // A toggle may land on a note outside the 3-item preview window, so the
     // preview is patched directly for instant feedback but openNotesCount —
     // an aggregate over the *full* thread — is left to the coalesced refetch.
     "note:update": (p: { note?: Note } | undefined) => {
       const note = p?.note;
       if (!note?.roomId) return;
-      setRooms((prev) => prev.map((r) => (r.id === note.roomId ? { ...r, notes: (r.notes ?? []).map((n) => (n.id === note.id ? note : n)) } : r)));
+      setRooms((prev) => prev.map((r) => (r.id === note.roomId ? { ...r, notes: (r.notes ?? []).map((n) => (n.id === note.id ? { ...n, ...note } : n)) } : r)));
       refreshRoomsSoon();
     },
   });

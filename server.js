@@ -16,6 +16,11 @@ const { randomBytes } = require("crypto");
 // Geheimnis für den geschützten Aufruf der Nachtlöschung (nur dieser Prozess kennt es).
 process.env.INTERNAL_TICKER_SECRET = process.env.INTERNAL_TICKER_SECRET || randomBytes(24).toString("hex");
 
+const { ensureAuthSecret, socketAuthMiddleware } = require("./socketAuth");
+
+// Gleiches Sitzungs-Geheimnis für Next (src/lib/auth.ts) und den Live-Kanal — vor dem Start von Next festlegen.
+const authSecret = ensureAuthSecret();
+
 const dev = process.env.NODE_ENV !== "production";
 const port = parseInt(process.env.PORT || "3000", 10);
 const hostname = "0.0.0.0";
@@ -32,11 +37,8 @@ app.prepare().then(() => {
   });
   globalThis.__io = io;
 
-  io.on("connection", (socket) => {
-    socket.on("hello", (info) => {
-      socket.data.user = info || {};
-    });
-  });
+  // S1: nur angemeldete Mitarbeiter am Live-Kanal; jeder Socket sitzt in role:<rolle> und user:<id> (socketAuth.js).
+  io.use(socketAuthMiddleware(() => authSecret));
 
   // Escalation ticker — DND/BLOCKED re-checks, welfare checks, ETA alerts,
   // release-queue backlog. Thresholds live in the Setting table.

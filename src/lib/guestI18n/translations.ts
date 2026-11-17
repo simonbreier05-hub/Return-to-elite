@@ -22,6 +22,7 @@ const en = {
     floor: "Floor {{floor}}",
     roomFloor: "Room {{number}} · Floor {{floor}}",
     welcome: "Welcome",
+    welcomeName: "Welcome, {{name}}",
     subtitle: "How can we help you?",
   },
   tiles: {
@@ -162,6 +163,7 @@ const de = {
     floor: "Etage {{floor}}",
     roomFloor: "Zimmer {{number}} · Etage {{floor}}",
     welcome: "Willkommen",
+    welcomeName: "Willkommen, {{name}}",
     subtitle: "Wie können wir Ihnen helfen?",
   },
   tiles: {

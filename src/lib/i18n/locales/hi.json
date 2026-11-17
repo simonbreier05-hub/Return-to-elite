@@ -1412,6 +1412,7 @@
     "notify.roomAssignedToYou": "कमरा {{n}} (मंज़िल {{floor}}) आपको सौंपा गया।",
     "notify.guestGreen": "कमरा {{n}}: मेहमान ने Green Option चुना — आज लिनेन बदलना नहीं।",
     "notify.guestCheckedOut": "कमरा {{n}} (मंज़िल {{floor}}): मेहमान ने चेक-आउट किया।",
+    "notify.guestStayConflict": "कमरा {{n}}: एक साथ दो ठहराव \"होटल में\" — अतिथि स्क्रीन तटस्थ रहती है। कृपया आयात/चेक-आउट जाँचें।",
     "notify.dndReminder": "कमरा {{n}} (मंज़िल {{floor}}): परेशान न करें — साफ़ नहीं हुआ, दरवाज़े पर कार्ड लटकाएँ।",
     "notify.changeCHECKED_OUT": "मेहमान ने चेक-आउट किया — कमरा साफ़ किया जा सकता है",
     "notify.changeLATE_CHECKOUT": "लेट चेक-आउट बदला गया",

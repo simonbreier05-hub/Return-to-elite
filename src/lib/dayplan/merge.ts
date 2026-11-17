@@ -5,6 +5,7 @@ import { broadcast } from "@/lib/realtime";
 import { generateOpaqueToken } from "@/lib/guestToken";
 import { getPlanningCreditSettings, getSettings } from "@/lib/settings";
 import { lateCheckoutFrom, mergedLateCheckout } from "./lateCheckout";
+import { salutationKey } from "@/lib/guestGreeting";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import type { ArrivalRow, DepartureRow, GuestName, InHouseRow, ParseIssue, TraceRow } from "@/lib/import/types";
 import { createRoomTask } from "@/lib/rooms/createRoomTask";
@@ -99,7 +100,10 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
     const g = guestOf.get(key);
     const data = {
       guestName: g ? shortName(g) : "—", checkOut: new Date(`${s.depDate}T10:00:00Z`),
-      status: s.status === "CKIN" || s.status === "DUOT" ? "IN_HOUSE" : "EXPECTED",
+      // S1: Begrüßung auf dem Gastbildschirm „Anrede Titel Nachname“ (src/lib/guestGreeting.ts).
+      guestSalutation: g ? salutationKey(g.salutation) : null, guestTitle: g?.title ?? null, guestLastName: g?.lastName ?? null,
+      // S1: Ein vom Front Office gemeldeter Check-out bleibt bestehen — ein späterer Import setzt ihn nie zurück auf „im Haus“.
+      status: existing?.status === "CHECKED_OUT" ? "CHECKED_OUT" : s.status === "CKIN" || s.status === "DUOT" ? "IN_HOUSE" : "EXPECTED",
       adults: s.adults, children: s.children, vip: s.vip, arrivalTime: s.arrTime, resStatus: s.status,
       needsReview: false, lastImportAt: now,
     };

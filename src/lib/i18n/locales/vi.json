@@ -1412,6 +1412,7 @@
     "notify.roomAssignedToYou": "Phòng {{n}} (tầng {{floor}}) đã được giao cho bạn.",
     "notify.guestGreen": "Phòng {{n}}: khách chọn Green Option — hôm nay không thay đồ vải.",
     "notify.guestCheckedOut": "Phòng {{n}} (tầng {{floor}}): khách đã trả phòng.",
+    "notify.guestStayConflict": "Phòng {{n}}: hai lượt lưu trú cùng lúc đang ở khách sạn — màn hình khách giữ trung tính. Vui lòng kiểm tra nhập dữ liệu/trả phòng.",
     "notify.dndReminder": "Phòng {{n}} (tầng {{floor}}): Không làm phiền — chưa dọn, treo thẻ ở cửa.",
     "notify.changeCHECKED_OUT": "khách đã trả phòng — có thể dọn phòng",
     "notify.changeLATE_CHECKOUT": "đã đổi giờ trả phòng muộn",

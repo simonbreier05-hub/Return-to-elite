@@ -1412,6 +1412,7 @@
     "notify.roomAssignedToYou": "{{n}} numaralı oda ({{floor}}. kat) size atandı.",
     "notify.guestGreen": "Oda {{n}}: misafir Green Option'ı seçti — bugün çarşaf değişimi yok.",
     "notify.guestCheckedOut": "Oda {{n}} ({{floor}}. kat): misafir çıkış yaptı.",
+    "notify.guestStayConflict": "Oda {{n}}: aynı anda iki konaklama otelde görünüyor — misafir ekranı nötr kalır. Lütfen içe aktarma/check-out'u kontrol edin.",
     "notify.dndReminder": "Oda {{n}} ({{floor}}. kat): Rahatsız etmeyin — temizlenmedi, kartı kapıya asın.",
     "notify.changeCHECKED_OUT": "misafir çıkış yaptı — oda temizlenebilir",
     "notify.changeLATE_CHECKOUT": "geç çıkış saati değişti",

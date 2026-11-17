@@ -13,6 +13,7 @@ import type { TKey } from "@/lib/i18n/translations";
 import { GlassMode } from "./shell/GlassMode";
 import LanguageButton, { LanguageQualityBadge, LanguageSuggestion } from "./LanguagePicker";
 import { useEscapeKey } from "./useEscapeKey";
+import { resetSocket } from "./useSocket";
 import { roleHome, type Role } from "@/lib/domain";
 import { firstName, greetingKey, initials } from "@/lib/ui/greeting";
 import { STATUS_UI, uiStatusForRoom } from "@/lib/ui/status";
@@ -161,6 +162,7 @@ export default function AppShell({
 
   const logout = async () => {
     await api("/api/auth/logout", { method: "POST" });
+    resetSocket(); // S1: die Live-Verbindung gehört zur abgemeldeten Person — schließen
     router.push("/login");
     router.refresh();
   };
