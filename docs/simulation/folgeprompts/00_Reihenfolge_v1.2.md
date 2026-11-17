@@ -6,8 +6,8 @@ Alle Pakete starten vom Basis-Branch `fix/basis-simulation-v2` und werden nach S
 
 | Nr. | Prompt | Befunde | Warum an dieser Stelle | Größe | Status |
 |---|---|---|---|---|---|
-| 0 | `archiv/Prompt_F0_Basis_Branch_v1.md` | – | Legt `fix/basis-simulation-v2` an: Fehlerbericht, Entscheidungen, Prompts, Simulationstests und -skripte auf Basis von `design/glass` | klein | offen |
-| 1 | `Prompt_S1_Sicherheit_v1.2.md` | K2, H1 | Datenschutz + richtiger Gastname. Ohne diesen Schritt keine echten Gastdaten. | mittel | offen |
+| 0 | `archiv/Prompt_F0_Basis_Branch_v1.md` | – | Legt `fix/basis-simulation-v2` an: Fehlerbericht, Entscheidungen, Prompts, Simulationstests und -skripte auf Basis von `design/glass` | klein | erledigt (Basis-Branch angelegt) |
+| 1 | `Prompt_S1_Sicherheit_v1.2.md` | K2, H1 | Datenschutz + richtiger Gastname. Ohne diesen Schritt keine echten Gastdaten. | mittel | gemergt (17.11.2026) |
 | 2 | `Prompt_F1_Morgenstatus_v1.2.md` | K1, K3, M5 | Ungereinigtes Zimmer darf nie als sauber gelten. | klein | offen |
 | 3 | `Prompt_F2_Sperren_v1.2.md` | H4, H5, H6, M4 | Gesperrte Zimmer mit Anreise; „Nicht im Service“ entfällt. | mittel | offen |
 | 4 | `Prompt_F3_FrontOffice_v1.2.md` | K4, H7, H8, H9, H10, M22 | Zimmerwechsel, Check-out-Korrekturen. Braucht S1. | groß | offen |
