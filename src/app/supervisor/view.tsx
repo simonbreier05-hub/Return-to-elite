@@ -4,6 +4,7 @@ import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/components/api";
+import { guestStillInText } from "@/lib/ui/guestPresence";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Collapsible from "@/components/Collapsible";
@@ -258,6 +259,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       // Apply immediately; the socket echo will simply re-apply the same values.
       setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
     } catch (e) {
+      if (e instanceof ApiError && e.code === "GUEST_STILL_IN_ROOM" && !extra.confirmGuestPresent) {
+        // F3 (H10): Freigabe/Start trotz Vorgast nur nach Rückfrage mit Klartext
+        setBusyRoomId(null);
+        if (window.confirm(guestStillInText(t, room.number, e.data?.lateCheckout as string | null | undefined))) await act(room, status, { ...extra, confirmGuestPresent: true });
+        return;
+      }
       setError(`${room.number}: ${errorText(e, t)}`);
     } finally {
       setBusyRoomId(null);

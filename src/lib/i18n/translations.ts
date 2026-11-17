@@ -1635,6 +1635,7 @@ const en = {
     tileEMPTY: "empty",
   },
   notify: {
+    arrivalConflict: "Room {{n}}: arrival {{eta}} before the previous guest leaves (late check-out {{lco}}) — please decide.",
     oooOccupied: "Room {{n}} out of order until {{until}}: {{reason}} — guest in room",
     oooArrival: "Room {{n}} out of order until {{until}}: {{reason}} — arrival today",
     oooReady: "{{n}}: defect fixed — put back into service?",
@@ -1983,6 +1984,12 @@ const en = {
     engTitle: "Block a room (without work order)",
     roomNumber: "Room",
     roomNotFound: "Room {{n}} not found.",
+  },
+  prevGuest: {
+    stillIn: "Room {{n}}: according to Front Office the guest is still in the room. Continue anyway?",
+    stillInLate: "Room {{n}}: according to Front Office the guest is still in the room, late check-out {{time}}. Continue anyway?",
+    conflict: "Conflict: arrival before departure",
+    checkinBlocked: "Check-in only after the previous guest has checked out.",
   },
 } as const;
 
@@ -3610,6 +3617,7 @@ const de = {
     tileEMPTY: "leer",
   },
   notify: {
+    arrivalConflict: "Zimmer {{n}}: Anreise {{eta}} vor Abreise des Vorgasts (Late Check-out {{lco}}) — bitte entscheiden.",
     oooOccupied: "Zimmer {{n}} außer Betrieb bis {{until}}: {{reason}} — Gast im Zimmer",
     oooArrival: "Zimmer {{n}} außer Betrieb bis {{until}}: {{reason}} — Anreise heute",
     oooReady: "{{n}}: Mangel behoben — wieder in Betrieb nehmen?",
@@ -3958,6 +3966,12 @@ const de = {
     engTitle: "Zimmer sperren (ohne Auftrag)",
     roomNumber: "Zimmer",
     roomNotFound: "Zimmer {{n}} nicht gefunden.",
+  },
+  prevGuest: {
+    stillIn: "Zimmer {{n}}: Gast laut Front Office noch im Zimmer. Trotzdem fortfahren?",
+    stillInLate: "Zimmer {{n}}: Gast laut Front Office noch im Zimmer, Late Check-out {{time}}. Trotzdem fortfahren?",
+    conflict: "Konflikt: Anreise vor Abreise",
+    checkinBlocked: "Einchecken erst, wenn der Vorgast ausgecheckt hat.",
   },
 } satisfies Dict;
 

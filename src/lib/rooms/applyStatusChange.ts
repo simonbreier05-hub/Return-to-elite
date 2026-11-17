@@ -6,6 +6,7 @@ import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domai
 import { checkTransition, SELL_BLOCKED } from "@/lib/stateMachine";
 import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 import { arrivalTodayWhere } from "@/lib/rooms/blockedRooms";
+import { previousGuest, previousGuestText } from "@/lib/rooms/previousGuest";
 import { pms } from "@/lib/pms/MockPMSConnector";
 import type { Session } from "@/lib/auth";
 import { endPauseOnChange } from "@/lib/work/pauseData";
@@ -34,11 +35,13 @@ export interface StatusChangeInput {
   oooReason?: string;
   /** F2: Sperre eines belegten Zimmers bzw. eines Zimmers mit Anreise heute ist bestätigt (sonst 409 mit Rückfrage). */
   confirmOccupied?: boolean;
+  /** F3 (K4, H10): Start/Freigabe trotz „Gast laut Front Office noch im Zimmer“ bestätigt (Annahme: Warnung, keine Sperre). */
+  confirmGuestPresent?: boolean;
 }
 
 export type StatusChangeResult =
   | { ok: true; room: Awaited<ReturnType<typeof updateRoom>> }
-  | { ok: false; status: number; error: string; code?: string };
+  | { ok: false; status: number; error: string; code?: string; data?: Record<string, unknown> };
 
 function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["data"]) {
   return prisma.room.update({
@@ -108,6 +111,13 @@ export async function applyStatusChange(
         error: "Guest has Do Not Disturb active — a supervisor can override this.", code: "GUEST_DND_ACTIVE",
       };
     }
+  }
+
+  // --- F3 Teil 1: Vorgast noch im Zimmer (Abreise/Turn nicht ausgecheckt oder Late Check-out später) -----
+  // Housekeeper-Start und Supervisor-Freigabe brauchen dann eine Bestätigung mit Klartext (Annahme: Warnung, keine Sperre).
+  if ((to === "IN_PROGRESS" || to === "INSPECTED") && !input.confirmGuestPresent) {
+    const prev = await previousGuest(room.id);
+    if (prev.present) return { ok: false, status: 409, code: "GUEST_STILL_IN_ROOM", error: previousGuestText(room, prev), data: { lateCheckout: prev.lateCheckout } };
   }
 
   // --- Payload each target status requires ---------------------------------

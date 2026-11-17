@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { NetworkError, api } from "@/components/api";
+import { ApiError, NetworkError, api } from "@/components/api";
+import { guestStillInText } from "@/lib/ui/guestPresence";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useOfflineQueue } from "@/components/useOfflineQueue";
@@ -191,6 +192,11 @@ export default function AttendantView() {
               : r
           )
         );
+      } else if (e instanceof ApiError && e.code === "GUEST_STILL_IN_ROOM" && !extra.confirmGuestPresent) {
+        // F3 (K4): Vorgast laut Front Office noch im Zimmer — Rückfrage mit Klartext, dann trotzdem starten (Annahme: Warnung, keine Sperre)
+        setBusyRoomId(null);
+        if (window.confirm(guestStillInText(t, room.number, e.data?.lateCheckout as string | null | undefined))) await setStatus(room, status, { ...extra, confirmGuestPresent: true });
+        return;
       } else {
         setError(`${room.number}: ${errorText(e, t)}`);
       }

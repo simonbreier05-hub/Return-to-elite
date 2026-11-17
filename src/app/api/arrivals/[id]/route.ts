@@ -7,6 +7,8 @@ import { broadcast } from "@/lib/realtime";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { notifyFloorSupervisors } from "@/lib/rooms/notifyFloorSupervisors";
 import { keyed } from "@/lib/i18n/notificationText";
+import { previousGuest, previousGuestText } from "@/lib/rooms/previousGuest";
+import { warnArrivalConflict } from "@/lib/rooms/arrivalConflict";
 
 const PatchSchema = z.object({
   eta: z.coerce.date().nullable().optional(),
@@ -33,8 +35,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Supervisor dürfen nur „Sofort“ setzen.", code: "FORBIDDEN" }, { status: 403 });
   }
 
-  const existing = await prisma.arrival.findUnique({ where: { id } });
+  const existing = await prisma.arrival.findUnique({ where: { id }, include: { room: { select: { id: true, number: true, status: true } } } });
   if (!existing) return NextResponse.json({ error: "Arrival not found.", code: "ARRIVAL_NOT_FOUND" }, { status: 404 });
+  // F3 Teil 1 (K4): Einchecken nur, wenn das Zimmer freigegeben ist UND der Vorgast ausgecheckt hat — sonst Hinweis mit Grund
+  if (parsed.data.status === "CHECKED_IN" && existing.status !== "CHECKED_IN") {
+    if (existing.room.status !== "INSPECTED") return NextResponse.json({ error: `Zimmer ${existing.room.number} ist noch nicht freigegeben.`, code: "CHECKIN_ROOM_NOT_READY" }, { status: 409 });
+    const prev = await previousGuest(existing.roomId);
+    if (prev.present) return NextResponse.json({ error: previousGuestText(existing.room, prev), code: "CHECKIN_GUEST_PRESENT", lateCheckout: prev.lateCheckout }, { status: 409 });
+  }
 
   const arrival = await prisma.arrival.update({
     where: { id },
@@ -51,6 +59,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // „Sofort gebraucht“ oder VIP-Frühanreise neu gesetzt → auch der Supervisor der Etage (Zimmer muss zuerst freigegeben werden).
   // Ohne Gastnamen: nur Zimmer, Etage und Anlass.
   const nowNeeded = parsed.data.neededNow === true && !existing.neededNow;
+  // F3 Teil 1 (H10, Frage 8): Rush, aber der Vorgast ist noch da → Konflikt an Supervisor der Etage + DM (sie entscheiden)
+  if (nowNeeded) await warnArrivalConflict(arrival.roomId, auth.session.userId, true).catch(() => 0);
   const vipEarly = !!(arrival.vip && arrival.earlyCheckIn) && !(existing.vip && existing.earlyCheckIn);
   if (nowNeeded || vipEarly) {
     const room = await prisma.room.findUnique({ where: { id: arrival.roomId }, select: { id: true, number: true, floor: true } });

@@ -172,6 +172,12 @@ function ArrivalDetail({ a, roomStatusLabel, ...p }: FrontOfficeHubProps & { a: 
             {a.room.status ? <StatusChip status={ROOM_STATUS_UI[a.room.status]} label={roomStatusLabel} /> : <span className="text-text-secondary">{roomStatusLabel}</span>}
           </span>
         </DetailLine>
+        {/* F3 (K4): Einchecken gesperrt, solange der Vorgast laut Front Office noch im Zimmer ist — Grund dabei */}
+        {expected && a.prevGuest?.present && (
+          <Banner tone="warning" icon="triangle-alert" title={t("prevGuest.checkinBlocked")}
+            detail={a.prevGuest.lateCheckout ? t("lists.lateCheckout", { time: a.prevGuest.lateCheckout }) : undefined} />
+        )}
+        {a.conflict && <Banner tone="warning" icon="clock" title={t("prevGuest.conflict")} />}
         {/* Betrieb L2 (Punkt 5): Schritte live — erreichte Schritte mit Haken, aktueller fett (Text + Symbol, nie nur Farbe) */}
         <ol aria-label={t("frontOffice.stageTitle")} className="flex flex-wrap items-center gap-2" data-testid="fo-stages">
           {FO_STAGES.map((s, i) => {

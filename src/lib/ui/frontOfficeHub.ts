@@ -20,6 +20,10 @@ export interface ArrivalView {
   neededNow: boolean;
   status: "EXPECTED" | "CHECKED_IN";
   room: { id: string | null; number: string | null; status: RoomStatus | null; openNotesCount: number };
+  /** F3 (K4): Vorgast laut Front Office noch im Zimmer (Abreise/Turn nicht ausgecheckt bzw. Late Check-out später). */
+  prevGuest: { present: boolean; lateCheckout: string | null } | null;
+  /** F3 (H10): Anreise kommt früher, als der Vorgast laut Late Check-out geht — Supervisor/DM entscheiden. */
+  conflict: boolean;
 }
 
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
@@ -46,11 +50,13 @@ export function normalizeArrival(raw: unknown): ArrivalView | null {
       status: rs && ROOM_STATUSES.includes(rs) ? rs : null,
       openNotesCount: typeof room.openNotesCount === "number" ? room.openNotesCount : 0,
     },
+    prevGuest: obj(r.prevGuest).present === true ? { present: true, lateCheckout: str(obj(r.prevGuest).lateCheckout) } : null,
+    conflict: r.conflict === true,
   };
 }
 
-/** Zimmer freigegeben (nur INSPECTED — Front Office checkt nur dann ein, wie bisher). */
-export const isReady = (a: Pick<ArrivalView, "room">) => a.room.status === "INSPECTED";
+/** Einchecken möglich: Zimmer freigegeben (INSPECTED) UND Vorgast ausgecheckt (F3, K4). */
+export const isReady = (a: Pick<ArrivalView, "room"> & Partial<Pick<ArrivalView, "prevGuest">>) => a.room.status === "INSPECTED" && !a.prevGuest?.present;
 
 /** ETA vorbei und Zimmer noch nicht frei (gleiche Regel wie die bisherige Dringend-Leiste). */
 export function isOverdue(a: ArrivalView, now: number = Date.now()): boolean {
@@ -112,6 +118,7 @@ export function foKpis(list: ArrivalView[]) {
 /** Eine Pille je Zeile (wichtigste zuerst): eingecheckt > sofort nötig > früh > VIP. Text steht immer dabei. */
 export function foPill(a: ArrivalView): { labelKey: TKey; tone: Tone } | null {
   if (a.status === "CHECKED_IN") return { labelKey: "frontOffice.checkedIn", tone: "success" };
+  if (a.conflict) return { labelKey: "prevGuest.conflict", tone: "danger" };
   if (a.neededNow) return { labelKey: "frontOffice.neededNow", tone: "danger" };
   if (a.earlyCheckIn) return { labelKey: "frontOffice.early", tone: "accent" };
   if (a.vip) return { labelKey: "frontOffice.vip", tone: "accent" };

@@ -6,6 +6,7 @@ import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { berlinToday } from "@/lib/import/businessDay";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
+import { warnArrivalConflict } from "@/lib/rooms/arrivalConflict";
 
 const Body = z.object({ time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/).nullable() }).strict();
 
@@ -31,5 +32,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   const room = await prisma.room.findUniqueOrThrow({ where: { id }, select: { number: true } });
   broadcast("dayplan:updated", { date, changedRooms: [room.number] });
   await notifyHousekeeperOfRoomChange({ roomId: id, kind: "LATE_CHECKOUT", actorId: auth.session.userId }).catch(() => null);
+  // F3 Teil 1 (H10): Late Check-out später als die Anreise → Supervisor der Etage + DM entscheiden
+  await warnArrivalConflict(id, auth.session.userId).catch(() => 0);
   return NextResponse.json({ ok: true });
 }
