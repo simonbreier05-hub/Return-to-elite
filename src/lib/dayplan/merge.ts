@@ -221,6 +221,9 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
 async function initRoomStatus(date: string, plan: { roomId: string; cleaningType: string }[], inHouseRooms: Set<string>, userId: string) {
   const rooms = await prisma.room.findMany({ select: { id: true, number: true, status: true, statusSince: true } });
   const needs = new Set(plan.filter((p) => p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN" || p.cleaningType === "STAYOVER").map((p) => p.roomId));
+  // F1: Rest vom Vortag bleibt schmutzig, auch nach einem Nachimport (dann stammt `statusSince` schon von heute) — außer gereinigt (CLEAN)
+  const statusOf = new Map(rooms.map((r) => [r.id, r.status]));
+  for (const p of plan) if (p.cleaningType === CARRYOVER && statusOf.get(p.roomId) !== "CLEAN") needs.add(p.roomId);
   for (const r of rooms) if (inHouseRooms.has(r.number)) needs.add(r.id);
   // Anreise in ein (laut Board) sauberes Zimmer: vor der Anreise vom Supervisor prüfen und freigeben lassen
   const check = new Set(plan.filter((p) => p.cleaningType === "ARRIVAL" && !needs.has(p.roomId)).map((p) => p.roomId));
@@ -258,7 +261,8 @@ async function recordCarryover(date: string, ids: string[], plan: { roomId: stri
   }
   const all = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: CARRYOVER }, select: { roomId: true } });
   const numberOf = new Map(rooms.map((r) => [r.id, r.number]));
-  const numbers = [...new Set([...all.map((p) => p.roomId), ...ids])].map((id) => numberOf.get(id)).filter((n): n is string => !!n)
+  // Nur Zimmer mit eigener Art „Rest vom Vortag“ — dieselbe Liste wie der Hinweis in /planung (house.ts)
+  const numbers = all.map((p) => numberOf.get(p.roomId)).filter((n): n is string => !!n)
     .sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
   if (numbers.length) {
     const dedupeKey = `CARRYOVER:${date}:${numbers.join(",")}`;

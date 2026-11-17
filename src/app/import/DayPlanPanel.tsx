@@ -100,10 +100,11 @@ export default function DayPlanPanel({ date, refreshKey }: { date: string | null
                   <tr key={r.room} className="border-t border-charcoal/5">
                     <td className="py-1 pe-3 font-medium">{r.room}{r.vip ? " ★" : ""}</td>
                     <td className="pe-3">
+                      {(r.cleaningType as string) === "CARRYOVER" ? <span className="font-medium">{t("lists.kindCARRYOVER")}</span> : (
                       <select value={r.cleaningType} disabled={busy} onChange={(e) => override(r.room, e.target.value as DayCleaningType)}
                         className="h-10 rounded-lg border border-charcoal/20 bg-white px-2">
                         {TYPES.map((ty) => <option key={ty} value={ty}>{t(`importPage.type${ty}` as "importPage.typeDEPARTURE")}</option>)}
-                      </select>
+                      </select>)}
                       {r.overridden && r.derivedType && (
                         <div className="text-[11px] text-gold-soft">{t("importPage.dpOverridden", { type: t(`importPage.type${r.derivedType}` as "importPage.typeDEPARTURE") })}</div>
                       )}

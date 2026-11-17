@@ -10,7 +10,7 @@ export const SERVICE_ORDER: ServiceKey[] = ["TURN", "DEPARTURE", "STAYOVER_LINEN
 
 export function serviceOf(kind: Kind, laundry: boolean): ServiceKey {
   if (kind === "SAME_DAY_TURN") return "TURN";
-  if (kind === "DEPARTURE") return "DEPARTURE";
+  if (kind === "DEPARTURE" || kind === "CARRYOVER" || kind === "EXTRA") return "DEPARTURE"; // F1: Rest vom Vortag/Zusatz wie Abreise
   if (kind === "ARRIVAL") return "ARRIVAL";
   return laundry ? "STAYOVER_LINEN" : "STAYOVER";
 }

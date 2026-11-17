@@ -130,6 +130,10 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
     expect(await prisma.notification.count({ where: { type: "CARRYOVER", targetRole: "duty_manager", level: "warning" } })).toBe(1);
     expect(await prisma.dayRoomPlan.count({ where: { date: TODAY, cleaningType: "CARRYOVER" } })).toBe(3);
     expect(await prisma.notification.count({ where: { type: "LIST_UPDATED" } })).toBe(0); // keine „entfällt“-Meldung
+    // Nachimport: 132 wurde morgens von IN_PROGRESS auf DIRTY gesetzt (statusSince = heute) — bleibt trotzdem schmutzig
+    await applyDayPlanToBoard(TODAY, userId);
+    const after = Object.fromEntries((await prisma.room.findMany({ where: { number: { in: ["131", "132", "133"] } } })).map((x) => [x.number, x.status]));
+    expect(after).toEqual({ "131": "DIRTY", "132": "DIRTY", "133": "CLEAN" });
     // Heute gereinigt: bleibt im Plan, Morgenstatus fasst es nicht mehr an
     await prisma.room.update({ where: { number: "131" }, data: { status: "CLEAN", statusSince: new Date() } });
     await applyDayPlanToBoard(TODAY, userId);

@@ -525,7 +525,7 @@ model DayRoomPlan {
   date           String // "YYYY-MM-DD"
   roomId         String
   room           Room     @relation(fields: [roomId], references: [id])
-  cleaningType   String // DEPARTURE | SAME_DAY_TURN | STAYOVER | ARRIVAL (NONE = keine Zeile)
+  cleaningType   String // DEPARTURE | SAME_DAY_TURN | STAYOVER | ARRIVAL | CARRYOVER (F1: Rest vom Vortag) (NONE = keine Zeile)
   laundryDue     Boolean  @default(false)
   nights         Int? // Nacht des Aufenthalts (Stayover) bzw. Nächte seit Anreise
   stayId         String? // bleibender bzw. abreisender Aufenthalt

@@ -15,7 +15,7 @@ export async function GET() {
   if (!auth.ok) return auth.response;
   const today = berlinDate(new Date());
   const date = await latestPlanDate();
-  const plan = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER"] } }, select: { roomId: true } });
+  const plan = await prisma.dayRoomPlan.findMany({ where: { date, cleaningType: { in: ["DEPARTURE", "SAME_DAY_TURN", "STAYOVER", "CARRYOVER"] } }, select: { roomId: true } });
   const roster = (await prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, select: { id: true, name: true, absentDate: true }, orderBy: { name: "asc" } }))
     .map((u) => ({ id: u.id, name: u.name, absent: u.absentDate === today }));
   const attendants = roster.filter((u) => !u.absent).map(({ id, name }) => ({ id, name }));
