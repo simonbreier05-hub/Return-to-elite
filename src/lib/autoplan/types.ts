@@ -89,9 +89,13 @@ export interface PlanInput {
   suiteMinCredit?: number;
 }
 
-/** Planung L1: Zählt das Zimmer als Suite? Nach Credit (Zimmerliste v2.1), ohne Schwelle nach Zimmertyp. */
+/**
+ * Planung L1: Zählt das Zimmer als Suite? Nach Zimmertyp (Junior Suite/Suite/Penthouse) ODER nach Credit ab der Schwelle
+ * (Zimmerliste v2.1). F4: vorher nur nach Credit, sobald eine Schwelle gesetzt war — dann rutschte eine Suite mit niedrigem
+ * Credit an „keine Suiten“ und am Suiten-Maximum vorbei.
+ */
 export function isSuite(r: Pick<PlanRoom, "credits" | "demanding">, suiteMinCredit?: number): boolean {
-  return suiteMinCredit ? r.credits >= suiteMinCredit : r.demanding.includes("SUITE");
+  return r.demanding.includes("SUITE") || (!!suiteMinCredit && r.credits >= suiteMinCredit);
 }
 
 /** Planung L1: verletzt dieses Zimmer eine Einschränkung der Kraft? (gibt den Code zurück) */

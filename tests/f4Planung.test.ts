@@ -52,3 +52,12 @@ describe("F4 (P4): Suiten gleichmäßig", () => {
     expect(Math.abs(count("x") - count("y"))).toBeLessThanOrEqual(1);
   });
 });
+
+describe("F4: Suite nach Zimmertyp, auch mit Credit-Schwelle", () => {
+  it("„keine Suiten“ bekommt keine Suite, auch wenn deren Credit unter der Schwelle liegt", () => {
+    const suites = makeDay(60).filter((r) => r.demanding.includes("SUITE")).slice(0, 4).map((r) => ({ ...r, credits: 1 }));
+    const plain = makeDay(60).filter((r) => r.demanding.length === 0).slice(0, 10);
+    const r = proposePlan({ ...makeInput([...suites, ...plain], [hk("x", "VOLLZEIT", 3), hk("y", "VOLLZEIT", 2, { restrictions: ["NO_SUITE"] })]), maxSuites: 2, suiteMinCredit: 1.5 });
+    for (const s of suites) expect(r.assignment[s.id], s.number).not.toBe("y");
+  });
+});
