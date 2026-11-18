@@ -1,4 +1,3 @@
-import { purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
 import { closeStaleCleanRequests, purgeArchivedStayHistory } from "@/lib/guest/stayArchive";
 import { unlink } from "fs/promises";
 import { deleteResolvedDefectPhotos } from "@/lib/rooms/defectPhotoCleanup";
@@ -63,8 +62,6 @@ export async function runGuestDataRetention(now = new Date()) {
   // F7 (H13): archivierter Verlauf der Aufenthalte nach 30 Tagen löschen
   const archived = await purgeArchivedStayHistory(now).catch(() => ({ requests: 0, notes: 0 }));
   await closeStaleCleanRequests(now).catch(() => 0);
-  // F8: Opera-Profil-Vorschläge — erledigte sofort, offene spätestens nach 30 Tagen
-  await purgeProfileSuggestions(now).catch(() => 0);
 
   const { count: roomNotesDeleted } = await prisma.roomNote.deleteMany({
     where: { authorId: guestSystemUserId, status: "DONE", createdAt: { lt: cutoff } },

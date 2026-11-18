@@ -1,3 +1,4 @@
+import { purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
 import { purgeOperaOrderNotes } from "@/lib/engineering/operaTraces";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -94,6 +95,8 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },
   })).count;
   counts.traceTexts = await purgeTraceTexts();
+  // F8: Opera-Profil-Vorschläge — Namen jede Nacht leeren (Kachel zeigt dann „Gast · Zimmer“), nach 30 Tagen ganz löschen
+  counts.profileSuggestions = await purgeProfileSuggestions(now);
   // F7-Review: Opera-Text in Technikaufträgen und Freitext-Grund beim Aufschieben (Hausmann) nachts löschen
   counts.operaOrderNotes = await purgeOperaOrderNotes();
   counts.deferReasons = (await prisma.roomTask.updateMany({ where: { deferReason: { not: null } }, data: { deferReason: null } })).count;
@@ -157,6 +160,7 @@ export async function purgeStay(stayId: string, userId: string) {
   const isoFrom = from.toISOString().slice(0, 10), isoTo = stay.checkOut.toISOString().slice(0, 10);
   const counts: PurgeCounts = {};
   counts.stayNames = (await prisma.stay.updateMany({ where: { id: stayId }, data: STAY_NAME_CLEARED })).count;
+  counts.profileSuggestions = (await prisma.profileSuggestion.deleteMany({ where: { stayId } })).count; // F8
   counts.arrivalNames = (await prisma.arrival.updateMany({
     where: { roomId: stay.roomId, createdAt: { gte: from, lte: new Date(stay.checkOut.getTime() + 86_400_000) } }, data: { guestName: "" },
   })).count;

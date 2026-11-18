@@ -71,10 +71,10 @@ describe("Regeln (rein)", () => {
     expect(isExcludedTrace({ code: "DIET", text: "glutenfrei" })).toBe(true);
     expect(isExcludedTrace({ code: "PIL", text: "Extra Kissen" })).toBe(false);
   });
-  it("wiederkehrender Hinweis nur als Typ (Code), nie mit Text", () => {
-    const items = profileItemsFrom({ cleanWishes: [], green: [], traces: [{ code: "PIL", text: "Extra Kissen bitte, Herr X", date: "2026-11-01" }, { code: "PIL", text: "Extra Kissen", date: "2026-11-02" }] });
-    expect(items).toEqual([{ code: "TRACE_TYPE", vars: { type: "PIL" }, status: "OPEN" }]);
-    expect(JSON.stringify(items)).not.toMatch(/Kissen|Herr/);
+  it("kein Punkt aus Opera-Codes oder Freitext — auch nicht nach der Nachtlöschung (leerer Text)", () => {
+    const traces = [{ code: "ALG", text: "", date: "2026-11-01" }, { code: "ALG", text: "", date: "2026-11-02" }, { code: "PIL", text: "Extra Kissen bitte, Herr X", date: "2026-11-01" }, { code: "PIL", text: "Extra Kissen", date: "2026-11-02" }];
+    expect(profileItemsFrom({ cleanWishes: [], green: [], traces })).toEqual([]);
+    for (const x of ["HALAL", "SCHWANGER", "DIABET", "ACCESSIB"]) expect(EXCLUDED_PROFILE_TYPES).toContain(x);
   });
 });
 
@@ -133,5 +133,38 @@ describe("Rechte und Erledigen", () => {
     await prisma.profileSuggestion.create({ data: { stayId: "neu", roomNumber: "698", departure: dayAgo(1), items: "[]" } });
     expect(await purgeProfileSuggestions()).toBe(1);
     expect((await prisma.profileSuggestion.findMany()).map((x) => x.stayId)).toEqual(["neu"]);
+  });
+});
+
+describe("Nachbesserung nach Review", () => {
+  it("Turn: Babybett des Neuankömmlings wird nicht dem abreisenden Gast zugeschrieben", async () => {
+    const t = await departingStay("603", "f8-c-00000000000000000000000000000");
+    const neu = await prisma.stay.create({ data: { roomId: t.room, guestName: "Neu", checkIn: new Date(), checkOut: dayAgo(-2), status: "EXPECTED", stayToken: "f8-d-00000000000000000000000000000" } });
+    await prisma.trace.create({ data: { roomId: t.room, stayId: neu.id, code: "BB", date: TODAY, text: "Baby cot", dept: "HOUSEMAN", dedupeKey: "c1", source: "TRACES" } });
+    for (const d of [3, 2]) await prisma.guestRequest.create({ data: { roomId: t.room, kind: "GREEN", status: "DONE", createdAt: dayAgo(d) } });
+    as("fo", "front_office");
+    expect((await checkoutPost(req("POST"), p(t.room))).status).toBe(200);
+    const s = await prisma.profileSuggestion.findUniqueOrThrow({ where: { stayId: t.stay } });
+    expect((JSON.parse(s.items) as { code: string }[]).map((i) => i.code)).toEqual(["NO_DAILY_LINEN"]);
+    ids.stayC = t.stay; ids.roomC = t.room;
+  });
+
+  it("alle erledigt → Check-out zurücknehmen → erneut auschecken: kein zweiter Vorschlag", async () => {
+    const s = await prisma.profileSuggestion.findUniqueOrThrow({ where: { stayId: ids.stayC } });
+    as("dm", "duty_manager");
+    expect((await (await itemPatch(req("PATCH", { all: true }), p(s.id))).json()).deleted).toBe(true);
+    as("fo", "front_office");
+    expect((await checkoutDelete(req("DELETE"), p(ids.roomC))).status).toBe(200);
+    expect((await checkoutPost(req("POST"), p(ids.roomC))).status).toBe(200);
+    expect(await prisma.profileSuggestion.count({ where: { stayId: ids.stayC } })).toBe(0);
+    as("dm", "duty_manager");
+    expect((await itemPatch(req("PATCH", { all: true }), p(s.id))).status).toBe(404);
+  });
+
+  it("Nachtlöschung leert Namen im Vorschlag jede Nacht", async () => {
+    await prisma.profileSuggestion.create({ data: { stayId: "namen", roomNumber: "697", guestSalutation: "Frau", guestLastName: "Probst", departure: new Date(), items: "[]" } });
+    await purgeProfileSuggestions();
+    const s = await prisma.profileSuggestion.findUniqueOrThrow({ where: { stayId: "namen" } });
+    expect([s.guestSalutation, s.guestTitle, s.guestLastName]).toEqual([null, null, null]);
   });
 });

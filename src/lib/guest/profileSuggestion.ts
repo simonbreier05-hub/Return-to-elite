@@ -12,7 +12,8 @@ import { GREEN_KIND } from "@/lib/guest/green";
  *  - Reinigung „ab HH:MM“ an mindestens 2 Tagen → bevorzugte Reinigungszeit (häufigste Uhrzeit),
  *  - Green Option an mindestens 2 Tagen → verzichtet auf täglichen Wäschewechsel,
  *  - Babybett / Extrabett / Twin-Aufbau (Opera-Hinweis bzw. Hausmann-Aufgabe) → Hinweis,
- *  - derselbe Opera-Hinweis-Typ (Code) an mindestens 2 Tagen → „wiederkehrender Hinweis: <Code>“ (nur Typ, nie Text).
+ * (Review: „wiederkehrender Opera-Code“ gestrichen — Codes sind Abteilungskürzel, und nach der Nachtlöschung fehlt der
+ *  Text, an dem Gesundheitsdaten zu erkennen wären. Nur noch Punkte aus einer festen, harmlosen Positivliste.)
  * Annahme: Schwelle „2×“. Gibt es nichts Brauchbares, entsteht KEIN Vorschlag.
  *
  * Nie im Vorschlag (Annahme Art. 9 DSGVO): Gesundheitsdaten (Allergien, Diät mit Gesundheitsbezug, Medizinisches,
@@ -24,7 +25,8 @@ export const PROFILE_MIN_DAYS = 2;
 /** Ausgeschlossene Arten (Art. 9 DSGVO / Beschwerden) — als Code-Bestandteil oder im Trace-Text. Getestet. */
 export const EXCLUDED_PROFILE_TYPES = [
   "ALLERG", "ALLERGIE", "ALLERGY", "DIAET", "DIÄT", "DIET", "GLUTEN", "LAKTOSE", "LACTOSE", "NUSS", "NUT", "MEDIC", "MEDIZIN", "INSULIN",
-  "KRANK", "SICK", "HEALTH", "GESUND", "ROLLSTUHL", "WHEELCHAIR", "HANDICAP", "BARRIER", "COMPLAINT", "BESCHWERDE", "DEFECT", "MANGEL",
+  "KRANK", "SICK", "HEALTH", "GESUND", "ROLLSTUHL", "WHEELCHAIR", "HANDICAP", "BARRIER", "ACCESSIB", "BEHINDER", "DISAB", "COMPLAINT", "BESCHWERDE", "DEFECT", "MANGEL",
+  "HALAL", "KOSCHER", "KOSHER", "SCHWANGER", "PREGNAN", "DIABET", "ASTHMA", "HÖRGERÄT", "HEARING", "BLIND", "VEGAN", "VEGETAR",
 ] as const;
 
 export function isExcludedTrace(t: { code: string; text: string }): boolean {
@@ -34,7 +36,7 @@ export function isExcludedTrace(t: { code: string; text: string }): boolean {
 
 const BABY_COT = /baby\s*(cot|bett|crib)|kinderbett|babybett|\bcrib\b|\bcot\b/i;
 
-export type ProfileItemCode = "CLEAN_AFTER" | "NO_DAILY_LINEN" | "BABY_COT" | "EXTRA_BED" | "TWIN" | "TRACE_TYPE";
+export type ProfileItemCode = "CLEAN_AFTER" | "NO_DAILY_LINEN" | "BABY_COT" | "EXTRA_BED" | "TWIN";
 export interface ProfileItem { code: ProfileItemCode; vars?: Record<string, string>; status: "OPEN" | "TAKEN" | "DISCARDED" }
 
 /** Rein: Punkte aus den strukturierten Daten eines Aufenthalts. */
@@ -58,19 +60,13 @@ export function profileItemsFrom(input: {
   // Opera-Hinweise: Gesundheitsdaten/Beschwerden komplett übergehen; Ausstattung als Hinweis; wiederkehrende Codes nur als Typ
   const usable = input.traces.filter((t) => !isExcludedTrace(t));
   const flags = new Set<ProfileItemCode>();
-  const daysByCode = new Map<string, Set<string>>();
   for (const t of usable) {
     if (BABY_COT.test(t.text)) { flags.add("BABY_COT"); continue; }
     const c = classifyTraceText(t.text);
     if (c?.type === "TWIN_SETUP") { flags.add("TWIN"); continue; }
     if (c?.type === "SONSTIGES") { flags.add("EXTRA_BED"); continue; }
-    if (c?.type === "TWIN_REVERT") continue;
-    daysByCode.set(t.code, (daysByCode.get(t.code) ?? new Set()).add(t.date));
   }
   for (const f of ["BABY_COT", "EXTRA_BED", "TWIN"] as const) if (flags.has(f)) items.push({ code: f, status: "OPEN" });
-  for (const [code, days] of [...daysByCode.entries()].sort((a, b) => a[0].localeCompare(b[0]))) {
-    if (days.size >= PROFILE_MIN_DAYS && /^[A-Z0-9_-]{1,12}$/i.test(code)) items.push({ code: "TRACE_TYPE", vars: { type: code.toUpperCase() }, status: "OPEN" });
-  }
   return items;
 }
 
@@ -84,10 +80,12 @@ export async function buildProfileSuggestion(stayId: string, now = new Date()): 
   if (await prisma.auditLog.findFirst({ where: { action: "PROFILE_SUGGESTION_CREATED", meta: { contains: stayId } }, select: { id: true } })) return null;
   const stay = await prisma.stay.findUnique({ where: { id: stayId }, include: { room: { select: { number: true } } } });
   if (!stay) return null;
+  // Nur der eigene Aufenthalt: Einträge mit seiner stayId, oder ohne stayId im Zimmer während seines Aufenthalts —
+  // nie Einträge eines anderen Aufenthalts (Turn: der Neuankömmling; Zimmerwechsel: der Vorbeleger).
   const window = { gte: stay.checkIn, lte: now };
   const [requests, traces] = await Promise.all([
-    prisma.guestRequest.findMany({ where: { OR: [{ stayId }, { roomId: stay.roomId, createdAt: window }], kind: { in: ["CLEAN_REQUEST", GREEN_KIND] } }, select: { kind: true, detail: true, status: true, createdAt: true } }),
-    prisma.trace.findMany({ where: { OR: [{ stayId }, { roomId: stay.roomId, date: { gte: berlinDate(stay.checkIn), lte: berlinDate(now) } }] }, select: { code: true, text: true, date: true } }),
+    prisma.guestRequest.findMany({ where: { OR: [{ stayId }, { stayId: null, roomId: stay.roomId, createdAt: window }], kind: { in: ["CLEAN_REQUEST", GREEN_KIND] } }, select: { kind: true, detail: true, status: true, createdAt: true } }),
+    prisma.trace.findMany({ where: { OR: [{ stayId }, { stayId: null, roomId: stay.roomId, date: { gte: berlinDate(stay.checkIn), lte: berlinDate(now) } }] }, select: { code: true, text: true, date: true } }),
   ]);
   const items = profileItemsFrom({
     cleanWishes: requests.filter((r) => r.kind === "CLEAN_REQUEST"),
@@ -105,9 +103,10 @@ export async function buildProfileSuggestion(stayId: string, now = new Date()): 
   return s.id;
 }
 
-/** Nachtlöschung: Vorschläge älter als `days` Tage (Standard 30) und erledigte werden gelöscht. */
+/** Nachtlöschung (aus `purgeGuestDataNow`): Namen jede Nacht leeren (wie überall), Vorschläge älter als `days` Tage löschen. */
 export async function purgeProfileSuggestions(now = new Date(), days = 30): Promise<number> {
   const cutoff = new Date(now.getTime() - days * 86_400_000);
-  const r = await prisma.profileSuggestion.deleteMany({ where: { OR: [{ createdAt: { lt: cutoff } }, { status: "DONE" }] } });
+  await prisma.profileSuggestion.updateMany({ where: { OR: [{ guestSalutation: { not: null } }, { guestTitle: { not: null } }, { guestLastName: { not: null } }] }, data: { guestSalutation: null, guestTitle: null, guestLastName: null } });
+  const r = await prisma.profileSuggestion.deleteMany({ where: { createdAt: { lt: cutoff } } });
   return r.count;
 }

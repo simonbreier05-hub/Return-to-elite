@@ -32,10 +32,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
   const done = items.every((it) => it.status !== "OPEN");
   await audit({ action: "PROFILE_SUGGESTION_UPDATED", userId: auth.session.userId, meta: { suggestionId: id, ...("all" in parsed.data ? { all: true } : { index: parsed.data.index, status: parsed.data.status }), done } });
+  // Ein zweiter DM hat ihn inzwischen erledigt/gelöscht → 404 statt Serverfehler (deleteMany/updateMany werfen nicht)
   if (done) {
-    await prisma.profileSuggestion.delete({ where: { id } });
+    await prisma.profileSuggestion.deleteMany({ where: { id } });
     return NextResponse.json({ ok: true, deleted: true });
   }
-  await prisma.profileSuggestion.update({ where: { id }, data: { items: JSON.stringify(items) } });
+  const upd = await prisma.profileSuggestion.updateMany({ where: { id }, data: { items: JSON.stringify(items) } });
+  if (upd.count === 0) return NextResponse.json({ error: "Vorschlag nicht gefunden.", code: "NOT_FOUND" }, { status: 404 });
   return NextResponse.json({ ok: true, items });
 }
