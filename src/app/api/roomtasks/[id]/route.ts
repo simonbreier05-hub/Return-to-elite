@@ -33,7 +33,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     if (!task) return NextResponse.json({ error: "Room task not found.", code: "TASK_NOT_FOUND" }, { status: 404 });
     if (task.status !== "OPEN") return NextResponse.json({ error: "Room task is already done.", code: "TASK_ALREADY_DONE" }, { status: 409 });
     const roomTask = await prisma.roomTask.update({ where: { id }, data: { deferredSince: task.deferredSince ?? berlinToday(), deferReason: defer.data.reason?.trim() || task.deferReason }, include: INCLUDE });
-    await audit({ action: "ROOM_TASK_DEFERRED", userId: auth.session.userId, roomId: task.roomId, meta: { roomTaskId: id, reason: defer.data.reason ?? null } });
+    await audit({ action: "ROOM_TASK_DEFERRED", userId: auth.session.userId, roomId: task.roomId, meta: { roomTaskId: id, reasonText: defer.data.reason ?? null } });
     broadcast("roomtask:update", { roomTask });
     return NextResponse.json({ roomTask });
   }

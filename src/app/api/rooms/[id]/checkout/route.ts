@@ -31,7 +31,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (stay?.status === "CHECKED_OUT") return NextResponse.json({ ok: true, already: true });
   await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "CHECKED_OUT" } });
   // F7 (H13): Verlauf des Aufenthalts archivieren — nächster Gast und die Listen starten leer
-  await archiveStayHistory(id, { stayId: plan.stayId });
+  // Turn: der neue Gast reist heute an — was heute schon für ihn notiert wurde, bleibt stehen
+  await archiveStayHistory(id, { stayId: plan.stayId, ...(plan.arrivingStayId ? { before: berlinToUtc(date, "00:00") } : {}) });
   const room = await prisma.room.update({ where: { id }, data: { occupancy: "VACANT" } });
   await audit({ action: "GUEST_CHECKED_OUT", userId: auth.session.userId, roomId: id, meta: { date } });
   broadcast("room:update", { room });

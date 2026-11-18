@@ -14,7 +14,7 @@ export async function greenRoomsOn(date: string, roomIds?: string[]): Promise<Se
   const from = berlinToUtc(date, "00:00");
   const to = new Date(from.getTime() + 24 * 3_600_000);
   const rows = await prisma.guestRequest.findMany({
-    where: { kind: GREEN_KIND, status: { not: "CANCELLED" }, createdAt: { gte: from, lt: to }, ...(roomIds ? { roomId: { in: roomIds } } : {}) },
+    where: { kind: GREEN_KIND, status: { not: "CANCELLED" }, archivedAt: null, createdAt: { gte: from, lt: to }, ...(roomIds ? { roomId: { in: roomIds } } : {}) },
     select: { roomId: true },
   });
   return new Set(rows.map((r) => r.roomId));

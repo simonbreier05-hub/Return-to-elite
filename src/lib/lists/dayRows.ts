@@ -119,7 +119,7 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   const todayStart = berlinToUtc(date, "00:00");
   const dayLabel = (d: Date) => { const [, m, dd] = berlinDate(d).split("-"); return `${dd}.${m}.`; };
   for (const n of notes) hintsBy.set(n.roomId, [...(hintsBy.get(n.roomId) ?? []), { id: n.id, body: n.createdAt < todayStart ? `(${dayLabel(n.createdAt)}) ${n.body}` : n.body }]);
-  const dnd = new Set((await prisma.guestRequest.findMany({ where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true } })).map((g) => g.roomId));
+  const dnd = new Set((await prisma.guestRequest.findMany({ where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] }, archivedAt: null, roomId: { in: ids } }, select: { roomId: true } })).map((g) => g.roomId));
   // Mängel und Gästewünsche sehen nur Supervisor/Duty Manager (Housekeeper-Listen laden sie nicht)
   const defectCount = new Map<string, number>();
   const wishBy = new Map<string, string>();

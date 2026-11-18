@@ -35,6 +35,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   const existing = await prisma.guestRequest.findUnique({ where: { id } });
   if (!existing) return NextResponse.json({ error: "Guest request not found." }, { status: 404 });
+  // F7: archivierter Wunsch eines früheren Aufenthalts wird nicht wieder geöffnet
+  if (existing.archivedAt) return NextResponse.json({ error: "Wunsch gehört zu einem abgereisten Aufenthalt.", code: "ARCHIVED" }, { status: 409 });
   const foLiftsDnd = auth.session.role === "front_office";
   if (foLiftsDnd && (existing.kind !== "DND" || parsed.data.status !== "DONE" || parsed.data.assignedToId !== undefined)) {
     return NextResponse.json({ error: "Front Office may only lift a guest's Do Not Disturb.", code: "FORBIDDEN" }, { status: 403 });
