@@ -5,6 +5,7 @@ import { broadcast } from "@/lib/realtime";
 import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domain";
 import { checkTransition, SELL_BLOCKED } from "@/lib/stateMachine";
 import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
+import { deleteResolvedDefectPhotos } from "@/lib/rooms/defectPhotoCleanup";
 import { alertVipLate } from "@/lib/notify/dmAlerts";
 import { arrivalTodayWhere } from "@/lib/rooms/blockedRooms";
 import { previousGuest, previousGuestText } from "@/lib/rooms/previousGuest";
@@ -240,6 +241,9 @@ export async function applyStatusChange(
       key: occupancyRisk.arrivalToday ? "notify.oooArrival" : "notify.oooOccupied", vars: { n: room.number, reason: oooReason, until },
     }).catch(() => 0);
   }
+
+  // F6 (M3, B9): wieder in Betrieb → Fotos erledigter Mängel löschen (Datei + Verweis)
+  if (SELL_BLOCKED.has(from) && !SELL_BLOCKED.has(to)) await deleteResolvedDefectPhotos(room.id).catch(() => 0);
 
   broadcast("room:update", { room: updated });
   broadcast("room:status", { roomId: room.id, number: room.number, from, to, by: session.name });
