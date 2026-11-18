@@ -22,7 +22,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   await overrideCleaningType(date, plan.room.number, "DEPARTURE", auth.session.userId);
   if (plan.stayId) {
     const stay = await prisma.stay.findUnique({ where: { id: plan.stayId }, select: { checkOut: true } });
-    const todayNoon = new Date(`${date}T11:00:00Z`);
+    const todayNoon = new Date(`${date}T10:00:00Z`); // wie der Import (merge.ts)
     if (stay && stay.checkOut > todayNoon) await prisma.stay.update({ where: { id: plan.stayId }, data: { checkOut: todayNoon } });
   }
   const room = await prisma.room.update({ where: { id }, data: { isCheckoutToday: true } });

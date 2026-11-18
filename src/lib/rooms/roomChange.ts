@@ -1,7 +1,9 @@
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
-import { berlinDate } from "@/lib/dayplan/time";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
+import { SELL_BLOCKED } from "@/lib/stateMachine";
+import type { RoomStatus } from "@/lib/domain";
 import { currentStayForRoom } from "@/lib/guestStay";
 import { arrivalTodayWhere } from "@/lib/rooms/blockedRooms";
 import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
@@ -46,7 +48,9 @@ export async function changeRoom(session: Session, fromId: string, toId: string,
   }
 
   await prisma.$transaction(async (tx) => {
-    await tx.stay.update({ where: { id: stay.id }, data: { roomId: to.id } });
+    await tx.stay.update({ where: { id: stay.id }, data: { roomId: to.id, roomChangedFrom: from.number } });
+    // Heute eingecheckte Ankunft wandert mit (Front-Office-Liste zeigt das richtige Zimmer)
+    await tx.arrival.updateMany({ where: { roomId: from.id, status: "CHECKED_IN", updatedAt: { gte: berlinToUtc(date, "00:00") } }, data: { roomId: to.id } });
     // Offene Gastwünsche wandern mit (Notizen zum alten Zimmer bleiben dort)
     await tx.guestRequest.updateMany({ where: { roomId: from.id, status: { in: ["RECEIVED", "IN_PROGRESS"] } }, data: { roomId: to.id } });
     // Altes Zimmer: Abreise (Handeingabe, der Import überschreibt sie nicht), Kennzeichen bis zur Freigabe
@@ -57,12 +61,14 @@ export async function changeRoom(session: Session, fromId: string, toId: string,
       create: { date, roomId: from.id, cleaningType: "DEPARTURE", typeOverridden: true, derivedType: null, roomChangeTo: to.number },
       update: { cleaningType: "DEPARTURE", typeOverridden: true, derivedType: derived, stayId: null, laundryDue: false, roomChangeTo: to.number },
     });
-    await tx.room.update({ where: { id: from.id }, data: { status: "DIRTY", statusSince: now, occupancy: "VACANT", isCheckoutToday: true } });
+    // Status: fertige Zimmer werden schmutzig; eine Sperre (nur Supervisor/DM heben sie auf, F2) und laufende Arbeit bleiben
+    const keepStatus = SELL_BLOCKED.has(from.status as RoomStatus) || from.status === "IN_PROGRESS" || from.status === "DIRTY" || from.status === "PICKUP";
+    await tx.room.update({ where: { id: from.id }, data: { ...(keepStatus ? {} : { status: "DIRTY", statusSince: now }), occupancy: "VACANT", isCheckoutToday: true } });
     // Zielzimmer: belegt, Bleiber, „von alt“ für den Tag
     await tx.dayRoomPlan.upsert({
       where: { date_roomId: { date, roomId: to.id } },
       create: { date, roomId: to.id, cleaningType: "STAYOVER", typeOverridden: true, stayId: stay.id, roomChangeFrom: from.number },
-      update: { cleaningType: "STAYOVER", typeOverridden: true, stayId: stay.id, arrivingStayId: null, roomChangeFrom: from.number },
+      update: { cleaningType: "STAYOVER", typeOverridden: true, stayId: stay.id, arrivingStayId: null, roomChangeFrom: from.number, lateCheckout: null, lateCheckoutManual: false, eta: null, vip: stay.vip },
     });
     await tx.room.update({ where: { id: to.id }, data: { occupancy: "OCCUPIED", isCheckoutToday: false } });
   });

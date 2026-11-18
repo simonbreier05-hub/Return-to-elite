@@ -94,13 +94,21 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   for (const r of [...inHouse, ...departures, ...arrivals]) guestOf.set(`${r.room}|${r.arrDate}`, r.guest);
   const seen = new Set<string>();
   const stayIdByKey = new Map<string, string>();
+  /** F3: Schlüssel (altes Zimmer|Anreise) von Aufenthalten, die per Zimmerwechsel umgezogen sind. */
+  const movedKeys = new Set<string>();
   const now = new Date();
   for (const s of derived.stays) {
     const room = roomByNumber.get(s.room)!;
     const key = `${s.room}|${s.arrDate}`;
     seen.add(key);
     const from = utcDay(s.arrDate), to = new Date(from.getTime() + 86_400_000);
-    const existing = await prisma.stay.findFirst({ where: { roomId: room.id, checkIn: { gte: from, lt: to } } });
+    let existing = await prisma.stay.findFirst({ where: { roomId: room.id, checkIn: { gte: from, lt: to } } });
+    // F3: nach einem Zimmerwechsel führt Opera den Gast evtl. noch im alten Zimmer — den umgezogenen Aufenthalt wiederfinden,
+    // nie einen zweiten im alten Zimmer anlegen. Er bleibt im neuen Zimmer; die Zeile des alten Zimmers bleibt unberührt.
+    if (!existing) {
+      const moved = await prisma.stay.findFirst({ where: { roomChangedFrom: s.room, checkIn: { gte: from, lt: to } }, include: { room: { select: { number: true } } } });
+      if (moved) { movedKeys.add(key); seen.add(`${moved.room.number}|${s.arrDate}`); existing = moved; }
+    }
     const g = guestOf.get(key);
     const data = {
       guestName: g ? shortName(g) : "—", checkOut: new Date(`${s.depDate}T10:00:00Z`),
@@ -150,6 +158,8 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   for (const r of derived.rooms) {
     const room = roomByNumber.get(r.room)!;
     const old = oldByRoom.get(r.room);
+    // F3: Zimmerwechsel — Zeile des alten Zimmers (roomChangeTo) und Zeilen zu umgezogenen Aufenthalten nicht aus Opera überschreiben
+    if (old?.roomChangeTo || (r.stay && movedKeys.has(`${r.room}|${r.stay}`)) || (r.arrivingStay && movedKeys.has(`${r.room}|${r.arrivingStay}`))) continue;
     const base = {
       laundryDue: r.laundryDue, nights: r.nights, vip: r.vip, eta: r.eta,
       stayId: r.stay ? stayIdByKey.get(`${r.room}|${r.stay}`) ?? null : null,
@@ -302,7 +312,8 @@ export async function applyDayPlanToBoard(date: string, userId: string) {
   for (const p of plan) {
     const checkout = p.cleaningType === "DEPARTURE" || p.cleaningType === "SAME_DAY_TURN";
     const arrivingStay = p.arrivingStayId ? await prisma.stay.findUnique({ where: { id: p.arrivingStayId } }) : null;
-    const occupied = p.cleaningType === CARRYOVER ? inHouseRooms.has(p.room.number) // F1: Rest vom Vortag ist nur laut In-House belegt
+    const occupied = p.roomChangeTo ? false // F3: Gast ist per Zimmerwechsel ausgezogen
+      : p.cleaningType === CARRYOVER ? inHouseRooms.has(p.room.number) // F1: Rest vom Vortag ist nur laut In-House belegt
       : p.cleaningType !== "ARRIVAL" || arrivingStay?.status === "IN_HOUSE";
     const data: { isCheckoutToday: boolean; occupancy: string } = { isCheckoutToday: checkout, occupancy: occupied ? "OCCUPIED" : "VACANT" };
     // Wäschewechsel-Datum wird nie aus der Anreise erfunden: Room.lastLinenChangeAt kommt nur aus einem erfassten Wechsel.

@@ -22,6 +22,7 @@ const Body = z.object({
   blockReason: BlockReasonSchema.optional(),
   note: z.string().max(1000).optional(),
   oooUntil: z.coerce.date().optional(),
+  confirmGuestPresent: z.boolean().optional(), // F3: Vorgast-Rückfrage bestätigt
 });
 
 export async function POST(req: NextRequest) {
@@ -39,14 +40,14 @@ export async function POST(req: NextRequest) {
   const { roomIds, ...input } = parsed.data;
 
   const succeeded: { roomId: string; number: string }[] = [];
-  const failed: { roomId: string; error: string; status: number }[] = [];
+  const failed: { roomId: string; error: string; status: number; code?: string }[] = [];
 
   // Sequential on purpose: each change writes an audit row and broadcasts, and
   // the batches here are small. Predictable beats fast.
   for (const roomId of [...new Set(roomIds)]) {
     const result = await applyStatusChange(auth.session, roomId, input);
     if (result.ok) succeeded.push({ roomId, number: result.room.number });
-    else failed.push({ roomId, error: result.error, status: result.status });
+    else failed.push({ roomId, error: result.error, status: result.status, code: result.code });
   }
 
   // A batch where nothing worked is almost always a permission problem; give

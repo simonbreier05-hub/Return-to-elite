@@ -208,3 +208,30 @@ describe("Teil 4 — Zimmerwechsel (H9, B5 neu)", () => {
     expect(p).toMatchObject({ cleaningType: "DEPARTURE", typeOverridden: true, roomChangeTo: "206" });
   });
 });
+
+import { GET as targetsGet } from "@/app/api/rooms/room-change-targets/route";
+import { GET as foDndGet } from "@/app/api/front-office/dnd/route";
+
+describe("Nachbesserung (Review)", () => {
+  it("Zimmerwechsel aus einem gesperrten Zimmer: Sperre bleibt (nur Supervisor/DM heben sie auf)", async () => {
+    const a = (await prisma.room.create({ data: { number: "207", floor: 2, section: "2A", type: "STANDARD", status: "OUT_OF_ORDER", oooReason: "Wasserschaden", occupancy: "OCCUPIED" } })).id;
+    const b = (await prisma.room.create({ data: { number: "208", floor: 2, section: "2A", type: "STANDARD", status: "INSPECTED", occupancy: "VACANT" } })).id;
+    await stay(a, "Sperrtest", -1, 2, "IN_HOUSE");
+    as("fo", "front_office");
+    expect((await roomChangePost(req({ toRoomId: b, reason: "Wasserschaden" }), ctx(a))).status).toBe(200);
+    expect(await prisma.room.findUniqueOrThrow({ where: { id: a } })).toMatchObject({ status: "OUT_OF_ORDER", oooReason: "Wasserschaden", occupancy: "VACANT" });
+  });
+
+  it("alle neuen Wege: Housekeeper, Concierge, Hausmann und Technik bekommen 403", async () => {
+    const dnd = await prisma.guestRequest.create({ data: { roomId: room["206"], kind: "DND", detail: "{}" } });
+    for (const [k, role] of [["anna", "room_attendant"], ["con", "concierge"], ["hm", "houseman"], ["eng", "engineering"]] as const) {
+      as(k, role);
+      expect((await earlyPost(req(), ctx(room["206"]))).status).toBe(403);
+      expect((await guestRequestPatch(req({ status: "DONE" }, "PATCH"), ctx(dnd.id))).status).toBe(403);
+      expect((await targetsGet()).status).toBe(403);
+      expect((await foDndGet()).status).toBe(403);
+      expect((await roomChangePost(req({ toRoomId: room["205"], reason: "x" }), ctx(room["206"]))).status).toBe(403);
+      expect((await checkoutDelete(req(undefined, "DELETE"), ctx(room["206"]))).status).toBe(403);
+    }
+  });
+});

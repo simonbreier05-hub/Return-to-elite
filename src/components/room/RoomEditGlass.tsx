@@ -10,6 +10,7 @@ import { statusTargetIcon } from "@/lib/ui/roomWindow";
 import { Field, Glyph, SectionLabel } from "@/components/ui";
 import { cx, FOCUS_RING } from "@/components/ui/primitives";
 import { ACTION_LABEL, DEPTS, useRoomEdit } from "./useRoomEdit";
+import { guestStillInText } from "@/lib/ui/guestPresence";
 
 const SELECT =
   "text-body-16 w-full min-h-(--size-touch-min) rounded-(--glass-radius-md) border border-border-subtle bg-surface-progress-track px-4 py-3 text-text-primary disabled:opacity-40";
@@ -92,6 +93,13 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
               <Glyph name="wrench" size={18} />
               {t("roomEdit.statusSet", { status: t("status.OUT_OF_ORDER") })}
             </TwoTapButton>
+          </div>
+        )}
+        {e.guestPrompt && (
+          <div role="alert" className="flex flex-col gap-2 rounded-(--glass-radius-md) bg-status-warning-bg p-3 sm:flex-row sm:items-center">
+            <p className="text-body-16 flex-1 text-text-primary">{guestStillInText(t, room.number, e.guestPrompt.lateCheckout)}</p>
+            <TwoTapButton onConfirm={() => e.setStatus(e.guestPrompt!.status, false, true)}>{t("roomEdit.save")}</TwoTapButton>
+            <button type="button" className={linkBtn} onClick={() => e.setGuestPrompt(null)}>{t("roomEdit.cancel")}</button>
           </div>
         )}
         {e.occupiedPrompt && (

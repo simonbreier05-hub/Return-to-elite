@@ -216,6 +216,9 @@ model Stay {
   arrivalTime String? // "HH:MM"
   resStatus   String? // Opera-Status: RESV | CKIN | DUOT …
   needsReview Boolean  @default(false) // fehlt in einem neueren Import — nicht gelöscht, nur markiert
+  // F3 (additiv): Zimmerwechsel — Nummer des Zimmers, aus dem der Aufenthalt umgezogen ist. Der Import findet ihn darüber wieder,
+  // auch wenn die Opera-Liste den Gast noch im alten Zimmer führt (kein zweiter Aufenthalt „im Haus“ im alten Zimmer).
+  roomChangedFrom String?
   lastImportAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

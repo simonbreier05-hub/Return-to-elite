@@ -1,5 +1,6 @@
 "use client";
 
+import { guestStillInText } from "@/lib/ui/guestPresence";
 import TwoTapButton from "@/components/TwoTapButton";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import type { TKey } from "@/lib/i18n/translations";
@@ -26,7 +27,7 @@ export default function RoomEditPanel({ room, onChanged }: { room: RoomDetail; o
 
 function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () => void | Promise<void> }) {
   const { t, fmt } = useLocale();
-  const { msg, ooo, setOoo, oooReason, setOooReason, occupiedPrompt, setOccupiedPrompt, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
+  const { msg, ooo, setOoo, oooReason, setOooReason, occupiedPrompt, setOccupiedPrompt, guestPrompt, setGuestPrompt, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
     setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd, canCheckOut, checkOut } = useRoomEdit(room, onChanged);
   const editRow = (kind: "trace" | "note", id: string) => editing && editing.kind === kind && editing.id === id && (
     <div className="mt-1 flex flex-col gap-2 sm:flex-row">
@@ -59,6 +60,13 @@ function RoomEditLight({ room, onChanged }: { room: RoomDetail; onChanged: () =>
             <label className="text-sm" htmlFor="ooo-until">{t("roomEdit.oooUntil")}</label>
             <input id="ooo-until" type="datetime-local" className={`${field} sm:w-auto`} value={ooo} onChange={(e) => setOoo(e.target.value)} />
             <TwoTapButton disabled={!ooo || !oooReason.trim()} onConfirm={() => setStatus("OUT_OF_ORDER")}>{t("roomEdit.statusSet", { status: t("status.OUT_OF_ORDER") })}</TwoTapButton>
+          </div>
+        )}
+        {guestPrompt && (
+          <div role="alert" className="mt-2 flex flex-col gap-2 rounded-lg bg-gold-soft/30 p-2 sm:flex-row sm:items-center">
+            <p className="flex-1 text-sm">{guestStillInText(t, room.number, guestPrompt.lateCheckout)}</p>
+            <TwoTapButton onConfirm={() => setStatus(guestPrompt.status, false, true)}>{t("roomEdit.save")}</TwoTapButton>
+            <button type="button" className="min-h-11 px-2 text-sm underline" onClick={() => setGuestPrompt(null)}>{t("roomEdit.cancel")}</button>
           </div>
         )}
         {occupiedPrompt && (

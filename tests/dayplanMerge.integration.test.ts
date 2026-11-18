@@ -232,3 +232,29 @@ describe("Hausmann-Liste aus dem Import", () => {
     if (other) expect(await setHousemanTraceStatus(other.id, "DONE", { userId, role: "supervisor" })).toBeNull();
   });
 });
+
+describe("F3: Nachimport nach einem Zimmerwechsel", () => {
+  it("Opera führt den Gast noch im alten Zimmer: kein zweiter Aufenthalt, alter Gastbildschirm bleibt neutral, Zeilen bleiben", async () => {
+    const { changeRoom } = await import("@/lib/rooms/roomChange");
+    const { roomStayState } = await import("@/lib/guestStay");
+    const plan = await prisma.dayRoomPlan.findMany({ where: { date: TODAY, cleaningType: "STAYOVER" }, include: { room: true } });
+    let fromRoom: { id: string; number: string } | null = null, stayId = "";
+    for (const p of plan) {
+      const st = await roomStayState(p.roomId);
+      if (st.kind === "active") { fromRoom = p.room; stayId = st.stay.id; break; }
+    }
+    expect(fromRoom).not.toBeNull();
+    const target = await prisma.room.create({ data: { number: "140", floor: 1, section: "1A", type: "STANDARD", status: "INSPECTED", occupancy: "VACANT" } });
+    const r = await changeRoom({ userId, name: "Sup", role: "supervisor" } as never, fromRoom!.id, target.id, "Lärm");
+    expect(r.ok).toBe(true);
+    const staysBefore = await prisma.stay.count();
+    await mergeDay(TODAY, userId); // Opera-Listen unverändert: Gast steht dort noch im alten Zimmer
+    expect(await prisma.stay.count()).toBe(staysBefore);
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: stayId } })).roomId).toBe(target.id);
+    expect((await roomStayState(fromRoom!.id)).kind).toBe("none");
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: stayId } })).needsReview).toBe(false);
+    expect(await prisma.dayRoomPlan.findUniqueOrThrow({ where: { date_roomId: { date: TODAY, roomId: fromRoom!.id } } })).toMatchObject({ cleaningType: "DEPARTURE", roomChangeTo: "140", stayId: null });
+    await applyDayPlanToBoard(TODAY, userId);
+    expect((await prisma.room.findUniqueOrThrow({ where: { id: fromRoom!.id } })).occupancy).toBe("VACANT");
+  });
+});

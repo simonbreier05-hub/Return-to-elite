@@ -25,6 +25,8 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
   const [oooReason, setOooReason] = useState("");
   /** F2: Rückfrage „Zimmer ist belegt / Anreise heute — trotzdem sperren?“ (Server-Text, ohne Gastdaten). */
   const [occupiedPrompt, setOccupiedPrompt] = useState<string | null>(null);
+  /** F3 (K4): Rückfrage „Gast laut Front Office noch im Zimmer“ — Status und Late Check-out, mit Bestätigung weiter. */
+  const [guestPrompt, setGuestPrompt] = useState<{ status: string; lateCheckout: string | null } | null>(null);
   const [assignTo, setAssignTo] = useState("");
   const [newText, setNewText] = useState("");
   const [newDept, setNewDept] = useState<(typeof DEPTS)[number]>("HOUSEKEEPING");
@@ -37,11 +39,15 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
     try { if ((await fn()) === false) return; setMsg({ ok: true, text: t("roomEdit.saved") }); await onChanged(); }
     catch (e) { setMsg({ ok: false, text: errorText(e, t, "roomEdit.failed") }); }
   };
-  const setStatus = (status: string, confirmOccupied = false) => run(async () => {
+  const setStatus = (status: string, confirmOccupied = false, confirmGuestPresent = false) => run(async () => {
     try {
-      await api(`/api/rooms/${room.id}/status`, { body: { status, ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString(), oooReason: oooReason.trim(), confirmOccupied } : {}) } });
-      setOccupiedPrompt(null);
-    } catch (e) { if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") { setOccupiedPrompt(e.message); return false; } throw e; }
+      await api(`/api/rooms/${room.id}/status`, { body: { status, ...(confirmGuestPresent ? { confirmGuestPresent } : {}), ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString(), oooReason: oooReason.trim(), confirmOccupied } : {}) } });
+      setOccupiedPrompt(null); setGuestPrompt(null);
+    } catch (e) {
+      if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") { setOccupiedPrompt(e.message); return false; }
+      if (e instanceof ApiError && e.code === "GUEST_STILL_IN_ROOM") { setGuestPrompt({ status, lateCheckout: (e.data?.lateCheckout as string | null) ?? null }); return false; }
+      throw e;
+    }
   });
   /** F2: gesperrtes Zimmer wieder in Betrieb nehmen (nur Supervisor/Duty Manager — Server prüft) */
   const isBlocked = room.status === "OUT_OF_ORDER" || room.status === "OUT_OF_SERVICE";
@@ -64,7 +70,7 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
   // Planung L1 (Regel 7): Abreise heute → „Gast ausgecheckt“ melden; erst dann rückt ein Turn vor die Bleiber
   const canCheckOut = room.day?.kind === "SAME_DAY_TURN" || room.day?.kind === "DEPARTURE";
   const checkOut = () => run(() => api(`/api/rooms/${room.id}/checkout`, { body: {} }));
-  return { msg, ooo, setOoo, oooReason, setOooReason, occupiedPrompt, setOccupiedPrompt, isBlocked, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
+  return { msg, ooo, setOoo, oooReason, setOooReason, occupiedPrompt, setOccupiedPrompt, guestPrompt, setGuestPrompt, isBlocked, assignTo, setAssignTo, newText, setNewText, newDept, setNewDept, editing, setEditing, startedPrompt, setStartedPrompt,
     setStatus, setDnd, assign, traceDone, addTrace, saveEdit, guestDnd, clearGuestDnd, isDnd, canCheckOut, checkOut };
 }
 
