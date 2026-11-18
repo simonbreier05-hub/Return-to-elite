@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "./api";
+import { api, NetworkError } from "./api";
+import { useOfflineQueue } from "./useOfflineQueue";
 import { NOTE_STATUS_STYLES } from "./status";
 import type { NoteStatus, PauseTarget } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -36,6 +37,8 @@ export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const offline = useOfflineQueue();
+  const { t } = useLocale();
   const [canMessage, setCanMessage] = useState(false);
   const [asMessage, setAsMessage] = useState(true);
   const [outOfScope, setOutOfScope] = useState(false);
@@ -55,13 +58,18 @@ export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated
   const addNote = async () => {
     if (!noteBody.trim() || savingNote) return;
     setSavingNote(true);
+    const body = messageMode ? { body: noteBody, kind: "MESSAGE", task } : { body: noteBody };
     try {
-      const body = messageMode ? { body: noteBody, kind: "MESSAGE", task } : { body: noteBody };
       const res = await api<{ note: ThreadNote }>(`/api/rooms/${roomId}/notes`, { body });
       const note = { ...res.note, roomId };
       setNotes((prev) => [note, ...prev]);
       setNoteBody("");
       onNoteAdded?.(note);
+    } catch (e) {
+      // F6 (H12): Funkloch — Notiz in dieselbe Warteliste wie Statuswechsel; sie wird nachgesendet, nie still verworfen
+      if (!(e instanceof NetworkError)) throw e;
+      offline.enqueue({ url: `/api/rooms/${roomId}/notes`, body, label: t("offline.noteLabel", { text: noteBody.slice(0, 40) }) });
+      setNoteBody("");
     } finally {
       setSavingNote(false);
     }

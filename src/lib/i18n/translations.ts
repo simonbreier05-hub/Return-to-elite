@@ -295,6 +295,8 @@ const en = {
     moveFailed: "Could not move the room.",
   },
   supervisor: {
+    etaSoon: "Arrival soon",
+    etaOverdue: "Arrival overdue",
     liveBoard: "Live Board",
     fiveFloorsKeys: "Five floors · {{count}} keys",
     floorScopeNotice: "Showing your assigned floor(s) only: {{floors}}",
@@ -603,6 +605,7 @@ const en = {
     floorPlanLinenMarkChanged: "Mark changed",
   },
   offline: {
+    noteLabel: "Note: {{text}}",
     sending: "Sending…",
     noConnection: "No connection",
     actionWaiting: "action waiting",
@@ -783,6 +786,8 @@ const en = {
     noneEligible: "No suitable housekeeper for {{n}} room(s).",
   },
   hk: {
+    secondRoomConfirm: "Room {{n}} is still in progress. Start a second room anyway?",
+    laundryConfirm: "Room {{n}}: linen changed? OK = yes, Cancel = no",
     homeDmOnly: "Preferred floors are set by the Duty Manager",
     title: "Housekeepers (assignment proposal)",
     hint: "Type and level are employee data: only supervisors and the duty manager see them — never housekeepers, never in logs. Check with the hotel (works council) before real use.",
@@ -2336,6 +2341,8 @@ const de = {
     moveFailed: "Zimmer konnte nicht verschoben werden.",
   },
   supervisor: {
+    etaSoon: "Anreise bald",
+    etaOverdue: "Anreise überfällig",
     liveBoard: "Live-Board",
     fiveFloorsKeys: "Fünf Etagen · {{count}} Zimmer",
     floorScopeNotice: "Zeigt nur deine zugewiesene(n) Etage(n): {{floors}}",
@@ -2644,6 +2651,7 @@ const de = {
     floorPlanLinenMarkChanged: "Als gewechselt markieren",
   },
   offline: {
+    noteLabel: "Notiz: {{text}}",
     sending: "Sendet…",
     noConnection: "Keine Verbindung",
     actionWaiting: "Aktion wartet",
@@ -2824,6 +2832,8 @@ const de = {
     noneEligible: "Kein geeigneter Housekeeper für {{n}} Zimmer.",
   },
   hk: {
+    secondRoomConfirm: "Zimmer {{n}} ist noch in Arbeit. Trotzdem ein zweites Zimmer starten?",
+    laundryConfirm: "Zimmer {{n}}: Wäschewechsel gemacht? OK = ja, Abbrechen = nein",
     homeDmOnly: "Präferenz-Etagen pflegt nur der Duty Manager",
     title: "Housekeeper (Zuteilungsvorschlag)",
     hint: "Typ und Stufe sind Beschäftigtendaten: Nur Supervisor und Duty Manager sehen sie — nie Housekeeper, nie in Logs. Vor dem Echtbetrieb mit dem Hotel (Betriebsrat) abstimmen.",

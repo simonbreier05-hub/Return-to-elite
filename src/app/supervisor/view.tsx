@@ -2,6 +2,7 @@
 
 import RoomActionsCard from "@/components/roles/RoomActionsCard";
 import RoomChangeForm from "@/components/roles/RoomChangeForm";
+import { sortReleaseQueue } from "@/lib/ui/supervisorHub";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -329,12 +330,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
   const release = (
     <ReleaseQueueCard
-      rooms={releaseQueue.map((r) => ({
+      rooms={sortReleaseQueue(releaseQueue.map((r) => ({
         id: r.id,
         number: r.number,
         waitingMin: Math.round((Date.now() - new Date(r.statusSince).getTime()) / 60000),
-        arrival: r.arrivals[0] ?? null,
-      }))}
+        // F6 (M11): die dringendste Anreise des Zimmers zählt (Sofort vor früher Zeit)
+        arrival: [...r.arrivals].sort((a, b) => Number(b.neededNow) - Number(a.neededNow) || (a.eta ?? "9").localeCompare(b.eta ?? "9"))[0] ?? null,
+      })))}
       busyRoomId={busyRoomId}
       onRelease={(id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); }}
       onRework={(id) => { const room = roomById.get(id); if (room) setDialog({ kind: "rework", room }); }}

@@ -39,6 +39,8 @@ export interface StatusChangeInput {
   confirmOccupied?: boolean;
   /** F3 (K4, H10): Start/Freigabe trotz „Gast laut Front Office noch im Zimmer“ bestätigt (Annahme: Warnung, keine Sperre). */
   confirmGuestPresent?: boolean;
+  /** F6 (M19): Wäschewechsel beim Fertigmelden ausdrücklich bestätigt — nur dann wird er gebucht (nie automatisch). */
+  laundryChanged?: boolean;
 }
 
 export type StatusChangeResult =
@@ -177,7 +179,7 @@ export async function applyStatusChange(
   await endPauseOnChange("ROOM", room.id, session.userId, room.id, room.number);
 
   // Fertig gemeldeter Bleiber mit fälligem Wäschewechsel laut Tagesplan: Wechsel ist erfasst (nur so entsteht ein echtes Wechseldatum).
-  if (to === "CLEAN") {
+  if (to === "CLEAN" && input.laundryChanged === true) {
     const due = await prisma.dayRoomPlan.findFirst({ where: { date: berlinDate(now), roomId: room.id, cleaningType: "STAYOVER", laundryDue: true }, select: { id: true } });
     if (due) {
       await prisma.room.update({ where: { id: room.id }, data: { lastLinenChangeAt: now } });

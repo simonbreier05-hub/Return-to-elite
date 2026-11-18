@@ -163,3 +163,16 @@ describe("offline queue — concurrency", () => {
     expect(q.list()).toHaveLength(0);
   });
 });
+
+describe("F6 (H12): Notizen in derselben Warteliste", () => {
+  it("eine offline geschriebene Notiz wird nachgeholt — in der Reihenfolge der Taps, zusammen mit Statuswechseln", async () => {
+    const { send, sent } = scriptedSend([ok]);
+    const q = queueOf(memoryStorage(), send);
+    q.enqueue({ url: "/api/rooms/r1/status", body: { status: "IN_PROGRESS" }, label: "208 · Start" });
+    q.enqueue({ url: "/api/rooms/r1/notes", body: { body: "Föhn defekt" }, label: "Notiz: Föhn defekt" });
+    const report = await q.flush();
+    expect(report.delivered).toHaveLength(2);
+    expect(sent.map((a) => a.url)).toEqual(["/api/rooms/r1/status", "/api/rooms/r1/notes"]);
+    expect(sent[1].body).toEqual({ body: "Föhn defekt" });
+  });
+});

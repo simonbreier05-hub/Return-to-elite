@@ -29,6 +29,8 @@ vi.mock("@/lib/db", () => ({
   },
 }));
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
+// F6: Fotos erledigter Mängel räumt deleteResolvedDefectPhotos auf (eigener Test in tests/f6Bildschirme.integration.test.ts)
+vi.mock("@/lib/rooms/defectPhotoCleanup", () => ({ deleteResolvedDefectPhotos: async () => 0 }));
 vi.mock("@/lib/settings", () => ({ getSettings: (...args: unknown[]) => getSettingsMock(...args) }));
 vi.mock("@/lib/guestServer", () => ({ getGuestSystemUserId: (...args: unknown[]) => getGuestSystemUserIdMock(...args) }));
 vi.mock("fs/promises", () => ({ unlink: (...args: unknown[]) => unlinkMock(...args) }));

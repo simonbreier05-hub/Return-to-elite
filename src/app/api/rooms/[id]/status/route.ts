@@ -20,6 +20,7 @@ const BodySchema = z.object({
   oooReason: z.string().max(200).optional(), // F2: Pflicht bei OUT_OF_ORDER (geprüft in applyStatusChange)
   confirmOccupied: z.boolean().optional(),
   confirmGuestPresent: z.boolean().optional(), // F3: Start/Freigabe trotz Vorgast
+  laundryChanged: z.boolean().optional(), // F6: Wäschewechsel bestätigt
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {

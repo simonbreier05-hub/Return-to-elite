@@ -171,6 +171,15 @@ export default function AttendantView() {
 
   const setStatus = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
     if (busyRoomId) return; // one tap at a time; prevents a double tap firing twice
+    // F6 (M19): zweites Zimmer gleichzeitig starten → einmal nachfragen
+    if (status === "IN_PROGRESS" && !extra.confirmSecond) {
+      const other = rooms.find((r) => r.id !== room.id && r.status === "IN_PROGRESS");
+      if (other && !window.confirm(t("hk.secondRoomConfirm", { n: other.number }))) return;
+    }
+    // F6 (M19): fälliger Wäschewechsel wird nur gebucht, wenn die Kraft ihn bestätigt
+    if (status === "CLEAN" && extra.laundryChanged === undefined && dayById.get(room.id)?.laundry) {
+      extra = { ...extra, laundryChanged: window.confirm(t("hk.laundryConfirm", { n: room.number })) };
+    }
     setBusyRoomId(room.id);
     setError(null);
     const url = `/api/rooms/${room.id}/status`;
