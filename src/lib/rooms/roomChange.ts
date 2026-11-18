@@ -1,3 +1,4 @@
+import { archiveStayHistory } from "@/lib/guest/stayArchive";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
@@ -72,6 +73,8 @@ export async function changeRoom(session: Session, fromId: string, toId: string,
     });
     await tx.room.update({ where: { id: to.id }, data: { occupancy: "OCCUPIED", isCheckoutToday: false } });
   });
+  // F7 (H13): Notizen des Aufenthalts im alten Zimmer archivieren (offene Wünsche sind oben mitgewandert)
+  await archiveStayHistory(from.id, { stayId: stay.id, now });
 
   await audit({ action: "ROOM_CHANGE", userId: session.userId, roomId: from.id, fromStatus: from.status, toStatus: "DIRTY", meta: { from: from.number, to: to.number, reasonText: reason, role: session.role } });
   for (const r of [await prisma.room.findUnique({ where: { id: from.id } }), await prisma.room.findUnique({ where: { id: to.id } })]) if (r) broadcast("room:update", { room: r });

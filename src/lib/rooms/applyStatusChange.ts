@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { berlinDate } from "@/lib/dayplan/time";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domain";
@@ -179,6 +179,14 @@ export async function applyStatusChange(
   await endPauseOnChange("ROOM", room.id, session.userId, room.id, room.number);
 
   // Fertig gemeldeter Bleiber mit fälligem Wäschewechsel laut Tagesplan: Wechsel ist erfasst (nur so entsteht ein echtes Wechseldatum).
+  // F7 (M10): der heutige Reinigungswunsch des Gastes läuft mit — Start → „In Bearbeitung“, fertig → „Erledigt“
+  if (to === "IN_PROGRESS" || to === "CLEAN" || to === "INSPECTED") {
+    const todayStart = berlinToUtc(berlinDate(now), "00:00");
+    await prisma.guestRequest.updateMany({
+      where: { roomId: room.id, kind: "CLEAN_REQUEST", archivedAt: null, createdAt: { gte: todayStart }, status: { in: to === "IN_PROGRESS" ? ["RECEIVED"] : ["RECEIVED", "IN_PROGRESS"] } },
+      data: { status: to === "IN_PROGRESS" ? "IN_PROGRESS" : "DONE" },
+    });
+  }
   if (to === "CLEAN" && input.laundryChanged === true) {
     const due = await prisma.dayRoomPlan.findFirst({ where: { date: berlinDate(now), roomId: room.id, cleaningType: "STAYOVER", laundryDue: true }, select: { id: true } });
     if (due) {

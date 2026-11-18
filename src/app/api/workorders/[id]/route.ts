@@ -60,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           room: {
             select: {
               id: true, number: true, status: true, floor: true,
-              _count: { select: { notes: { where: { status: "OPEN" } } } },
+              _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
             },
           },
           reportedBy: { select: { name: true, role: true } },

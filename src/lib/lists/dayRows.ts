@@ -10,7 +10,8 @@ import { activePauses, type PauseView } from "@/lib/work/pauseData";
 import { isCheckedOut, parseCleanWish } from "@/lib/planung/listOrder";
 import { unplannedKind } from "@/lib/dayplan/dayNumbers";
 import { isStartedStatus } from "@/lib/rooms/startedStatus";
-import { berlinHHMM, berlinToUtc } from "@/lib/dayplan/time";
+import { cleanAfterFromTraces } from "./traceCleanAfter";
+import { berlinDate, berlinHHMM, berlinToUtc } from "@/lib/dayplan/time";
 
 /** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
@@ -112,16 +113,19 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   const traceBy = new Map<string, TraceView[]>();
   for (const t of traces) traceBy.set(t.roomId, [...(traceBy.get(t.roomId) ?? []), { id: t.id, code: t.code, text: t.text, dept: t.dept, status: t.status }]);
   // H2: offene Hinweise des Teams (nicht vom Gast-Systemkonto) — auch Housekeeper sehen sie für ihre Zimmer
-  const notes = await prisma.roomNote.findMany({ where: { roomId: { in: ids }, status: "OPEN", kind: { not: "MESSAGE" }, author: { role: { not: "guest" } } }, orderBy: { createdAt: "asc" }, select: { id: true, roomId: true, body: true } });
+  const notes = await prisma.roomNote.findMany({ where: { roomId: { in: ids }, status: "OPEN", archivedAt: null, kind: { not: "MESSAGE" }, author: { role: { not: "guest" } } }, orderBy: { createdAt: "asc" }, select: { id: true, roomId: true, body: true, createdAt: true } });
   const hintsBy = new Map<string, { id: string; body: string }[]>();
-  for (const n of notes) hintsBy.set(n.roomId, [...(hintsBy.get(n.roomId) ?? []), { id: n.id, body: n.body }]);
+  // F7 (H13, Aufgabe 3): Notizen, die nicht von heute sind, tragen ein Datum „(17.11.)“
+  const todayStart = berlinToUtc(date, "00:00");
+  const dayLabel = (d: Date) => { const [, m, dd] = berlinDate(d).split("-"); return `${dd}.${m}.`; };
+  for (const n of notes) hintsBy.set(n.roomId, [...(hintsBy.get(n.roomId) ?? []), { id: n.id, body: n.createdAt < todayStart ? `(${dayLabel(n.createdAt)}) ${n.body}` : n.body }]);
   const dnd = new Set((await prisma.guestRequest.findMany({ where: { kind: "DND", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true } })).map((g) => g.roomId));
   // Mängel und Gästewünsche sehen nur Supervisor/Duty Manager (Housekeeper-Listen laden sie nicht)
   const defectCount = new Map<string, number>();
   const wishBy = new Map<string, string>();
   if (opts.extra) {
     for (const d of await prisma.defect.findMany({ where: { roomId: { in: ids }, NOT: { workOrder: { status: "RESOLVED" } } }, select: { roomId: true } })) defectCount.set(d.roomId, (defectCount.get(d.roomId) ?? 0) + 1);
-    for (const g of await prisma.guestRequest.findMany({ where: { kind: { in: ["CLEAN_REQUEST", "CONTACT"] }, status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true, kind: true }, orderBy: { createdAt: "asc" } })) wishBy.set(g.roomId, g.kind);
+    for (const g of await prisma.guestRequest.findMany({ where: { kind: { in: ["CLEAN_REQUEST", "CONTACT"] }, status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids }, createdAt: { gte: berlinToUtc(date, "00:00") } }, select: { roomId: true, kind: true }, orderBy: { createdAt: "asc" } })) wishBy.set(g.roomId, g.kind);
   }
 
   const pauses = await activePauses("ROOM", rooms.filter((r) => r.status === "IN_PROGRESS").map((r) => r.id));
@@ -129,7 +133,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   // Planung L1 (Regeln 7, 9, 10): Signale für die Reihenfolge — nur Ja/Nein bzw. Uhrzeit, nie Gastnamen oder Text
   const rush = new Set((await prisma.arrival.findMany({ where: { roomId: { in: ids }, neededNow: true, status: "EXPECTED" }, select: { roomId: true } })).map((a) => a.roomId));
   const cleanWish = new Map<string, ReturnType<typeof parseCleanWish>>();
-  for (const g of await prisma.guestRequest.findMany({ where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids } }, select: { roomId: true, detail: true }, orderBy: { createdAt: "asc" } })) {
+  // F7 (H13, Aufgabe 2): ein Reinigungswunsch gilt nur für den Tag, an dem er gestellt wurde
+  for (const g of await prisma.guestRequest.findMany({ where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, roomId: { in: ids }, createdAt: { gte: berlinToUtc(date, "00:00") } }, select: { roomId: true, detail: true }, orderBy: { createdAt: "asc" } })) {
     cleanWish.set(g.roomId, parseCleanWish(g.detail)); // der jüngste offene Wunsch gilt
   }
   // Betrieb L2 (Punkt 11): Green Option heute → kein Wäschewechsel
@@ -162,7 +167,8 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       hints: hintsBy.get(r.id) ?? [],
       rush: rush.has(r.id),
       serviceNow: cleanWish.get(r.id)?.serviceNow ?? false,
-      cleanAfter: cleanWish.get(r.id)?.cleanAfter ?? null,
+      // F7 (M21, Regel P9): „cleaning after 13:00“ im Opera-Hinweis zählt wie der Gastwunsch „Reinigung ab 13 Uhr“
+      cleanAfter: cleanWish.get(r.id)?.cleanAfter ?? cleanAfterFromTraces(traceBy.get(r.id) ?? []),
       // nur echte Meldung (POST /api/rooms/[id]/checkout bzw. Opera-Code) — nie aus „frei“ geraten (Standardwert VACANT)
       checkedOut: isCheckedOut(p?.stayId ? stayBy.get(p.stayId) : null),
       startedAt: r.status === "IN_PROGRESS" ? r.statusSince.toISOString() : null,

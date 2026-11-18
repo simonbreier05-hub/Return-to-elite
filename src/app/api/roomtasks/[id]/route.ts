@@ -1,3 +1,4 @@
+import { berlinToday } from "@/lib/import/businessDay";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -16,13 +17,28 @@ const INCLUDE = {
 
 /** PATCH /api/roomtasks/[id] — mark a room task DONE (the only transition; OPEN → DONE). */
 const Body = z.object({ status: RoomTaskStatusSchema });
+const Defer = z.object({ action: z.literal("DEFER"), reason: z.string().max(200).optional() });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(["houseman", "supervisor"]);
+  const auth = await requireRole(["houseman", "supervisor", "duty_manager"]);
   if (!auth.ok) return auth.response;
   const { id } = await params;
+  const json = await req.json().catch(() => null);
 
-  const parsed = Body.safeParse(await req.json().catch(() => null));
+  // F7 (H16, Annahme B7): „Aufschieben“ — Hausmann, Supervisor, DM; kurzer Grund optional. Die Aufgabe bleibt offen und
+  // steht morgen oben mit „aufgeschoben seit …“ (GET /api/roomtasks).
+  const defer = Defer.safeParse(json);
+  if (defer.success) {
+    const task = await prisma.roomTask.findUnique({ where: { id } });
+    if (!task) return NextResponse.json({ error: "Room task not found.", code: "TASK_NOT_FOUND" }, { status: 404 });
+    if (task.status !== "OPEN") return NextResponse.json({ error: "Room task is already done.", code: "TASK_ALREADY_DONE" }, { status: 409 });
+    const roomTask = await prisma.roomTask.update({ where: { id }, data: { deferredSince: task.deferredSince ?? berlinToday(), deferReason: defer.data.reason?.trim() || task.deferReason }, include: INCLUDE });
+    await audit({ action: "ROOM_TASK_DEFERRED", userId: auth.session.userId, roomId: task.roomId, meta: { roomTaskId: id, reason: defer.data.reason ?? null } });
+    broadcast("roomtask:update", { roomTask });
+    return NextResponse.json({ roomTask });
+  }
+
+  const parsed = Body.safeParse(json);
   if (!parsed.success) return NextResponse.json({ error: "Invalid room task status.", code: "INVALID_STATUS" }, { status: 400 });
 
   const existing = await prisma.roomTask.findUnique({ where: { id } });

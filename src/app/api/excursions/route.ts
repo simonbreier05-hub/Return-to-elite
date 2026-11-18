@@ -17,7 +17,7 @@ export async function GET() {
       room: {
         select: {
           id: true, number: true, status: true,
-          _count: { select: { notes: { where: { status: "OPEN" } } } },
+          _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
         },
       },
     },
@@ -26,7 +26,8 @@ export async function GET() {
     const { _count, ...room } = e.room;
     return { ...e, room: { ...room, openNotesCount: _count.notes } };
   });
-  return NextResponse.json({ excursions: withNoteCounts });
+  // F7 (M24): „mine“ = eigener Eintrag (bearbeiten/löschen); Reinigungsstand nur als Status, nie Namen von Kräften
+  return NextResponse.json({ excursions: withNoteCounts.map((e) => ({ ...e, mine: e.createdById === auth.session.userId || auth.session.role === "duty_manager" })) });
 }
 
 const CreateSchema = z

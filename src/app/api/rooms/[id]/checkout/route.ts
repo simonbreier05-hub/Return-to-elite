@@ -1,3 +1,5 @@
+import { archiveStayHistory, unarchiveStayHistory } from "@/lib/guest/stayArchive";
+import { berlinToUtc } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -28,6 +30,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const stay = await prisma.stay.findUnique({ where: { id: plan.stayId }, select: { status: true } });
   if (stay?.status === "CHECKED_OUT") return NextResponse.json({ ok: true, already: true });
   await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "CHECKED_OUT" } });
+  // F7 (H13): Verlauf des Aufenthalts archivieren — nächster Gast und die Listen starten leer
+  await archiveStayHistory(id, { stayId: plan.stayId });
   const room = await prisma.room.update({ where: { id }, data: { occupancy: "VACANT" } });
   await audit({ action: "GUEST_CHECKED_OUT", userId: auth.session.userId, roomId: id, meta: { date } });
   broadcast("room:update", { room });
@@ -62,6 +66,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: "Der neue Gast ist schon eingecheckt — Rücknahme nicht möglich.", code: "NEW_GUEST_CHECKED_IN" }, { status: 409 });
   }
   await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "IN_HOUSE" } });
+  await unarchiveStayHistory(id, berlinToUtc(date, "00:00")); // F7: Rücknahme holt den heute archivierten Verlauf zurück
   const room = await prisma.room.update({ where: { id }, data: { occupancy: "OCCUPIED" } });
   await audit({ action: "GUEST_CHECKOUT_REVERTED", userId: auth.session.userId, roomId: id, meta: { date } });
   broadcast("room:update", { room });

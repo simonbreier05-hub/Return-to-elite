@@ -18,7 +18,7 @@ const broadcastMock = vi.fn();
 vi.mock("@/lib/db", () => ({
   prisma: {
     room: { findUnique: (...args: unknown[]) => roomFindUnique(...args), update: (...args: unknown[]) => roomUpdate(...args) },
-    guestRequest: { findFirst: (...args: unknown[]) => guestRequestFindFirst(...args) },
+    guestRequest: { findFirst: (...args: unknown[]) => guestRequestFindFirst(...args), updateMany: async () => ({ count: 0 }) }, // F7: Gaststatus läuft mit
     user: { update: (...args: unknown[]) => userUpdate(...args) },
     // Statusänderung beendet eine aktive Pause (src/lib/work/pauseData.ts) — hier gibt es keine.
     workPause: { updateMany: async () => ({ count: 0 }) },

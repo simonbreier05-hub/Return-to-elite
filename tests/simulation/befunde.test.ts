@@ -113,8 +113,9 @@ describe("M14 Gastsprache (B12): mehr als Deutsch und Englisch", () => {
     expect(isGuestLocale("en")).toBe(true);
   });
 
-  it.fails("Französisch, Spanisch und Chinesisch werden als Gastsprache angenommen", () => {
-    expect(["fr", "es", "zh"].every(isGuestLocale)).toBe(true);
+  // F7 (entschieden 16.11.): dieselben Sprachen wie die übrige App — fr/es/zh gehören nicht dazu
+  it("die Sprachen der App werden als Gastsprache angenommen", () => {
+    expect(["de", "en", "it", "tr", "fa", "hi", "vi"].every(isGuestLocale)).toBe(true);
   });
 });
 

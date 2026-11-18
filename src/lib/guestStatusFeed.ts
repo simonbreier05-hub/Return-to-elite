@@ -52,12 +52,12 @@ export async function getGuestStatusFeed(roomId: string, now: Date = new Date())
 
   const [requests, notes, defects] = await Promise.all([
     prisma.guestRequest.findMany({
-      where: { roomId, createdAt: { gte: since } },
+      where: { roomId, archivedAt: null, createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
       take: FEED_LIMIT,
     }),
     prisma.roomNote.findMany({
-      where: { roomId, authorId: guestUserId, createdAt: { gte: since } },
+      where: { roomId, authorId: guestUserId, archivedAt: null, createdAt: { gte: since } },
       orderBy: { createdAt: "desc" },
       take: FEED_LIMIT,
     }),

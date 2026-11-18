@@ -60,6 +60,8 @@ export default function HousemanView() {
 
   const toggle = async (item: HmItemView) => {
     if (busyKey) return;
+    // F7 (Aufgabe 10): Twin-Rückbau, solange der Gast noch im Zimmer ist — einmal nachfragen
+    if (item.status === "OPEN" && item.waitsForDeparture && !window.confirm(t("houseman.guestStillConfirm", { n: item.roomNumber }))) return;
     setError(null);
     if (item.kind === "trace") {
       setBusyKey(item.key);
@@ -73,6 +75,25 @@ export default function HousemanView() {
       const res = await api<{ roomTask?: unknown }>(`/api/roomtasks/${item.id}`, { method: "PATCH", body: { status: "DONE" } });
       const rt = res?.roomTask as { id?: string } | undefined;
       if (rt?.id) setTasks((prev) => (prev ?? []).map((x) => ((x as { id?: string })?.id === rt.id ? rt : x)));
+    } catch (e) {
+      setError(errorText(e, t));
+    } finally {
+      setBusyKey(null);
+    }
+  };
+
+  // F7 (H16): aufschieben — kurzer Grund optional; die Aufgabe steht morgen oben mit „aufgeschoben seit …“
+  const defer = async (item: HmItemView) => {
+    if (busyKey) return;
+    const reason = window.prompt(t("houseman.deferReason"), "");
+    if (reason === null) return;
+    setBusyKey(item.key);
+    setError(null);
+    try {
+      const res = await api<{ roomTask?: unknown }>(`/api/roomtasks/${item.id}`, { method: "PATCH", body: { action: "DEFER", reason: reason.trim() || undefined } });
+      const rt = res?.roomTask as { id?: string } | undefined;
+      if (rt?.id) void loadTasks();
+      setSelectedKey(null);
     } catch (e) {
       setError(errorText(e, t));
     } finally {
@@ -94,6 +115,7 @@ export default function HousemanView() {
         setError(null);
       }}
       onToggle={toggle}
+      onDefer={defer}
       busyKey={busyKey}
       actionError={error ?? hm.error}
       loading={loading && !loadError}

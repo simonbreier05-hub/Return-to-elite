@@ -21,6 +21,8 @@ export interface HousemanHubProps {
   onSelect: (key: string | null) => void;
   /** Abhaken/Zurücknehmen (Trace) bzw. Erledigt (Aufgabe) — gleiche Wege wie bisher. */
   onToggle: (item: HmItemView) => void;
+  /** F7 (H16): Aufgabe aufschieben (nur von Hand angelegte Aufgaben; Traces wandern ohnehin mit). */
+  onDefer?: (item: HmItemView) => void;
   busyKey: string | null;
   actionError: string | null;
   loading: boolean;
@@ -53,7 +55,13 @@ export function HousemanHub(p: HousemanHubProps) {
     if (i.taskType === "SONSTIGES" || !i.taskType) return i.text || t("roomTaskType.SONSTIGES");
     return t(`roomTaskType.${i.taskType}` as TKey);
   };
-  const subtitle = (i: HmItemView) => {
+  const sinceText = (i: HmItemView) => {
+    if (!i.since || i.status !== "OPEN") return null;
+    const [, m, d] = i.since.split("-");
+    return t(i.sinceKind === "overdue" ? "houseman.overdueSince" : "houseman.deferredSince", { date: `${d}.${m}.` });
+  };
+  const subtitle = (i: HmItemView) => [sinceText(i), subtitleBase(i)].filter(Boolean).join(" · ");
+  const subtitleBase = (i: HmItemView) => {
     if (i.status === "DONE" && i.doneAt) return t("lists.hmDoneAt", { time: hhmm(i.doneAt) });
     if (i.kind === "trace") return [i.guest, i.waitsForDeparture ? t("lists.hmWaitsDeparture") : null].filter(Boolean).join(" · ") || (i.floor !== null ? t("lists.floorN", { n: i.floor }) : "");
     return i.requestedBy ? t("houseman.requestedBy", { name: i.requestedBy }) : "";
@@ -70,9 +78,16 @@ export function HousemanHub(p: HousemanHubProps) {
     const busy = p.busyKey === sel.key;
     const footer =
       sel.status === "OPEN" ? (
-        <Button icon="check" block onClick={() => p.onToggle(sel)} disabled={busy}>
-          {busy ? "…" : t("lists.hmTick")}
-        </Button>
+        <div className="flex flex-col gap-2">
+          <Button icon="check" block onClick={() => p.onToggle(sel)} disabled={busy}>
+            {busy ? "…" : t("lists.hmTick")}
+          </Button>
+          {sel.kind === "task" && p.onDefer && (
+            <Button variant="secondary" icon="clock" block onClick={() => p.onDefer!(sel)} disabled={busy}>
+              {t("houseman.defer")}
+            </Button>
+          )}
+        </div>
       ) : sel.kind === "trace" ? (
         <Button variant="secondary" icon="refresh" block onClick={() => p.onToggle(sel)} disabled={busy}>
           {busy ? "…" : t("lists.hmUntick")}
@@ -91,7 +106,8 @@ export function HousemanHub(p: HousemanHubProps) {
           {sel.times.length > 0 && <DetailLine icon="clock">{t("lists.hmTimes", { list: sel.times.join(", ") })}</DetailLine>}
           {sel.requestedBy && <DetailLine icon="users">{t("houseman.requestedBy", { name: sel.requestedBy })}</DetailLine>}
           {sel.status === "DONE" && sel.doneAt && <DetailLine icon="check">{t("lists.hmDoneAt", { time: hhmm(sel.doneAt) })}</DetailLine>}
-          {sel.waitsForDeparture && sel.status === "OPEN" && <Banner tone="warning" icon="clock" title={t("lists.hmWaitsDeparture")} />}
+          {sel.waitsForDeparture && sel.status === "OPEN" && <Banner tone="warning" icon="clock" title={t("lists.hmWaitsDeparture")} detail={t("houseman.guestStillIn")} />}
+          {sinceText(sel) && <Banner tone="info" icon="clock" title={sinceText(sel)!} />}
           {p.actionError && (
             <div role="alert">
               <Banner tone="warning" icon="triangle-alert" title={p.actionError} />

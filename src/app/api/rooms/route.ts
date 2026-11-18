@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       assignedTo: { select: { id: true, name: true, dailyNumber: true } },
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: new Date() } } },
-      notes: { orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
+      notes: { where: { archivedAt: null }, orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
       defects: {
         include: { workOrder: true, reportedBy: { select: { name: true, role: true } } },
         orderBy: { createdAt: "desc" },
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 5,
       },
-      _count: { select: { notes: { where: { status: "OPEN" } } } },
+      _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
     },
   });
 

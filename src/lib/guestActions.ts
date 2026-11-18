@@ -20,7 +20,7 @@ import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { sanitizeGuestText } from "@/lib/guestSanitize";
 import { keyed } from "@/lib/i18n/notificationText";
 import { GREEN_KIND, greenRoomsOn } from "@/lib/guest/green";
-import { berlinDate } from "@/lib/dayplan/time";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 
 /**
@@ -35,7 +35,7 @@ import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 
 type GuestActionRoom = { id: string; number: string };
 
-export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes", "green"] as const;
+export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes", "green", "green-cancel"] as const;
 export type GuestAction = (typeof GUEST_ACTIONS)[number];
 
 export function isGuestAction(value: string): value is GuestAction {
@@ -58,7 +58,30 @@ export function runGuestAction(action: GuestAction, room: GuestActionRoom, req: 
       return handleNotes(room, req);
     case "green":
       return handleGreen(room);
+    case "green-cancel":
+      return handleGreenCancel(room);
   }
+}
+
+/** F7 (Aufgabe 7): Green Option am selben Tag zurücknehmen — der Wäschewechsel ist wieder fällig; Housekeeper und Supervisor erfahren es. */
+async function handleGreenCancel(room: GuestActionRoom): Promise<NextResponse> {
+  const today = berlinDate(new Date());
+  const from = berlinToUtc(today, "00:00");
+  const res = await prisma.guestRequest.updateMany({ where: { roomId: room.id, kind: GREEN_KIND, status: { not: "CANCELLED" }, createdAt: { gte: from } }, data: { status: "CANCELLED" } });
+  if (res.count === 0) return NextResponse.json({ ok: true, already: true }, { status: 200 });
+  const guestUserId = await getGuestSystemUserId();
+  const notification = await prisma.notification.create({
+    data: {
+      type: "GUEST_REQUEST", level: "info", targetRole: "supervisor", roomId: room.id,
+      message: `Zimmer ${room.number}: Gast nimmt die Green Option zurück — heute doch Wäschewechsel.`,
+      ...keyed("notify.guestGreenUndone", { n: room.number }),
+    },
+  });
+  await audit({ action: "GUEST_GREEN_OPTION_UNDONE", userId: guestUserId, roomId: room.id, meta: { date: today } });
+  broadcast("notification:new", { notification });
+  broadcast("guestrequest:update", { roomId: room.id });
+  await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "GUEST_WISH" });
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 /**

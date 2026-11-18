@@ -51,7 +51,7 @@ export async function getRoomDetail(idOrNumber: string, role: string, viewer?: {
   const [rows, traces, notes, defects, guestRequests, audits, attendants] = await Promise.all([
     date ? loadRoomRows(date, { roomIds: [room.id] }, null) : Promise.resolve([]),
     prisma.trace.findMany({ where: { roomId: room.id, date: today }, orderBy: { createdAt: "asc" } }),
-    prisma.roomNote.findMany({ where: { roomId: room.id }, orderBy: { createdAt: "desc" }, take: 20, include: { author: { select: { name: true, role: true } } } }),
+    prisma.roomNote.findMany({ where: { roomId: room.id, archivedAt: null }, orderBy: { createdAt: "desc" }, take: 20, include: { author: { select: { name: true, role: true } } } }),
     prisma.defect.findMany({ where: { roomId: room.id }, include: { workOrder: true, reportedBy: { select: { name: true, role: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.guestRequest.findMany({ where: { roomId: room.id, status: { in: ["RECEIVED", "IN_PROGRESS"] } }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.auditLog.findMany({ where: { roomId: room.id }, orderBy: { createdAt: "desc" }, take: 15 }),

@@ -29,6 +29,8 @@ export interface HousemanItem {
   eta: string | null;
   /** Aktive Pause (Grund-Code, seit, von wem) — pausiert zählt nicht als erledigt. */
   pause: PauseView | null;
+  /** F7 (H16): offen seit einem früheren Tag „YYYY-MM-DD“ (aufgeschoben / nicht erledigt) — steht oben mit Kennzeichen. */
+  since: string | null;
 }
 export interface HousemanList { date: string | null; floors: number[]; items: HousemanItem[] }
 
@@ -39,7 +41,16 @@ export interface HousemanList { date: string | null; floors: number[]; items: Ho
 export async function getHousemanList(floor?: number | null, forUserId?: string | null, onlyFloors?: number[] | null): Promise<HousemanList> {
   const date = await listDay();
   if (!date) return { date: null, floors: [], items: [] };
-  const traces = await prisma.trace.findMany({ where: { date, dept: "HOUSEMAN" }, include: { room: { select: { id: true, number: true, floor: true } } }, orderBy: [{ createdAt: "asc" }] });
+  const todays = await prisma.trace.findMany({ where: { date, dept: "HOUSEMAN" }, include: { room: { select: { id: true, number: true, floor: true } } }, orderBy: [{ createdAt: "asc" }] });
+  // F7 (H16, entschieden): offene Hausmann-Aufgaben der letzten 7 Tage wandern mit — außer der Gast ist abgereist
+  // (Aufenthalt ausgecheckt/storniert) oder dieselbe Aufgabe steht heute schon in der Liste (Nachimport).
+  const weekAgo = new Date(Date.parse(`${date}T12:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
+  const older = await prisma.trace.findMany({ where: { dept: "HOUSEMAN", status: "OPEN", date: { lt: date, gte: weekAgo } }, include: { room: { select: { id: true, number: true, floor: true } } }, orderBy: [{ date: "asc" }] });
+  const gone = new Set((await prisma.stay.findMany({ where: { id: { in: older.map((t) => t.stayId).filter((x): x is string => !!x) }, status: { in: ["CHECKED_OUT", "CANCELLED"] } }, select: { id: true } })).map((s) => s.id));
+  const sameKey = (t: { roomId: string; code: string; text: string }) => `${t.roomId}|${t.code}|${t.text}`;
+  const seen = new Set(todays.map(sameKey));
+  const carried = older.filter((t) => !(t.stayId && gone.has(t.stayId)) && !seen.has(sameKey(t)) && (seen.add(sameKey(t)), true));
+  const traces = [...carried, ...todays];
   const roomIds = traces.map((t) => t.roomId);
   const plans = await prisma.dayRoomPlan.findMany({ where: { date, roomId: { in: roomIds } } });
   const planBy = new Map(plans.map((p) => [p.roomId, p]));
@@ -66,6 +77,7 @@ export async function getHousemanList(floor?: number | null, forUserId?: string 
       waitsForDeparture: task?.type === "TWIN_REVERT" && kind !== "DEPARTURE" && kind !== "SAME_DAY_TURN",
       pause: t.status === "DONE" ? null : pauses.get(t.id) ?? null,
       eta: p?.eta ?? null,
+      since: t.date < date ? t.date : null,
     };
   }).sort(compareHousemanItems); // Betrieb L2 (Punkt 9): offen zuerst, nach Anreisezeit, sonst Zimmernummer
   // Ein Hausmann sieht seine eigenen und die nicht zugeteilten Aufgaben; Supervisor sehen alle.

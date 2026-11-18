@@ -22,13 +22,15 @@ const NOT_YOURS = () => NextResponse.json({ error: "Notizen nur für eigene Zimm
  * Duty Manager. Für alle anderen fehlen sie in der Liste.
  */
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const { id } = await params;
   if (await attendantBlocked(auth.session, id)) return NOT_YOURS();
+  // F7 (H13): archivierter Verlauf früherer Aufenthalte nur für Supervisor/DM und nur auf Nachfrage (?archived=1)
+  const archived = req.nextUrl.searchParams.get("archived") === "1" && ["supervisor", "duty_manager"].includes(auth.session.role);
   const notes = await prisma.roomNote.findMany({
-    where: { roomId: id },
+    where: { roomId: id, archivedAt: archived ? { not: null } : null },
     orderBy: { createdAt: "desc" },
     include: { author: { select: { name: true, role: true } } },
   });

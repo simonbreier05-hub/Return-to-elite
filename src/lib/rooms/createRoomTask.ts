@@ -22,11 +22,14 @@ export async function createRoomTask(input: {
   type: RoomTaskType;
   note: string | null;
   createdById: string;
+  /** F7: Einmal-Aufgabe für einen Tag (YYYY-MM-DD) bzw. Herkunft aus einer wiederkehrenden Aufgabe. */
+  dueDate?: string | null;
+  recurringTaskId?: string | null;
 }) {
   const { room, type, note, createdById } = input;
 
   const roomTask = await prisma.roomTask.create({
-    data: { roomId: room.id, type, note, createdById },
+    data: { roomId: room.id, type, note, createdById, dueDate: input.dueDate ?? null, recurringTaskId: input.recurringTaskId ?? null },
     include: INCLUDE,
   });
 

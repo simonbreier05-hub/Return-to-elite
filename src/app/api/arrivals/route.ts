@@ -17,7 +17,7 @@ export async function GET() {
       room: {
         select: {
           id: true, number: true, status: true, floor: true, type: true,
-          _count: { select: { notes: { where: { status: "OPEN" } } } },
+          _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
         },
       },
     },
