@@ -1534,6 +1534,7 @@
     "notify.etaPassed": "कमरा {{n}}: मेहमान के आने का समय निकल गया, पर कमरा “{{status}}” है, रिलीज़ नहीं।",
     "notify.etaSoon": "कमरा {{n}}: मेहमान {{min}} मिनट में आ रहे हैं, पर कमरा “{{status}}” है, रिलीज़ नहीं।",
     "notify.releaseBacklog": "{{n}} कमरे साफ़ हैं और जाँच के इंतज़ार में — रिलीज़ का ढेर।",
+    "notifyType.GUEST_STAY_CONFLICT": "दो ठहराव एक साथ",
     "notifyType.VIP_RELEASE_LATE": "VIP देर से जारी",
     "notifyType.BEHIND_PLAN": "योजना से पीछे",
     "notifyType.STAFF_SHORT": "स्टाफ़ कम",

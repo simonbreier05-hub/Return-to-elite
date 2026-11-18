@@ -1534,6 +1534,7 @@
     "notify.etaPassed": "Camera {{n}}: l'orario di arrivo dell'ospite è passato, ma la camera è “{{status}}”, non rilasciata.",
     "notify.etaSoon": "Camera {{n}}: l'ospite arriva tra {{min}} min, ma la camera è “{{status}}”, non rilasciata.",
     "notify.releaseBacklog": "{{n}} camere sono pulite e attendono il controllo — rilascio arretrato.",
+    "notifyType.GUEST_STAY_CONFLICT": "Due soggiorni in casa",
     "notifyType.VIP_RELEASE_LATE": "VIP rilasciata tardi",
     "notifyType.BEHIND_PLAN": "In ritardo",
     "notifyType.STAFF_SHORT": "Personale insufficiente",

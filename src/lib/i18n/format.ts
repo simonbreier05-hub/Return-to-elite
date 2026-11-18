@@ -23,7 +23,9 @@ export function formatDate(lang: string, d: Date | string | number, opts: Intl.D
 }
 
 export function formatDateTime(lang: string, d: Date | string | number, opts: Intl.DateTimeFormatOptions = {}): string {
-  return toDate(d).toLocaleString(intlLocale(lang), { dateStyle: "short", timeStyle: "short", hourCycle: "h23", timeZone: HOTEL_TZ, ...opts });
+  // Einzelne Felder (day, hour …) vertragen sich nicht mit dateStyle/timeStyle (RangeError) — dann nur die Felder (F5-Absturz)
+  const fields = ["weekday", "year", "month", "day", "hour", "minute", "second"].some((k) => k in opts);
+  return toDate(d).toLocaleString(intlLocale(lang), { ...(fields ? {} : { dateStyle: "short", timeStyle: "short" }), hourCycle: "h23", timeZone: HOTEL_TZ, ...opts });
 }
 
 export function formatNumber(lang: string, n: number, opts: Intl.NumberFormatOptions = {}): string {

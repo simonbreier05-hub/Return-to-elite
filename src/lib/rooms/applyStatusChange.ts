@@ -207,7 +207,7 @@ export async function applyStatusChange(
       where: { roomId: room.id, status: "EXPECTED", notifyOnRelease: true },
     });
     // F5 (H14): VIP-Zimmer erst nach der Ankunftszeit freigegeben → Duty Manager
-    for (const a of await prisma.arrival.findMany({ where: { roomId: room.id, status: "EXPECTED", vip: true }, select: { id: true, vip: true, eta: true } })) {
+    for (const a of await prisma.arrival.findMany({ where: { roomId: room.id, vip: true, ...arrivalTodayWhere(now) }, select: { id: true, vip: true, eta: true } })) {
       await alertVipLate({ id: room.id, number: room.number }, a, now).catch(() => 0);
     }
     for (const arrival of waiting) {

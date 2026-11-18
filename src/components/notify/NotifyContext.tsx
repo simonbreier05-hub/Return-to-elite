@@ -82,6 +82,8 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
   const [older, setOlder] = useState<NotificationRow[]>([]);
   const [nextBefore, setNextBefore] = useState<string | null>(null);
+  const olderRef = useRef<NotificationRow[]>([]);
+  olderRef.current = older;
   const [panelOpen, setPanelOpen] = useState(false);
   const [toasts, setToasts] = useState<NotifyToast[]>([]);
   const [resyncCount, setResyncCount] = useState(0);
@@ -105,8 +107,8 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
     } catch {
       return;
     }
-    setNextBefore(d.nextBefore ?? null);
-    setOlder([]);
+    // Live-Meldungen ersetzen nur die erste Seite — nachgeladene ältere Seiten bleiben stehen (Liste springt nicht zurück)
+    setNextBefore((cur) => (cur && olderRef.current.length ? cur : d.nextBefore ?? null));
     const list = Array.isArray(d.notifications) ? d.notifications : [];
     const who: NotifyMe = d.me?.userId ? { role: d.me.role, userId: d.me.userId } : meRef.current;
     setMe(who);
@@ -218,7 +220,9 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
   }, []);
 
   const ack = useCallback(async (id: string) => {
-    setNotifications((list) => list.map((n) => (n.id === id && isUnreadMine(n, meRef.current) ? { ...n, acknowledged: true } : n)));
+    const mark = (list: NotificationRow[]) => list.map((n) => (n.id === id && isUnreadMine(n, meRef.current) ? { ...n, acknowledged: true } : n));
+    setNotifications(mark);
+    setOlder(mark);
     try { await api("/api/notifications", { method: "PATCH", body: { id } }); } catch { /* beim nächsten Laden wieder offen */ }
   }, []);
 

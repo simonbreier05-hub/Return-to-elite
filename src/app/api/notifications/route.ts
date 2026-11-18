@@ -29,17 +29,22 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const q = req?.nextUrl?.searchParams; // ältere Aufrufer (Tests) ohne Request: erste Seite
   const limit = Math.min(200, Math.max(1, Number(q?.get("limit")) || PAGE));
-  const before = q?.get("before") ? new Date(q.get("before")!) : null;
+  // Cursor „Zeit|Id“ — gleiche Zeitstempel (Massen-Check-out) werden nicht übersprungen
+  const [beforeIso, beforeId] = (q?.get("before") ?? "").split("|");
+  const before = beforeIso ? new Date(beforeIso) : null;
+  const cursor = before && !Number.isNaN(before.getTime())
+    ? { OR: [{ createdAt: { lt: before } }, ...(beforeId ? [{ createdAt: before, id: { lt: beforeId } }] : [])] } : {};
   const urgent = q?.get("urgent") === "1";
   const rows = await prisma.notification.findMany({
-    where: { ...scopeFor(auth.session), ...(before && !Number.isNaN(before.getTime()) ? { createdAt: { lt: before } } : {}), ...(urgent ? { level: { in: ["warning", "critical"] } } : {}) },
-    orderBy: { createdAt: "desc" },
+    where: { AND: [scopeFor(auth.session), cursor, urgent ? { level: { in: ["warning", "critical"] } } : {}] },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
     take: limit + 1,
     include: { reads: { where: { userId: auth.session.userId }, select: { id: true } } },
   });
   const page = rows.slice(0, limit);
   const notifications = page.map(({ reads, ...n }) => ({ ...n, acknowledged: n.acknowledged || reads.length > 0 }));
-  const nextBefore = rows.length > limit ? page[page.length - 1].createdAt.toISOString() : null;
+  const last = page[page.length - 1];
+  const nextBefore = rows.length > limit ? `${last.createdAt.toISOString()}|${last.id}` : null;
   // `me`: damit der Client „an mich gerichtet“ (Pop-up, Ton, Zähler) ohne eigene Abfrage entscheiden kann.
   return NextResponse.json({ notifications, nextBefore, me: { role: auth.session.role, userId: auth.session.userId } });
 }

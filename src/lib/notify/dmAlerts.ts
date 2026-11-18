@@ -6,6 +6,7 @@ import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { parseAssignedFloors } from "@/lib/floors";
 import { getDayNumbers } from "@/lib/dayplan/dayNumbersData";
 import { roomBand } from "@/lib/planung/floorTeam";
+import { isDoneStatus, isToClean } from "@/lib/dayplan/dayNumbers";
 import type { TKey } from "@/lib/i18n/translations";
 
 /**
@@ -64,8 +65,12 @@ export async function alertBehindPlan(now = new Date()): Promise<number> {
   const start = berlinToUtc(date, `${String(s.workStartHour).padStart(2, "0")}:00`);
   const end = new Date(start.getTime() + s.shiftMinutes * 60_000);
   if (now < start || now >= end) return 0;
+  const hour = Math.floor(now.getTime() / 3_600_000);
+  const dedupeKey = `BEHIND_PLAN:${date}:${hour}`;
+  if (await prisma.notification.findFirst({ where: { dedupeKey }, select: { id: true } })) return 0; // vorne: Ticker läuft jede Minute
   const { rows } = await getDayNumbers(date);
-  const openIds = rows.filter((r) => r.kind && r.kind !== "OCCUPIED" && !["CLEAN", "INSPECTED", "OUT_OF_ORDER", "OUT_OF_SERVICE"].includes(r.status) && (r.kind !== "ARRIVAL")).map((r) => r.id);
+  // dieselbe Regel wie die Tageszahlen: zu reinigen (isToClean) und noch nicht fertig
+  const openIds = rows.filter((r) => isToClean(r.kind, r.status) && !isDoneStatus(r.status)).map((r) => r.id);
   if (!openIds.length) return 0;
   const rooms = await prisma.room.findMany({ where: { id: { in: openIds } }, select: { credit: true } });
   const needMin = rooms.reduce((a, r) => a + (r.credit ?? 1), 0) * s.minutesPerCredit;
@@ -74,10 +79,9 @@ export async function alertBehindPlan(now = new Date()): Promise<number> {
   const people = workers.filter((w) => w.assignedToId && !absent.has(w.assignedToId)).length;
   const capMin = people * Math.max(0, (end.getTime() - now.getTime()) / 60_000);
   if (needMin <= capMin) return 0;
-  const hour = Math.floor(now.getTime() / 3_600_000);
   const fmt = (m: number) => `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, "0")}`;
   return create({ type: "BEHIND_PLAN", targetRole: "duty_manager", message: `Fortschritt hinter Plan: ${openIds.length} Zimmer offen, Restarbeit ${fmt(needMin)} h, Restkapazität ${fmt(capMin)} h.`,
-    key: "notify.behindPlan", vars: { n: openIds.length, need: fmt(needMin), cap: fmt(capMin) }, dedupeKey: `BEHIND_PLAN:${date}:${hour}` });
+    key: "notify.behindPlan", vars: { n: openIds.length, need: fmt(needMin), cap: fmt(capMin) }, dedupeKey });
 }
 
 /** VIP-Anreise: Zimmer wird erst nach der geplanten Ankunftszeit freigegeben → DM (ohne Gastnamen). */

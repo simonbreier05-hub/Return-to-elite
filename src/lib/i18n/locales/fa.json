@@ -1534,6 +1534,7 @@
     "notify.etaPassed": "اتاق {{n}}: زمان رسیدن مهمان گذشته، اما اتاق «{{status}}» است، آزاد نشده.",
     "notify.etaSoon": "اتاق {{n}}: مهمان {{min}} دقیقه دیگر می‌رسد، اما اتاق «{{status}}» است، آزاد نشده.",
     "notify.releaseBacklog": "{{n}} اتاق تمیز است و منتظر بازرسی — انباشت در صف تأیید.",
+    "notifyType.GUEST_STAY_CONFLICT": "دو اقامت هم‌زمان",
     "notifyType.VIP_RELEASE_LATE": "VIP دیر آزاد شد",
     "notifyType.BEHIND_PLAN": "عقب از برنامه",
     "notifyType.STAFF_SHORT": "کمبود نیرو",
