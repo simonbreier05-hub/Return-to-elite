@@ -31,7 +31,8 @@ export interface RoomDetail {
   allowedStatuses: RoomStatus[];
   /** Bitte-nicht-stören (Sperre mit Grund DND) ist von diesem Status aus erlaubt. */
   canBlock: boolean;
-  attendants: { id: string; name: string; dailyNumber: number | null }[];
+  /** F4 (H3): `skill` = Stufe und Einschränkungen — nur für Supervisor/Duty Manager gefüllt, nie für andere Rollen. */
+  attendants: { id: string; name: string; dailyNumber: number | null; skill?: { level: number; restrictions: string[] } }[];
 }
 
 /**
@@ -54,7 +55,7 @@ export async function getRoomDetail(idOrNumber: string, role: string, viewer?: {
     prisma.defect.findMany({ where: { roomId: room.id }, include: { workOrder: true, reportedBy: { select: { name: true, role: true } } }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.guestRequest.findMany({ where: { roomId: room.id, status: { in: ["RECEIVED", "IN_PROGRESS"] } }, orderBy: { createdAt: "desc" }, take: 5 }),
     prisma.auditLog.findMany({ where: { roomId: room.id }, orderBy: { createdAt: "desc" }, take: 15 }),
-    prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, select: { id: true, name: true, dailyNumber: true }, orderBy: { name: "asc" } }),
+    prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, select: { id: true, name: true, dailyNumber: true, hkLevel: true, hkRestrictions: true }, orderBy: { name: "asc" } }),
   ]);
   const [pauses, canMessage] = await Promise.all([activePauses("ROOM", [room.id]), viewer ? sessionSeesMessages(viewer, room.id) : Promise.resolve(role === "duty_manager")]);
   const userIds = [...new Set(audits.map((a) => a.userId).filter((x): x is string => !!x))];
@@ -78,6 +79,7 @@ export async function getRoomDetail(idOrNumber: string, role: string, viewer?: {
     logbook: audits.map((a) => ({ id: a.id, action: a.action, at: a.createdAt.toISOString(), by: a.userId ? users.get(a.userId) ?? null : null, from: a.fromStatus, to: a.toStatus })),
     allowedStatuses: OFFERED.filter((s) => ROOM_STATUSES.includes(s) && checkTransition(role as never, room.status as RoomStatus, s).ok),
     canBlock: checkTransition(role as never, room.status as RoomStatus, "BLOCKED").ok,
-    attendants,
+    attendants: attendants.map(({ hkLevel, hkRestrictions, ...a }) => (role === "supervisor" || role === "duty_manager"
+      ? { ...a, skill: { level: hkLevel, restrictions: hkRestrictions ? hkRestrictions.split(",").filter(Boolean) : [] } } : a)),
   };
 }

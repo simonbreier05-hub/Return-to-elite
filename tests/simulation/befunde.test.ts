@@ -95,7 +95,7 @@ describe("H7 Check-out lässt sich zurücknehmen", () => {
 });
 
 describe("H11 Krankmeldung bleibt beim Team-Speichern erhalten", () => {
-  it.fails("saveTeam setzt eine heutige Krankmeldung nicht still zurück", () => {
+  it("saveTeam setzt eine heutige Krankmeldung nicht still zurück", () => {
     // Heute: Kraft ist in der Auswahl UND heute krank gemeldet → absentDate wird auf null gesetzt (teamData.ts).
     expect(src("src/lib/planung/teamData.ts")).not.toMatch(/if \(u\.absentDate === date\) await prisma\.user\.update\(\{ where: \{ id: u\.id \}, data: \{ absentDate: null \} \}\)/);
   });

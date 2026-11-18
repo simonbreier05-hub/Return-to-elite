@@ -49,6 +49,8 @@ model User {
   dailyTarget  Float? // überschreibt das Tagesziel des Typs (Credits)
   hkActive     Boolean  @default(true)
   absentDate   String? // "YYYY-MM-DD": an diesem Tag abwesend (ein Tap)
+  // F4 (additiv, H11): "YYYY-MM-DD" der Krankmeldung — Team-Speichern setzt sie nie zurück; nur DM/Supervisor nehmen sie aktiv zurück
+  sickDate     String?
   // Planung L1 (additiv): Einschränkungen je Person als feste Codes, komma-getrennt (NO_SUITE | NO_VIP | NO_ALLERGY), nie Freitext.
   // Beschäftigtendaten wie hkLevel: nur hinter requireRole(["supervisor"]), nie in Logs.
   hkRestrictions String   @default("")

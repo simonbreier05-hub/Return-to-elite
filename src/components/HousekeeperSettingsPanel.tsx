@@ -64,7 +64,8 @@ export default function HousekeeperSettingsPanel() {
                   </select>
                 </td>
                 <td className="pe-3">
-                  <input className={`${input} w-20`} defaultValue={h.homeFloors} placeholder={t("hk.homeHint")} title={t("hk.homeHint")} inputMode="numeric"
+                  {/* F4 (Frage 12): Präferenz-Etagen nur DM — Supervisor sieht sie nur */}
+                  <input className={`${input} w-20`} defaultValue={h.homeFloors} placeholder={t("hk.homeHint")} title={canEditLevel ? t("hk.homeHint") : t("hk.homeDmOnly")} inputMode="numeric" readOnly={!canEditLevel} disabled={!canEditLevel}
                     onBlur={(e) => { const f = e.target.value.split(",").map((x) => parseInt(x, 10)).filter((n) => n >= 1 && n <= 7).slice(0, 2); patchHk(h.id, { homeFloors: f }); }} />
                 </td>
                 <td className="pe-3">

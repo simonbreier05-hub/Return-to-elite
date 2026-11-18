@@ -776,6 +776,7 @@ const en = {
     noneEligible: "No suitable housekeeper for {{n}} room(s).",
   },
   hk: {
+    homeDmOnly: "Preferred floors are set by the Duty Manager",
     title: "Housekeepers (assignment proposal)",
     hint: "Type and level are employee data: only supervisors and the duty manager see them — never housekeepers, never in logs. Check with the hotel (works council) before real use.",
     colName: "Name",
@@ -1208,6 +1209,7 @@ const en = {
     toHub: "Open planning hub",
   },
   planungTool: {
+    typeEXTERN: "Temp (external)",
     ftW_LEVEL1_DEMANDING: "{{name}} (level 1) on floor {{floor}} with many demanding rooms — please check.",
     ftW_HK_TOO_MANY_FLOORS: "{{name}} is on more than 2 floors.",
     ftW_FLOOR_UNDERLOAD: "Floor {{floor}}: fewer rooms than the team can do.",
@@ -2018,6 +2020,13 @@ const en = {
     earlyHint: "Only for a stayover: becomes a departure today, then check out as usual.",
     earlyDone: "Room {{n}} leaves today — now a departure.",
   },
+  assign: {
+    level: "Level {{n}}",
+    restrNO_SUITE: "no suites",
+    restrNO_VIP: "no VIP",
+    restrNO_ALLERGY: "no allergy rooms",
+    warnConfirm: "Assign anyway?",
+  },
 } as const;
 
 const de = {
@@ -2785,6 +2794,7 @@ const de = {
     noneEligible: "Kein geeigneter Housekeeper für {{n}} Zimmer.",
   },
   hk: {
+    homeDmOnly: "Präferenz-Etagen pflegt nur der Duty Manager",
     title: "Housekeeper (Zuteilungsvorschlag)",
     hint: "Typ und Stufe sind Beschäftigtendaten: Nur Supervisor und Duty Manager sehen sie — nie Housekeeper, nie in Logs. Vor dem Echtbetrieb mit dem Hotel (Betriebsrat) abstimmen.",
     colName: "Name",
@@ -3217,6 +3227,7 @@ const de = {
     toHub: "Zum Planungshub",
   },
   planungTool: {
+    typeEXTERN: "Aushilfe (extern)",
     ftW_LEVEL1_DEMANDING: "{{name}} (Stufe 1) auf Etage {{floor}} mit vielen anspruchsvollen Zimmern — bitte prüfen.",
     ftW_HK_TOO_MANY_FLOORS: "{{name}} ist auf mehr als 2 Etagen eingeteilt.",
     ftW_FLOOR_UNDERLOAD: "Etage {{floor}}: weniger Zimmer, als die Eingeteilten schaffen.",
@@ -4026,6 +4037,13 @@ const de = {
     earlyDeparture: "Reist heute ab (vorzeitig)",
     earlyHint: "Nur für einen Bleiber: wird heute zur Abreise, danach wie gewohnt auschecken.",
     earlyDone: "Zimmer {{n}} reist heute ab — jetzt Abreise.",
+  },
+  assign: {
+    level: "Stufe {{n}}",
+    restrNO_SUITE: "keine Suiten",
+    restrNO_VIP: "keine VIP",
+    restrNO_ALLERGY: "keine Allergiker-Zimmer",
+    warnConfirm: "Trotzdem zuteilen?",
   },
 } satisfies Dict;
 

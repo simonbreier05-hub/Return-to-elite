@@ -35,7 +35,8 @@ const id: Record<string, string> = {};
 const roomId: Record<string, string> = {};
 let dm: Session;
 const as = (key: string | null, role = "supervisor") => { getSessionMock.mockReset(); getSessionMock.mockResolvedValue(key ? { userId: id[key], name: key, role } : null); };
-const bulk = (body: unknown) => bulkAssign(new NextRequest("http://x/api/rooms/bulk-assign", { method: "POST", body: JSON.stringify(body) }));
+// F4 (H3): Warnungen beim Zuteilen von Hand haben eigene Tests (tests/f4Planung.integration.test.ts) — hier gesehen/bestätigt
+const bulk = (body: unknown) => bulkAssign(new NextRequest("http://x/api/rooms/bulk-assign", { method: "POST", body: JSON.stringify({ confirmWarnings: true, ...(body as object) }) }));
 
 beforeAll(async () => {
   execSync("npx prisma db push --skip-generate --schema prisma/schema.prisma", { env: { ...process.env, DATABASE_URL: url }, stdio: "pipe" });

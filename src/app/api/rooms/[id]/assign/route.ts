@@ -5,11 +5,12 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
+import { assignWarnings } from "@/lib/assignment/assignWarnings";
 import { isStartedStatus } from "@/lib/rooms/moveRoomBetweenAttendants";
 import { notifyReassignment } from "@/lib/rooms/notifyReassignment";
 
 /** POST /api/rooms/[id]/assign — supervisor assigns/unassigns an attendant. */
-const Body = z.object({ attendantId: z.string().nullable(), confirmStarted: z.boolean().optional() });
+const Body = z.object({ attendantId: z.string().nullable(), confirmStarted: z.boolean().optional(), confirmWarnings: z.boolean().optional() });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireRole(["supervisor"]);
@@ -31,6 +32,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   // Keine Sperren — begonnene/fertige Zimmer nur nach ausdrücklicher Bestätigung (Status/Fortschritt bleiben erhalten).
   if (started && before!.assignedToId !== parsed.data.attendantId && !parsed.data.confirmStarted) {
     return NextResponse.json({ error: `Zimmer ${before!.number} ist schon begonnen oder fertig. Trotzdem ändern?`, code: "STARTED_ROOM" }, { status: 409 });
+  }
+  // F4 (H3): Warnungen (Stufe 1 + anspruchsvoll, Einschränkung, Suiten, Tagesziel, krank) vor dem Speichern als Rückfrage
+  if (parsed.data.attendantId && before?.assignedToId !== parsed.data.attendantId && !parsed.data.confirmWarnings) {
+    const warnings = await assignWarnings(parsed.data.attendantId, [id]);
+    if (warnings.length) return NextResponse.json({ error: warnings.map((w) => w.message).join(" "), code: "ASSIGN_WARNINGS", warnings }, { status: 409 });
   }
   const room = await prisma.room.update({
     where: { id },

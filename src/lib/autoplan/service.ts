@@ -277,7 +277,8 @@ export async function setAbsent(hkId: string, absent: boolean, userId: string, n
   const date = berlinDate(now);
   const u = await prisma.user.findUnique({ where: { id: hkId } });
   if (!u || u.role !== "room_attendant") throw new Error("Housekeeper nicht gefunden.");
-  await prisma.user.update({ where: { id: hkId }, data: { absentDate: absent ? date : null } });
+  // F4 (H11): die Krankmeldung bleibt als eigenes Datum stehen — saveTeam setzt sie nicht still zurück
+  await prisma.user.update({ where: { id: hkId }, data: { absentDate: absent ? date : null, sickDate: absent ? date : null } });
   await audit({ action: "HK_ABSENCE_SET", userId, meta: { hkId, absent, date } });
   if (!absent) {
     const open = await prisma.redistributionSuggestion.findMany({ where: { date, status: "OPEN", kind: "ABSENT" } });

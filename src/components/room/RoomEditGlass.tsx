@@ -130,7 +130,7 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
           <GlassSelect className="min-w-0 flex-1" label={t("roomEdit.assignment")} value={e.assignTo} onChange={(v) => { e.setAssignTo(v); e.setStartedPrompt(null); }}>
             <option value="">{t("roomEdit.assignPick")}</option>
             {room.attendants.map((a) => (
-              <option key={a.id} value={a.id}>{a.dailyNumber ? `#${a.dailyNumber} ` : ""}{a.name}</option>
+              <option key={a.id} value={a.id}>{a.dailyNumber ? `#${a.dailyNumber} ` : ""}{a.name}{a.skill ? ` · ${t("assign.level", { n: a.skill.level })}${a.skill.restrictions.length ? ` · ${a.skill.restrictions.map((r) => t(`assign.restr${r}` as TKey)).join(", ")}` : ""}` : ""}</option>
             ))}
           </GlassSelect>
           <TwoTapButton disabled={!e.assignTo} onConfirm={() => e.assign(e.assignTo)}>{t("roomEdit.save")}</TwoTapButton>

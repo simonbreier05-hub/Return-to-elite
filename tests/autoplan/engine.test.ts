@@ -38,19 +38,22 @@ describe("Zuteilungsvorschlag: harte Regeln", () => {
     for (const x of started.filter((y) => y.state === "STARTED")) expect(res.assignment[x.id]).toBe("c");
   });
 
-  it("nur Stufe 1 anwesend: trotzdem bleibt kein Zimmer offen — nur eine Warnung je anspruchsvollem Zimmer", () => {
+  it("F4 (P6 neu): nur Stufe 1 anwesend — anspruchsvolle Zimmer bleiben offen, ein gebündelter Hinweis ganz oben", () => {
     const res = proposePlan(makeInput(rooms, [hk("x", "VOLLZEIT", 1), hk("y", "VOLLZEIT", 1)]));
-    expect(res.unassigned).toEqual([]);
     const demanding = rooms.filter((x) => x.demanding.length).map((x) => x.id).sort();
-    const warned = res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING").flatMap((w) => w.roomIds ?? []).sort();
-    expect(warned).toEqual(demanding);
+    expect([...res.unassigned].sort()).toEqual(demanding);
+    expect(res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING")).toEqual([]);
+    const w = res.warnings.find((x) => x.code === "DEMANDING_UNASSIGNED")!;
+    expect([...(w.roomIds ?? [])].sort()).toEqual(demanding);
+    expect(res.warnings.findIndex((x) => x.code === "DEMANDING_UNASSIGNED")).toBeLessThanOrEqual(1);
   });
 
-  it("jede Kraft darf jedes Zimmer bekommen: bei beliebigem Team bleibt nach dem Vorschlag nichts offen", () => {
+  it("F4: einfache Zimmer bleiben nie offen; anspruchsvolle nur, wenn niemand ab Stufe 2 da ist", () => {
+    const demanding = new Set(rooms.filter((x) => x.demanding.length).map((x) => x.id));
     for (const team of [[hk("a", "VOLLZEIT", 1)], [hk("a", "AZUBI", 1), hk("b", "TEILZEIT", 1)], TEAM(), [hk("a", "VOLLZEIT", 3)]]) {
       const res = proposePlan(makeInput(rooms, team));
-      expect(res.unassigned, `Team ${team.length}`).toEqual([]);
-      expect(Object.values(res.assignment).every((v) => v !== null)).toBe(true);
+      expect(res.unassigned.every((id) => demanding.has(id)), `Team ${team.length}`).toBe(true);
+      if (team.some((h) => h.level >= 2)) expect(res.unassigned, `Team ${team.length}`).toEqual([]);
     }
   });
 });

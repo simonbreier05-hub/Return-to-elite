@@ -73,10 +73,15 @@ export function compile(input: PlanInput): Compiled {
 const popcount = (m: number) => { let n = 0; while (m) { n += m & 1; m >>= 1; } return n; };
 
 /**
- * Jedes Zimmer darf jeder anwesenden Kraft zugeteilt werden — Regeln sind nur Kosten, nie Sperren.
- * "Stufe 1 bekommt keine anspruchsvollen Zimmer" ist ein Strafterm (`levelMismatch`) und eine Warnung, kein Filter.
+ * F4 (H2, Entscheidung Frage 1 — P6 neu): harter Filter NUR für den Vorschlag. Stufe 1 bekommt nie ein anspruchsvolles Zimmer
+ * (Suite inkl. Junior Suite, VIP, Allergiker, viele Traces); eine Kraft mit „keine Suiten“ bekommt keine Suite (Annahme, gleiche
+ * Logik). Findet sich niemand Passendes, bleibt das Zimmer im Vorschlag offen (Hinweis oben). Von Hand zuteilen bleibt erlaubt
+ * (mit Warnung, `src/lib/assignment/assignWarnings.ts`); fest zugeteilte Zimmer (`fixedTo`) prüft der Filter nicht.
  */
-export function eligible(_c: Compiled, _roomI: number, _hkI: number): boolean {
+export function eligible(c: Compiled, roomI: number, hkI: number): boolean {
+  const h = c.input.housekeepers[hkI];
+  if (h.level < 2 && c.rooms[roomI].demanding.length > 0) return false;
+  if (c.suite[roomI] && (h.restrictions ?? []).includes("NO_SUITE")) return false;
   return true;
 }
 
@@ -142,7 +147,8 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
   parts.stayContinuity = stayMis * (w.stayContinuity ?? 0);
   // Planung L1 (Regel 4): Suiten über dem Maximum je Kraft — weich
   const maxSuites = c.input.maxSuites;
-  if (maxSuites !== undefined) for (let h = 0; h < H; h++) if (suites[h] > maxSuites) parts.suiteCap += (suites[h] - maxSuites) * (w.suiteCap ?? 0);
+  // F4 (P4): quadratisch — bei Engpass lieber 3+3 als 4+2, damit die höchste Suitenzahl je Kraft so klein wie möglich bleibt
+  if (maxSuites !== undefined) for (let h = 0; h < H; h++) if (suites[h] > maxSuites) parts.suiteCap += (suites[h] - maxSuites) ** 2 * (w.suiteCap ?? 0);
 
   if (!opts.rulesOnly) {
     for (let h = 0; h < H; h++) {

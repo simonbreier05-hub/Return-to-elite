@@ -81,7 +81,7 @@ export async function getTeamState(date: string): Promise<TeamState> {
 /** „Heute anwesend" speichern: im Roster (Abwesenheitsdatum der Housekeeper) und als Auswahl für den nächsten Tag. */
 export async function saveTeam(date: string, sel: TeamSelection, userId: string) {
   const [hks, sups, hms] = await Promise.all([
-    prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, select: { id: true, absentDate: true } }),
+    prisma.user.findMany({ where: { role: "room_attendant", hkActive: true }, select: { id: true, absentDate: true, sickDate: true } }),
     prisma.user.findMany({ where: { role: "supervisor" }, select: { id: true } }),
     prisma.user.findMany({ where: { role: "houseman" }, select: { id: true } }),
   ]);
@@ -91,7 +91,8 @@ export async function saveTeam(date: string, sel: TeamSelection, userId: string)
   const chosen = new Set(sel.hk);
   for (const u of hks) {
     if (chosen.has(u.id)) {
-      if (u.absentDate === date) await prisma.user.update({ where: { id: u.id }, data: { absentDate: null } });
+      // F4 (H11): heute krank gemeldet → bleibt krank (nur DM/Supervisor nehmen die Krankmeldung aktiv zurück, setAbsent)
+      if (u.absentDate === date && u.sickDate !== date) await prisma.user.update({ where: { id: u.id }, data: { absentDate: null } });
     } else if (u.absentDate !== date && (!u.absentDate || u.absentDate < date)) {
       await prisma.user.update({ where: { id: u.id }, data: { absentDate: date } });
     }

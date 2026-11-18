@@ -55,7 +55,17 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
   const assign = (attendantId: string | null, confirmStarted = false) =>
     run(async () => {
       try { await api(`/api/rooms/${room.id}/assign`, { body: { attendantId, confirmStarted } }); setStartedPrompt(null); }
-      catch (e) { if (e instanceof ApiError && e.code === "STARTED_ROOM") { setStartedPrompt(attendantId ?? ""); return; } throw e; }
+      catch (e) {
+        if (e instanceof ApiError && e.code === "STARTED_ROOM") { setStartedPrompt(attendantId ?? ""); return false; }
+        // F4 (H3): Warnungen beim Zuteilen von Hand — Rückfrage, dann trotzdem
+        if (e instanceof ApiError && e.code === "ASSIGN_WARNINGS") {
+          if (!window.confirm(`${e.message}
+
+${t("assign.warnConfirm")}`)) return false;
+          await api(`/api/rooms/${room.id}/assign`, { body: { attendantId, confirmStarted, confirmWarnings: true } }); setStartedPrompt(null); return;
+        }
+        throw e;
+      }
     });
   const traceDone = (id: string, done: boolean) => run(() => api(`/api/rooms/${room.id}/traces/${id}`, { method: "PATCH", body: { status: done ? "DONE" : "OPEN" } }));
   const addTrace = () => run(async () => { await api(`/api/rooms/${room.id}/traces`, { body: { text: newText, dept: newDept } }); setNewText(""); });

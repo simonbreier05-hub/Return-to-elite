@@ -67,12 +67,13 @@ beforeAll(async () => {
 }, 90_000);
 afterAll(async () => { await prisma.$disconnect(); rmSync(dir, { recursive: true, force: true }); });
 
-describe("Auto-Planung lässt nichts offen", () => {
-  it("auch wenn nur Stufe 1 und 2 anwesend sind und anspruchsvolle Zimmer (VIP, Suite) da sind", async () => {
+describe("Auto-Planung: einfache Zimmer nie offen, anspruchsvolle nur ohne passende Kraft (F4, P6 neu)", () => {
+  it("nur Stufe 1 anwesend: anspruchsvolle Zimmer bleiben offen mit Hinweis; mit Stufe 2 ist alles verteilt", async () => {
     const r = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]); // nur Stufe 1
-    expect(r.payload.input.rooms.some((x) => x.demanding.length)).toBe(true);
-    expect(r.payload.result.unassigned).toEqual([]);
-    expect(r.payload.result.warnings.map((w) => w.code)).toContain("LEVEL1_DEMANDING"); // nur eine Warnung, keine Sperre
+    const demanding = r.payload.input.rooms.filter((x) => x.demanding.length).map((x) => x.id).sort();
+    expect(demanding.length).toBeGreaterThan(0);
+    expect([...r.payload.result.unassigned].sort()).toEqual(demanding);
+    expect(r.payload.result.warnings.map((w) => w.code)).toContain("DEMANDING_UNASSIGNED");
     const all = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk2, ids.hk3]);
     proposalId = all.proposalId; assignment = { ...all.payload.result.assignment };
     expect(all.payload.result.unassigned).toEqual([]);
@@ -189,10 +190,13 @@ describe("Ursache „offen trotz Credit-Ziel“: Zimmer einer nicht eingeplanten
     for (const n of ["101", "102", "103", "105", "106", "107"]) await prisma.room.update({ where: { id: room[n] }, data: { assignedToId: ids.hk2, assignedOn: DATE, status: "DIRTY" } });
     await prisma.room.update({ where: { id: room["104"] }, data: { assignedToId: ids.hk2, assignedOn: DATE, status: "IN_PROGRESS" } });
     const r = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]);
-    expect(r.payload.result.unassigned).toEqual([]);
-    expect(buildResult(r.payload.input, r.payload.result.assignment).unassigned).toEqual([]); // so rechnet die Oberfläche („X offen“)
+    // F4: ohne Stufe 2/3 bleiben nur die anspruchsvollen Zimmer offen (P6 neu) — einfache werden neu verteilt
+    const demandingIds = new Set(r.payload.input.rooms.filter((x) => x.demanding.length).map((x) => x.id));
+    expect(r.payload.result.unassigned.every((id) => demandingIds.has(id))).toBe(true);
+    expect(buildResult(r.payload.input, r.payload.result.assignment).unassigned).toEqual(r.payload.result.unassigned); // so rechnet die Oberfläche („X offen“)
     expect(r.payload.input.rooms.map((x) => x.id)).not.toContain(room["104"]); // begonnen: bleibt bei hk2
     for (const n of ["101", "102", "103", "105", "106", "107"]) {
+      if (demandingIds.has(room[n])) continue; // F4: anspruchsvoll ohne passende Kraft → offen
       const to = r.payload.result.assignment[room[n]];
       expect([ids.hk1, ids.hk3]).toContain(to);
     }
@@ -200,8 +204,11 @@ describe("Ursache „offen trotz Credit-Ziel“: Zimmer einer nicht eingeplanten
   it("„Nicht einplanen“ ist umkehrbar: mit der Kraft sind alle Zimmer zugeteilt, ohne sie auch, danach wieder mit ihr", async () => {
     for (const team of [[ids.hk1, ids.hk2, ids.hk3], [ids.hk1, ids.hk3], [ids.hk1, ids.hk2, ids.hk3]]) {
       const r = await proposeForDate(DATE, ids.sup, team);
-      expect(r.payload.result.unassigned).toEqual([]);
-      expect(new Set(Object.values(r.payload.result.assignment))).toEqual(new Set(team.filter((id) => r.payload.result.metrics.find((m) => m.hkId === id)!.rooms > 0)));
+      // F4: ohne die Stufe-2-Kraft bleiben nur anspruchsvolle Zimmer offen, mit ihr nichts
+      const demandingIds = new Set(r.payload.input.rooms.filter((x) => x.demanding.length).map((x) => x.id));
+      if (team.includes(ids.hk2)) expect(r.payload.result.unassigned).toEqual([]);
+      else expect(r.payload.result.unassigned.every((id) => demandingIds.has(id))).toBe(true);
+      expect(new Set(Object.values(r.payload.result.assignment).filter(Boolean))).toEqual(new Set(team.filter((id) => r.payload.result.metrics.find((m) => m.hkId === id)!.rooms > 0)));
     }
   });
 });
