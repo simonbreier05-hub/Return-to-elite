@@ -1468,6 +1468,7 @@
     "assign.restrNO_SUITE": "không suite",
     "assign.level": "Cấp {{n}}",
     "assign.warnConfirm": "Vẫn phân công?",
+    "notify.changeRUSH": "Ngay — làm phòng này trước",
     "notify.vipLate": "Phòng VIP {{n}} được duyệt {{min}} phút sau giờ đến.",
     "notify.behindPlan": "Chậm so với kế hoạch: {{n}} phòng còn mở, việc còn lại {{need}} giờ, năng lực còn lại {{cap}} giờ.",
     "notify.staffShort": "Thiếu nhân sự: cần {{needed}}, có {{present}}.",

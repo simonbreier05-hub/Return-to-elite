@@ -1468,6 +1468,7 @@
     "assign.restrNO_SUITE": "सुइट नहीं",
     "assign.level": "स्तर {{n}}",
     "assign.warnConfirm": "फिर भी असाइन करें?",
+    "notify.changeRUSH": "तुरंत — पहले यह कमरा",
     "notify.vipLate": "VIP कमरा {{n}} आगमन समय के {{min}} मिनट बाद जारी हुआ।",
     "notify.behindPlan": "योजना से पीछे: {{n}} कमरे खुले, बचा काम {{need}} घं., बची क्षमता {{cap}} घं.।",
     "notify.staffShort": "स्टाफ़ कम: {{needed}} चाहिए, {{present}} मौजूद।",

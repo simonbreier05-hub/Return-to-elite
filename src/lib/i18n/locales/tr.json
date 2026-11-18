@@ -1468,6 +1468,7 @@
     "assign.restrNO_SUITE": "süit yok",
     "assign.level": "Seviye {{n}}",
     "assign.warnConfirm": "Yine de atansın mı?",
+    "notify.changeRUSH": "Hemen — önce bu oda",
     "notify.vipLate": "VIP oda {{n}} varış saatinden {{min}} dk sonra açıldı.",
     "notify.behindPlan": "Plan gerisinde: {{n}} oda açık, kalan iş {{need}} sa, kalan kapasite {{cap}} sa.",
     "notify.staffShort": "Personel yetersiz: {{needed}} gerekli, {{present}} mevcut.",

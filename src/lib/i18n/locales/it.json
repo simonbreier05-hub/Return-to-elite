@@ -1468,6 +1468,7 @@
     "assign.restrNO_SUITE": "niente suite",
     "assign.level": "Livello {{n}}",
     "assign.warnConfirm": "Assegnare comunque?",
+    "notify.changeRUSH": "Subito — questa camera per prima",
     "notify.vipLate": "Camera VIP {{n}} rilasciata {{min}} min dopo l'orario di arrivo.",
     "notify.behindPlan": "In ritardo sul piano: {{n}} camere aperte, lavoro residuo {{need}} h, capacità residua {{cap}} h.",
     "notify.staffShort": "Personale insufficiente: servono {{needed}}, presenti {{present}}.",

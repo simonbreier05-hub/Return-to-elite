@@ -4,7 +4,7 @@ import { berlinDate } from "@/lib/dayplan/time";
 import { keyed } from "@/lib/i18n/notificationText";
 
 /** Was sich an einem Zimmer geändert hat (Zuteilung/Verschiebung melden `notifyReassignment`/`notifyBulkReassignment`). */
-export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY" | "REWORK" | "DEFECT_FIXED" | "EXCURSION" | "EXCURSION_SOON" | "CHECKED_OUT" | "LATE_CHECKOUT" | "DND_REMINDER" | "CHECKOUT_REVERTED";
+export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY" | "REWORK" | "DEFECT_FIXED" | "EXCURSION" | "EXCURSION_SOON" | "CHECKED_OUT" | "LATE_CHECKOUT" | "DND_REMINDER" | "CHECKOUT_REVERTED" | "RUSH";
 
 const TEXT: Record<RoomChangeKind, string> = {
   NOTE: "neue Notiz",
@@ -23,12 +23,14 @@ const TEXT: Record<RoomChangeKind, string> = {
   DND_REMINDER: "Bitte nicht stören — Karte ans Zimmer hängen: nicht gereinigt",
   // F3 Teil 2 (H7)
   CHECKOUT_REVERTED: "Check-out zurückgenommen — Gast ist noch im Zimmer, bitte nicht reinigen",
+  // F6 (M23): Klartext statt „Priorität geändert“
+  RUSH: "Sofort — dieses Zimmer zuerst",
 };
 
 /** Eigene Meldungsart (Glocke/Pop-up-Kopf) für die neuen Anlässe aus Paket O1; alles andere bleibt „Zimmer geändert“. */
 const TYPE: Partial<Record<RoomChangeKind, string>> = { REWORK: "ROOM_REWORK", DEFECT_FIXED: "DEFECT_FIXED", EXCURSION: "EXCURSION", EXCURSION_SOON: "EXCURSION", CHECKED_OUT: "GUEST_CHECKED_OUT", DND_REMINDER: "DND_REMINDER", CHECKOUT_REVERTED: "GUEST_CHECKOUT_REVERTED" };
 /** Dringend (Pop-up bleibt bis Antippen, doppelter Ton). */
-const URGENT: ReadonlySet<RoomChangeKind> = new Set(["DND", "PRIORITY", "REWORK", "CHECKED_OUT", "DND_REMINDER", "CHECKOUT_REVERTED"]); // Betrieb L2: Pop-up + Ton, beeinflusst den Arbeitsfluss
+const URGENT: ReadonlySet<RoomChangeKind> = new Set(["DND", "PRIORITY", "REWORK", "CHECKED_OUT", "DND_REMINDER", "CHECKOUT_REVERTED", "RUSH"]); // Betrieb L2: Pop-up + Ton, beeinflusst den Arbeitsfluss
 
 /** Meldetext: nur Zimmer, Etage und Art der Änderung — nie Notiz-/Trace-Text, nie Gastdaten. */
 export function roomChangeMessage(room: { number: string; floor: number }, kind: RoomChangeKind): string {

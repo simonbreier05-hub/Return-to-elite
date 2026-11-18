@@ -1468,6 +1468,7 @@
     "assign.restrNO_SUITE": "بدون سوئیت",
     "assign.level": "سطح {{n}}",
     "assign.warnConfirm": "با این حال واگذار شود؟",
+    "notify.changeRUSH": "فوری — اول این اتاق",
     "notify.vipLate": "اتاق VIP {{n}}، {{min}} دقیقه پس از زمان رسیدن آزاد شد.",
     "notify.behindPlan": "عقب‌تر از برنامه: {{n}} اتاق باز، کار باقی‌مانده {{need}} ساعت، ظرفیت باقی‌مانده {{cap}} ساعت.",
     "notify.staffShort": "نیرو کافی نیست: {{needed}} لازم، {{present}} حاضر.",

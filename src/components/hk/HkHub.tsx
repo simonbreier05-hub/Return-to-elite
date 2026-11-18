@@ -79,7 +79,8 @@ export function HkHub(p: HkHubProps) {
   const visible = p.items.filter((i) => matchesFilter(i.view, activeFilter));
   const early = earlyArrivals(views);
   const nextRooms = p.items.filter((i) => i.group === "NEXT").slice(0, 3);
-  const allDone = p.items.length > 0 && p.items.every((i) => i.group === "DONE" || i.group === "OTHER");
+  // F6 (M12): „Alles erledigt“ nur, wenn kein eigenes Zimmer offen, blockiert (DND) oder abgelehnt ist — gesperrte zählen nicht
+  const allDone = p.items.length > 0 && p.items.every((i) => i.group === "DONE" || i.view.status === "OUT_OF_ORDER" || i.view.status === "OUT_OF_SERVICE");
 
   const kpiTiles: { key: string; label: string; value: number; icon: "bed-single" | "check" | "refresh" | "circle"; warm: boolean }[] = [
     { key: "total", label: bp === "wide" ? t("hkHub.kpiRooms") : t("nav.rooms"), value: p.kpis.total, icon: "bed-single", warm: false },

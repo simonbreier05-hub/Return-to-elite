@@ -1658,6 +1658,7 @@ const en = {
     tileEMPTY: "empty",
   },
   notify: {
+    changeRUSH: "Urgent — do this room first",
     staffSick: "{{name}} reported sick, {{n}} room(s) open.",
     staffShort: "Not enough staff: {{needed}} needed, {{present}} present.",
     behindPlan: "Behind plan: {{n}} rooms open, remaining work {{need}} h, remaining capacity {{cap}} h.",
@@ -3704,6 +3705,7 @@ const de = {
     tileEMPTY: "leer",
   },
   notify: {
+    changeRUSH: "Sofort — dieses Zimmer zuerst",
     staffSick: "{{name}} krank gemeldet, {{n}} Zimmer offen.",
     staffShort: "Personal reicht nicht: benötigt {{needed}} Kräfte, da sind {{present}}.",
     behindPlan: "Fortschritt hinter Plan: {{n}} Zimmer offen, Restarbeit {{need}} h, Restkapazität {{cap}} h.",

@@ -54,7 +54,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   // VIP/„wird jetzt gebraucht“/ETA ändern die Priorität des Zimmers — das zuständige Zimmermädchen erfährt es live.
   const prioChanged = (["vip", "neededNow"] as const).some((k) => parsed.data[k] !== undefined && parsed.data[k] !== existing[k])
     || (parsed.data.eta !== undefined && (parsed.data.eta?.getTime() ?? null) !== (existing.eta?.getTime() ?? null));
-  if (prioChanged) await notifyHousekeeperOfRoomChange({ roomId: arrival.roomId, kind: "PRIORITY", actorId: auth.session.userId });
+  if (prioChanged) await notifyHousekeeperOfRoomChange({ roomId: arrival.roomId, kind: parsed.data.neededNow === true && !existing.neededNow ? "RUSH" : "PRIORITY", actorId: auth.session.userId });
 
   // „Sofort gebraucht“ oder VIP-Frühanreise neu gesetzt → auch der Supervisor der Etage (Zimmer muss zuerst freigegeben werden).
   // Ohne Gastnamen: nur Zimmer, Etage und Anlass.
