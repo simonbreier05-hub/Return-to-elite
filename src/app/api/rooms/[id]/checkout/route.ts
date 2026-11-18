@@ -34,7 +34,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   // F7 (H13): Verlauf des Aufenthalts archivieren — nächster Gast und die Listen starten leer
   // F8: Vorschlag fürs Opera-Profil — vor dem Archivieren lesen, einmal je Aufenthalt (Rücknahme/Wiederholung legt keinen zweiten an)
   await buildProfileSuggestion(plan.stayId).catch(() => null);
-  await archiveStayHistory(id, { stayId: plan.stayId });
+  // Turn: der neue Gast reist heute an — was heute schon für ihn notiert wurde, bleibt stehen
+  await archiveStayHistory(id, { stayId: plan.stayId, ...(plan.arrivingStayId ? { before: berlinToUtc(date, "00:00") } : {}) });
   const room = await prisma.room.update({ where: { id }, data: { occupancy: "VACANT" } });
   await audit({ action: "GUEST_CHECKED_OUT", userId: auth.session.userId, roomId: id, meta: { date } });
   broadcast("room:update", { room });

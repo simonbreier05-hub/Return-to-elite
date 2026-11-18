@@ -187,3 +187,43 @@ describe("Concierge (M24)", () => {
     expect(await prisma.auditLog.count({ where: { action: { in: ["EXCURSION_UPDATED", "EXCURSION_DELETED"] } } })).toBe(2);
   });
 });
+
+describe("Nachbesserung nach Review", () => {
+  it("Technik-Trace: nach der Nachtlöschung (leerer Text) kein neuer leerer Auftrag; Opera-Text wird nachts gelöscht", async () => {
+    const { purgeOperaOrderNotes, OPERA_NOTE_PURGED } = await import("@/lib/engineering/operaTraces");
+    await prisma.trace.updateMany({ where: { dept: "ENGINEERING" }, data: { text: "" } });
+    expect(await ensureEngineeringOrdersFromTraces(TODAY)).toBe(0);
+    expect(await purgeOperaOrderNotes()).toBe(1);
+    expect((await prisma.defect.findFirstOrThrow({ where: { roomId: ids.r1 } })).note).toBe(OPERA_NOTE_PURGED);
+    const reporter = await prisma.defect.findFirstOrThrow({ where: { roomId: ids.r1 }, include: { reportedBy: true } });
+    expect(reporter.reportedBy.name).toBe("Opera-Import");
+  });
+
+  it("Hausmann-Übertrag: nach der Nachtlöschung (leerer Text) sichtbar mit Code statt leer, kein Doppel mit heute", async () => {
+    await prisma.trace.updateMany({ where: { dept: "HOUSEMAN", date: YDAY }, data: { text: "" } });
+    await prisma.trace.create({ data: { roomId: ids.r3, code: "BB", date: TODAY, text: "Babybett", dept: "HOUSEMAN", dedupeKey: "d", source: "TRACES" } });
+    const list = await getHousemanList(null, null, null);
+    expect(list.items.filter((i) => i.roomId === ids.r3)).toHaveLength(1);
+    expect(list.items.every((i) => i.text.trim().length > 0)).toBe(true);
+  });
+
+  it("Turn: Notiz für den anreisenden Gast von heute bleibt beim Check-out stehen", async () => {
+    const room = await prisma.room.create({ data: { number: "505", floor: 5, section: "5A", type: "STANDARD", status: "DIRTY" } });
+    const old = await prisma.stay.create({ data: { roomId: room.id, guestName: "A", checkIn: new Date(Date.now() - 3 * 86_400_000), checkOut: new Date(), status: "IN_HOUSE", stayToken: "f7-turn-a-000000000000000000000000" } });
+    const neu = await prisma.stay.create({ data: { roomId: room.id, guestName: "B", checkIn: new Date(), checkOut: new Date(Date.now() + 2 * 86_400_000), status: "EXPECTED", stayToken: "f7-turn-b-000000000000000000000000" } });
+    await prisma.dayRoomPlan.create({ data: { date: TODAY, roomId: room.id, cleaningType: "SAME_DAY_TURN", stayId: old.id, arrivingStayId: neu.id } });
+    await prisma.roomNote.create({ data: { roomId: room.id, authorId: ids.fo, body: "Vorgast: alt", createdAt: yesterday } });
+    await prisma.roomNote.create({ data: { roomId: room.id, authorId: ids.fo, body: "Neuer Gast: VIP-Blumen" } });
+    as("fo", "front_office");
+    expect((await checkoutPost(new NextRequest("http://x", { method: "POST" }), p(room.id))).status).toBe(200);
+    const [row] = await loadRoomRows(TODAY, { roomIds: [room.id] }, null);
+    expect(row.hints.map((h) => h.body)).toEqual(["Neuer Gast: VIP-Blumen"]);
+  });
+
+  it("Grund beim Aufschieben wird nachts gelöscht", async () => {
+    const { purgeGuestDataNow } = await import("@/lib/guestDataPurge");
+    await purgeGuestDataNow();
+    expect(await prisma.roomTask.count({ where: { deferReason: { not: null } } })).toBe(0);
+    expect(JSON.stringify(await prisma.auditLog.findMany({ where: { action: "ROOM_TASK_DEFERRED" } }))).not.toMatch(/Teil fehlt/);
+  });
+});

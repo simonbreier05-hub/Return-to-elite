@@ -1,3 +1,4 @@
+import { purgeOperaOrderNotes } from "@/lib/engineering/operaTraces";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { getSettings } from "@/lib/settings";
@@ -93,6 +94,9 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },
   })).count;
   counts.traceTexts = await purgeTraceTexts();
+  // F7-Review: Opera-Text in Technikaufträgen und Freitext-Grund beim Aufschieben (Hausmann) nachts löschen
+  counts.operaOrderNotes = await purgeOperaOrderNotes();
+  counts.deferReasons = (await prisma.roomTask.updateMany({ where: { deferReason: { not: null } }, data: { deferReason: null } })).count;
   counts.importRows = (await prisma.importRow.deleteMany({})).count;
   counts.guestNotes = guestSystemUserId ? (await prisma.roomNote.deleteMany({ where: { authorId: guestSystemUserId } })).count : 0;
   counts.auditEntries = await scrubAuditMeta();

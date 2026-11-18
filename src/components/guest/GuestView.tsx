@@ -240,7 +240,7 @@ function GuestScreen({
         />
       )}
       {modal === "green" && (
-        <GreenModal actionBase={actionBase} offline={offline} already={greenToday} onClose={() => setModal(null)} onSubmit={() => announce(t("toast.green"))} />
+        <GreenModal actionBase={actionBase} offline={offline} already={greenToday} onClose={() => setModal(null)} onSubmit={() => announce(t(greenToday ? "toast.greenUndone" : "toast.green"))} />
       )}
       {modal === "requests" && <RequestsModal items={items} onClose={() => setModal(null)} />}
     </div>

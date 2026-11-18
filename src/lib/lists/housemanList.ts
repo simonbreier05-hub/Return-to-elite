@@ -46,8 +46,17 @@ export async function getHousemanList(floor?: number | null, forUserId?: string 
   // (Aufenthalt ausgecheckt/storniert) oder dieselbe Aufgabe steht heute schon in der Liste (Nachimport).
   const weekAgo = new Date(Date.parse(`${date}T12:00:00Z`) - 7 * 86_400_000).toISOString().slice(0, 10);
   const older = await prisma.trace.findMany({ where: { dept: "HOUSEMAN", status: "OPEN", date: { lt: date, gte: weekAgo } }, include: { room: { select: { id: true, number: true, floor: true } } }, orderBy: [{ date: "asc" }] });
-  const gone = new Set((await prisma.stay.findMany({ where: { id: { in: older.map((t) => t.stayId).filter((x): x is string => !!x) }, status: { in: ["CHECKED_OUT", "CANCELLED"] } }, select: { id: true } })).map((s) => s.id));
-  const sameKey = (t: { roomId: string; code: string; text: string }) => `${t.roomId}|${t.code}|${t.text}`;
+  // Abgereist: Aufenthalt ausgecheckt/storniert/schon gelöscht, oder der heutige Tagesplan des Zimmers kennt ihn nicht mehr
+  const olderStayIds = older.map((t) => t.stayId).filter((x): x is string => !!x);
+  const live = new Set((await prisma.stay.findMany({ where: { id: { in: olderStayIds }, status: { notIn: ["CHECKED_OUT", "CANCELLED"] } }, select: { id: true } })).map((s) => s.id));
+  const todayStays = new Map<string, Set<string>>();
+  for (const pl of await prisma.dayRoomPlan.findMany({ where: { date, roomId: { in: older.map((t) => t.roomId) } }, select: { roomId: true, stayId: true, arrivingStayId: true } })) {
+    todayStays.set(pl.roomId, new Set([pl.stayId, pl.arrivingStayId].filter((x): x is string => !!x)));
+  }
+  const gone = new Set(olderStayIds.filter((id) => !live.has(id)));
+  for (const t of older) if (t.stayId && todayStays.has(t.roomId) && todayStays.get(t.roomId)!.size > 0 && !todayStays.get(t.roomId)!.has(t.stayId)) gone.add(t.stayId);
+  // Gleiche Aufgabe = Zimmer + Opera-Code (der Text ist nach der Nachtlöschung leer)
+  const sameKey = (t: { roomId: string; code: string }) => `${t.roomId}|${t.code}`;
   const seen = new Set(todays.map(sameKey));
   const carried = older.filter((t) => !(t.stayId && gone.has(t.stayId)) && !seen.has(sameKey(t)) && (seen.add(sameKey(t)), true));
   const traces = [...carried, ...todays];
@@ -71,7 +80,8 @@ export async function getHousemanList(floor?: number | null, forUserId?: string 
     const stay = p ? stays.get(p.arrivingStayId ?? p.stayId ?? "") : undefined;
     const task = classifyTraceText(t.text);
     return {
-      id: t.id, roomId: t.room.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text, times: timesInText(t.text),
+      // nach der Nachtlöschung ist der Opera-Text leer — dann Code und Hinweis statt einer leeren Zeile
+      id: t.id, roomId: t.room.id, roomNumber: t.room.number, floor: t.room.floor, text: t.text || `Opera ${t.code} (Text nachts gelöscht)`, times: timesInText(t.text),
       status: t.status === "DONE" ? "DONE" : "OPEN", doneAt: t.doneAt?.toISOString() ?? null, roomTaskId: t.roomTaskId, assignedToId: t.assignedToId, assignedToName: t.assignedToId ? people.get(t.assignedToId) ?? null : null, doneByName: doneBy.get(t.id) ?? null,
       guest: stay ? shortGuestName(stay.guestName, stay.source) : null,
       waitsForDeparture: task?.type === "TWIN_REVERT" && kind !== "DEPARTURE" && kind !== "SAME_DAY_TURN",

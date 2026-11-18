@@ -10,14 +10,16 @@ import { prisma } from "@/lib/db";
  * Annahme: Alle noch nicht archivierten Notizen des Zimmers gehören zum Aufenthalt (technische Dinge laufen über Mängel).
  * Nachrichten (`kind: MESSAGE`) an Aufgaben bleiben unberührt — sie gehören zur Arbeit, nicht zum Gast.
  */
-export async function archiveStayHistory(roomId: string, opts: { stayId?: string | null; now?: Date } = {}): Promise<{ requests: number; notes: number }> {
+/** `before`: nur bis zu diesem Zeitpunkt Angelegtes (Turn: Notizen/Wünsche des anreisenden Gastes von heute bleiben). */
+export async function archiveStayHistory(roomId: string, opts: { stayId?: string | null; now?: Date; before?: Date } = {}): Promise<{ requests: number; notes: number }> {
   const now = opts.now ?? new Date();
+  const created = opts.before ? { createdAt: { lt: opts.before } } : {};
   const closed = await prisma.guestRequest.updateMany({
-    where: { roomId, archivedAt: null, status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+    where: { roomId, archivedAt: null, status: { in: ["RECEIVED", "IN_PROGRESS"] }, ...created },
     data: { status: "CANCELLED", archivedAt: now, ...(opts.stayId ? { stayId: opts.stayId } : {}) },
   });
-  const rest = await prisma.guestRequest.updateMany({ where: { roomId, archivedAt: null }, data: { archivedAt: now } });
-  const notes = await prisma.roomNote.updateMany({ where: { roomId, archivedAt: null, kind: { not: "MESSAGE" } }, data: { archivedAt: now } });
+  const rest = await prisma.guestRequest.updateMany({ where: { roomId, archivedAt: null, ...created }, data: { archivedAt: now, ...(opts.stayId ? { stayId: opts.stayId } : {}) } });
+  const notes = await prisma.roomNote.updateMany({ where: { roomId, archivedAt: null, kind: { not: "MESSAGE" }, ...created }, data: { archivedAt: now } });
   return { requests: closed.count + rest.count, notes: notes.count };
 }
 

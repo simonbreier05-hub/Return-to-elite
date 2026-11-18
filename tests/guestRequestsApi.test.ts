@@ -50,7 +50,7 @@ describe("GET /api/guest-requests", () => {
 
     await GET(new NextRequest("http://localhost/api/guest-requests"));
     expect(guestRequestFindMany).toHaveBeenCalledWith(
-      expect.objectContaining({ where: { status: { in: ["RECEIVED", "IN_PROGRESS"] } } })
+      expect.objectContaining({ where: { status: { in: ["RECEIVED", "IN_PROGRESS"] }, archivedAt: null } })
     );
   });
 
@@ -59,7 +59,7 @@ describe("GET /api/guest-requests", () => {
     guestRequestFindMany.mockReset().mockResolvedValue([]);
 
     await GET(new NextRequest("http://localhost/api/guest-requests?all=1"));
-    expect(guestRequestFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: {} }));
+    expect(guestRequestFindMany).toHaveBeenCalledWith(expect.objectContaining({ where: { archivedAt: null } } /* F7: Archiv früherer Aufenthalte ausgenommen */));
   });
 });
 

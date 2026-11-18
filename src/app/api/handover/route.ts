@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
   });
   const openWorkOrders = workOrders.filter((w) => w.status !== "RESOLVED");
 
-  const notes = await prisma.roomNote.findMany({
-    where: { createdAt: { gte: since } },
+  const notes = await prisma.roomNote.findMany({ // F7: archivierter Verlauf früherer Aufenthalte gehört nicht in die Übergabe
+    where: { createdAt: { gte: since }, archivedAt: null },
     orderBy: { createdAt: "desc" },
     take: 8,
     include: { room: { select: { number: true } }, author: { select: { name: true, role: true } } },
