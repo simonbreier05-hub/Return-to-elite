@@ -1505,7 +1505,7 @@
     "profile.item.TWIN": "یادداشت: تخت‌های جدا",
     "profile.item.EXTRA_BED": "یادداشت: تخت اضافه",
     "profile.item.BABY_COT": "یادداشت: تخت نوزاد",
-    "profile.item.NO_DAILY_LINEN": "تعویض روزانه ملحفه را نمی‌خواهد",
+    "profile.item.NO_DAILY_LINEN": "تعویض ملحفه روزانه را نمی‌خواهد",
     "profile.item.CLEAN_AFTER": "زمان ترجیحی نظافت از {{time}}",
     "profile.allDone": "همه انجام شد",
     "profile.discard": "رد کردن",
