@@ -32,7 +32,7 @@ export default function FrontOfficeDnd() {
         {rows.map((r) => (
           <li key={r.id} className="flex flex-wrap items-center gap-3">
             <span className="text-number text-text-primary">{r.room.number}</span>
-            <span className="text-body-16 flex-1 text-text-secondary">{t("frontOffice.dndSince", { time: fmt.dateTime(new Date(r.since), { hour: "2-digit", minute: "2-digit" }) })}</span>
+            <span className="text-body-16 flex-1 text-text-secondary">{t("frontOffice.dndSince", { time: fmt.time(r.since) })}</span>
             <TwoTapButton onConfirm={async () => { setMsg(null); try { await api(`/api/guest-requests/${r.id}`, { method: "PATCH", body: { status: "DONE" } }); await load(); } catch (e) { setMsg(errorText(e, t)); } }}>
               {t("roomEdit.guestDndClear")}
             </TwoTapButton>
