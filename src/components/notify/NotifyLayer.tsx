@@ -10,7 +10,7 @@ import { cx, FOCUS_RING, Glyph } from "@/components/ui/primitives";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { notificationText, notificationTypeLabel } from "@/lib/i18n/notificationText";
 import type { TKey } from "@/lib/i18n/translations";
-import { isMine, isUnreadMine, toastDuration, type NotifyToast } from "@/lib/ui/notify";
+import { groupRoutine, isMine, isUnreadMine, isUrgentNotification, toastDuration, type NotifyToast } from "@/lib/ui/notify";
 import { useNotify, type NotificationRow } from "./NotifyContext";
 
 /** Meldungs-Stufen — eigenes System, nie mit Zimmerstatus verwechselbar; immer mit Typ-Text daneben. */
@@ -121,8 +121,36 @@ function NotifyPanel() {
   const ctx = useNotify()!;
   const open = ctx.panelOpen;
   const setOpen = ctx.setPanelOpen;
+  // F5 (M2): Filter „Dringend / Alle“, Routine gebündelt (aufklappbar), Datum bei älteren Meldungen, seitenweise laden
+  const [urgentOnly, setUrgentOnly] = useState(false);
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
   useEscapeKey(() => setOpen(false), open);
   if (!open) return null;
+  const today = new Date().toDateString();
+  const when = (iso: string | Date) => (new Date(iso).toDateString() === today ? fmt.time(iso) : fmt.dateTime(new Date(iso), { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }));
+  const visible = urgentOnly ? ctx.notifications.filter(isUrgentNotification) : ctx.notifications;
+  const hasOld = ctx.notifications.some((n) => new Date(n.createdAt).toDateString() !== today && isUnreadMine(n, ctx.me));
+  const row = (n: NotificationRow, i: number) => {
+    const unread = isUnreadMine(n, ctx.me);
+    const foreign = !isMine(n, ctx.me);
+    return (
+      <button
+        type="button"
+        key={n.id}
+        data-notify-item={unread ? "unread" : "read"}
+        onClick={() => ctx.openNotification(n)}
+        style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
+        className={cx("animate-in-up press mb-2 block min-h-12 w-full rounded-(--glass-radius-sm) border-s-4 bg-surface-card-raised p-3 text-start", FOCUS_RING, LEVEL_STYLES[n.level], !unread && "opacity-65")}
+      >
+        <span className="text-label flex flex-wrap items-center gap-2 text-text-muted">
+          {unread && <span className="font-semibold text-accent-text">{t("notifyCenter.unread")}</span>}
+          {notificationTypeLabel(n.type, t)} · {when(n.createdAt)}
+          {foreign && <span>· {t(`role.${n.targetRole}` as TKey)}</span>}
+        </span>
+        <span className="text-body-16 mt-1 block text-text-primary">{notificationText(n, t)}</span>
+      </button>
+    );
+  };
   return (
     <div role="dialog" aria-label={t("appShell.notifications")} className="glass animate-in-up pointer-events-auto fixed inset-x-2 top-24 z-50 mx-auto max-w-lg rounded-(--glass-radius-lg) sm:start-auto sm:end-6 sm:w-[26rem]">
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle px-4 py-3">
@@ -135,28 +163,37 @@ function NotifyPanel() {
         </div>
       </div>
       <div className="max-h-[60dvh] overflow-y-auto p-2">
-        {ctx.notifications.length === 0 && <p className="text-body-16 p-4 text-text-muted">{t("appShell.noNotifications")}</p>}
-        {ctx.notifications.map((n, i) => {
-          const unread = isUnreadMine(n, ctx.me);
-          const foreign = !isMine(n, ctx.me);
-          return (
-            <button
-              type="button"
-              key={n.id}
-              data-notify-item={unread ? "unread" : "read"}
-              onClick={() => ctx.openNotification(n)}
-              style={{ "--i": Math.min(i, 8) } as React.CSSProperties}
-              className={cx("animate-in-up press mb-2 block min-h-12 w-full rounded-(--glass-radius-sm) border-s-4 bg-surface-card-raised p-3 text-start", FOCUS_RING, LEVEL_STYLES[n.level], !unread && "opacity-65")}
-            >
-              <span className="text-label flex flex-wrap items-center gap-2 text-text-muted">
-                {unread && <span className="font-semibold text-accent-text">{t("notifyCenter.unread")}</span>}
-                {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
-                {foreign && <span>· {t(`role.${n.targetRole}` as TKey)}</span>}
-              </span>
-              <span className="text-body-16 mt-1 block text-text-primary">{notificationText(n, t)}</span>
+        <div className="mb-2 flex flex-wrap items-center gap-2 px-1" role="group" aria-label={t("notifyCenter.filter")}>
+          {([false, true] as const).map((u) => (
+            <button key={String(u)} type="button" aria-pressed={urgentOnly === u} onClick={() => setUrgentOnly(u)}
+              className={cx("press text-label min-h-11 rounded-pill border px-3", FOCUS_RING, urgentOnly === u ? "border-accent-text text-accent-text" : "border-border-subtle text-text-secondary")}>
+              {t(u ? "notifyCenter.filterUrgent" : "notifyCenter.filterAll")}
             </button>
+          ))}
+          {hasOld && <button type="button" onClick={() => void ctx.ackOld()} className={cx("press text-label ms-auto min-h-11 px-2 text-accent-text underline underline-offset-4", FOCUS_RING)}>{t("notifyCenter.closeOld")}</button>}
+        </div>
+        {visible.length === 0 && <p className="text-body-16 p-4 text-text-muted">{t("appShell.noNotifications")}</p>}
+        {groupRoutine(visible).map((g, i) => {
+          if (g.kind === "one") return row(g.n, i);
+          const key = `${g.type}:${g.items[0].id}`;
+          const isOpen = expanded.has(key);
+          const unreadN = g.items.filter((n) => isUnreadMine(n, ctx.me)).length;
+          return (
+            <div key={key} className="mb-2" data-notify-group={g.type}>
+              <button type="button" aria-expanded={isOpen}
+                onClick={() => setExpanded((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; })}
+                className={cx("press flex min-h-12 w-full items-center gap-2 rounded-(--glass-radius-sm) border-s-4 bg-surface-card-raised p-3 text-start", FOCUS_RING, LEVEL_STYLES[g.items[0].level])}>
+                <Glyph name={isOpen ? "chevron-down" : "chevron-right"} size={18} />
+                <span className="text-body-16 flex-1 text-text-primary">{t("notifyCenter.group", { n: g.items.length, what: notificationTypeLabel(g.type, t) })}</span>
+                <span className="text-label text-text-muted">{when(g.items[g.items.length - 1].createdAt)}–{when(g.items[0].createdAt)}{unreadN ? ` · ${t("notifyCenter.unreadN", { n: unreadN })}` : ""}</span>
+              </button>
+              {isOpen && <div className="ms-4 mt-2">{g.items.map((n, k) => row(n, k))}</div>}
+            </div>
           );
         })}
+        {ctx.hasMore && (
+          <Button variant="secondary" block className="mt-1" onClick={() => void ctx.loadMore()}>{t("notifyCenter.loadMore")}</Button>
+        )}
       </div>
     </div>
   );

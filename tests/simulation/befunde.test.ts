@@ -102,7 +102,7 @@ describe("H11 Krankmeldung bleibt beim Team-Speichern erhalten", () => {
 });
 
 describe("M2 Meldungen: der Duty Manager verliert nichts hinter einem 50er-Deckel", () => {
-  it.fails("GET /api/notifications schneidet nicht pauschal bei 50 ab", () => {
+  it("GET /api/notifications schneidet nicht pauschal bei 50 ab", () => {
     expect(src("src/app/api/notifications/route.ts")).not.toMatch(/take: 50/);
   });
 });

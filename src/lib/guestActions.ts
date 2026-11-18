@@ -74,7 +74,7 @@ async function handleGreen(room: GuestActionRoom): Promise<NextResponse> {
     prisma.notification.create({
       data: {
         type: "GUEST_REQUEST", level: "info", targetRole: "supervisor", roomId: room.id,
-        message: `Room ${room.number}: guest chose the Green Option — no linen change today.`,
+        message: `Zimmer ${room.number}: Gast wählt die Green Option — heute kein Wäschewechsel.`,
         ...keyed("notify.guestGreen", { n: room.number }),
       },
     }),
@@ -110,7 +110,7 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
   // F2 (entschieden): DND eines belegten Zimmers sehen DM, Supervisor der Etage und die zugeteilte Housekeeperin (unten)
   await notifyFloorLeads({
     roomId: room.id, type: "GUEST_REQUEST", level: "info",
-    message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
+    message: `Zimmer ${room.number}: Gast wünscht „Bitte nicht stören“ — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
     key: "notify.guestDnd", vars: { n: room.number, windowKey: `dndWindow.${parsed.data.window}` },
   });
   await audit({ action: "GUEST_DND_REQUESTED", userId: guestUserId, roomId: room.id, meta: { window: parsed.data.window } });
@@ -142,7 +142,7 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
         level: "info",
         targetRole: "supervisor",
         roomId: room.id,
-        message: `Room ${room.number}: guest lifted Do Not Disturb.`,
+        message: `Zimmer ${room.number}: Gast hat „Bitte nicht stören“ aufgehoben.`,
         ...keyed("notify.guestDndLifted", { n: room.number }),
       },
     }),
@@ -178,7 +178,7 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
         level: "info",
         targetRole: "supervisor",
         roomId: room.id,
-        message: `Room ${room.number}: guest requests cleaning — ${timingLabel}.`,
+        message: `Zimmer ${room.number}: Gast wünscht Reinigung — ${timingLabel}.`,
         ...(timing === "LATER" && time ? keyed("notify.guestCleanAt", { n: room.number, time }) : keyed("notify.guestClean", { n: room.number, timingKey: `cleanTiming.${timing}` })),
       },
     }),
@@ -250,7 +250,7 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
         level: "info",
         targetRole: dept.role,
         roomId: room.id,
-        message: `Room ${room.number}: guest wants to be contacted by ${dept.label}.`,
+        message: `Zimmer ${room.number}: Gast möchte Kontakt (${dept.label}).`,
         ...keyed("notify.guestContact", { n: room.number, deptKey: `department.${dept.key}` }),
       },
     }),

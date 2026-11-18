@@ -43,7 +43,7 @@ export async function createRoomTask(input: {
       level: "info",
       targetRole: "houseman",
       roomId: room.id,
-      message: `New task: room ${room.number} — ${type}${note ? `: ${note}` : ""}`,
+      message: `Neue Aufgabe: Zimmer ${room.number} — ${type}${note ? `: ${note}` : ""}`,
       ...(note ? keyed("notify.newTaskNote", { n: room.number, typeKey: `roomTaskType.${type}`, note }) : keyed("notify.newTask", { n: room.number, typeKey: `roomTaskType.${type}` })),
       dedupeKey: `ROOM_TASK:${roomTask.id}`,
     },

@@ -17,6 +17,7 @@ import { buildResult } from "./result";
 import { suggestionSignature, suggestRedistribution, type Move, type Suggestion } from "./redistribute";
 import type { Assignment, PlanInput, PlanResult } from "./types";
 import { keyed } from "@/lib/i18n/notificationText";
+import { alertSick } from "@/lib/notify/dmAlerts";
 
 export interface ProposalPayload { input: PlanInput; result: PlanResult; generatedAt: string }
 
@@ -280,6 +281,8 @@ export async function setAbsent(hkId: string, absent: boolean, userId: string, n
   // F4 (H11): die Krankmeldung bleibt als eigenes Datum stehen — saveTeam setzt sie nicht still zurück
   await prisma.user.update({ where: { id: hkId }, data: { absentDate: absent ? date : null, sickDate: absent ? date : null } });
   await audit({ action: "HK_ABSENCE_SET", userId, meta: { hkId, absent, date } });
+  // F5 (H14, Frage 9): Krankmeldung → Duty Manager direkt (+ Supervisoren der Etagen, Annahme), danach Personal neu rechnen
+  if (absent) await alertSick(hkId, now).catch(() => 0);
   if (!absent) {
     const open = await prisma.redistributionSuggestion.findMany({ where: { date, status: "OPEN", kind: "ABSENT" } });
     const mine = open.filter((s) => (JSON.parse(s.reason) as { params: { from?: string } }).params.from === hkId);

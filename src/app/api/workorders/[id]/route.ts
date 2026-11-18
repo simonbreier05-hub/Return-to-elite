@@ -95,7 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         level: "info",
         targetRole: "supervisor",
         roomId: wo.defect.roomId,
-        message: `Work order resolved in room ${wo.defect.room.number} (${wo.defect.category}). Room may resume cleaning.`,
+        message: `Auftrag in Zimmer ${wo.defect.room.number} erledigt (${wo.defect.category}). Zimmer kann wieder gereinigt werden.`,
         ...keyed("notify.workOrderResolved", { n: wo.defect.room.number, categoryKey: `defectCategory.${wo.defect.category}` }),
         dedupeKey: `WORK_ORDER_RESOLVED:${id}`,
       },

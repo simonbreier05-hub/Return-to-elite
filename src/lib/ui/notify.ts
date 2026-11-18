@@ -149,3 +149,24 @@ export const RESYNC_MIN_GAP_MS = 2000;
 export function shouldResync(lastAt: number, now: number): boolean {
   return now - lastAt >= RESYNC_MIN_GAP_MS;
 }
+
+/**
+ * F5 (M2): Glocke lesbar halten — gleichartige Routine-Meldungen (z. B. 28× „Gast ausgecheckt“) werden zu einer aufklappbaren
+ * Zeile gebündelt, sobald mindestens `min` direkt hintereinander stehen. Dringende Einzelmeldungen bleiben einzeln. Rein.
+ */
+export const ROUTINE_TYPES: ReadonlySet<string> = new Set(["GUEST_CHECKED_OUT", "ROOM_RELEASED", "ROOM_CHANGED", "LIST_UPDATED", "WORK_ORDER_RESOLVED", "DEFECT_FIXED"]);
+export type NotifyGroup<N> = { kind: "one"; n: N } | { kind: "group"; type: string; items: N[] };
+export function groupRoutine<N extends { type: string }>(list: N[], min = 3): NotifyGroup<N>[] {
+  const out: NotifyGroup<N>[] = [];
+  for (let i = 0; i < list.length;) {
+    let j = i;
+    while (j < list.length && list[j].type === list[i].type) j++;
+    if (ROUTINE_TYPES.has(list[i].type) && j - i >= min) out.push({ kind: "group", type: list[i].type, items: list.slice(i, j) });
+    else for (let k = i; k < j; k++) out.push({ kind: "one", n: list[k] });
+    i = j;
+  }
+  return out;
+}
+
+/** F5 (M2): nur dringende Meldungen (Filter „Dringend“). */
+export const isUrgentNotification = (n: { level: string }) => n.level === "warning" || n.level === "critical";

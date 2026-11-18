@@ -5,6 +5,7 @@ import { broadcast } from "@/lib/realtime";
 import { RoomStatusSchema, type BlockReason, type RoomStatus } from "@/lib/domain";
 import { checkTransition, SELL_BLOCKED } from "@/lib/stateMachine";
 import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
+import { alertVipLate } from "@/lib/notify/dmAlerts";
 import { arrivalTodayWhere } from "@/lib/rooms/blockedRooms";
 import { previousGuest, previousGuestText } from "@/lib/rooms/previousGuest";
 import { pms } from "@/lib/pms/MockPMSConnector";
@@ -204,6 +205,10 @@ export async function applyStatusChange(
     const waiting = await prisma.arrival.findMany({
       where: { roomId: room.id, status: "EXPECTED", notifyOnRelease: true },
     });
+    // F5 (H14): VIP-Zimmer erst nach der Ankunftszeit freigegeben → Duty Manager
+    for (const a of await prisma.arrival.findMany({ where: { roomId: room.id, status: "EXPECTED", vip: true }, select: { id: true, vip: true, eta: true } })) {
+      await alertVipLate({ id: room.id, number: room.number }, a, now).catch(() => 0);
+    }
     for (const arrival of waiting) {
       const notification = await prisma.notification.create({
         data: {
@@ -212,7 +217,7 @@ export async function applyStatusChange(
           targetRole: "front_office",
           roomId: room.id,
           // Ohne Gastnamen (CLAUDE.md): Meldungen gehen per Broadcast an jeden Client.
-          message: `Room ${room.number} released (INSPECTED) — ready for the ${arrival.vip ? "VIP " : ""}arrival.`,
+          message: `Zimmer ${room.number} freigegeben — bereit für die ${arrival.vip ? "VIP-" : ""}Anreise.`,
           ...keyed(arrival.vip ? "notify.roomReleasedVip" : "notify.roomReleased", { n: room.number }),
           dedupeKey: `ROOM_RELEASED:${arrival.id}:${now.getTime()}`,
         },

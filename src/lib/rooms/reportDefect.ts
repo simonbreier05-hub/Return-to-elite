@@ -54,7 +54,7 @@ export async function reportDefect(input: {
       level: "warning",
       targetRole: "engineering",
       roomId: room.id,
-      message: `New work order: room ${room.number} — ${category}: ${note.slice(0, 120)}`,
+      message: `Neuer Auftrag: Zimmer ${room.number} — ${category}: ${note.slice(0, 120)}`,
       ...keyed("notify.newWorkOrder", { n: room.number, categoryKey: `defectCategory.${category}`, note: note.slice(0, 120) }),
       dedupeKey: `WORK_ORDER:${defect.id}`,
     },

@@ -83,7 +83,7 @@ export function checkDayFigures(figures: DayFigures, totalRooms: number, roomsNe
   if (figures.eveningOccupancy > totalRooms) {
     warnings.push({
       field: "eveningOccupancy",
-      message: `The house has ${totalRooms} keys — tonight cannot exceed that.`,
+      message: `Das Haus hat ${totalRooms} Zimmer — heute Nacht können es nicht mehr sein.`,
     });
   }
   if (figures.arrivals > figures.eveningOccupancy) {
