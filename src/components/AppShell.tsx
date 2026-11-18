@@ -163,6 +163,8 @@ export default function AppShell({
   const logout = async () => {
     await api("/api/auth/logout", { method: "POST" });
     resetSocket(); // S1: die Live-Verbindung gehört zur abgemeldeten Person — schließen
+    // F6-Review: Warteliste gehört zur abgemeldeten Person — auf geteilten iPads nie unter fremdem Namen nachsenden
+    try { window.localStorage.removeItem("stayclean.queue.v1"); } catch { /* privater Modus */ }
     router.push("/login");
     router.refresh();
   };

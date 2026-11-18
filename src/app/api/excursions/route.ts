@@ -1,3 +1,4 @@
+import { berlinHHMM } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -66,6 +67,6 @@ export async function POST(req: NextRequest) {
   broadcast("excursion:update", { excursion });
   // Gast außer Haus: die heute zuständige Kraft kann das Zimmer jetzt machen. Nur Zimmer + Etage, kein Gastname.
   // Nur wenn der Ausflug schon läuft oder heute beginnt — „kommt bald zurück“ meldet der Ticker (src/lib/escalations.ts).
-  if (excursion.startsAt.getTime() - Date.now() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}` });
+  if (excursion.startsAt.getTime() - Date.now() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}`, time: `${berlinHHMM(excursion.startsAt)}–${berlinHHMM(excursion.endsAt)}` });
   return NextResponse.json({ excursion }, { status: 201 });
 }

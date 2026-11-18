@@ -105,6 +105,13 @@ export function FrontOfficeHub(p: FrontOfficeHubProps) {
             pill: pill ? { label: cap(t(pill.labelKey)), tone: pill.tone } : undefined,
             meta: a.eta ? hhmm(a.eta) : undefined,
             done: a.status === "CHECKED_IN",
+            // F6 (M23): Rush direkt in der Zeile — einmal nachfragen, dann sofort an die Housekeeperin
+            action: a.status === "EXPECTED" ? (
+              <Button variant={a.neededNow ? "primary" : "secondary"} icon="zap" className="min-h-(--size-touch-min)! shrink-0 px-4!" aria-pressed={a.neededNow}
+                onClick={() => { if (a.neededNow || window.confirm(t("frontOffice.rushConfirm", { n: a.room.number ?? "?" }))) void p.onSave(a, { neededNow: !a.neededNow }); }}>
+                {t("frontOffice.neededNow")}
+              </Button>
+            ) : undefined,
           };
         })}
         selectedKey={p.selectedId}

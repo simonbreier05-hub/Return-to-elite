@@ -5,6 +5,15 @@ import { requireAuth } from "@/lib/rbac";
 import { addRoomNote } from "@/lib/rooms/addRoomNote";
 import { PauseTargetSchema } from "@/lib/domain";
 import { messageAccess, sessionSeesMessages } from "@/lib/work/messages";
+import { berlinToday } from "@/lib/import/businessDay";
+
+/** F6-Review (M17): Housekeeper lesen/schreiben Notizen nur an ihren eigenen heutigen Zimmern — sonst Gastnotizen über die Suche sichtbar. */
+async function attendantBlocked(session: { role: string; userId: string }, roomId: string): Promise<boolean> {
+  if (session.role !== "room_attendant") return false;
+  const room = await prisma.room.findUnique({ where: { id: roomId }, select: { assignedToId: true, assignedOn: true } });
+  return !room || room.assignedToId !== session.userId || room.assignedOn !== berlinToday();
+}
+const NOT_YOURS = () => NextResponse.json({ error: "Notizen nur für eigene Zimmer.", code: "NOT_YOUR_ROOM" }, { status: 403 });
 
 /**
  * Cross-department per-room notes: every authenticated role may read & add.
@@ -17,6 +26,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const { id } = await params;
+  if (await attendantBlocked(auth.session, id)) return NOT_YOURS();
   const notes = await prisma.roomNote.findMany({
     where: { roomId: id },
     orderBy: { createdAt: "desc" },
@@ -36,6 +46,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const { id } = await params;
+  if (await attendantBlocked(auth.session, id)) return NOT_YOURS();
 
   const parsed = NoteSchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Note body required.", code: "TEXT_REQUIRED" }, { status: 400 });

@@ -133,7 +133,7 @@ export async function GET(req: NextRequest) {
     ? roomsWithCounts.map((r) => (r.assignedToId === me ? r : {
         id: r.id, number: r.number, floor: r.floor, section: r.section, status: r.status, type: r.type, foreign: true,
         assignedToId: null, assignedTo: null, routeOrder: null, arrivals: [], excursions: [], notes: [], defects: [], guestRequests: [],
-        openNotesCount: 0, guestDndActive: false, pause: null, rewind: null, isCheckoutToday: false, occupancy: "VACANT", blockReason: null,
+        openNotesCount: 0, pause: null, rewind: null, isCheckoutToday: false, // Belegung/DND/Sperrgrund bewusst weggelassen statt falsch
       }))
     : roomsWithCounts;
   return NextResponse.json({ rooms: visible, attendants: attendantView ? [] : attendants, floorScope, hub });

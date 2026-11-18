@@ -37,6 +37,9 @@ export default function AssignmentFloorPlan() {
   useSocket({ "app:resync": () => soon(), "assignments:applied": () => soon(), "room:update": () => soon(), "dayplan:updated": () => soon() });
 
   const toggle = async (id: string, absent: boolean) => {
+    // F6 (M20): Abmelden (krank/abwesend) fragt einmal nach — kein versehentliches Abmelden mit einem Tipp
+    const name = day?.roster.find((h) => h.id === id)?.name ?? "";
+    if (absent && !window.confirm(t("planning.confirmAbsent", { name }))) return;
     setError(null);
     try { await api(`/api/housekeepers/${id}/absent`, { body: { absent } }); await load(); setVersion((v) => v + 1); }
     catch (e) { setError(errorText(e, t)); }

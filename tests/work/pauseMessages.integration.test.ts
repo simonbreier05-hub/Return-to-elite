@@ -126,7 +126,9 @@ describe("Nachrichten an Zimmer/Aufgabe", () => {
     expect(await bodies("hk", "room_attendant")).toContain("Bett klemmt, brauche Hilfe");
     expect(await bodies("sup3", "supervisor")).toContain("Bett klemmt, brauche Hilfe");
     expect(await bodies("dm", "duty_manager")).toContain("Bett klemmt, brauche Hilfe");
-    expect(await bodies("hk2", "room_attendant")).not.toContain("Bett klemmt, brauche Hilfe");
+    // F6-Review: fremde Housekeeperin bekommt die Notizen des Zimmers gar nicht (403), nicht nur ohne Nachrichten
+    as("hk2", "room_attendant");
+    expect((await notesGet(new NextRequest("http://x"), params(ids.r301))).status).toBe(403);
     expect(await bodies("sup4", "supervisor")).not.toContain("Bett klemmt, brauche Hilfe");
     expect(await bodies("fo", "front_office")).not.toContain("Bett klemmt, brauche Hilfe");
     // Supervisor ohne Etagen: sieht sie (wie das Live-Board das ganze Haus), gekennzeichnet als außerhalb der Zuständigkeit
