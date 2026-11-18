@@ -32,6 +32,10 @@ export interface SupervisorHubProps {
   notices?: ReactNode;
   /** Freigabe-Warteschlange (Glas-Karte). */
   release?: ReactNode;
+  /** Simon-Feedback 18.11.: „Heute auf einen Blick“ steht vor „Team heute“ (getauscht). */
+  glance?: ReactNode;
+  /** Unterseite (Freigabe, Probleme): nur Hinweise + dieser Inhalt, ohne Kennzahlen und Team. */
+  only?: ReactNode;
   /** Weitere Bereiche unter „Team heute“. */
   below?: ReactNode;
   /** Detail (`DetailContainer`): ab 1280 px als Panel rechts, darunter Einschub/Sheet. */
@@ -142,10 +146,15 @@ export function SupervisorHub(p: SupervisorHubProps) {
   const main = (
     <div className="flex min-w-0 flex-col gap-4 sm:gap-6">
       {p.notices}
-      {kpiRow}
-      {team}
-      {p.release}
-      {p.below}
+      {p.only ?? (
+        <>
+          {kpiRow}
+          {p.glance}
+          {team}
+          {p.release}
+          {p.below}
+        </>
+      )}
     </div>
   );
 

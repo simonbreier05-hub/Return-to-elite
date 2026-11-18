@@ -39,7 +39,9 @@ export const NAV: Record<Role, NavEntry[]> = {
   supervisor: [
     { id: "overview", labelKey: "nav.overview", icon: "home", href: "/supervisor", mobileRank: 1 },
     { id: "planning", labelKey: "nav.planning", icon: "calendar-days", href: "/planung", mobileRank: 2 },
-    { id: "rooms", labelKey: "nav.rooms", icon: "bed-single", href: "/supervisor/service", mobileRank: 3 },
+    // Simon-Feedback 18.11.: „Zimmer“ (Service-Liste) entfällt — Grundriss deckt es ab; Freigabe und Probleme als eigene Punkte
+    { id: "release", labelKey: "nav.release", icon: "clock", href: "/supervisor/release", mobileRank: 3 },
+    { id: "problems", labelKey: "nav.problems", icon: "triangle-alert", href: "/supervisor/problems", mobileRank: 10 },
     messages(4),
     { id: "floorPlan", labelKey: "appShell.floorPlan", icon: "list", href: "/floor-plan", mobileRank: 5 },
     { id: "handover", labelKey: "nav.handover", icon: "file-text", href: "/supervisor/handover", mobileRank: 6 },
@@ -65,8 +67,9 @@ export const NAV: Record<Role, NavEntry[]> = {
   ],
   front_office: [
     { id: "arrivals", labelKey: "nav.arrivals", icon: "log-in", href: "/front-office", mobileRank: 1 },
-    floorPlan(2, "nav.rooms"),
-    messages(3),
+    { id: "departures", labelKey: "nav.departures", icon: "log-out", href: "/front-office/departures", mobileRank: 2 },
+    floorPlan(3, "nav.rooms"),
+    messages(4),
   ],
   concierge: [
     { id: "excursions", labelKey: "nav.excursions", icon: "star", href: "/concierge", mobileRank: 1 },

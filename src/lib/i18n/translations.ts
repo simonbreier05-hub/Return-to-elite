@@ -40,6 +40,9 @@ const en = {
     reload: "Reload",
   },
   nav: {
+    release: "Release",
+    problems: "Problems",
+    departures: "Departures",
     overview: "Overview",
     rooms: "Rooms",
     house: "House",
@@ -295,6 +298,7 @@ const en = {
     moveFailed: "Could not move the room.",
   },
   supervisor: {
+    problemRooms: "Rooms with problems",
     etaSoon: "Arrival soon",
     etaOverdue: "Arrival overdue",
     liveBoard: "Live Board",
@@ -2087,6 +2091,9 @@ const de = {
     reload: "Neu laden",
   },
   nav: {
+    release: "Freigabe",
+    problems: "Probleme",
+    departures: "Abreisen",
     overview: "Übersicht",
     rooms: "Zimmer",
     house: "Haus",
@@ -2342,6 +2349,7 @@ const de = {
     moveFailed: "Zimmer konnte nicht verschoben werden.",
   },
   supervisor: {
+    problemRooms: "Zimmer mit Problemen",
     etaSoon: "Anreise bald",
     etaOverdue: "Anreise überfällig",
     liveBoard: "Live-Board",

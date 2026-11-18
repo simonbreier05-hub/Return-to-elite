@@ -13,7 +13,6 @@ import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Collapsible from "@/components/Collapsible";
 import type { ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
-import SupervisorList from "@/components/lists/SupervisorList";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import SupervisorGlance from "@/components/SupervisorGlance";
 import SupervisorFeed from "@/components/SupervisorFeed";
@@ -104,7 +103,12 @@ const LEGEND: RoomStatus[] = [
  * to flag the stat card and to decide the priority banner's urgency tone. */
 const RELEASE_QUEUE_BACKLOG = 5;
 
-export default function SupervisorView({ isDutyManager }: { isDutyManager: boolean }) {
+/** Zimmer mit Problemen (Simon-Feedback 18.11.): gesperrt, blockiert, Gast-DND oder offener Mangel. */
+const isProblemRoom = (r: Room) =>
+  ["BLOCKED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "DEFECT_REPORTED"].includes(r.status) || !!r.guestDndActive || r.defects.some((d) => d.workOrder?.status !== "RESOLVED");
+
+/** mode: „home“ = Übersicht, „release“ = Freigabe-Warteschlange, „problems“ = Zimmer mit Problemen (eigene Menüpunkte). */
+export default function SupervisorView({ isDutyManager, mode = "home" }: { isDutyManager: boolean; mode?: "home" | "release" | "problems" }) {
   const { t } = useLocale();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
@@ -214,6 +218,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rooms.filter((room) => {
+      if (mode === "problems" && !isProblemRoom(room)) return false;
       if (statusFilter !== "ALL" && room.status !== statusFilter) return false;
       if (floorFilter !== "ALL" && room.floor !== floorFilter) return false;
       if (attendantFilter === "NONE" && room.assignedTo) return false;
@@ -227,7 +232,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         room.arrivals.some((a) => a.guestName.toLowerCase().includes(q))
       );
     });
-  }, [rooms, search, statusFilter, floorFilter, attendantFilter, guestDndOnly]);
+  }, [rooms, search, statusFilter, floorFilter, attendantFilter, guestDndOnly, mode]);
 
   const filtersActive =
     search.trim() !== "" ||
@@ -313,7 +318,14 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         : [],
     [rooms, activeAttendantId, t]
   );
-  const onKpi = (k: SupKpi) => focusStatus(SUP_KPI_STATUS[k] as RoomStatus);
+  // Übersicht ohne Live-Board: Kennzahl öffnet die passende Seite (Freigabe, Probleme, sonst Grundriss)
+  const onKpi = (k: SupKpi) => {
+    const s = SUP_KPI_STATUS[k] as RoomStatus | null;
+    if (mode === "problems") return focusStatus(s);
+    if (s === "CLEAN") return router.push("/supervisor/release");
+    if (k === "dnd" || k === "defects" || (s && ["BLOCKED", "OUT_OF_ORDER", "DEFECT_REPORTED"].includes(s))) return router.push("/supervisor/problems");
+    router.push("/floor-plan");
+  };
 
   const notices = (
     <>
@@ -352,9 +364,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       {HOTEL.unconfirmedFloors.length > 0 && (
         <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
       )}
-      <ErrorBoundary>
-        <SupervisorGlance rooms={rooms} onChanged={load} />
-      </ErrorBoundary>
       <PriorityBanner
         items={[
           {
@@ -362,20 +371,25 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             label: t("priority.releaseQueue"),
             icon: "clock",
             tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
-            onClick: () => focusStatus("CLEAN"),
+            onClick: () => router.push("/supervisor/release"),
           },
-          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
+          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => router.push("/supervisor/problems") },
         ]}
       >
         <ErrorBoundary>
           <SupervisorFeed />
         </ErrorBoundary>
       </PriorityBanner>
+    </>
+  );
 
+  // Live-Board nur noch auf der Seite „Probleme“ (vorgefiltert); Etagenliste entfällt — der Grundriss deckt sie ab (Simon-Feedback 18.11.)
+  const board = (
+    <>
       {/* Live-Board (Status-Raster): dieselben Filter und Zimmer wie bisher, im Glas-Design (D3b). */}
       <GlassCard as="section" aria-labelledby="sup-board-title" className="flex flex-col gap-4">
         <div ref={gridRef} className="scroll-mt-4">
-          <h2 id="sup-board-title" className="text-title-22 text-text-primary">{t("supervisor.liveBoard")}</h2>
+          <h2 id="sup-board-title" className="text-title-22 text-text-primary">{t("supervisor.problemRooms")}</h2>
           <p className="text-label text-text-muted">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
         </div>
         {/* Ein Zimmer unter 145 finden, ohne zu scrollen. */}
@@ -470,8 +484,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           ))}
         </div>
       </GlassCard>
-
-      <SupervisorList />
     </>
   );
 
@@ -494,9 +506,10 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         selectedRoomId={selectedId}
         onOpenRoom={setSelectedId}
         onMoveRooms={() => router.push("/floor-plan")}
-        notices={<>{notices}<BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} /><RoomActionsCard roomChange={<RoomChangeForm />} /></>}
-        release={release}
+        notices={<>{notices}{mode === "home" && <RoomActionsCard roomChange={<RoomChangeForm />} />}</>}
+        glance={<ErrorBoundary><SupervisorGlance rooms={rooms} onChanged={load} /></ErrorBoundary>}
         below={below}
+        only={mode === "release" ? release : mode === "problems" ? <><BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} />{board}</> : undefined}
         detailOpen={!!detailRoom}
         detail={
           <DetailContainer open={!!detailRoom} onClose={() => setSelectedId(null)} title={detailRoom ? t("hkHub.roomTitle", { n: detailRoom.number }) : ""}>

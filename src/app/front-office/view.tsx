@@ -35,7 +35,8 @@ const etaInput = (iso: string | null) => {
  * Gleiche Wege wie bisher: `GET/POST /api/arrivals`, `PATCH /api/arrivals/[id]`, Live `arrival:update`, `room:update`
  * und die Meldung „Zimmer freigegeben“ (`ROOM_RELEASED`). Front Office ändert nie den Reinigungsstatus.
  */
-export default function FrontOfficeView() {
+/** mode „departures“: Abreisen als eigener Menüpunkt (Simon-Feedback 18.11.2026), sonst Anreisen-Hub ohne Abreisen. */
+export default function FrontOfficeView({ mode = "arrivals" }: { mode?: "arrivals" | "departures" }) {
   const { t } = useLocale();
   const [raw, setRaw] = useState<Record<string, unknown>[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -151,6 +152,26 @@ export default function FrontOfficeView() {
   const neededNowNotReady = expected.filter((a) => a.neededNow && a.room.status !== "INSPECTED").length;
   const overdueEta = expected.filter((a) => isOverdue(a)).length;
 
+  const departuresEl = (
+    <FrontOfficeDepartures
+      rows={departures}
+      busyId={depBusy}
+      error={depError}
+      onCheckout={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { body: {} }))}
+      onCheckoutMany={(roomIds) => void depAction(roomIds[0], async () => { for (const id of roomIds) await api(`/api/rooms/${id}/checkout`, { body: {} }); })}
+      onRevert={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { method: "DELETE" }))}
+      onLateCheckout={(roomId, time) => void depAction(roomId, () => api(`/api/rooms/${roomId}/late-checkout`, { method: "PATCH", body: { time } }))}
+    />
+  );
+  if (mode === "departures") {
+    return (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        {departuresEl}
+        {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
+      </div>
+    );
+  }
+
   return (
     <>
       <FrontOfficeHub
@@ -169,17 +190,6 @@ export default function FrontOfficeView() {
         loadError={raw === null ? loadError : null}
         onRetry={() => void load()}
         etaInput={etaInput}
-        departures={
-          <FrontOfficeDepartures
-            rows={departures}
-            busyId={depBusy}
-            error={depError}
-            onCheckout={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { body: {} }))}
-            onCheckoutMany={(roomIds) => void depAction(roomIds[0], async () => { for (const id of roomIds) await api(`/api/rooms/${id}/checkout`, { body: {} }); })}
-            onRevert={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { method: "DELETE" }))}
-            onLateCheckout={(roomId, time) => void depAction(roomId, () => api(`/api/rooms/${roomId}/late-checkout`, { method: "PATCH", body: { time } }))}
-          />
-        }
         notices={
           <>
             {released && <Banner tone="info" icon="bell" title={released} />}

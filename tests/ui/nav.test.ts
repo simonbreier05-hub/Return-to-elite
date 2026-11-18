@@ -53,7 +53,7 @@ describe("Menü je Rolle (src/lib/nav.ts)", () => {
       expect([...tabs, ...more].map((e) => e.id).sort()).toEqual(navFor(r).map((e) => e.id).sort());
       expect(tabs[0].href).toBe(roleHome(r));
     }
-    expect(tabsFor("supervisor").tabs.map((e) => e.id)).toEqual(["overview", "planning", "rooms"]);
+    expect(tabsFor("supervisor").tabs.map((e) => e.id)).toEqual(["overview", "planning", "release"]); // Simon-Feedback 18.11.: Freigabe statt Service-Liste
     expect(tabsFor("room_attendant").more).toEqual([]);
   });
   it("aktiver Punkt: Unterseiten zählen zum passenden Eintrag, längster Treffer gewinnt", () => {
