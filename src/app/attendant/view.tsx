@@ -71,6 +71,8 @@ interface Room {
 /** Tagesliste aus GET /api/lists/housekeeper (Art, Wäsche, VIP, Gast-Kurzname, Traces, Credits, Fortschritt). */
 interface HkList {
   date: string | null;
+  shiftEnd?: string;
+  absentToday?: boolean;
   progress: { done: number; total: number; creditsDone: number; creditsTotal: number };
   rooms: ListRoom[];
 }
@@ -178,8 +180,12 @@ export default function AttendantView() {
     }
     // F6 (M19): fälliger Wäschewechsel wird nur gebucht, wenn die Kraft ihn bestätigt
     if (status === "CLEAN" && extra.laundryChanged === undefined && dayById.get(room.id)?.laundry) {
-      extra = { ...extra, laundryChanged: window.confirm(t("hk.laundryConfirm", { n: room.number })) };
+      // Zweistufig: „Abbrechen“ heißt nie versehentlich „fertig ohne Wäsche“ (F6-Review)
+      const changed = window.confirm(t("hk.laundryConfirm", { n: room.number }));
+      if (!changed && !window.confirm(t("hk.laundryNoConfirm", { n: room.number }))) return;
+      extra = { ...extra, laundryChanged: changed };
     }
+    extra = { ...extra, confirmSecond: true }; // Rückfrage zweites Zimmer nicht wiederholen (z. B. nach „Gast noch im Zimmer“)
     setBusyRoomId(room.id);
     setError(null);
     const url = `/api/rooms/${room.id}/status`;
@@ -274,6 +280,19 @@ export default function AttendantView() {
     };
   }, [dayById, reasonsOf]);
 
+  /** F6 (M1, M13): Zusatzzeile je Zimmer — Gast, außer Haus, Suite, Allergiker, Sollzeit bzw. Start und laufende Minuten (immer Text). */
+  const rowMeta = (r: Room, d: ListRoom | undefined): string | null => {
+    const parts: (string | null)[] = [d?.guest ?? null];
+    if (d?.outside) parts.push(t("hk.outside", { time: d.outside }));
+    if (d?.suite) parts.push(t("hk.suite"));
+    if (d?.allergy) parts.push(t("hk.allergy"));
+    if (r.status === "IN_PROGRESS" && d?.startedAt) {
+      parts.push(t("hk.running", { start: time(d.startedAt), min: Math.max(0, Math.round((Date.now() - new Date(d.startedAt).getTime()) / 60_000)), target: d.estMinutes ?? 0 }));
+    } else if (d?.estMinutes && r.status !== "CLEAN" && r.status !== "INSPECTED") parts.push(t("hk.target", { min: d.estMinutes }));
+    const out = parts.filter(Boolean).join(" · ");
+    return out || null;
+  };
+
   // Planung L1 (Regel 7): Stufe aus der Tagesliste (Rush, Service Now, Turn ausgecheckt, Bleiber, …) vor der Route
   const tierOf = useCallback((r: Room) => {
     const d = dayById.get(r.id);
@@ -303,7 +322,7 @@ export default function AttendantView() {
       (["NOW", "NEXT", "DONE", "OTHER"] as HkGroup[]).flatMap((g) =>
         groups[g].map((r) => {
           const d = dayById.get(r.id);
-          return { view: viewOf(r), group: g, guest: d?.guest ?? null, lang: d?.lang ?? null, pax: d?.pax ?? null, flash: flash.has(r.number) };
+          return { view: viewOf(r), group: g, guest: rowMeta(r, d), lang: d?.lang ?? null, pax: d?.pax ?? null, flash: flash.has(r.number) };
         }),
       ),
     [groups, dayById, viewOf, flash],
@@ -431,9 +450,19 @@ export default function AttendantView() {
     );
   })();
 
+  // F6 (Block 1.2/1.4): Restzeit „noch N Zimmer, etwa X Std“ (ruhig; Warnton nur über Schichtende) und Abmeldung bei Krankmeldung
+  const openRows = items.filter((i) => i.group === "NOW" || i.group === "NEXT");
+  const restMin = openRows.reduce((a, i) => a + (dayById.get(i.view.id)?.estMinutes ?? 0), 0);
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const [eh, em] = (list?.shiftEnd ?? "23:59").split(":").map(Number);
+  const overShift = nowMin + restMin > eh * 60 + em;
   const notices = (
     <>
       <HkOfflineBar state={offline} />
+      {list?.absentToday && <Banner tone="warning" icon="info" title={t("hk.absentToday")} />}
+      {openRows.length > 0 && restMin > 0 && (
+        <Banner tone={overShift ? "warning" : "info"} icon="clock" title={t("hk.restTime", { n: openRows.length, h: (Math.round(restMin / 30) / 2).toLocaleString(intl) })} detail={overShift ? t("hk.overShift", { end: list?.shiftEnd ?? "" }) : undefined} />
+      )}
       {hub && !hub.ready && (
         <Banner
           tone="info"

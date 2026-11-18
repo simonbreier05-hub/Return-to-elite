@@ -10,6 +10,7 @@ import { activePauses, type PauseView } from "@/lib/work/pauseData";
 import { isCheckedOut, parseCleanWish } from "@/lib/planung/listOrder";
 import { unplannedKind } from "@/lib/dayplan/dayNumbers";
 import { isStartedStatus } from "@/lib/rooms/startedStatus";
+import { berlinHHMM, berlinToUtc } from "@/lib/dayplan/time";
 
 /** Tag der Listen: immer der Betriebstag. Ohne Tagesplan für heute sind die Listen leer (kein Rückfall auf ältere Tage). */
 export async function listDay(): Promise<string | null> {
@@ -65,6 +66,11 @@ export interface RoomRow {
   startedAt: string | null;
   /** Betrieb L2 (Punkt 2): geschätzte Dauer = Credit × minutesPerCredit. */
   estMinutes: number;
+  /** F6 (M13): Gast heute außer Haus „HH:MM–HH:MM“ (Ausflug), sonst null. */
+  outside: string | null;
+  /** F6 (M1): Marker Suite / Allergiker-Zimmer. */
+  suite: boolean;
+  allergy: boolean;
   /** Betrieb L2 (Punkt 3): Late Check-out „HH:MM“ (Report oder Front Office), sonst null. */
   lateCheckout: string | null;
   /** Betrieb L2 (Punkt 4): DND ab dndReminderHour noch nicht gereinigt — „Karte ans Zimmer hängen“. */
@@ -128,6 +134,13 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
   }
   // Betrieb L2 (Punkt 11): Green Option heute → kein Wäschewechsel
   const green = await greenRoomsOn(date, ids);
+  // F6 (M13): Gast außer Haus heute „14:00–18:00“ (Concierge-Ausflug) — nur Uhrzeiten, kein Name
+  const dayStart = berlinToUtc(date, "00:00");
+  const dayEnd = new Date(dayStart.getTime() + 86_400_000);
+  const outsideBy = new Map<string, string>();
+  for (const x of await prisma.excursion.findMany({ where: { roomId: { in: ids }, startsAt: { lt: dayEnd }, endsAt: { gt: dayStart } }, orderBy: { startsAt: "asc" }, select: { roomId: true, startsAt: true, endsAt: true } })) {
+    outsideBy.set(x.roomId, `${berlinHHMM(x.startsAt)}–${berlinHHMM(x.endsAt)}`);
+  }
 
   return rooms.map((r) => {
     const p = planBy.get(r.id);
@@ -158,6 +171,9 @@ export async function loadRoomRows(date: string, where: { roomIds?: string[]; as
       green: !!p?.laundryDue && green.has(r.id),
       roomChangeTo: p?.roomChangeTo && r.status !== "INSPECTED" ? p.roomChangeTo : null,
       roomChangeFrom: p?.roomChangeFrom ?? null,
+      outside: outsideBy.get(r.id) ?? null,
+      suite: r.type.includes("SUITE"),
+      allergy: !!r.isAntiAllergic,
       dndCard: dndReminderDue({ dnd: dnd.has(r.id) || r.blockReason === "DND", status: r.status, toClean: !!kind && kind !== "ARRIVAL" }, now, settings.dndReminderHour),
     };
   });

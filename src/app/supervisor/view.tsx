@@ -18,7 +18,7 @@ import SupervisorGlance from "@/components/SupervisorGlance";
 import SupervisorFeed from "@/components/SupervisorFeed";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { DetailContainer } from "@/components/shell/DetailContainer";
-import { HkNoteThread } from "@/components/hk/HkParts";
+import { HkDefectDialog, HkNoteThread } from "@/components/hk/HkParts";
 import { Banner, Field, FilterChip, GlassCard, Glyph } from "@/components/ui";
 import { SupervisorHub, type HubTile } from "@/components/supervisor/SupervisorHub";
 import { OooDialog, ReworkDialog, SupervisorRoomDetail } from "@/components/supervisor/SupervisorRoomDetail";
@@ -116,7 +116,7 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo" | "roomTask"; room: Room } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo" | "roomTask" | "defect"; room: Room } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "ALL">("ALL");
   const [floorFilter, setFloorFilter] = useState<number | "ALL">("ALL");
@@ -132,6 +132,7 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
   const [selectedAttendantId, setSelectedAttendantId] = useState<string | null>(null);
   const [creditSettings, setCreditSettings] = useState<CreditSettings | null>(null);
   const [laundryIds, setLaundryIds] = useState<Set<string>>(new Set());
+  const [minutesPerCredit, setMinutesPerCredit] = useState(0);
 
   const load = useCallback(async () => {
     const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null; hub?: HubState }>("/api/rooms");
@@ -144,10 +145,11 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
   // Nur Anzeige (Credits in „Team heute“): dieselben Quellen wie der Grundriss, Fehler lassen die Credits leer (0).
   const loadCredits = useCallback(async () => {
     const [settings, day] = await Promise.all([
-      api<{ roomTypeCredits: Record<string, number> }>("/api/settings").catch(() => null),
+      api<{ roomTypeCredits: Record<string, number>; minutesPerCredit?: number }>("/api/settings").catch(() => null),
       api<{ numbers: { laundryDue: { ids: string[] } | null } | null }>("/api/day-numbers").catch(() => null),
     ]);
     if (settings) setCreditSettings({ roomTypeCredits: settings.roomTypeCredits });
+    if (settings?.minutesPerCredit) setMinutesPerCredit(settings.minutesPerCredit);
     if (day) setLaundryIds(new Set(day.numbers?.laundryDue?.ids ?? []));
   }, []);
 
@@ -347,7 +349,7 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
         number: r.number,
         waitingMin: Math.round((Date.now() - new Date(r.statusSince).getTime()) / 60000),
         // F6 (M11): die dringendste Anreise des Zimmers zählt (Sofort vor früher Zeit)
-        arrival: [...r.arrivals].sort((a, b) => Number(b.neededNow) - Number(a.neededNow) || (a.eta ?? "9").localeCompare(b.eta ?? "9"))[0] ?? null,
+        arrival: [...r.arrivals].filter((a) => !a.eta || Date.now() - new Date(a.eta).getTime() < 12 * 3_600_000).sort((a, b) => Number(b.neededNow) - Number(a.neededNow) || (a.eta ?? "9").localeCompare(b.eta ?? "9"))[0] ?? null,
       })))}
       busyRoomId={busyRoomId}
       onRelease={(id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); }}
@@ -491,6 +493,8 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
     ? {
         ...selected,
         assignedLabel: selected.assignedTo ? attendantLabel(selected.assignedTo) : null,
+        startedAt: selected.status === "IN_PROGRESS" ? selected.statusSince : null,
+        estMinutes: Math.round(creditOf(selected.id) * minutesPerCredit),
       }
     : null;
 
@@ -553,6 +557,17 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
           onSubmit={async (note) => {
             setDialog(null);
             await act(dialog.room, "PICKUP", { note });
+          }}
+        />
+      )}
+      {dialog?.kind === "defect" && (
+        <HkDefectDialog
+          room={dialog.room.number}
+          onClose={() => setDialog(null)}
+          onSubmit={async (fd) => {
+            await api(`/api/rooms/${dialog.room.id}/defects`, { formData: fd });
+            setDialog(null);
+            refetchSoon();
           }}
         />
       )}

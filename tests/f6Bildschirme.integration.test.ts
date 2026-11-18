@@ -107,3 +107,37 @@ describe("Freigabe-Warteschlange (M11)", () => {
     expect(etaState(at(200), now)).toBeNull();
   });
 });
+
+describe("Nachbesserung nach Review", () => {
+  it("Housekeeper liest/schreibt Notizen nur an eigenen heutigen Zimmern (Leck über die Suche geschlossen)", async () => {
+    const { GET: notesGet, POST: notesPost } = await import("@/app/api/rooms/[id]/notes/route");
+    as("anna", "room_attendant");
+    const foreign = await notesGet(new NextRequest(`http://x/api/rooms/${ids.r3}/notes`), { params: Promise.resolve({ id: ids.r3 }) });
+    expect(foreign.status).toBe(403);
+    const write = await notesPost(new NextRequest(`http://x/api/rooms/${ids.r3}/notes`, { method: "POST", body: JSON.stringify({ body: "x" }) }), { params: Promise.resolve({ id: ids.r3 }) });
+    expect(write.status).toBe(403);
+    const own = await notesGet(new NextRequest(`http://x/api/rooms/${ids.r2}/notes`), { params: Promise.resolve({ id: ids.r2 }) });
+    expect(own.status).toBe(200);
+    as("sup", "supervisor");
+    expect((await notesGet(new NextRequest(`http://x/api/rooms/${ids.r3}/notes`), { params: Promise.resolve({ id: ids.r3 }) })).status).toBe(200);
+  });
+
+  it("Suche: fremdes Zimmer ohne Belegung/DND/Sperrgrund statt falscher Werte", async () => {
+    as("anna", "room_attendant");
+    const r = (await (await roomsGet(new NextRequest("http://x/api/rooms?q=403"))).json()).rooms.find((x: { number: string }) => x.number === "403");
+    expect(r).not.toHaveProperty("occupancy");
+    expect(r).not.toHaveProperty("guestDndActive");
+    expect(r).not.toHaveProperty("blockReason");
+  });
+
+  it("Meldung an eine krank gemeldete Kraft geht an den Supervisor der Etage (M20)", async () => {
+    const { notifyHousekeeperOfRoomChange } = await import("@/lib/rooms/notifyRoomChange");
+    await prisma.user.update({ where: { id: ids.bea }, data: { sickDate: TODAY } });
+    await prisma.notification.deleteMany();
+    await notifyHousekeeperOfRoomChange({ roomId: ids.r3, kind: "RUSH", actorId: ids.sup });
+    const all = await prisma.notification.findMany();
+    expect(all.some((n) => n.targetUserId === ids.bea)).toBe(false);
+    expect(all.some((n) => n.targetRole === "supervisor" && /abgemeldet/.test(n.message))).toBe(true);
+    await prisma.user.update({ where: { id: ids.bea }, data: { sickDate: null } });
+  });
+});

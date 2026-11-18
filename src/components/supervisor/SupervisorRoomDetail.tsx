@@ -24,6 +24,9 @@ export interface SupDetailRoom {
   oooUntil?: string | null;
   oooReason?: string | null;
   assignedLabel: string | null;
+  /** F6 (M1): bei „In Arbeit“ Start (ISO) und Sollzeit in Minuten — Anzeige „seit 10:12 · 23 von ~45 Min“. */
+  startedAt?: string | null;
+  estMinutes?: number;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
 }
@@ -45,7 +48,7 @@ export function SupervisorRoomDetail({
   busy: boolean;
   isDutyManager: boolean;
   onAct: (status: RoomStatus) => void;
-  onOpenDialog: (kind: "rework" | "ooo" | "roomTask") => void;
+  onOpenDialog: (kind: "rework" | "ooo" | "roomTask" | "defect") => void;
   thread: ReactNode;
 }) {
   const { t } = useLocale();
@@ -92,6 +95,10 @@ export function SupervisorRoomDetail({
             {withoutLeadingSymbol(t("supervisor.setOoo"))}
           </Button>
         )}
+        {/* F6 (M3/B9): Mangel melden mit Foto auch für Supervisor/DM (Kamera direkt aus der App) */}
+        <Button variant="secondary" icon="wrench" block onClick={() => onOpenDialog("defect")}>
+          {withoutLeadingSymbol(t("attendant.defectAction")).replace(/…$/, "")}
+        </Button>
         <Button variant="secondary" icon="list" block onClick={() => onOpenDialog("roomTask")}>
           {withoutLeadingSymbol(t("supervisor.houseTaskBtn"))}
         </Button>
@@ -100,6 +107,11 @@ export function SupervisorRoomDetail({
       <div className="flex flex-col gap-2">
         <SectionLabel as="h3" icon="user" title={t("supervisor.assignedAttendant")} />
         <p className="text-body-18 text-text-primary">{room.assignedLabel ?? t("supervisor.unassignedOption")}</p>
+        {room.startedAt && (
+          <p className="text-body-16 text-text-secondary" data-testid="sup-running">
+            {t("hk.running", { start: hhmm(room.startedAt), min: Math.max(0, Math.round((Date.now() - new Date(room.startedAt).getTime()) / 60_000)), target: room.estMinutes ?? 0 })}
+          </p>
+        )}
         <Link href="/floor-plan" className={cx("text-body-16 inline-flex min-h-(--size-touch-min) items-center text-accent-text underline underline-offset-4", FOCUS_RING)}>
           {t("roster.changeInFloorPlan")}
         </Link>

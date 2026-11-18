@@ -31,6 +31,8 @@ export interface RoleRow {
   /** Rechte Angabe (Uhrzeit). Am Handy hängt sie an die Unterzeile an. */
   meta?: string;
   done?: boolean;
+  /** F6 (M23): Knopf direkt in der Zeile (z. B. „Sofort“ bei Anreisen), neben dem Antippen der Zeile. */
+  action?: ReactNode;
 }
 
 export interface RoleHubProps {
@@ -124,7 +126,8 @@ export function RoleHub(p: RoleHubProps) {
     body = (
       <ul className="flex flex-col gap-1">
         {p.rows.map((r) => (
-          <li key={r.key} data-row={r.key}>
+          <li key={r.key} data-row={r.key} className={r.action ? "flex items-center gap-2" : undefined}>
+            <div className={r.action ? "min-w-0 flex-1" : undefined}>
             {phone ? (
               <ListRowCompact
                 icon={r.icon}
@@ -138,6 +141,8 @@ export function RoleHub(p: RoleHubProps) {
             ) : (
               <ListRow icon={r.icon} title={r.title} subtitle={r.subtitle} pill={r.pill} meta={r.meta} state={state(r)} onClick={() => p.onSelect(r.key)} className="animate-in-up" />
             )}
+            </div>
+            {r.action}
           </li>
         ))}
       </ul>

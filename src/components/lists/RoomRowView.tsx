@@ -45,6 +45,10 @@ export interface ListRoom {
   dndCard?: boolean;
   /** Betrieb L2: Gast hat heute die Green Option gewählt (kein Wäschewechsel). */
   green?: boolean;
+  /** F6: Gast außer Haus „HH:MM–HH:MM“, Suite, Allergiker-Zimmer. */
+  outside?: string | null;
+  suite?: boolean;
+  allergy?: boolean;
 }
 
 const LABEL_ICON = { CARRYOVER: IconBroom, TURN: IconClock, DEPARTURE: IconBroom, EXTRA: IconBroom, STAYOVER: IconMoon, ARRIVAL: IconSuitcase, NONE: null } as const;

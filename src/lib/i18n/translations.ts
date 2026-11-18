@@ -372,6 +372,7 @@ const en = {
     houseTaskSending: "Sending…",
   },
   frontOffice: {
+    rushConfirm: "Room {{n}} needed now? The housekeeper is told to do it first.",
     checkoutMany: "Mark {{n}} as checked out",
     checkoutManyTitle: "Check out {{n}} rooms?",
     checkoutManyConfirm: "Yes, checked out",
@@ -490,6 +491,7 @@ const en = {
     deferredBadge: "{{count}} rooms carried over from a previous plan — see below for which ones.",
   },
   planning: {
+    confirmAbsent: "Sign off {{name}} for today (sick/absent)? Their rooms become free to reassign.",
     title: "Morning Planning",
     subtitle: "Set the day, pick the team, get a balanced round for each attendant.",
     liveBoardLink: "← Live board",
@@ -790,6 +792,15 @@ const en = {
     noneEligible: "No suitable housekeeper for {{n}} room(s).",
   },
   hk: {
+    outside: "Guest out {{time}}",
+    suite: "Suite",
+    allergy: "Allergy room",
+    target: "~{{min}} min",
+    running: "since {{start}} · {{min}} of ~{{target}} min",
+    restTime: "{{n}} rooms left, about {{h}} h",
+    overShift: "That runs past the end of the shift ({{end}}) — your supervisor can see it.",
+    absentToday: "You are signed off for today.",
+    laundryNoConfirm: "Mark room {{n}} clean WITHOUT a linen change? Cancel = back",
     secondRoomConfirm: "Room {{n}} is still in progress. Start a second room anyway?",
     laundryConfirm: "Room {{n}}: linen changed? OK = yes, Cancel = no",
     homeDmOnly: "Preferred floors are set by the Duty Manager",
@@ -1662,6 +1673,8 @@ const en = {
     tileEMPTY: "empty",
   },
   notify: {
+    roomChangeAbsent: "Room {{n}} (floor {{floor}}): {{what}} — {{name}} is signed off today, please take over.",
+    roomChangeTime: "Room {{n}} (floor {{floor}}): {{what}} {{time}}.",
     changeRUSH: "Urgent — do this room first",
     staffSick: "{{name}} reported sick, {{n}} room(s) open.",
     staffShort: "Not enough staff: {{needed}} needed, {{present}} present.",
@@ -2423,6 +2436,7 @@ const de = {
     houseTaskSending: "Sendet…",
   },
   frontOffice: {
+    rushConfirm: "Zimmer {{n}} sofort gebraucht? Die Housekeeperin bekommt „Sofort — dieses Zimmer zuerst“.",
     checkoutMany: "{{n}} als ausgecheckt melden",
     checkoutManyTitle: "{{n}} Zimmer als ausgecheckt melden?",
     checkoutManyConfirm: "Ja, ausgecheckt",
@@ -2541,6 +2555,7 @@ const de = {
     deferredBadge: "{{count}} Zimmer aus einem früheren Plan übernommen — welche, steht unten.",
   },
   planning: {
+    confirmAbsent: "{{name}} für heute abmelden (krank/abwesend)? Die Zimmer werden zum Umverteilen frei.",
     title: "Tagesplanung",
     subtitle: "Tag festlegen, Team wählen — für jedes Zimmermädchen eine ausgewogene Runde.",
     liveBoardLink: "← Live-Board",
@@ -2841,6 +2856,15 @@ const de = {
     noneEligible: "Kein geeigneter Housekeeper für {{n}} Zimmer.",
   },
   hk: {
+    outside: "Gast außer Haus {{time}}",
+    suite: "Suite",
+    allergy: "Allergiker",
+    target: "~{{min}} Min",
+    running: "seit {{start}} · {{min}} von ~{{target}} Min",
+    restTime: "Noch {{n}} Zimmer, etwa {{h}} Std",
+    overShift: "Das geht über das Schichtende ({{end}}) hinaus — deine Supervisorin sieht das.",
+    absentToday: "Du bist heute abgemeldet.",
+    laundryNoConfirm: "Zimmer {{n}} OHNE Wäschewechsel fertig melden? Abbrechen = zurück",
     secondRoomConfirm: "Zimmer {{n}} ist noch in Arbeit. Trotzdem ein zweites Zimmer starten?",
     laundryConfirm: "Zimmer {{n}}: Wäschewechsel gemacht? OK = ja, Abbrechen = nein",
     homeDmOnly: "Präferenz-Etagen pflegt nur der Duty Manager",
@@ -3713,6 +3737,8 @@ const de = {
     tileEMPTY: "leer",
   },
   notify: {
+    roomChangeAbsent: "Zimmer {{n}} (Etage {{floor}}): {{what}} — {{name}} ist heute abgemeldet, bitte übernehmen.",
+    roomChangeTime: "Zimmer {{n}} (Etage {{floor}}): {{what}} {{time}}.",
     changeRUSH: "Sofort — dieses Zimmer zuerst",
     staffSick: "{{name}} krank gemeldet, {{n}} Zimmer offen.",
     staffShort: "Personal reicht nicht: benötigt {{needed}} Kräfte, da sind {{present}}.",
