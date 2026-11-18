@@ -115,12 +115,14 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
     });
   }
   // F4 (M7): Warnungen je Art bündeln — eine Zeile mit Namen und Zimmernummern statt einer Zeile je Zimmer
+  // Eine Zeile je Kraft und Art (mit hkId — der Tagesplan ordnet Hinweise der Kraft zu, src/lib/ui/tagesplan.ts planHints)
   const bundle = (code: string, pairs: { k: number; r: PlanRoom }[], head: string) => {
-    if (!pairs.length) return;
-    const byPerson = new Map<number, string[]>();
-    for (const p of pairs) byPerson.set(p.k, [...(byPerson.get(p.k) ?? []), p.r.number]);
-    warnings.push({ code, severity: "WARNING", roomIds: pairs.map((p) => p.r.id),
-      message: `${head}: ${[...byPerson.entries()].map(([k, ns]) => `${input.housekeepers[k].name} ${ns.join(", ")}`).join("; ")} — bitte prüfen.` });
+    const byPerson = new Map<number, PlanRoom[]>();
+    for (const p of pairs) byPerson.set(p.k, [...(byPerson.get(p.k) ?? []), p.r]);
+    for (const [k, rs] of byPerson) {
+      warnings.push({ code, severity: "WARNING", hkId: input.housekeepers[k].id, roomIds: rs.map((r) => r.id),
+        message: `${head}: ${input.housekeepers[k].name} ${rs.map((r) => r.number).join(", ")} — bitte prüfen.` });
+    }
   };
   // Planung L1 (Regel 5): Einschränkung der Kraft verletzt (nur bei Handzuteilung möglich; „keine Suiten“ filtert der Vorschlag)
   const RESTRICTION_LABEL = { NO_SUITE: "keine Suiten", NO_VIP: "keine VIP-Zimmer", NO_ALLERGY: "keine Allergiker-Zimmer" } as const;

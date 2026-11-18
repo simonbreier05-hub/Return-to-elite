@@ -87,7 +87,7 @@ export function eligible(c: Compiled, roomI: number, hkI: number): boolean {
 
 /** Nur für Systemvorschläge zur Umverteilung: anspruchsvolle Zimmer nicht von sich aus auf Stufe 1 schieben. Von Hand ist alles erlaubt. */
 export function suitable(c: Compiled, roomI: number, hkI: number): boolean {
-  return c.input.housekeepers[hkI].level >= 2 || c.rooms[roomI].demanding.length === 0;
+  return eligible(c, roomI, hkI); // F4: dieselbe harte Regel wie der Vorschlag (Stufe 1, „keine Suiten“)
 }
 
 /**

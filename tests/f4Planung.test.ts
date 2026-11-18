@@ -61,3 +61,4 @@ describe("F4: Suite nach Zimmertyp, auch mit Credit-Schwelle", () => {
     for (const s of suites) expect(r.assignment[s.id], s.number).not.toBe("y");
   });
 });
+
