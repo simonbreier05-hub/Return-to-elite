@@ -33,7 +33,7 @@
     "errorBoundary.title": "इस स्क्रीन पर कोई गड़बड़ी हुई",
     "errorBoundary.message": "ऐप का बाकी हिस्सा ठीक है। दोबारा लोड करने से अक्सर ठीक हो जाता है — फिर भी हो तो सुपरवाइज़र को बताएँ।",
     "errorBoundary.reload": "दोबारा लोड करें",
-    "nav.departures": "प्रस्थान",
+    "nav.departures": "चेक-आउट",
     "nav.problems": "समस्याएँ",
     "nav.release": "रिलीज़",
     "nav.liveBoard": "लाइव बोर्ड",

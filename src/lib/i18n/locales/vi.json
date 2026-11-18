@@ -33,7 +33,7 @@
     "errorBoundary.title": "Màn hình này gặp lỗi",
     "errorBoundary.message": "Phần còn lại của ứng dụng không bị ảnh hưởng. Tải lại thường sẽ khắc phục — nếu vẫn lỗi, hãy báo cho Supervisor.",
     "errorBoundary.reload": "Tải lại",
-    "nav.departures": "Trả phòng",
+    "nav.departures": "Check-out",
     "nav.problems": "Sự cố",
     "nav.release": "Duyệt phòng",
     "nav.liveBoard": "Bảng trực tiếp",
