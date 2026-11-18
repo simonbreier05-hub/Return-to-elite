@@ -1534,6 +1534,7 @@
     "notify.etaPassed": "Oda {{n}}: misafirin varış saati geçti, ama oda “{{status}}”, onaylanmadı.",
     "notify.etaSoon": "Oda {{n}}: misafir {{min}} dakika içinde geliyor, ama oda “{{status}}”, onaylanmadı.",
     "notify.releaseBacklog": "{{n}} oda temiz ve kontrol bekliyor — onay birikmesi.",
+    "notifyType.GUEST_STAY_CONFLICT": "İki konaklama içeride",
     "notifyType.VIP_RELEASE_LATE": "VIP geç açıldı",
     "notifyType.BEHIND_PLAN": "Plan gerisinde",
     "notifyType.STAFF_SHORT": "Personel yetersiz",

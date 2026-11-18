@@ -105,7 +105,7 @@ export function planAssignments(
       unassigned: workload.map((r) => ({
         roomId: r.id,
         number: r.number,
-        reason: "No attendant on shift.",
+        reason: "Keine Housekeeperin im Dienst.",
       })),
       summary: emptySummary,
     };

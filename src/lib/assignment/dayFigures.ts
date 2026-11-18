@@ -89,7 +89,7 @@ export function checkDayFigures(figures: DayFigures, totalRooms: number, roomsNe
   if (figures.arrivals > figures.eveningOccupancy) {
     warnings.push({
       field: "arrivals",
-      message: "More arrivals than rooms occupied tonight — one of the two figures is off.",
+      message: "Mehr Anreisen als heute Nacht belegte Zimmer — eine der beiden Zahlen stimmt nicht.",
     });
   }
   return warnings;

@@ -1732,6 +1732,7 @@ const en = {
     arrivalVipEarly: "Room {{n}} (floor {{floor}}): VIP early arrival — please finish and release it first.",
   },
   notifyType: {
+    GUEST_STAY_CONFLICT: "Two stays in house",
     CARRYOVER: "Open since yesterday",
     ROOM_BLOCKED_OCCUPIED: "Occupied room blocked",
     OOO_READY: "Ready for release",
@@ -3772,6 +3773,7 @@ const de = {
     arrivalVipEarly: "Zimmer {{n}} (Etage {{floor}}): VIP-Frühanreise — bitte zuerst fertig machen und freigeben.",
   },
   notifyType: {
+    GUEST_STAY_CONFLICT: "Zwei Aufenthalte im Haus",
     CARRYOVER: "Seit gestern offen",
     ROOM_BLOCKED_OCCUPIED: "Belegtes Zimmer gesperrt",
     OOO_READY: "Bereit zur Freigabe",

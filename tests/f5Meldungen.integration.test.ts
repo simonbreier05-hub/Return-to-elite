@@ -88,3 +88,16 @@ describe("M2: Glocke", () => {
     expect(g.slice(1).map((x) => x.kind)).toEqual(["one", "one", "one"]);
   });
 });
+
+describe("Nachbesserung (Review)", () => {
+  it("Seiten überspringen keine Meldungen mit gleichem Zeitstempel (Cursor Zeit|Id)", async () => {
+    await prisma.notification.deleteMany();
+    const t = new Date();
+    for (let i = 0; i < 70; i++) await prisma.notification.create({ data: { type: "GUEST_CHECKED_OUT", level: "info", targetRole: "duty_manager", message: `x${i}`, createdAt: t } });
+    as("dm", "duty_manager");
+    const p1 = await get();
+    const p2 = await get(`?before=${encodeURIComponent(p1.nextBefore)}`);
+    expect(new Set([...p1.notifications, ...p2.notifications].map((n: { id: string }) => n.id)).size).toBe(70);
+    expect(p2.nextBefore).toBeNull();
+  });
+});

@@ -1534,6 +1534,7 @@
     "notify.etaPassed": "Phòng {{n}}: đã quá giờ khách đến, nhưng phòng đang “{{status}}”, chưa được duyệt.",
     "notify.etaSoon": "Phòng {{n}}: khách đến sau {{min}} phút, nhưng phòng đang “{{status}}”, chưa được duyệt.",
     "notify.releaseBacklog": "{{n}} phòng đã sạch và đang chờ kiểm tra — tồn đọng Duyệt phòng.",
+    "notifyType.GUEST_STAY_CONFLICT": "Hai lượt lưu trú cùng lúc",
     "notifyType.VIP_RELEASE_LATE": "VIP duyệt muộn",
     "notifyType.BEHIND_PLAN": "Chậm kế hoạch",
     "notifyType.STAFF_SHORT": "Thiếu nhân sự",
