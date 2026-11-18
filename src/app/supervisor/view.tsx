@@ -390,7 +390,7 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
       <GlassCard as="section" aria-labelledby="sup-board-title" className="flex flex-col gap-4">
         <div ref={gridRef} className="scroll-mt-4">
           <h2 id="sup-board-title" className="text-title-22 text-text-primary">{t("supervisor.problemRooms")}</h2>
-          <p className="text-label text-text-muted">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+          <p className="text-label text-text-muted">{t("supervisor.fiveFloorsKeys", { count: visible.length })}</p>
         </div>
         {/* Ein Zimmer unter 145 finden, ohne zu scrollen. */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
