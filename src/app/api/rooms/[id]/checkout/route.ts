@@ -1,3 +1,4 @@
+import { buildProfileSuggestion } from "@/lib/guest/profileSuggestion";
 import { archiveStayHistory, unarchiveStayHistory } from "@/lib/guest/stayArchive";
 import { berlinToUtc } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
@@ -31,6 +32,8 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   if (stay?.status === "CHECKED_OUT") return NextResponse.json({ ok: true, already: true });
   await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "CHECKED_OUT" } });
   // F7 (H13): Verlauf des Aufenthalts archivieren — nächster Gast und die Listen starten leer
+  // F8: Vorschlag fürs Opera-Profil — vor dem Archivieren lesen, einmal je Aufenthalt (Rücknahme/Wiederholung legt keinen zweiten an)
+  await buildProfileSuggestion(plan.stayId).catch(() => null);
   await archiveStayHistory(id, { stayId: plan.stayId });
   const room = await prisma.room.update({ where: { id }, data: { occupancy: "VACANT" } });
   await audit({ action: "GUEST_CHECKED_OUT", userId: auth.session.userId, roomId: id, meta: { date } });

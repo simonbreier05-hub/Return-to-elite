@@ -713,3 +713,23 @@ model RecurringTask {
 
   @@index([active])
 }
+
+// F8 (entschieden 16.11.2026): Vorschlag fürs Opera-Gastprofil nach Abreise — einmal je Aufenthalt, nur Duty Manager,
+// wird von Hand in Opera gepflegt (StayClean schreibt nie nach Opera). Nur regelbasierte Punkte, keine Gesundheitsdaten,
+// kein Freitext. Gelöscht, sobald alle Punkte erledigt sind, spätestens nach 30 Tagen (Nachtlöschung).
+model ProfileSuggestion {
+  id              String    @id @default(cuid())
+  stayId          String    @unique // einmal je Aufenthalt (Rücknahme + erneuter Check-out legt keinen zweiten an)
+  roomNumber      String
+  guestSalutation String?
+  guestTitle      String?
+  guestLastName   String?
+  departure       DateTime
+  items           String // JSON: [{ code, vars, status: OPEN | TAKEN | DISCARDED }]
+  status          String    @default("OPEN") // OPEN | DONE
+  doneById        String?
+  doneAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([createdAt])
+}

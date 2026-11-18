@@ -1,5 +1,6 @@
 "use client";
 
+import ProfileSuggestionsCard from "@/components/ProfileSuggestionsCard";
 import RoomActionsCard from "@/components/roles/RoomActionsCard";
 import RoomChangeForm from "@/components/roles/RoomChangeForm";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
@@ -181,6 +182,7 @@ export default function DutyManagerView() {
                 <>
                   <HubMissingNotice hub={hub} planner glass />
                   <BlockedRoomsCard role="duty_manager" />
+                  <ProfileSuggestionsCard />
                   <RoomActionsCard roomChange={<RoomChangeForm />} />
                   {HOTEL.unconfirmedFloors.length > 0 && (
                     <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />

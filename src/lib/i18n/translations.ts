@@ -2092,6 +2092,22 @@ const en = {
     restrNO_ALLERGY: "no allergy rooms",
     warnConfirm: "Assign anyway?",
   },
+  profile: {
+    title: "Opera profile suggestions ({{n}})",
+    hint: "Observations from departed stays — enter them in Opera by hand if suitable. StayClean never writes to Opera.",
+    guestUnknown: "Guest",
+    departure: "Departure {{date}}",
+    room: "Room {{n}}",
+    taken: "Entered in Opera",
+    discard: "Discard",
+    allDone: "All done",
+    "item.CLEAN_AFTER": "Preferred cleaning time from {{time}}",
+    "item.NO_DAILY_LINEN": "Declines daily linen change",
+    "item.BABY_COT": "Note: baby cot",
+    "item.EXTRA_BED": "Note: extra bed",
+    "item.TWIN": "Note: twin beds",
+    "item.TRACE_TYPE": "Recurring Opera note: {{type}}",
+  },
 } as const;
 
 const de = {
@@ -4174,6 +4190,22 @@ const de = {
     restrNO_VIP: "keine VIP",
     restrNO_ALLERGY: "keine Allergiker-Zimmer",
     warnConfirm: "Trotzdem zuteilen?",
+  },
+  profile: {
+    title: "Opera-Profil-Vorschläge ({{n}})",
+    hint: "Beobachtungen aus abgereisten Aufenthalten — bei Bedarf von Hand in Opera eintragen. StayClean schreibt nie nach Opera.",
+    guestUnknown: "Gast",
+    departure: "Abreise {{date}}",
+    room: "Zimmer {{n}}",
+    taken: "In Opera übernommen",
+    discard: "Verwerfen",
+    allDone: "Alle erledigt",
+    "item.CLEAN_AFTER": "Bevorzugte Reinigungszeit ab {{time}}",
+    "item.NO_DAILY_LINEN": "Verzichtet auf täglichen Wäschewechsel",
+    "item.BABY_COT": "Hinweis: Babybett",
+    "item.EXTRA_BED": "Hinweis: Extrabett",
+    "item.TWIN": "Hinweis: Twin-Betten",
+    "item.TRACE_TYPE": "Wiederkehrender Opera-Hinweis: {{type}}",
   },
 } satisfies Dict;
 
