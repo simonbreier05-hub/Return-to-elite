@@ -33,6 +33,41 @@ export interface Compiled {
   restricted: Uint8Array | null;
   /** Planung L1 (Regel 13): Index der Kraft vom selben Aufenthalt je Zimmer, -1 = keine. */
   stayHk: Int16Array;
+  /** F4 (Simon 19.11.): 1 = anspruchsvolles Zimmer, für das die Stufen-Regel heute nicht gilt (passende Kräfte über ihrer Zimmervorgabe). */
+  relaxed: Uint8Array;
+}
+
+/**
+ * F4 (Entscheidung Simon 19.11.2026, Kapazität): Die Stufen-Regel hat Vorrang, solange die passenden Kräfte (ab Stufe 2) das
+ * innerhalb ihrer Zimmervorgabe schaffen. Reicht das nicht, gehen die übrigen anspruchsvollen Zimmer nach der normalen
+ * Zimmervorgabe an alle Kräfte (auch Stufe 1) — statt alles bei einer Person zu stapeln. Immer mit Warnung (`buildResult`).
+ * Zimmervorgabe = Zimmer-Band oben (`roomsHi`), ohne Band die Credit-Obergrenze (`hi`). Die Kräfte behalten die
+ * schwersten Zimmer (Suite vor VIP/Allergiker, mehr Merkmale, mehr Credits); freigegeben werden die leichteren.
+ * „Keine Suiten“ bleibt eine harte Einschränkung der Person. Ist gar niemand ab Stufe 2 da, bleibt es bei „offen + Hinweis“.
+ */
+export function levelOverflow(input: PlanInput, suite: Uint8Array): Uint8Array {
+  const rooms = input.rooms;
+  const out = new Uint8Array(rooms.length);
+  const hks = input.housekeepers;
+  const matching = hks.filter((h) => h.level >= 2);
+  if (!matching.length) return out;
+  const byRooms = matching.every((h) => h.roomsHi !== undefined);
+  const unit = (r: PlanRoom) => (byRooms ? 1 : r.credits);
+  const fixedUnits = new Map<string, number>();
+  for (const r of rooms) if (r.fixedTo) fixedUnits.set(r.fixedTo, (fixedUnits.get(r.fixedTo) ?? 0) + unit(r));
+  const cap = (h: PlanHousekeeper) => Math.max(0, (byRooms ? h.roomsHi! : h.hi) - (fixedUnits.get(h.id) ?? 0));
+  const capAll = matching.reduce((a, h) => a + cap(h), 0);
+  const capSuite = matching.filter((h) => !(h.restrictions ?? []).includes("NO_SUITE")).reduce((a, h) => a + cap(h), 0);
+  const free = rooms.map((r, i) => i).filter((i) => !rooms[i].fixedTo && rooms[i].demanding.length > 0);
+  free.sort((a, b) => suite[b] - suite[a] || rooms[b].demanding.length - rooms[a].demanding.length || rooms[b].credits - rooms[a].credits ||
+    (parseInt(rooms[a].number, 10) || 0) - (parseInt(rooms[b].number, 10) || 0) || a - b);
+  let used = 0, usedSuite = 0;
+  for (const i of free) {
+    const u = unit(rooms[i]);
+    const fits = used + u <= capAll + 1e-9 && (!suite[i] || usedSuite + u <= capSuite + 1e-9);
+    if (fits) { used += u; if (suite[i]) usedSuite += u; } else out[i] = 1;
+  }
+  return out;
 }
 
 export type CostPart = "extraFloor" | "credits" | "categoryFairness" | "demandingFairness" | "interconnectSplit" | "homeFloor" | "jump" | "unassigned" | "levelMismatch" | "rooms" | "assignedFloor" | "learned" | "overtime" | "traineeSuite" | "suiteCap" | "restriction" | "stayContinuity";
@@ -60,8 +95,9 @@ export function compile(input: PlanInput): Compiled {
   const restricted = anyRestricted ? new Uint8Array(rooms.length * H) : null;
   if (restricted) rooms.forEach((r, i) => input.housekeepers.forEach((h, k) => { if (restrictionHit(h, r, input.suiteMinCredit)) restricted[i * H + k] = 1; }));
   const stayHk = Int16Array.from(rooms, (r) => (r.stayHk !== undefined && hkIdx.has(r.stayHk) ? hkIdx.get(r.stayHk)! : -1));
+  const relaxed = levelOverflow(input, suite);
   return {
-    suite, restricted, stayHk,
+    suite, restricted, stayHk, relaxed,
     input, rooms, order, roomIdx, hkIdx, pairs, num, centers, centerSum: centers.reduce((a, b) => a + b, 0) || 1,
     roomCenters, roomCenterSum: roomCenters.reduce((a, b) => a + b, 0) || 1,
     // Planung L1: Springer (EXTERN) haben keine Präferenz-Etagen — sie gehen dorthin, wo Bedarf ist
@@ -80,7 +116,7 @@ const popcount = (m: number) => { let n = 0; while (m) { n += m & 1; m >>= 1; } 
  */
 export function eligible(c: Compiled, roomI: number, hkI: number): boolean {
   const h = c.input.housekeepers[hkI];
-  if (h.level < 2 && c.rooms[roomI].demanding.length > 0) return false;
+  if (h.level < 2 && c.rooms[roomI].demanding.length > 0 && !c.relaxed[roomI]) return false; // F4: außer Überhang (levelOverflow)
   if (c.suite[roomI] && (h.restrictions ?? []).includes("NO_SUITE")) return false;
   return true;
 }
@@ -114,7 +150,7 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     const today = c.today[a];
     if (today.size && !today.has(r.floor)) todayMis++;
     if (r.kind === "STAYOVER") { if (r.laundry) linen[a]++; else stay[a]++; } else if (r.kind === "TURN") turn[a]++; else deep[a]++;
-    if (r.demanding.length) { dem[a]++; if (hks[a].level < 2) levelMis++; }
+    if (r.demanding.length) { dem[a]++; if (hks[a].level < 2 && !c.relaxed[i]) levelMis++; }
     if (hks[a].type === "AZUBI" && r.demanding.includes("SUITE")) traineeSuites++;
     if (c.suite[i]) suites[a]++;
     if (c.restricted && c.restricted[i * H + a]) restrictionHits++;
