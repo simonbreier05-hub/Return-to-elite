@@ -33,6 +33,41 @@ type Key = DayTileKey | "arrivals" | "departures" | "dnd" | "dndBlocked" | "prog
  */
 const COLLAPSE_KEY = "stayclean.glance.collapsed";
 
+/**
+ * Simon-Feedback 19.11.: „Heute auf einen Blick“ einklappbar. Der Zustand bleibt je Gerät gemerkt (nur Bequemlichkeit,
+ * ohne Gastdaten); privater Modus/gesperrter Speicher → einfach aufgeklappt.
+ */
+export function useGlanceCollapse(enabled = true) {
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (!enabled) return;
+    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* privater Modus */ }
+  }, [enabled]);
+  const toggle = () => setCollapsed((c) => {
+    try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* privater Modus */ }
+    return !c;
+  });
+  return { collapsed, toggle };
+}
+
+/** Kopfzeile der Karte; mit `fold` als Knopf zum Ein-/Ausklappen. */
+export function GlanceTitle({ title, fold }: { title: string; fold?: { collapsed: boolean; toggle: () => void } }) {
+  const { t } = useLocale();
+  const glassMode = useGlassMode();
+  const cls = glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl";
+  if (!fold) return <h3 className={cls}>{title}</h3>;
+  return (
+    <h3 className={cls}>
+      <button type="button" onClick={fold.toggle} aria-expanded={!fold.collapsed}
+        className={cx("press flex min-h-(--size-touch-min) w-full items-center justify-between gap-2 text-start", FOCUS_RING)}>
+        <span className="min-w-0 flex-1">{title}</span>
+        <span className="sr-only">{fold.collapsed ? t("glance.expand") : t("glance.collapse")}</span>
+        <Glyph name="chevron-down" size={20} className={cx("text-text-secondary transition-transform duration-150", !fold.collapsed && "rotate-180")} />
+      </button>
+    </h3>
+  );
+}
+
 export default function TodayAtAGlance({ title, numbers, kpis, source, variant = "dutyManager", extraKpi, onChanged, children, glass, collapsible }: {
   title?: string;
   numbers: DayNumbers | null;
@@ -128,17 +163,8 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
 
   const sup = variant === "supervisor";
   const glassMode = useGlassMode();
-  // Simon-Feedback 19.11.: Karte einklappbar; der Zustand bleibt je Gerät gemerkt (nur Bequemlichkeit, ohne Gastdaten)
-  const [collapsed, setCollapsed] = useState(false);
-  useEffect(() => {
-    if (!collapsible) return;
-    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* privater Modus */ }
-  }, [collapsible]);
-  const toggle = () => setCollapsed((c) => {
-    try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* privater Modus */ }
-    return !c;
-  });
-  const shown = !collapsible || !collapsed;
+  const fold = useGlanceCollapse(!!collapsible);
+  const shown = !collapsible || !fold.collapsed;
   if (glass) {
     return (
       <>
@@ -149,18 +175,7 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
   }
   return (
     <section aria-label={title ?? t("dutyManager.dashboardTitle")} className={glassMode ? "glass flex flex-col gap-1 rounded-(--glass-radius-lg) p-4 sm:p-6" : "mb-6"}>
-      {collapsible ? (
-        <h3 className={glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>
-          <button type="button" onClick={toggle} aria-expanded={!collapsed}
-            className={cx("press flex min-h-(--size-touch-min) w-full items-center justify-between gap-2 text-start", FOCUS_RING)}>
-            <span className="min-w-0 flex-1">{title ?? t("dutyManager.dashboardTitle")}</span>
-            <span className="sr-only">{collapsed ? t("glance.expand") : t("glance.collapse")}</span>
-            <Glyph name="chevron-down" size={20} className={cx("text-text-secondary transition-transform duration-150", !collapsed && "rotate-180")} />
-          </button>
-        </h3>
-      ) : (
-        <h3 className={glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>{title ?? t("dutyManager.dashboardTitle")}</h3>
-      )}
+      <GlanceTitle title={title ?? t("dutyManager.dashboardTitle")} fold={collapsible ? fold : undefined} />
       {shown && <>
       {source && <p className={glassMode ? "text-label mb-3 text-text-muted" : "mb-2 text-xs text-graphite/60"}>{t("glance.tapHint")}</p>}
       {numbers && <DayNumberTiles className="mb-3" numbers={numbers} onTile={source ? detail.open : undefined} />}
