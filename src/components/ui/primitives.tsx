@@ -62,9 +62,10 @@ export function Glyph({ name, size = 24, className }: { name: IconName; size?: n
 }
 
 /** Zähler-Badge in Champagner (Navigation, Tab-Leiste). */
-export function CountBadge({ value, className }: { value: string | number; className?: string }) {
+/** `quiet`: gedämpft (keine Akzentfarbe) — für Zahlen, die nicht drängen sollen (Simon-Feedback 19.11.: Freigabe-Warteschlange). */
+export function CountBadge({ value, className, quiet }: { value: string | number; className?: string; quiet?: boolean }) {
   return (
-    <span className={cx("bg-champagne text-label inline-flex min-w-7 items-center justify-center rounded-pill px-2 py-1 text-text-on-accent", className)}>
+    <span className={cx("text-label inline-flex min-w-7 items-center justify-center rounded-pill px-2 py-1", quiet ? "bg-surface-progress-track text-text-secondary" : "bg-champagne text-text-on-accent", className)}>
       {value}
     </span>
   );

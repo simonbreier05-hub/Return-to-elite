@@ -2110,6 +2110,21 @@ const en = {
     "item.TWIN": "Note: twin beds",
     "item.TRACE_TYPE": "Recurring Opera note: {{type}}",
   },
+  foPlan: {
+    filterLabel: "Filter rooms",
+    filterAll: "All",
+    filterArrivals: "Arrivals",
+    filterDepartures: "Departures",
+    filterReady: "Free & ready",
+    filterProblems: "Needs attention",
+    empty: "No rooms match this filter.",
+    floorSummary: "{{free}} free & ready · {{occupied}} occupied",
+    vacant: "Vacant",
+    arrival: "Arrival",
+    arrivalAt: "Arrival {{time}}",
+    departure: "Departure",
+    blocked: "Blocked",
+  },
 } as const;
 
 const de = {
@@ -4210,6 +4225,21 @@ const de = {
     "item.EXTRA_BED": "Hinweis: Extrabett",
     "item.TWIN": "Hinweis: Twin-Betten",
     "item.TRACE_TYPE": "Wiederkehrender Opera-Hinweis: {{type}}",
+  },
+  foPlan: {
+    filterLabel: "Zimmer filtern",
+    filterAll: "Alle",
+    filterArrivals: "Anreisen",
+    filterDepartures: "Abreisen",
+    filterReady: "Frei & bereit",
+    filterProblems: "Achtung",
+    empty: "Kein Zimmer passt zu diesem Filter.",
+    floorSummary: "{{free}} frei & bereit · {{occupied}} belegt",
+    vacant: "Frei",
+    arrival: "Anreise",
+    arrivalAt: "Anreise {{time}}",
+    departure: "Abreise",
+    blocked: "Gesperrt",
   },
 } satisfies Dict;
 

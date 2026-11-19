@@ -16,10 +16,15 @@ const SELECT = "text-body-16 w-full min-h-(--size-touch-min) rounded-(--glass-ra
  * F3 Teil 4 (H9, Regel B5 neu): Zimmerwechsel in einem Schritt — von Zimmer, nach Zimmer (nur freie, geprüfte, nicht
  * gesperrte Zimmer ohne Anreise heute), Grund ohne Gastdaten — mit einer Rückfrage, die beide Zimmernummern nennt.
  */
-export default function RoomChangeForm() {
+export default function RoomChangeForm({ fromRoom, onDone }: {
+  /** Simon-Feedback 19.11.: im Zimmerfenster steht das Ausgangszimmer fest (kein Eingabefeld „Von Zimmer“). */
+  fromRoom?: string;
+  onDone?: () => void;
+} = {}) {
   const { t } = useLocale();
   const selectId = useId();
-  const [from, setFrom] = useState("");
+  const [fromInput, setFrom] = useState("");
+  const from = fromRoom ?? fromInput;
   const [to, setTo] = useState("");
   const [reason, setReason] = useState("");
   const [targets, setTargets] = useState<RoomChangeTarget[]>([]);
@@ -36,14 +41,14 @@ export default function RoomChangeForm() {
       if (!id) throw new Error(t("blocked.roomNotFound", { n: from.trim() }));
       await api(`/api/rooms/${id}/room-change`, { body: { toRoomId: to, reason: reason.trim() } });
       setMsg({ ok: true, text: t("roomActions.changeDone", { from: from.trim(), to: toNumber }) });
-      setFrom(""); setTo(""); setReason(""); await load();
+      setFrom(""); setTo(""); setReason(""); await load(); onDone?.();
     } catch (e) { setMsg({ ok: false, text: errorText(e, t) }); } finally { setBusy(false); }
   };
   return (
     <div className="flex flex-col gap-2 border-t border-border-subtle pt-3" data-testid="room-change">
       <h3 className="text-section text-text-muted">{t("roomActions.changeTitle")}</h3>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-        <Field className="sm:w-32" label={t("roomActions.changeFrom")} value={from} maxLength={6} inputMode="numeric" onChange={(e) => setFrom(e.target.value)} />
+        {fromRoom === undefined && <Field className="sm:w-32" label={t("roomActions.changeFrom")} value={from} maxLength={6} inputMode="numeric" onChange={(e) => setFrom(e.target.value)} />}
         <div className="flex flex-col gap-2 sm:w-48">
           <label htmlFor={selectId} className="text-label text-text-muted">{t("roomActions.changeTo")}</label>
           <select id={selectId} className={cx(SELECT, FOCUS_RING)} value={to} onChange={(e) => setTo(e.target.value)}>
