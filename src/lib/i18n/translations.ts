@@ -2139,6 +2139,22 @@ const en = {
     inProgress: "In progress",
     done: "Done",
   },
+  guestAccess: {
+    title: "Guest access (QR/NFC)",
+    intro: "Each code is tied to one room and always resolves to the current stay — never to the room number in plain text. If a tag is lost, create a new one here: the old code stops working immediately.",
+    search: "Search room",
+    download: "Download NFC URL list",
+    print: "Open printable QR list",
+    colRoom: "Room",
+    colFloor: "Floor",
+    colUrl: "NFC/QR URL",
+    copy: "Copy",
+    copied: "Copied",
+    regenerate: "Create new code",
+    regenerateTitle: "New code for room {{n}}?",
+    regenerateText: "The old QR code / NFC tag stops working afterwards.",
+    noRoom: "No room found.",
+  },
 } as const;
 
 const de = {
@@ -4268,6 +4284,22 @@ const de = {
     take: "Übernehmen",
     inProgress: "In Bearbeitung",
     done: "Erledigt",
+  },
+  guestAccess: {
+    title: "Gästezugang (QR/NFC)",
+    intro: "Jeder Code ist fest an ein Zimmer gebunden und löst immer zum aktuellen Aufenthalt auf — nie zur Zimmernummer im Klartext. Ist ein Tag verloren gegangen, hier neu erzeugen: der alte Code funktioniert danach sofort nicht mehr.",
+    search: "Zimmer suchen",
+    download: "NFC-URL-Liste herunterladen",
+    print: "Druckbare QR-Liste öffnen",
+    colRoom: "Zimmer",
+    colFloor: "Etage",
+    colUrl: "NFC/QR-URL",
+    copy: "Kopieren",
+    copied: "Kopiert",
+    regenerate: "Neu erzeugen",
+    regenerateTitle: "Neuen Code für Zimmer {{n}} erzeugen?",
+    regenerateText: "Der alte QR-Code/NFC-Tag funktioniert danach nicht mehr.",
+    noRoom: "Kein Zimmer gefunden.",
   },
 } satisfies Dict;
 

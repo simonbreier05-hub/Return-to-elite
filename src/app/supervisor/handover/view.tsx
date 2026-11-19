@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
+import { Banner, Button, FilterChip, GlassCard, SectionLabel } from "@/components/ui";
+import { cx, FOCUS_RING, Glyph } from "@/components/ui/primitives";
 
 interface Handover {
   headline: string;
@@ -33,6 +34,7 @@ interface Facts {
 
 const WINDOWS = [4, 8, 12];
 
+/** Schichtübergabe (Supervisor). Simon-Feedback 19.11.2026: im Design der App („Glas & Premium“), Inhalt unverändert. */
 export default function HandoverView() {
   const { t } = useLocale();
   const [hours, setHours] = useState(8);
@@ -52,11 +54,9 @@ export default function HandoverView() {
     } finally {
       setBusy(false);
     }
-  }, []);
+  }, [t]);
 
-  useEffect(() => {
-    load(hours);
-  }, [load, hours]);
+  useEffect(() => { void load(hours); }, [load, hours]);
 
   const copy = async () => {
     if (!data) return;
@@ -69,103 +69,63 @@ export default function HandoverView() {
   const f = data?.facts;
 
   return (
-    <div className="animate-rise pb-16">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl leading-none">{t("handover.title")}</h2>
-          <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">{t("handover.subtitle")}</p>
+    <div className="theme-glass flex flex-col gap-4 pb-16 sm:gap-6" data-testid="handover">
+      <GlassCard as="section" aria-label={t("handover.title")} className="flex flex-col gap-3">
+        <SectionLabel as="h2" icon="file-text" title={t("handover.title")} />
+        <p className="text-body-16 text-text-muted">{t("handover.subtitle")}</p>
+        <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t("handover.coverLast")}>
+          <span className="text-label text-text-muted">{t("handover.coverLast")}</span>
+          {WINDOWS.map((w) => (
+            <FilterChip key={w} active={hours === w} onClick={() => setHours(w)}>{t("handover.hours", { n: w })}</FilterChip>
+          ))}
+          <Button variant="secondary" icon="refresh" disabled={busy} onClick={() => void load(hours)}>
+            {busy ? t("handover.writing") : t("handover.regenerate")}
+          </Button>
         </div>
-      </div>
+      </GlassCard>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="text-sm text-graphite/60">{t("handover.coverLast")}</span>
-        {WINDOWS.map((w) => (
-          <button
-            key={w}
-            onClick={() => setHours(w)}
-            className={`h-12 rounded-xl border px-5 text-sm transition ${
-              hours === w ? "border-gold-line bg-parchment font-semibold" : "border-charcoal/15 bg-white"
-            }`}
-          >
-            {t("handover.hours", { n: w })}
-          </button>
-        ))}
-        <button
-          onClick={() => load(hours)}
-          disabled={busy}
-          className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm disabled:opacity-40"
-        >
-          {busy ? t("handover.writing") : t("handover.regenerate")}
-        </button>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4 text-sm text-status-out-of-order">
-          {error}
-        </div>
-      )}
+      {error && <Banner tone="warning" title={error} />}
 
       {h && f && (
         <>
           {f.attention.deferred.length > 0 && (
-            <div className="mb-4 flex items-center gap-2 rounded-xl border border-gold/40 bg-gold/10 px-4 py-3 text-sm font-medium text-gold-soft">
-              <span aria-hidden>↷</span>
-              {t("handover.deferredBadge", { count: f.attention.deferred.length })}
-            </div>
+            <Banner tone="accent" icon="clock" title={t("handover.deferredBadge", { count: f.attention.deferred.length })} />
           )}
-          <article className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-6 shadow-card">
-            <h3 className="font-serif text-3xl leading-tight">{h.headline}</h3>
-            <div className="rule-gold my-3 w-full" />
-            <div className="space-y-3 text-[0.95rem] leading-relaxed text-charcoal/90">
-              {h.body.split("\n\n").map((p, i) => (
-                <p key={i}>{p}</p>
-              ))}
+          <GlassCard as="article" className="flex flex-col gap-4">
+            <h3 className="text-title-28 text-text-primary">{h.headline}</h3>
+            <div className="text-body-18 flex flex-col gap-3 text-text-secondary">
+              {h.body.split("\n\n").map((p, i) => <p key={i}>{p}</p>)}
             </div>
-
-            <div className="mt-5 flex flex-wrap items-center gap-3 border-t border-charcoal/10 pt-4">
-              <button
-                onClick={copy}
-                className="h-12 rounded-xl bg-navy px-5 text-sm font-medium text-ivory transition hover:bg-navy-line"
-              >
+            <div className="flex flex-wrap items-center gap-3 border-t border-border-subtle pt-4">
+              <Button icon={copied ? "check" : "file-text"} onClick={() => void copy()}>
                 {copied ? t("handover.copied") : t("handover.copyForShiftBook")}
-              </button>
-              <span className="text-xs text-graphite/55">
+              </Button>
+              <span className="text-label text-text-muted">
                 {h.providerLabel}
                 {h.model ? ` · ${h.model}` : ""}
               </span>
             </div>
+            {h.warning && <Banner tone="warning" title={h.warning} />}
+          </GlassCard>
 
-            {h.warning && (
-              <p className="mt-3 rounded-lg border border-gold/40 bg-gold/10 p-3 text-sm text-gold-soft">
-                {h.warning}
-              </p>
-            )}
-          </article>
-
-          {/* The point of this panel: every number above is verifiable. */}
-          <section className="rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-            <button
-              onClick={() => setShowFacts((s) => !s)}
-              className="flex min-h-11 w-full items-center justify-between text-start"
-            >
-              <span className="font-serif text-xl">{t("handover.factsTitle")}</span>
-              <span className="text-sm text-gold">{showFacts ? `${t("common.hide")} ▲` : `${t("common.show")} ▼`}</span>
+          {/* Jede Zahl oben ist nachprüfbar — die Fakten dahinter zum Aufklappen */}
+          <GlassCard as="section" className="flex flex-col gap-2">
+            <button type="button" onClick={() => setShowFacts((s) => !s)} aria-expanded={showFacts}
+              className={cx("press flex min-h-(--size-touch-min) w-full items-center justify-between gap-3 text-start", FOCUS_RING)}>
+              <span className="text-title-22 text-text-primary">{t("handover.factsTitle")}</span>
+              <Glyph name="chevron-down" size={20} className={cx("text-text-secondary transition-transform duration-150", showFacts && "rotate-180")} />
             </button>
-            <p className="mt-1 text-sm text-graphite/60">{t("handover.factsExplain")}</p>
-
+            <p className="text-body-16 text-text-muted">{t("handover.factsExplain")}</p>
             {showFacts && (
-              <ul className="mt-3 space-y-1.5 rounded-xl border border-gold-line/40 bg-ivory p-4 text-sm text-graphite">
-                {h.bullets.map((b, i) => (
-                  <li key={i}>· {b}</li>
-                ))}
+              <ul className="text-body-16 flex flex-col gap-2 rounded-(--glass-radius-md) bg-surface-card-raised p-4 text-text-secondary">
+                {h.bullets.map((b, i) => <li key={i}>· {b}</li>)}
               </ul>
             )}
-          </section>
+          </GlassCard>
         </>
       )}
 
-      {!h && !error && <p className="text-sm text-graphite/60">{t("handover.collecting")}</p>}
+      {!h && !error && <p className="text-body-16 text-text-muted">{t("handover.collecting")}</p>}
     </div>
   );
 }

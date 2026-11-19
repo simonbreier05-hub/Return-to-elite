@@ -6,8 +6,8 @@ import ServiceOverview from "@/components/lists/ServiceOverview";
 export default async function ServicePage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="service.title" userName={session.name} role={session.role} backHref="/supervisor">
-      <div className="animate-rise">
+    <AppShell title="service.title" userName={session.name} role={session.role} backHref="/supervisor" legacy={false}>
+      <div className="theme-glass">
         <ServiceOverview />
       </div>
     </AppShell>

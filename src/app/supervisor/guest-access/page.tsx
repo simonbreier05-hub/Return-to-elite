@@ -11,7 +11,7 @@ import GuestAccessView from "./view";
 export default async function GuestAccessPage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="nav.guestAccess" userName={session.name} role={session.role} backHref="/supervisor">
+    <AppShell title="nav.guestAccess" userName={session.name} role={session.role} backHref="/supervisor" legacy={false}>
       <GuestAccessView />
     </AppShell>
   );

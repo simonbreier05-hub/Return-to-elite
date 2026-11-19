@@ -8,7 +8,7 @@ export default async function SettingsPage() {
   // Only entry point today is the supervisor view; switch to roleHome(session.role)
   // once other dashboards link here too.
   return (
-    <AppShell title="nav.settings" userName={session.name} role={session.role} backHref="/supervisor">
+    <AppShell title="nav.settings" userName={session.name} role={session.role} backHref="/duty-manager" legacy={false}>
       <SettingsView />
     </AppShell>
   );

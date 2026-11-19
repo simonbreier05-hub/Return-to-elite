@@ -2,7 +2,12 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { api, ApiError } from "@/components/api";
+import { api } from "@/components/api";
+import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
+import { Banner, Button, Field, GlassCard, SectionLabel } from "@/components/ui";
+import { cx, FOCUS_RING, Glyph } from "@/components/ui/primitives";
+import { GlassDialog } from "@/components/shell/GlassDialog";
 
 interface GuestAccessRoom {
   id: string;
@@ -15,24 +20,26 @@ interface GuestAccessRoom {
 /**
  * QR/NFC generator (Prompt G2 Teil 2): the table below is the working view
  * (search, copy, regenerate a lost tag's code); /supervisor/guest-access/print
- * is the printable QR sheet (open it, then use the browser's Print → Save
- * as PDF — no server-side PDF generation needed for an internal tool).
+ * is the printable QR sheet (bleibt bewusst hell — für Papier).
+ * Simon-Feedback 19.11.2026: im Design der App („Glas & Premium“), alle Texte übersetzt; Rückfrage als Dialog.
  */
 export default function GuestAccessView() {
+  const { t } = useLocale();
   const [rooms, setRooms] = useState<GuestAccessRoom[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
+  const [ask, setAsk] = useState<GuestAccessRoom | null>(null);
 
   useEffect(() => setOrigin(window.location.origin), []);
 
   useEffect(() => {
     api<{ rooms: GuestAccessRoom[] }>("/api/rooms/guest-access")
       .then((d) => setRooms(d.rooms))
-      .catch((e) => setError(e instanceof ApiError ? e.message : "Konnte die Zugangscodes nicht laden."));
-  }, []);
+      .catch((e) => setError(errorText(e, t)));
+  }, [t]);
 
   const filtered = useMemo(() => {
     if (!rooms) return [];
@@ -48,23 +55,20 @@ export default function GuestAccessView() {
       setCopiedId(room.id);
       setTimeout(() => setCopiedId((id) => (id === room.id ? null : id)), 2000);
     } catch {
-      // Clipboard API can be unavailable (permissions, non-secure context) —
-      // the URL is still selectable text in the row, so this isn't fatal.
+      // Zwischenablage nicht verfügbar — die URL bleibt als markierbarer Text in der Zeile.
     }
   };
 
   const regenerate = async (room: GuestAccessRoom) => {
+    setAsk(null);
     if (!rooms) return;
-    if (!window.confirm(`Neuen Code für Zimmer ${room.number} erzeugen? Der alte QR-Code/NFC-Tag funktioniert danach nicht mehr.`)) {
-      return;
-    }
     setBusyId(room.id);
     setError(null);
     try {
       const { code } = await api<{ code: string }>(`/api/rooms/${room.id}/guest-access`, { method: "POST" });
-      setRooms(rooms.map((r) => (r.id === room.id ? { ...r, code } : r)));
+      setRooms((rs) => (rs ?? []).map((r) => (r.id === room.id ? { ...r, code } : r)));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Regenerieren fehlgeschlagen.");
+      setError(errorText(e, t));
     } finally {
       setBusyId(null);
     }
@@ -73,7 +77,7 @@ export default function GuestAccessView() {
   const downloadUrlList = () => {
     if (!rooms) return;
     const lines = rooms.map((r) => `${r.number}\t${urlFor(r.code)}`).join("\n");
-    const blob = new Blob([`Zimmer\tNFC-URL\n${lines}\n`], { type: "text/plain;charset=utf-8" });
+    const blob = new Blob([`${t("guestAccess.colRoom")}\tNFC-URL\n${lines}\n`], { type: "text/plain;charset=utf-8" });
     const link = document.createElement("a");
     link.href = URL.createObjectURL(blob);
     link.download = "stayclean-guest-nfc-urls.txt";
@@ -82,89 +86,61 @@ export default function GuestAccessView() {
   };
 
   return (
-    <div className="animate-rise">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl leading-none">Gästezugang (QR/NFC)</h2>
-          <div className="rule-gold my-2 w-40" />
-          <p className="max-w-2xl text-sm text-graphite/70">
-            Jeder Code ist fest an ein Zimmer gebunden und löst immer zum aktuellen Aufenthalt auf — nie zur
-            Zimmernummer im Klartext. Ist ein Tag verloren gegangen, hier neu erzeugen: der alte Code funktioniert
-            danach sofort nicht mehr.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={downloadUrlList}
-            disabled={!rooms}
-            className="flex h-11 items-center rounded-lg border border-charcoal/15 bg-linen px-4 text-sm font-medium hover:border-gold-line disabled:opacity-40"
-          >
-            NFC-URL-Liste herunterladen
-          </button>
-          <Link
-            href="/supervisor/guest-access/print"
-            className="flex h-11 items-center rounded-lg bg-navy px-4 text-sm font-semibold text-ivory hover:bg-navy-line"
-          >
-            Druckbare QR-Liste öffnen
+    <div className="theme-glass flex flex-col gap-4 sm:gap-6" data-testid="guest-access">
+      <GlassCard as="section" aria-label={t("guestAccess.title")} className="flex flex-col gap-3">
+        <SectionLabel as="h2" icon="users" title={t("guestAccess.title")} />
+        <p className="text-body-16 max-w-3xl text-text-muted">{t("guestAccess.intro")}</p>
+        <div className="flex flex-wrap items-end gap-3">
+          <Field className="sm:w-64" label={t("guestAccess.search")} value={query} inputMode="numeric" onChange={(e) => setQuery(e.target.value)} />
+          <Button variant="secondary" icon="file-text" disabled={!rooms} onClick={downloadUrlList}>{t("guestAccess.download")}</Button>
+          <Link href="/supervisor/guest-access/print"
+            className={cx("press bg-champagne text-body-18 inline-flex min-h-(--size-button-height) items-center justify-center gap-3 rounded-(--glass-radius-md) border border-border-accent px-6 text-text-on-accent", FOCUS_RING)}>
+            <Glyph name="list" size={24} />
+            {t("guestAccess.print")}
           </Link>
         </div>
-      </div>
+      </GlassCard>
 
-      {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
-
-      <input
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Zimmer suchen…"
-        className="mb-4 h-11 w-full max-w-xs rounded-lg border border-charcoal/20 px-3 text-sm outline-none focus:border-gold sm:w-64"
-      />
-
-      {!rooms && !error && <p className="text-sm text-graphite/70">Lädt…</p>}
+      {error && <Banner tone="warning" title={error} />}
+      {!rooms && !error && <p className="text-body-16 text-text-muted">{t("common.loading")}</p>}
 
       {rooms && (
-        <div className="overflow-x-auto rounded-xl border border-charcoal/10">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-linen text-xs uppercase tracking-wide text-graphite/70">
+        <GlassCard as="section" aria-label={t("guestAccess.title")} padded={false} className="overflow-x-auto">
+          <table className="text-body-16 w-full min-w-[36rem] text-start">
+            <thead className="text-label text-text-muted">
               <tr>
-                <th className="px-4 py-2.5">Zimmer</th>
-                <th className="px-4 py-2.5">Etage</th>
-                <th className="px-4 py-2.5">NFC/QR-URL</th>
-                <th className="px-4 py-2.5" />
+                <th className="px-4 py-3 text-start">{t("guestAccess.colRoom")}</th>
+                <th className="px-4 py-3 text-start">{t("guestAccess.colFloor")}</th>
+                <th className="px-4 py-3 text-start">{t("guestAccess.colUrl")}</th>
+                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {filtered.map((room) => (
-                <tr key={room.id} className="border-t border-charcoal/10">
-                  <td className="px-4 py-2.5 font-semibold">{room.number}</td>
-                  <td className="px-4 py-2.5">{room.floor}</td>
-                  <td className="max-w-xs truncate px-4 py-2.5 font-mono text-xs text-graphite/80" title={urlFor(room.code)}>
-                    {urlFor(room.code)}
-                  </td>
-                  <td className="px-4 py-2.5">
+                <tr key={room.id} className="border-t border-border-subtle text-text-primary">
+                  <td className="px-4 py-3 font-semibold">{room.number}</td>
+                  <td className="px-4 py-3">{room.floor}</td>
+                  <td className="text-label max-w-xs truncate px-4 py-3 font-mono text-text-secondary" title={urlFor(room.code)}>{urlFor(room.code)}</td>
+                  <td className="px-4 py-3">
                     <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => copy(room)}
-                        className="h-11 rounded-md border border-charcoal/15 px-3 text-xs font-medium hover:border-gold-line md:h-8"
-                      >
-                        {copiedId === room.id ? "Kopiert!" : "Kopieren"}
-                      </button>
-                      <button
-                        onClick={() => regenerate(room)}
-                        disabled={busyId === room.id}
-                        className="h-11 rounded-md border border-charcoal/15 px-3 text-xs font-medium text-status-out-of-order md:h-8 hover:border-status-out-of-order disabled:opacity-40"
-                      >
-                        {busyId === room.id ? "…" : "Neu erzeugen"}
-                      </button>
+                      <Button variant="secondary" icon={copiedId === room.id ? "check" : "file-text"} onClick={() => void copy(room)}>
+                        {copiedId === room.id ? t("guestAccess.copied") : t("guestAccess.copy")}
+                      </Button>
+                      <Button variant="secondary" icon="refresh" disabled={busyId === room.id} onClick={() => setAsk(room)}>
+                        {t("guestAccess.regenerate")}
+                      </Button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {filtered.length === 0 && <p className="p-4 text-sm text-graphite/70">Kein Zimmer gefunden.</p>}
-        </div>
+          {filtered.length === 0 && <p className="text-body-16 p-4 text-text-muted">{t("guestAccess.noRoom")}</p>}
+        </GlassCard>
       )}
+
+      <GlassDialog open={!!ask} title={t("guestAccess.regenerateTitle", { n: ask?.number ?? "" })} message={t("guestAccess.regenerateText")}
+        confirmLabel={t("guestAccess.regenerate")} confirmIcon="refresh" onCancel={() => setAsk(null)} onConfirm={() => ask && void regenerate(ask)} busy={!!busyId} />
     </div>
   );
 }
