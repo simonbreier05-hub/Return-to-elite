@@ -6,16 +6,20 @@ Alle Pakete starten vom Basis-Branch `fix/basis-simulation-v2` und werden nach S
 
 | Nr. | Prompt | Befunde | Warum an dieser Stelle | Größe | Status |
 |---|---|---|---|---|---|
-| 0 | `archiv/Prompt_F0_Basis_Branch_v1.md` | – | Legt `fix/basis-simulation-v2` an: Fehlerbericht, Entscheidungen, Prompts, Simulationstests und -skripte auf Basis von `design/glass` | klein | erledigt (Basis-Branch angelegt) |
-| 1 | `Prompt_S1_Sicherheit_v1.2.md` | K2, H1 | Datenschutz + richtiger Gastname. Ohne diesen Schritt keine echten Gastdaten. | mittel | gemergt (17.11.2026) |
-| 2 | `Prompt_F1_Morgenstatus_v1.2.md` | K1, K3, M5 | Ungereinigtes Zimmer darf nie als sauber gelten. | klein | offen |
-| 3 | `Prompt_F2_Sperren_v1.2.md` | H4, H5, H6, M4 | Gesperrte Zimmer mit Anreise; „Nicht im Service“ entfällt. | mittel | offen |
-| 4 | `Prompt_F3_FrontOffice_v1.2.md` | K4, H7, H8, H9, H10, M22 | Zimmerwechsel, Check-out-Korrekturen. Braucht S1. | groß | offen |
-| 5 | `Prompt_F4_Planung_v1.2.md` | H2, H3, H11, M6, M7, M8 | Level-1-Filter, Suiten gleichmäßig, Krankmeldung. | mittel | offen |
-| 6 | `Prompt_F5_Meldungen_v1.2.md` | H14, M2, M9, M16 | Baut auf F2/F3 auf. Übergabe zurückgestellt. | mittel | offen |
-| 7 | `Prompt_F6_Bildschirme_v1.2.md` | H12, M1, M3, M11, M12, M13, M17, M19, M20, M23 | Viele kleine Verbesserungen, Mängel-Fotos. | mittel | offen |
-| 8 | `Prompt_F7_Gast_Hausmann_v1.2.md` | H13, H16, M10, M14, M15, M18, M21, M24 | Gastbildschirm, Hausmann, Concierge, Archiv beim Check-out. | mittel | offen |
-| 9 | `Prompt_F8_Opera_Profilvorschlag_v1.md` | – (neu) | Vorschlag fürs Opera-Gastprofil nach Abreise, nur DM. Braucht F7. | klein | offen |
+| 0 | `archiv/Prompt_F0_Basis_Branch_v1.md` | – | Legt `fix/basis-simulation-v2` an: Fehlerbericht, Entscheidungen, Prompts, Simulationstests und -skripte auf Basis von `design/glass` | klein | erledigt (17.11., Commits 07ffe4f, b659aee) |
+| 1 | `Prompt_S1_Sicherheit_v1.2.md` | K2, H1 | Datenschutz + richtiger Gastname. Ohne diesen Schritt keine echten Gastdaten. | mittel | gemergt (17.11., ab62c98) |
+| 2 | `Prompt_F1_Morgenstatus_v1.2.md` | K1, K3, M5 | Ungereinigtes Zimmer darf nie als sauber gelten. | klein | gemergt (20.11., 29a63cf) |
+| 3 | `Prompt_F2_Sperren_v1.2.md` | H4, H5, H6, M4 | Gesperrte Zimmer mit Anreise; „Nicht im Service“ entfällt. | mittel | gemergt (20.11., 29a63cf) |
+| 4 | `Prompt_F3_FrontOffice_v1.2.md` | K4, H7, H8, H9, H10, M22 | Zimmerwechsel, Check-out-Korrekturen. Braucht S1. | groß | gemergt (20.11., 29a63cf) |
+| 5 | `Prompt_F4_Planung_v1.2.md` | H2, H3, H11, M6, M7, M8 | Level-1-Filter, Suiten gleichmäßig, Krankmeldung. | mittel | gemergt (20.11., 29a63cf) |
+| 6 | `Prompt_F5_Meldungen_v1.2.md` | H14, M2, M9, M16 | Baut auf F2/F3 auf. Übergabe zurückgestellt. | mittel | gemergt (20.11., 29a63cf) |
+| 7 | `Prompt_F6_Bildschirme_v1.2.md` | H12, M1, M3, M11, M12, M13, M17, M19, M20, M23 | Viele kleine Verbesserungen, Mängel-Fotos. | mittel | gemergt (20.11., 29a63cf) |
+| 8 | `Prompt_F7_Gast_Hausmann_v1.2.md` | H13, H16, M10, M14, M15, M18, M21, M24 | Gastbildschirm, Hausmann, Concierge, Archiv beim Check-out. | mittel | gemergt (20.11., 29a63cf) |
+| 9 | `Prompt_F8_Opera_Profilvorschlag_v1.md` | – (neu) | Vorschlag fürs Opera-Gastprofil nach Abreise, nur DM. Braucht F7. | klein | gemergt (20.11., 29a63cf) |
+
+## Stand 20.11.2026
+
+Alle Pakete S1–F8 sind zusammen mit UI-Feedback, Design-Rest und Nachtrag über `feature/nachtrag` in `fix/basis-simulation-v2` gemergt (Merge-Commit 29a63cf, OK Simon 20.11.2026). Details, Prüfberichte und Vorher/Nachher-Bilder: Artifact „StayClean Fix-Pakete“. Status je Befund: `docs/simulation/Fehlerbericht_Simulation_v2.md`, Spalte „Paket“.
 
 ## Offen
 
