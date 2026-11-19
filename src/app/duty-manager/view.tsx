@@ -1,8 +1,5 @@
 "use client";
 
-import RoomActionsCard from "@/components/roles/RoomActionsCard";
-import RoomChangeForm from "@/components/roles/RoomChangeForm";
-import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -180,8 +177,7 @@ export default function DutyManagerView() {
               notices={
                 <>
                   <HubMissingNotice hub={hub} planner glass />
-                  <BlockedRoomsCard role="duty_manager" />
-                  <RoomActionsCard roomChange={<RoomChangeForm />} />
+                  {/* Gesperrte Zimmer und Zimmer-Aktionen: eigener Punkt „Probleme“ (Simon-Feedback 19.11.2026) */}
                   {HOTEL.unconfirmedFloors.length > 0 && (
                     <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
                   )}

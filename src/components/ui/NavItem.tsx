@@ -10,11 +10,13 @@ export interface NavItemProps extends Omit<InteractiveProps, "aria-current" | "a
   active?: boolean;
   /** Zähler (z. B. ungelesene Nachrichten); nur in `wide` sichtbar, in `rail` im Vorlesetext. */
   count?: number;
+  /** Zähler gedämpft statt in Akzentfarbe. */
+  countQuiet?: boolean;
   className?: string;
 }
 
 /** Menüeintrag der Seitenleiste. Figma `20:71`. */
-export function NavItem({ icon, label, mode = "wide", active = false, count, className, ...action }: NavItemProps) {
+export function NavItem({ icon, label, mode = "wide", active = false, count, countQuiet, className, ...action }: NavItemProps) {
   const rail = mode === "rail";
   return (
     <Interactive
@@ -30,8 +32,8 @@ export function NavItem({ icon, label, mode = "wide", active = false, count, cla
     >
       <Glyph name={icon} size={rail ? 28 : 24} className={active ? "text-accent-text" : undefined} />
       {!rail && <span className="text-body-18 min-w-0 flex-1 truncate">{label}</span>}
-      {!rail && count ? <CountBadge value={count} /> : null}
-      {rail && count ? <span aria-hidden="true" className="bg-champagne absolute end-2 top-2 size-2.5 rounded-pill" /> : null}
+      {!rail && count ? <CountBadge value={count} quiet={countQuiet} /> : null}
+      {rail && count ? <span aria-hidden="true" className={cx(countQuiet ? "bg-text-muted" : "bg-champagne", "absolute end-2 top-2 size-2.5 rounded-pill")} /> : null}
     </Interactive>
   );
 }

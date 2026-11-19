@@ -14,7 +14,7 @@ import type { TKey } from "@/lib/i18n/translations";
 import type { IconName } from "@/lib/ui/icons";
 
 /** Woher ein Zähler-Badge kommt — nur bestehende Datenquellen (keine neuen API-Routen). */
-export type NavCountSource = "chat";
+export type NavCountSource = "chat" | "release";
 
 export interface NavEntry {
   id: string;
@@ -42,7 +42,7 @@ export const NAV: Record<Role, NavEntry[]> = {
     // Simon-Feedback 18.11.: „Zimmer“ (Service-Liste) entfällt — Grundriss deckt es ab; Freigabe und Probleme als eigene Punkte
     // Simon-Feedback 19.11.: Grundriss ist der 3. Punkt der Leiste (Handy-Leiste unverändert: Freigabe bleibt Rang 3)
     { id: "floorPlan", labelKey: "appShell.floorPlan", icon: "list", href: "/floor-plan", mobileRank: 5 },
-    { id: "release", labelKey: "nav.release", icon: "clock", href: "/supervisor/release", mobileRank: 3 },
+    { id: "release", labelKey: "nav.release", icon: "clock", href: "/supervisor/release", count: "release", mobileRank: 3 },
     { id: "problems", labelKey: "nav.problems", icon: "triangle-alert", href: "/supervisor/problems", mobileRank: 10 },
     messages(4),
     { id: "handover", labelKey: "nav.handover", icon: "file-text", href: "/supervisor/handover", mobileRank: 6 },
@@ -54,6 +54,8 @@ export const NAV: Record<Role, NavEntry[]> = {
     { id: "house", labelKey: "nav.house", icon: "home", href: "/duty-manager", mobileRank: 1 },
     { id: "planning", labelKey: "nav.planning", icon: "calendar-days", href: "/planung", mobileRank: 2 },
     floorPlan(3, "nav.rooms"),
+    // Simon-Feedback 19.11.: gesperrte Zimmer und Zimmer-Aktionen von der Startseite in einen eigenen Punkt „Probleme“
+    { id: "problems", labelKey: "nav.problems", icon: "triangle-alert", href: "/duty-manager/problems", mobileRank: 6 },
     messages(4),
     { id: "settings", labelKey: "nav.settings", icon: "wrench", href: "/settings", mobileRank: 5 },
   ],
