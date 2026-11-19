@@ -893,6 +893,8 @@
     "board.saveFailed": "Không lưu được — thay đổi đã được hoàn tác.",
     "board.open": "Chưa giao",
     "board.dueLinen": "Cần Thay đồ vải",
+    "glance.collapse": "Thu gọn",
+    "glance.expand": "Mở rộng",
     "glance.myFloorsTitle": "Hôm nay trong nháy mắt — Tầng {{floors}}",
     "glance.houseTitle": "Toàn khách sạn",
     "glance.houseHint": "để định hướng",

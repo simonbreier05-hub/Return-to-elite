@@ -893,6 +893,8 @@
     "board.saveFailed": "सेव नहीं हुआ — बदलाव वापस ले लिया गया।",
     "board.open": "खुले",
     "board.dueLinen": "लिनेन बदलना बाकी",
+    "glance.collapse": "बंद करें",
+    "glance.expand": "खोलें",
     "glance.myFloorsTitle": "आज एक नज़र में — मंज़िल {{floors}}",
     "glance.houseTitle": "पूरा होटल",
     "glance.houseHint": "जानकारी के लिए",

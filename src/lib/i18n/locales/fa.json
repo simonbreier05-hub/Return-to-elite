@@ -893,6 +893,8 @@
     "board.saveFailed": "ذخیره نشد — تغییر برگردانده شد.",
     "board.open": "باز",
     "board.dueLinen": "نوبت تعویض ملحفه",
+    "glance.collapse": "بستن",
+    "glance.expand": "باز کردن",
     "glance.myFloorsTitle": "امروز در یک نگاه — طبقه {{floors}}",
     "glance.houseTitle": "کل هتل",
     "glance.houseHint": "برای آشنایی",

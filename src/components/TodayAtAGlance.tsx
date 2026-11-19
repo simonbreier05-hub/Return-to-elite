@@ -1,6 +1,7 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import { cx, FOCUS_RING, Glyph } from "@/components/ui/primitives";
 import DayNumberTiles from "@/components/DayNumberTiles";
 import { GlanceDetailHost, GlanceTile, useGlanceDetail, type DetailContent, type DetailItem } from "@/components/GlanceDetailSheet";
 import { rowsOnFloors, type DayNumberRow, type DayNumbers } from "@/lib/dayplan/dayNumbers";
@@ -30,7 +31,9 @@ type Key = DayTileKey | "arrivals" | "departures" | "dnd" | "dndBlocked" | "prog
  * Jede Kachel ist antippbar und öffnet dieselbe Detailansicht (`GlanceDetailSheet`), Zimmer darin öffnen das Zimmer-Detail.
  * `variant="supervisor"`: statt der DND-Kachel „DND/Blockiert“ und zusätzlich „Tagesfortschritt“; Duty Manager unverändert.
  */
-export default function TodayAtAGlance({ title, numbers, kpis, source, variant = "dutyManager", extraKpi, onChanged, children, glass }: {
+const COLLAPSE_KEY = "stayclean.glance.collapsed";
+
+export default function TodayAtAGlance({ title, numbers, kpis, source, variant = "dutyManager", extraKpi, onChanged, children, glass, collapsible }: {
   title?: string;
   numbers: DayNumbers | null;
   kpis: GlanceKpis | null;
@@ -46,6 +49,8 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
    * `open(key)` dieselben Detailansichten (Inhalt, Zahlen und Zimmer-Detail unverändert).
    */
   glass?: (open: (key: GlanceKey) => void) => ReactNode;
+  /** Kopfzeile als Knopf zum Ein-/Ausklappen (Supervisor-Startansicht). */
+  collapsible?: boolean;
 }) {
   const { t } = useLocale();
   const detail = useGlanceDetail<Key>();
@@ -123,6 +128,17 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
 
   const sup = variant === "supervisor";
   const glassMode = useGlassMode();
+  // Simon-Feedback 19.11.: Karte einklappbar; der Zustand bleibt je Gerät gemerkt (nur Bequemlichkeit, ohne Gastdaten)
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    if (!collapsible) return;
+    try { setCollapsed(localStorage.getItem(COLLAPSE_KEY) === "1"); } catch { /* privater Modus */ }
+  }, [collapsible]);
+  const toggle = () => setCollapsed((c) => {
+    try { localStorage.setItem(COLLAPSE_KEY, c ? "0" : "1"); } catch { /* privater Modus */ }
+    return !c;
+  });
+  const shown = !collapsible || !collapsed;
   if (glass) {
     return (
       <>
@@ -133,7 +149,19 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
   }
   return (
     <section aria-label={title ?? t("dutyManager.dashboardTitle")} className={glassMode ? "glass flex flex-col gap-1 rounded-(--glass-radius-lg) p-4 sm:p-6" : "mb-6"}>
-      <h3 className={glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>{title ?? t("dutyManager.dashboardTitle")}</h3>
+      {collapsible ? (
+        <h3 className={glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>
+          <button type="button" onClick={toggle} aria-expanded={!collapsed}
+            className={cx("press flex min-h-(--size-touch-min) w-full items-center justify-between gap-2 text-start", FOCUS_RING)}>
+            <span className="min-w-0 flex-1">{title ?? t("dutyManager.dashboardTitle")}</span>
+            <span className="sr-only">{collapsed ? t("glance.expand") : t("glance.collapse")}</span>
+            <Glyph name="chevron-down" size={20} className={cx("text-text-secondary transition-transform duration-150", !collapsed && "rotate-180")} />
+          </button>
+        </h3>
+      ) : (
+        <h3 className={glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>{title ?? t("dutyManager.dashboardTitle")}</h3>
+      )}
+      {shown && <>
       {source && <p className={glassMode ? "text-label mb-3 text-text-muted" : "mb-2 text-xs text-graphite/60"}>{t("glance.tapHint")}</p>}
       {numbers && <DayNumberTiles className="mb-3" numbers={numbers} onTile={source ? detail.open : undefined} />}
       {kpis && (
@@ -151,6 +179,7 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
         </div>
       )}
       {children}
+      </>}
       <GlanceDetailHost state={detail} content={content} onChanged={onChanged} />
     </section>
   );
