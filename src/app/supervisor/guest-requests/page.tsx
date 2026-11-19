@@ -11,7 +11,7 @@ import GuestRequestsView from "./view";
 export default async function GuestRequestsPage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="nav.guestRequests" userName={session.name} role={session.role} backHref="/supervisor">
+    <AppShell title="nav.guestRequests" userName={session.name} role={session.role} backHref="/supervisor" legacy={false}>
       <GuestRequestsView currentUserId={session.userId} />
     </AppShell>
   );

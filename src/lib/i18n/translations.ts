@@ -2129,6 +2129,20 @@ const en = {
     departure: "Departure",
     blocked: "Blocked",
   },
+  guestRequestsPage: {
+    title: "Guest requests",
+    intro: "Do-not-disturb, cleaning and department requests straight from the guest screen. Change the status here — the guest sees it on their device.",
+    filter: "Show requests",
+    onlyOpen: "Open only",
+    all: "All",
+    emptyOpen: "No open guest requests.",
+    emptyAll: "No guest requests.",
+    room: "Room {{n}}",
+    assignedTo: "assigned to {{name}}",
+    take: "Take over",
+    inProgress: "In progress",
+    done: "Done",
+  },
 } as const;
 
 const de = {
@@ -4248,6 +4262,20 @@ const de = {
     arrivalAt: "Anreise {{time}}",
     departure: "Abreise",
     blocked: "Gesperrt",
+  },
+  guestRequestsPage: {
+    title: "Gästeanfragen",
+    intro: "Bitte-nicht-stören-, Reinigungs- und Abteilungswünsche direkt vom Gästebildschirm. Status hier ändern — der Gast sieht die Änderung auf seinem Gerät.",
+    filter: "Anfragen anzeigen",
+    onlyOpen: "Nur offene",
+    all: "Alle",
+    emptyOpen: "Keine offenen Gästeanfragen.",
+    emptyAll: "Keine Gästeanfragen.",
+    room: "Zimmer {{n}}",
+    assignedTo: "zugewiesen an {{name}}",
+    take: "Übernehmen",
+    inProgress: "In Bearbeitung",
+    done: "Erledigt",
   },
 } satisfies Dict;
 
