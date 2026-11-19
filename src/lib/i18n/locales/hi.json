@@ -1091,6 +1091,7 @@
     "hubDay.missingPlanner": "StayClean सिर्फ़ योजना केंद्र के आज के डेटा से काम करता है। वहाँ पाँचों Opera सूचियाँ डालें — बोर्ड, सूचियाँ और फ़्लोर प्लान तुरंत भर जाएँगे।",
     "hubDay.missingAttendant": "योजना केंद्र में आज की योजना बनते ही आपके कमरे दिखेंगे।",
     "hubDay.toHub": "योजना केंद्र खोलें",
+    "planungTool.draftRestored": "{{time}} का ड्राफ़्ट वापस लाया गया — आपके हाथ से किए बदलाव बने हुए हैं।",
     "planungTool.typeEXTERN": "अस्थायी (बाहरी)",
     "planungTool.title": "योजना",
     "planungTool.houseToday": "आज होटल",

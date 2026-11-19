@@ -67,7 +67,7 @@ export interface PlanResultView { counts: PlanCounts; warnings: { severity: "WAR
 
 /** Der Entwurf, wie er bearbeitet wird: Eingabe des Vorschlags + aktuelle (ggf. von Hand geänderte) Zuteilung. */
 export interface PlanDraft { proposalId: string; input: PlanInput; proposed: Assignment; assignment: Assignment }
-const DRAFT_KEY = "stayclean.planDraft.v1";
+export const DRAFT_KEY = "stayclean.planDraft.v1";
 interface DraftSnapshot { date: string; draft: PlanDraft; result: PlanResultView; active: string[]; startedOk: string[]; savedAt: string }
 export type ConfirmOutcome =
   | { ok: true; assigned: number; open: number }
@@ -78,7 +78,7 @@ export type ConfirmOutcome =
  * wenn sie wirklich fertig ist. Danach lässt sich der Entwurf ansehen und bearbeiten (Grundriss im Entwurfsmodus);
  * erst `confirm` schaltet ihn live (eine Transaktion, Meldungen an die Betroffenen).
  */
-export function usePlanRun(date: string | null) {
+export function usePlanRun(date: string | null, userId: string | null = null) {
   const [completed, setCompleted] = useState(0);
   const [running, setRunning] = useState(false);
   const [failedAt, setFailedAt] = useState<PlanPhase | null>(null);
@@ -96,27 +96,30 @@ export function usePlanRun(date: string | null) {
   const last = useRef<{ team: TeamSelection; floorAssign: Record<number, string | null> } | null>(null);
 
   // F4-Nachtrag (M8): Entwurf und Handzuteilungen bleiben beim Verlassen von /planung erhalten — im Sitzungsspeicher des
-  // Tabs (weg beim Schließen; enthält keine Gastnamen, nur Zimmer/Kräfte/Zuteilung). Nach „Plan bestätigen“ gelöscht.
+  // Tabs (weg beim Schließen; keine Gastnamen, aber Beschäftigtendaten des Vorschlags). Review (M3): Schlüssel je Person,
+  // beim Abmelden gelöscht (AppShell), Wiederherstellung sichtbar („Entwurf von hh:mm“). Nach „Plan bestätigen“ gelöscht.
   const restored = useRef(false);
+  const [restoredAt, setRestoredAt] = useState<string | null>(null);
+  const key = userId ? `${DRAFT_KEY}.${userId}` : null;
   useEffect(() => {
-    if (!date || restored.current) return;
+    if (!date || !key || restored.current) return;
     restored.current = true;
     try {
-      const raw = sessionStorage.getItem(DRAFT_KEY);
+      const raw = sessionStorage.getItem(key);
       const snap = raw ? (JSON.parse(raw) as DraftSnapshot) : null;
       if (!snap || snap.date !== date || !snap.draft || !snap.result) return;
       setDraft(snap.draft); setResult(snap.result); setActive(snap.active ?? []); setStartedOk(new Set(snap.startedOk ?? []));
-      setCompleted(5); setStarted(true);
+      setCompleted(5); setStarted(true); setRestoredAt(snap.savedAt);
     } catch { /* kein Speicher (privater Modus) — dann eben ohne Wiederherstellung */ }
-  }, [date]);
+  }, [date, key]);
   useEffect(() => {
-    if (!date || !restored.current) return;
+    if (!date || !key || !restored.current) return;
     try {
-      if (confirmed || !draft || !result) { if (confirmed) sessionStorage.removeItem(DRAFT_KEY); return; }
+      if (confirmed || !draft || !result) { if (confirmed) sessionStorage.removeItem(key); return; }
       const snap: DraftSnapshot = { date, draft, result, active, startedOk: [...startedOk], savedAt: new Date().toISOString() };
-      sessionStorage.setItem(DRAFT_KEY, JSON.stringify(snap));
+      sessionStorage.setItem(key, JSON.stringify(snap));
     } catch { /* Speicher voll/gesperrt — Entwurf bleibt nur im Speicher der Seite */ }
-  }, [date, draft, result, active, startedOk, confirmed]);
+  }, [date, key, draft, result, active, startedOk, confirmed]);
 
   const propose = useCallback(async (ids: string[]) => {
     const p = await api<{ proposalId: string; input: PlanInput; result: PlanResult }>("/api/autoplan/propose", { body: { date, attendantIds: ids } });
@@ -190,5 +193,5 @@ export function usePlanRun(date: string | null) {
   }, [draft]);
 
   const states = phaseStates(completed, running, failedAt);
-  return { run, states, started, running, error, result, beamKey, done: !!result && !running, draft, view, assign, assignMany, active, toggleHk, startedOk, confirm, confirming, confirmed };
+  return { run, states, started, running, error, result, beamKey, done: !!result && !running, draft, view, assign, assignMany, active, toggleHk, startedOk, confirm, confirming, confirmed, restoredAt: draft ? restoredAt : null };
 }

@@ -42,15 +42,17 @@ export function useHousemanList(onLinkedTasks?: (roomTaskIds: Set<string>) => vo
   const soon = useCoalescedRefetch(load, 1000);
   useSocket({ "app:resync": () => soon(), "assignments:applied": () => soon(), "trace:update": () => soon(), "roomtask:update": () => soon(), "dayplan:updated": () => soon(), "work:pause": () => soon() });
 
-  const toggle = async (item: Pick<Item, "id" | "status">) => {
-    if (busy) return;
+  /** Gibt zurück, ob es geklappt hat (Review M2: Mehrfach-Erledigen wertet das aus). */
+  const toggle = async (item: Pick<Item, "id" | "status">): Promise<boolean> => {
+    if (busy) return false;
     setBusy(item.id); setError(null);
     const next = item.status === "DONE" ? "OPEN" : "DONE";
     try {
       await api(`/api/traces/${item.id}`, { method: "PATCH", body: { status: next } });
       setData((d) => d && { ...d, items: d.items.map((i) => (i.id === item.id ? { ...i, status: next, doneAt: next === "DONE" ? new Date().toISOString() : null } : i)) });
       soon();
-    } catch { setError(t("lists.hmFailed")); } finally { setBusy(null); }
+      return true;
+    } catch { setError(t("lists.hmFailed")); return false; } finally { setBusy(null); }
   };
   const setPause = (id: string, p: PauseInfo | null) => setData((d) => d && { ...d, items: d.items.map((x) => (x.id === id ? { ...x, pause: p } : x)) });
   return { data, loadError, load, toggle, busy, error, setPause };

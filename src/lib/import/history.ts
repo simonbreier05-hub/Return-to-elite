@@ -13,27 +13,21 @@ export interface ImportHistoryEntry {
 
 /** Wer hat heute (Betriebstag `today`, Berlin) welche Liste übernommen oder gelöscht — neueste zuerst, höchstens 30. */
 export async function importHistory(today: string): Promise<ImportHistoryEntry[]> {
+  // Review (M4): aus dem Logbuch — eine Liste kann mehrmals am Tag übernommen werden (ältere Batches werden ersetzt/gelöscht)
   const since = berlinToUtc(today, "00:00");
-  const [applied, deleted] = await Promise.all([
-    prisma.importBatch.findMany({
-      where: { status: "APPLIED", appliedAt: { gte: since } },
-      select: { type: true, appliedAt: true, rowCount: true, businessDate: true, uploadedBy: { select: { name: true } } },
-      orderBy: { appliedAt: "desc" }, take: 30,
-    }),
-    prisma.auditLog.findMany({
-      where: { action: "IMPORT_LIST_DELETED", createdAt: { gte: since } },
-      select: { createdAt: true, meta: true, userId: true },
-      orderBy: { createdAt: "desc" }, take: 30,
-    }),
-  ]);
-  const names = new Map((await prisma.user.findMany({ where: { id: { in: deleted.map((d) => d.userId).filter((x): x is string => !!x) } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
-  const out: ImportHistoryEntry[] = [
-    ...applied.map((b) => ({ at: b.appliedAt!.toISOString(), type: b.type, action: "APPLIED" as const, by: b.uploadedBy?.name ?? null, rows: b.rowCount, businessDate: b.businessDate })),
-    ...deleted.map((d) => {
-      let meta: { type?: string; businessDate?: string } = {};
-      try { meta = JSON.parse(d.meta ?? "{}"); } catch { /* altes Format */ }
-      return { at: d.createdAt.toISOString(), type: meta.type ?? "?", action: "DELETED" as const, by: d.userId ? names.get(d.userId) ?? null : null, rows: null, businessDate: meta.businessDate ?? null };
-    }),
-  ];
-  return out.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 30);
+  const logs = await prisma.auditLog.findMany({
+    where: { action: { in: ["IMPORT_APPLIED", "IMPORT_LIST_DELETED"] }, createdAt: { gte: since } },
+    select: { action: true, createdAt: true, meta: true, userId: true },
+    orderBy: { createdAt: "desc" }, take: 30,
+  });
+  const ids = [...new Set(logs.map((l) => l.userId).filter((x): x is string => !!x))];
+  const names = new Map((await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } })).map((u) => [u.id, u.name]));
+  return logs.map((l) => {
+    let meta: { type?: string; businessDate?: string; rows?: number } = {};
+    try { meta = JSON.parse(l.meta ?? "{}"); } catch { /* altes Format */ }
+    return {
+      at: l.createdAt.toISOString(), type: meta.type ?? "?", action: l.action === "IMPORT_APPLIED" ? "APPLIED" as const : "DELETED" as const,
+      by: l.userId ? names.get(l.userId) ?? null : null, rows: typeof meta.rows === "number" ? meta.rows : null, businessDate: meta.businessDate ?? null,
+    };
+  });
 }

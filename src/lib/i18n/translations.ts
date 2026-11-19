@@ -1270,6 +1270,7 @@ const en = {
     toHub: "Open planning hub",
   },
   planungTool: {
+    draftRestored: "Draft from {{time}} restored — your manual changes are kept.",
     typeEXTERN: "Temp (external)",
     ftW_LEVEL1_DEMANDING: "{{name}} (level 1) on floor {{floor}} with many demanding rooms — please check.",
     ftW_HK_TOO_MANY_FLOORS: "{{name}} is on more than 2 floors.",
@@ -3431,6 +3432,7 @@ const de = {
     toHub: "Zum Planungshub",
   },
   planungTool: {
+    draftRestored: "Entwurf von {{time}} wiederhergestellt — deine Handänderungen sind erhalten.",
     typeEXTERN: "Aushilfe (extern)",
     ftW_LEVEL1_DEMANDING: "{{name}} (Stufe 1) auf Etage {{floor}} mit vielen anspruchsvollen Zimmern — bitte prüfen.",
     ftW_HK_TOO_MANY_FLOORS: "{{name}} ist auf mehr als 2 Etagen eingeteilt.",

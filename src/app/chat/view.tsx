@@ -214,7 +214,7 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
               ) : (
                 // F5-Nachtrag (M16, B10): „gelesen: 5 von 13“ aufklappbar mit Namen
                 <details className="mt-1 text-xs text-text-secondary" data-testid="chat-receipt">
-                  <summary className="min-h-11 cursor-pointer list-none py-2 underline-offset-2 hover:underline">
+                  <summary className="min-h-11 cursor-pointer list-none py-2 underline-offset-2 hover:underline"><span aria-hidden="true">▸ </span>
                     <span aria-hidden="true">{m.readBy.read >= m.readBy.total ? "✓✓ " : "✓ "}</span>
                     {t("chat.readBy", { read: m.readBy.read, total: m.readBy.total })}
                   </summary>

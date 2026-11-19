@@ -53,6 +53,13 @@ describe("Abreise nur über Opera", () => {
     expect(log.meta).not.toContain("Test");
   });
 
+  it("Review (H1): ein Aufenthalt, der heute noch in den Listen steht (keep), bleibt im Haus — auch mit altem Abreisedatum", async () => {
+    const kept = await prisma.stay.create({ data: { roomId, guestName: "Verlängert", checkIn: day("2026-11-10", "00:00"), checkOut: day("2026-11-17"), status: "IN_HOUSE", stayToken: "f7n-keep-0000000000000000000000000", source: "IMPORT" } });
+    expect(await closeDepartedImportStays("2026-11-19", new Date(), { keep: [["701", "2026-11-10"]] })).toBe(0);
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: kept.id } })).status).toBe("IN_HOUSE");
+    await prisma.stay.update({ where: { id: kept.id }, data: { status: "CANCELLED" } });
+  });
+
   it("zweiter Lauf ändert nichts; verlängerter oder heutiger Aufenthalt bleibt im Haus", async () => {
     expect(await closeDepartedImportStays("2026-11-19")).toBe(0);
     const today = await prisma.stay.create({ data: { roomId, guestName: "Heute", checkIn: day("2026-11-17", "00:00"), checkOut: day("2026-11-19"), status: "IN_HOUSE", stayToken: "f7n-today-00000000000000000000000000", source: "IMPORT" } });
@@ -64,11 +71,15 @@ describe("Abreise nur über Opera", () => {
 describe("F4-Nachtrag (M8): Importverlauf des Tages", () => {
   it("übernommene und gelöschte Listen von heute, neueste zuerst, mit Person — ohne Gastdaten", async () => {
     const now = Date.now();
-    await prisma.importBatch.create({ data: { type: "ARRIVALS", businessDate: berlinDate(new Date()), uploadedById: userId, status: "APPLIED", rowCount: 12, fileHash: "h1", appliedAt: new Date(now - 60_000) } });
-    await prisma.importBatch.create({ data: { type: "TRACES", businessDate: "2026-01-01", uploadedById: userId, status: "APPLIED", rowCount: 3, fileHash: "h2", appliedAt: new Date("2026-01-01T08:00:00Z") } });
-    await prisma.auditLog.create({ data: { action: "IMPORT_LIST_DELETED", userId, meta: JSON.stringify({ type: "FORECAST", businessDate: berlinDate(new Date()) }) } });
-    const h = await importHistory(berlinDate(new Date()));
-    expect(h.map((x) => [x.type, x.action])).toEqual([["FORECAST", "DELETED"], ["ARRIVALS", "APPLIED"]]);
-    expect(h[1]).toMatchObject({ by: "fo", rows: 12 });
+    // Review (M4): aus dem Logbuch — dieselbe Liste zweimal übernommen erscheint zweimal
+    const today = berlinDate(new Date(now));
+    const at = (msAgo: number) => new Date(Math.max(now - msAgo, new Date(`${today}T00:00:00Z`).getTime() + 1000 * (10 - msAgo / 60_000)));
+    await prisma.auditLog.create({ data: { action: "IMPORT_APPLIED", userId, createdAt: at(3 * 60_000), meta: JSON.stringify({ type: "ARRIVALS", businessDate: today, rows: 10 }) } });
+    await prisma.auditLog.create({ data: { action: "IMPORT_APPLIED", userId, createdAt: at(2 * 60_000), meta: JSON.stringify({ type: "ARRIVALS", businessDate: today, rows: 12 }) } });
+    await prisma.auditLog.create({ data: { action: "IMPORT_APPLIED", userId, createdAt: new Date("2026-01-01T08:00:00Z"), meta: JSON.stringify({ type: "TRACES", businessDate: "2026-01-01", rows: 3 }) } });
+    await prisma.auditLog.create({ data: { action: "IMPORT_LIST_DELETED", userId, createdAt: at(60_000), meta: JSON.stringify({ type: "FORECAST", businessDate: today }) } });
+    const h = await importHistory(today);
+    expect(h.map((x) => [x.type, x.action, x.rows])).toEqual([["FORECAST", "DELETED", null], ["ARRIVALS", "APPLIED", 12], ["ARRIVALS", "APPLIED", 10]]);
+    expect(h[1].by).toBe("fo");
   });
 });

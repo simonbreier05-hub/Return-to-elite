@@ -58,6 +58,8 @@ export async function POST(req: NextRequest) {
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "Invalid room task.", code: "INVALID_INPUT" }, { status: 400 });
   const { roomId, type, note, dueDate } = parsed.data;
+  // Review (N4): Einmal-Aufgabe nie für einen vergangenen Tag (die Oberfläche setzt min, der Server prüft selbst)
+  if (dueDate && dueDate < berlinToday()) return NextResponse.json({ error: "Date is in the past.", code: "DUE_DATE_PAST" }, { status: 400 });
   if (type === "SONSTIGES" && !note?.trim()) {
     return NextResponse.json({ error: "A note is required for type SONSTIGES.", code: "TEXT_REQUIRED" }, { status: 400 });
   }

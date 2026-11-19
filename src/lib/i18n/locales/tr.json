@@ -1091,6 +1091,7 @@
     "hubDay.missingPlanner": "StayClean yalnızca planlama merkezindeki günlük verilerle çalışır. Beş Opera listesini orada aktarın — pano, listeler ve kat planı hemen dolar.",
     "hubDay.missingAttendant": "Günlük planlama, planlama merkezinde yapıldığında odalarınız görünür.",
     "hubDay.toHub": "Planlama merkezine git",
+    "planungTool.draftRestored": "{{time}} taslağı geri yüklendi — elle yaptığınız değişiklikler korundu.",
     "planungTool.typeEXTERN": "Harici (yardımcı)",
     "planungTool.title": "Planlama",
     "planungTool.houseToday": "Otel bugün",

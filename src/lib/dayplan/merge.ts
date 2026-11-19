@@ -134,8 +134,20 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   }
 
   // F7-Nachtrag: Abreise nur über Opera (ohne Check-out-Knopf) — Aufenthalte vor diesem Tag abschließen wie beim Check-out
-  const departed = await closeDepartedImportStays(date).catch(() => 0);
-  if (departed) issues.push(issue("INFO", "STAYS_CLOSED", `${departed} abgereiste(r) Aufenthalt(e) ohne Check-out-Meldung abgeschlossen (Verlauf archiviert).`));
+  // Review (H1): nur mit frischen Listen von heute (nicht „Trotzdem verwenden“, nicht nachts gelöscht) — sonst würde ein
+  // verlängerter Gast mit altem Abreisedatum dauerhaft ausgecheckt. Aufenthalte, die heute noch in den Listen stehen, nie.
+  const freshLists = !!ih && ih.batch.businessDate === date && !ih.purged && dep.batch.businessDate === date && !dep.purged;
+  if (freshLists) {
+    try {
+      const departed = await closeDepartedImportStays(date, new Date(), { keep: [...seen].map((k) => k.split("|")) });
+      if (departed) issues.push(issue("INFO", "STAYS_CLOSED", `${departed} abgereiste(r) Aufenthalt(e) ohne Check-out-Meldung abgeschlossen (Verlauf archiviert).`));
+    } catch (e) {
+      console.error("[merge] closeDepartedImportStays:", e instanceof Error ? e.name : "error");
+      issues.push(issue("WARNING", "STAYS_CLOSE_FAILED", "Abgereiste Aufenthalte konnten nicht abgeschlossen werden — beim nächsten Import erneut."));
+    }
+  } else {
+    issues.push(issue("INFO", "STAYS_NOT_CLOSED", "Abreisen ohne Check-out-Meldung nicht abgeschlossen: In-House- oder Departures-Liste ist nicht von heute."));
+  }
 
   // ── Tagesplan (DayRoomPlan) ──────────────────────────────────────────────
   const existingPlan = await prisma.dayRoomPlan.findMany({ where: { date }, include: { room: { select: { number: true, assignedToId: true } } } });

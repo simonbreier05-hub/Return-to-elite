@@ -1091,6 +1091,7 @@
     "hubDay.missingPlanner": "StayClean lavora solo con i dati del giorno dell'hub di pianificazione. Carica lì i cinque elenchi Opera — bacheca, elenchi e planimetria si riempiono subito.",
     "hubDay.missingAttendant": "Le tue camere compaiono appena la pianificazione del giorno è fatta nell'hub di pianificazione.",
     "hubDay.toHub": "All'hub di pianificazione",
+    "planungTool.draftRestored": "Bozza delle {{time}} ripristinata — le modifiche manuali sono mantenute.",
     "planungTool.typeEXTERN": "Esterna (aiuto)",
     "planungTool.title": "Pianificazione",
     "planungTool.houseToday": "L'hotel oggi",

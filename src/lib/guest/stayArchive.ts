@@ -52,20 +52,25 @@ export async function closeStaleCleanRequests(now = new Date()): Promise<number>
  * Status CHECKED_OUT. Ein verlängerter Aufenthalt hat im heutigen Import ein späteres Abreisedatum und bleibt unberührt.
  * Logbuch `GUEST_DEPARTED_IMPORT` (nur Ids, keine Gastdaten). Gibt die Anzahl zurück.
  */
-export async function closeDepartedImportStays(date: string, now = new Date()): Promise<number> {
+export async function closeDepartedImportStays(date: string, now = new Date(), opts: { keep?: string[][] } = {}): Promise<number> {
+  /** Review (H1): Aufenthalte, die heute noch in den Listen stehen ([Zimmer, Anreise]), bleiben in jedem Fall. */
+  const keep = new Set((opts.keep ?? []).map(([room, arr]) => `${room}|${arr}`));
   const { berlinDate, berlinToUtc } = await import("@/lib/dayplan/time");
   const { buildProfileSuggestion } = await import("@/lib/guest/profileSuggestion");
   const stays = await prisma.stay.findMany({
     where: { source: "IMPORT", status: "IN_HOUSE", checkOut: { lt: new Date(`${date}T00:00:00Z`) } },
-    select: { id: true, roomId: true, checkOut: true },
+    select: { id: true, roomId: true, checkOut: true, checkIn: true, room: { select: { number: true } } },
   });
+  let closed = 0;
   for (const s of stays) {
+    if (keep.has(`${s.room.number}|${s.checkIn.toISOString().slice(0, 10)}`)) continue;
     const depDay = berlinDate(s.checkOut);
     await buildProfileSuggestion(s.id, berlinToUtc(depDay, "23:59")).catch(() => null);
-    const next = await prisma.stay.findFirst({ where: { roomId: s.roomId, id: { not: s.id }, checkIn: { gt: new Date(s.checkOut.getTime() - 86_400_000) } }, orderBy: { checkIn: "asc" }, select: { checkIn: true } });
+    const next = await prisma.stay.findFirst({ where: { roomId: s.roomId, id: { not: s.id }, status: { not: "CANCELLED" }, checkIn: { gt: new Date(s.checkOut.getTime() - 86_400_000) } }, orderBy: { checkIn: "asc" }, select: { checkIn: true } });
     await archiveStayHistory(s.roomId, { stayId: s.id, now, ...(next ? { before: berlinToUtc(berlinDate(next.checkIn), "00:00") } : {}) });
     await prisma.stay.update({ where: { id: s.id }, data: { status: "CHECKED_OUT" } });
     await prisma.auditLog.create({ data: { action: "GUEST_DEPARTED_IMPORT", roomId: s.roomId, meta: JSON.stringify({ stayId: s.id, date }) } });
+    closed++;
   }
-  return stays.length;
+  return closed;
 }

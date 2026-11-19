@@ -1091,6 +1091,7 @@
     "hubDay.missingPlanner": "StayClean chỉ dùng dữ liệu trong ngày từ trung tâm kế hoạch. Hãy nhập năm danh sách Opera ở đó — bảng, danh sách và sơ đồ tầng sẽ có dữ liệu ngay.",
     "hubDay.missingAttendant": "Phòng của bạn sẽ hiện ra ngay khi kế hoạch trong ngày được lập ở trung tâm kế hoạch.",
     "hubDay.toHub": "Đến trung tâm kế hoạch",
+    "planungTool.draftRestored": "Đã khôi phục bản nháp lúc {{time}} — các thay đổi thủ công vẫn được giữ.",
     "planungTool.typeEXTERN": "Tạm thời (bên ngoài)",
     "planungTool.title": "Lập kế hoạch",
     "planungTool.houseToday": "Khách sạn hôm nay",

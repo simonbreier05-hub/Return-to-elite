@@ -85,14 +85,16 @@ export default function HousemanView() {
   // F7 (Nachtrag): mehrere auf einmal erledigen — dieselben Wege wie einzeln; Twin-Rückbau bei Gast im Zimmer einmal gesammelt nachfragen
   const doneMany = async (list: HmItemView[]) => {
     if (busyKey || list.length === 0) return;
+    // Review (M2): „Gast noch im Zimmer“ verneint → nur diese Zimmer auslassen, nicht den ganzen Stapel
     const waiting = list.filter((i) => i.waitsForDeparture);
-    if (waiting.length && !window.confirm(t("houseman.guestStillConfirmMany", { rooms: waiting.map((i) => i.roomNumber).join(", ") }))) return;
+    if (waiting.length && !window.confirm(t("houseman.guestStillConfirmMany", { rooms: waiting.map((i) => i.roomNumber).join(", ") }))) list = list.filter((i) => !i.waitsForDeparture);
+    if (list.length === 0) return;
     setError(null);
     setBusyKey("multi");
     const failed: string[] = [];
     for (const item of list) {
       try {
-        if (item.kind === "trace") await hm.toggle({ id: item.id, status: "OPEN" });
+        if (item.kind === "trace") { if (!(await hm.toggle({ id: item.id, status: "OPEN" }))) failed.push(item.roomNumber); }
         else {
           const res = await api<{ roomTask?: unknown }>(`/api/roomtasks/${item.id}`, { method: "PATCH", body: { status: "DONE" } });
           const rt = res?.roomTask as { id?: string } | undefined;

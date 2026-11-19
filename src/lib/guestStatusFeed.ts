@@ -43,7 +43,7 @@ export async function getGuestStatusFeed(roomId: string, now: Date = new Date())
 }> {
   const guestUserId = await getGuestSystemUserId();
   const lastCheckout = await prisma.auditLog.findFirst({
-    where: { roomId, action: "GUEST_CHECKED_OUT" },
+    where: { roomId, action: { in: ["GUEST_CHECKED_OUT", "GUEST_DEPARTED_IMPORT"] } }, // Review (M1): auch Abschluss über den Import
     orderBy: { createdAt: "desc" },
     select: { createdAt: true },
   });

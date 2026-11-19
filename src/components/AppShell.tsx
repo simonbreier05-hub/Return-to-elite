@@ -166,6 +166,8 @@ export default function AppShell({
     resetSocket(); // S1: die Live-Verbindung gehört zur abgemeldeten Person — schließen
     // F6-Review: Warteliste gehört zur abgemeldeten Person — auf geteilten iPads nie unter fremdem Namen nachsenden
     try { window.localStorage.removeItem("stayclean.queue.v1"); } catch { /* privater Modus */ }
+    // Review (M3): Planungsentwurf gehört zur abgemeldeten Person
+    try { for (const k of Object.keys(window.sessionStorage)) if (k.startsWith("stayclean.planDraft.")) window.sessionStorage.removeItem(k); } catch { /* privater Modus */ }
     router.push("/login");
     router.refresh();
   };
@@ -333,10 +335,10 @@ export default function AppShell({
             <ErrorBoundary>
               {legacy ? (
                 // Alter Seiteninhalt (helle Palette) bis zur Umstellung in D2–D5 auf heller Fläche — sonst wäre Navy-Text auf Dunkel unlesbar.
-                <div className="rounded-(--glass-radius-lg) bg-ivory p-3 font-sans text-charcoal sm:p-6">
+                <GlassMode on={false}><div className="rounded-(--glass-radius-lg) bg-ivory p-3 font-sans text-charcoal sm:p-6">
                   <LanguageSuggestion />
                   {children}
-                </div>
+                </div></GlassMode>
               ) : (
                 <GlassMode>
                   <LanguageSuggestion glass />
