@@ -59,21 +59,20 @@ function ReferenceFloorPlan() {
 
   const liveByNumber = useMemo(() => new Map(liveRooms.map((r) => [r.number, r])), [liveRooms]);
 
-  if (error) return <div className="rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</div>;
-  if (!plan) return <p className="text-sm text-graphite/60">{t("floorPlanRef.loading")}</p>;
+  if (error) return <div className="rounded-(--glass-radius-sm) border border-status-danger-fg/40 bg-status-danger-bg p-3 text-sm text-status-danger-fg">{error}</div>;
+  if (!plan) return <p className="text-sm text-text-muted">{t("floorPlanRef.loading")}</p>;
 
   return (
-    <div className="animate-rise">
+    <div className="theme-glass flex flex-col gap-4">
       <div className="mb-5">
-        <h2 className="font-serif text-4xl leading-none">{t("floorPlanRef.title")}</h2>
-        <div className="rule-gold my-2 w-40" />
-        <p className="text-sm text-graphite/70">
+        
+        <p className="text-sm text-text-secondary">
           {t("floorPlanRef.intro")}
         </p>
       </div>
 
       <HubMissingNotice hub={hub} planner />
-      <div className="mb-4 rounded-xl border border-gold-line/40 bg-parchment/60 p-3 text-xs text-graphite/70">
+      <div className="mb-4 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-3 text-xs text-text-secondary">
         <strong>{t("floorPlanRef.liftNoteStrong")}</strong> {t("floorPlanRef.liftNote")}
       </div>
 

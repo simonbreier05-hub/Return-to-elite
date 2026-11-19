@@ -48,7 +48,7 @@ describe("Zimmerzeile", () => {
     expect(out).toMatch(/<svg/);
     expect(out).toContain("VIP");
     expect(out).toMatch(/border-s-status-dirty/); // Betrieb L2: Turn = blaue Pille, roter Rand
-    expect(out).toMatch(/text-status-inspected/);
+    expect(out).toMatch(/text-status-info-fg/); // Simon 19.11.: Glas-Ton für Blau
   });
   it("Hinweis aus der Planung ist klar gekennzeichnet", () => {
     const out = html(room("201", "STAYOVER", { hints: [{ id: "n1", body: "Bitte extra Kissen" }] }));

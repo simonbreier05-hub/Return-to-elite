@@ -72,8 +72,8 @@ export const EVENT_ROLES: Record<string, readonly Role[]> = {
   "room:status": ["supervisor", "front_office", "duty_manager"],
   "attendant:location": LEADS,
   "arrival:update": ["supervisor", "front_office", "duty_manager"],
-  "guestrequest:new": LEADS,
-  "guestrequest:update": LEADS,
+  "guestrequest:new": [...LEADS, "front_office"], // F3: Front Office sieht Gast-DND (Karte „Bitte nicht stören“)
+  "guestrequest:update": [...LEADS, "front_office"],
   "excursion:update": ["concierge", "supervisor", "front_office", "duty_manager"],
   "import:applied": LEADS,
   "import:deleted": LEADS,

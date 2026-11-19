@@ -232,6 +232,16 @@ export function usePlanningFloorPlan({
     try {
       await api(`/api/rooms/${live.id}/assign`, { body: { attendantId, confirmStarted } });
     } catch (e) {
+      // F4 (H3): Stufe/Einschränkung/Suiten/Tagesziel/krank — Rückfrage, dann trotzdem zuteilen
+      if (e instanceof ApiError && e.code === "ASSIGN_WARNINGS") {
+        if (window.confirm(`${e.message}
+
+${t("assign.warnConfirm")}`)) {
+          try { await api(`/api/rooms/${live.id}/assign`, { body: { attendantId, confirmStarted, confirmWarnings: true } }); return; } catch { /* fällt auf Zurückrollen */ }
+        }
+        loadLive();
+        return;
+      }
       if (e instanceof ApiError && e.code === "STARTED_ROOM") setStartedPrompt({ room, number: room.number, attendantId });
       else setNotice(t("board.saveFailed") + (e instanceof Error && e.message ? ` (${e.message})` : ""));
       loadLive(); // zurückrollen: Serverstand wiederherstellen
@@ -268,6 +278,15 @@ export function usePlanningFloorPlan({
     try {
       await api("/api/rooms/bulk-assign", { body: { roomIds: rooms.map((r) => r.id), attendantId, confirmStarted } });
     } catch (e) {
+      if (e instanceof ApiError && e.code === "ASSIGN_WARNINGS") {
+        if (window.confirm(`${e.message}
+
+${t("assign.warnConfirm")}`)) {
+          try { await api("/api/rooms/bulk-assign", { body: { roomIds: rooms.map((r) => r.id), attendantId, confirmStarted, confirmWarnings: true } }); return; } catch { /* fällt auf Zurückrollen */ }
+        }
+        loadLive();
+        return;
+      }
       if (e instanceof ApiError && e.code === "STARTED_ROOMS") setBulkPrompt({ ids: roomIds, attendantId, rooms: (e.data?.rooms as string[] | undefined) ?? [] });
       else setNotice(t("board.saveFailed") + (e instanceof Error && e.message ? ` (${e.message})` : ""));
       loadLive();

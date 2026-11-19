@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Inter, Noto_Sans_Devanagari, Vazirmatn } from "next/font/google";
 import Script from "next/script";
 import Providers from "@/components/Providers";
+import { GlassMode } from "@/components/shell/GlassMode";
 import "./globals.css";
 
 /**
@@ -68,7 +69,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="de" dir="ltr" className={`${serif.variable} ${sans.variable} ${devanagari.variable} ${arabic.variable}`}>
       <body className="min-h-screen bg-ivory text-charcoal antialiased">
-        <Providers>{children}</Providers>
+        {/* Simon-Feedback 19.11.2026: alle Mitarbeiter-Seiten im Glas-Design — auch Fenster, die außerhalb einer Seite aufgehen (Portale) */}
+        <Providers><GlassMode>{children}</GlassMode></Providers>
         {/* Registers the static-asset service worker (public/sw.js) after
             the page is interactive. The Socket.IO connection and all
             /api/** calls stay online-only — see public/sw.js for scope. */}

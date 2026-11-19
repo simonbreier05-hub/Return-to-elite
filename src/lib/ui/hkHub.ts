@@ -13,7 +13,7 @@ import type { MarkerKind } from "./markers";
 import { STATUS_UI, uiStatusForRoom, type UiStatus } from "./status";
 import type { Tone } from "./tone";
 
-export type DayKind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | null;
+export type DayKind = "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | "CARRYOVER" | "EXTRA" | null;
 
 /** Was der Hub über ein Zimmer weiß (Board-Status + Tagesliste + Priorität), auf das Nötige reduziert. */
 export interface HkRoomView {
@@ -58,6 +58,9 @@ export const KIND_PILL: Record<Exclude<DayKind, null>, { labelKey: TKey; tone: T
   DEPARTURE: { labelKey: "lists.kindDEPARTURE", tone: "danger" },
   STAYOVER: { labelKey: "lists.kindSTAYOVER", tone: "success" },
   ARRIVAL: { labelKey: "lists.kindARRIVAL", tone: "info" },
+  // F1: Rest vom Vortag (Achtung, Rand Rot wie Abreise) und Zusatz ohne Tagesplan
+  CARRYOVER: { labelKey: "lists.kindCARRYOVER", tone: "warning", edge: "danger" },
+  EXTRA: { labelKey: "lists.kindEXTRA", tone: "neutral", edge: "danger" },
 };
 
 export function kindPill(kind: DayKind): { labelKey: TKey; tone: Tone; edge?: Tone } | null {

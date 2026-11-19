@@ -109,6 +109,50 @@ describe("Tagesplan aus Import (Wegwerf-DB)", () => {
     expect(await prisma.arrival.count({ where: { source: "IMPORT", status: "EXPECTED" } })).toBe(7); // ersetzt statt verdoppelt
   });
 
+  it("F1 (K1): gestern DIRTY, heute nicht im Plan → bleibt schmutzig, „Rest vom Vortag“, zählt mit, DM-Hinweis einmal", async () => {
+    const yesterday = new Date("2026-10-05T16:00:00Z");
+    const mk = (number: string, status: string) => prisma.room.create({ data: { number, floor: 1, section: "1A", type: "STANDARD", status, statusSince: yesterday } });
+    await mk("131", "DIRTY"); await mk("132", "IN_PROGRESS"); await mk("133", "CLEAN"); await mk("134", "INSPECTED"); await mk("135", "OUT_OF_ORDER");
+    const r = await applyDayPlanToBoard(TODAY, userId);
+    const st = Object.fromEntries((await prisma.room.findMany({ where: { number: { in: ["131", "132", "133", "134", "135"] } } })).map((x) => [x.number, x.status]));
+    expect(st).toEqual({ "131": "DIRTY", "132": "DIRTY", "133": "CLEAN", "134": "INSPECTED", "135": "OUT_OF_ORDER" });
+    expect(r.carryover).toEqual(["131", "132", "133"]);
+    expect(r.notes.join(" ")).toContain("3 Zimmer seit gestern nicht gereinigt: 131, 132, 133");
+    const plan = await prisma.dayRoomPlan.findMany({ where: { date: TODAY, cleaningType: "CARRYOVER" }, include: { room: true } });
+    expect(plan.map((p) => p.room.number).sort()).toEqual(["131", "132", "133"]);
+    // Tageszahlen: 131 und 132 sind zu reinigen, 133 (gereinigt, ungeprüft) nicht
+    const { getDayNumbers } = await import("@/lib/dayplan/dayNumbersData");
+    const { numbers } = await getDayNumbers(TODAY);
+    expect(numbers.byKind.CARRYOVER).toBe(2);
+    // Duty Manager: eine Warnung; zweiter Lauf und Nachimport legen keine zweite an und löschen den Rest vom Vortag nicht
+    await applyDayPlanToBoard(TODAY, userId);
+    await mergeDay(TODAY, userId);
+    expect(await prisma.notification.count({ where: { type: "CARRYOVER", targetRole: "duty_manager", level: "warning" } })).toBe(1);
+    expect(await prisma.dayRoomPlan.count({ where: { date: TODAY, cleaningType: "CARRYOVER" } })).toBe(3);
+    expect(await prisma.notification.count({ where: { type: "LIST_UPDATED" } })).toBe(0); // keine „entfällt“-Meldung
+    // Nachimport: 132 wurde morgens von IN_PROGRESS auf DIRTY gesetzt (statusSince = heute) — bleibt trotzdem schmutzig
+    await applyDayPlanToBoard(TODAY, userId);
+    const after = Object.fromEntries((await prisma.room.findMany({ where: { number: { in: ["131", "132", "133"] } } })).map((x) => [x.number, x.status]));
+    expect(after).toEqual({ "131": "DIRTY", "132": "DIRTY", "133": "CLEAN" });
+    // Heute gereinigt: bleibt im Plan, Morgenstatus fasst es nicht mehr an
+    await prisma.room.update({ where: { number: "131" }, data: { status: "CLEAN", statusSince: new Date() } });
+    await applyDayPlanToBoard(TODAY, userId);
+    expect((await prisma.room.findUniqueOrThrow({ where: { number: "131" } })).status).toBe("CLEAN");
+  });
+
+  it("F1 (K3): heute zugeteiltes Zimmer ohne Tagesplan-Eintrag zählt als zu reinigen, Credits nach Zimmertyp", async () => {
+    const att = await prisma.user.create({ data: { email: "k3@test", name: "K3", passwordHash: "x", role: "room_attendant" } });
+    await prisma.room.create({ data: { number: "136", floor: 1, section: "1A", type: "STANDARD", status: "DIRTY", assignedToId: att.id, assignedOn: TODAY } });
+    const { getDayNumbers } = await import("@/lib/dayplan/dayNumbersData");
+    const { numbers } = await getDayNumbers(TODAY);
+    expect(numbers.byKind.EXTRA).toBe(1);
+    const { loadRoomRows } = await import("@/lib/lists/dayRows");
+    const [row] = await loadRoomRows(TODAY, { assignedToId: att.id }, null);
+    expect(row).toMatchObject({ number: "136", kind: "EXTRA" });
+    expect(row.credits).toBeGreaterThan(0);
+    await prisma.room.update({ where: { number: "136" }, data: { assignedToId: null, assignedOn: null } });
+  });
+
   it("Nachimport: Zuteilung bleibt fest, Zimmer bekommt Hinweis; fehlender Aufenthalt wird markiert, nicht gelöscht", async () => {
     const attendant = await prisma.user.create({ data: { email: "att@test", name: "Att", passwordHash: "x", role: "room_attendant" } });
     // Heutige Zuteilung (assignedOn = heute, wie jeder Zuteilungsweg sie setzt) — nur sie bekommt die Nachimport-Meldung.
@@ -186,5 +230,31 @@ describe("Hausmann-Liste aus dem Import", () => {
     expect((await prisma.trace.findUniqueOrThrow({ where: { id: done.id } })).doneAt).toBeNull();
     const other = await prisma.trace.findFirst({ where: { dept: { not: "HOUSEMAN" } } });
     if (other) expect(await setHousemanTraceStatus(other.id, "DONE", { userId, role: "supervisor" })).toBeNull();
+  });
+});
+
+describe("F3: Nachimport nach einem Zimmerwechsel", () => {
+  it("Opera führt den Gast noch im alten Zimmer: kein zweiter Aufenthalt, alter Gastbildschirm bleibt neutral, Zeilen bleiben", async () => {
+    const { changeRoom } = await import("@/lib/rooms/roomChange");
+    const { roomStayState } = await import("@/lib/guestStay");
+    const plan = await prisma.dayRoomPlan.findMany({ where: { date: TODAY, cleaningType: "STAYOVER" }, include: { room: true } });
+    let fromRoom: { id: string; number: string } | null = null, stayId = "";
+    for (const p of plan) {
+      const st = await roomStayState(p.roomId);
+      if (st.kind === "active") { fromRoom = p.room; stayId = st.stay.id; break; }
+    }
+    expect(fromRoom).not.toBeNull();
+    const target = await prisma.room.create({ data: { number: "140", floor: 1, section: "1A", type: "STANDARD", status: "INSPECTED", occupancy: "VACANT" } });
+    const r = await changeRoom({ userId, name: "Sup", role: "supervisor" } as never, fromRoom!.id, target.id, "Lärm");
+    expect(r.ok).toBe(true);
+    const staysBefore = await prisma.stay.count();
+    await mergeDay(TODAY, userId); // Opera-Listen unverändert: Gast steht dort noch im alten Zimmer
+    expect(await prisma.stay.count()).toBe(staysBefore);
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: stayId } })).roomId).toBe(target.id);
+    expect((await roomStayState(fromRoom!.id)).kind).toBe("none");
+    expect((await prisma.stay.findUniqueOrThrow({ where: { id: stayId } })).needsReview).toBe(false);
+    expect(await prisma.dayRoomPlan.findUniqueOrThrow({ where: { date_roomId: { date: TODAY, roomId: fromRoom!.id } } })).toMatchObject({ cleaningType: "DEPARTURE", roomChangeTo: "140", stayId: null });
+    await applyDayPlanToBoard(TODAY, userId);
+    expect((await prisma.room.findUniqueOrThrow({ where: { id: fromRoom!.id } })).occupancy).toBe("VACANT");
   });
 });

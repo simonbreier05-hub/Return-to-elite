@@ -19,18 +19,18 @@ export default function HubMoreMenu({ children, extraBadge }: { children?: React
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
-        className="relative flex h-14 items-center gap-2 rounded-xl border border-charcoal/15 bg-linen px-5 text-sm font-medium hover:border-gold-line"
+        className="relative flex h-14 items-center gap-2 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-5 text-sm font-medium"
       >
         {extraBadge}
         {t("supervisor.more")}
-        {unread > 0 && <span aria-label={t("chat.unreadAria", { n: unread })} className="rounded-full bg-navy px-2 py-0.5 text-xs font-semibold text-ivory">{unread}</span>}
+        {unread > 0 && <span aria-label={t("chat.unreadAria", { n: unread })} className="rounded-full bg-champagne px-2 py-0.5 text-xs font-semibold text-text-on-accent">{unread}</span>}
         <span aria-hidden className={`transition-transform duration-150 ${open ? "rotate-180" : ""}`}>▾</span>
       </button>
       {open && (
-        <div className="animate-rise order-last flex w-full flex-wrap gap-2">
-          <Link href="/chat" className="flex h-12 items-center gap-2 rounded-xl border border-navy/30 bg-navy px-5 text-sm font-semibold text-ivory hover:bg-navy-line">
+        <div className="theme-glass order-last flex w-full flex-wrap gap-2">
+          <Link href="/chat" className="flex h-12 items-center gap-2 rounded-(--glass-radius-md) border border-border-subtle bg-champagne px-5 text-sm font-semibold text-text-on-accent">
             💬 {t("chat.title")}
-            {unread > 0 && <span className="rounded-full bg-ivory px-2 py-0.5 text-xs font-semibold text-navy">{unread}</span>}
+            {unread > 0 && <span className="rounded-full bg-surface-card-raised px-2 py-0.5 text-xs font-semibold text-accent-text">{unread}</span>}
           </Link>
           {children}
         </div>

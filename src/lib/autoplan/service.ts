@@ -17,6 +17,7 @@ import { buildResult } from "./result";
 import { suggestionSignature, suggestRedistribution, type Move, type Suggestion } from "./redistribute";
 import type { Assignment, PlanInput, PlanResult } from "./types";
 import { keyed } from "@/lib/i18n/notificationText";
+import { alertSick } from "@/lib/notify/dmAlerts";
 
 export interface ProposalPayload { input: PlanInput; result: PlanResult; generatedAt: string }
 
@@ -29,6 +30,15 @@ export async function proposeForDate(date: string, userId: string, attendantIds?
   if (!input.housekeepers.length) throw new Error("Keine anwesenden Housekeeper ausgewählt.");
   const result = proposePlan(input);
   for (const message of d.learnedNotes) result.warnings.push({ code: "LEARNED_SKIPPED", severity: "INFO", message });
+  // F2: Anreise in ein gesperrtes Zimmer — Vorschlag und Bestätigungsdialog warnen (das Zimmer wird nicht verplant)
+  const blockedArrivals = await prisma.dayRoomPlan.findMany({
+    where: { date, cleaningType: { in: ["ARRIVAL", "SAME_DAY_TURN"] }, room: { status: { in: ["OUT_OF_ORDER", "OUT_OF_SERVICE"] } } },
+    select: { roomId: true, room: { select: { number: true } } },
+  });
+  if (blockedArrivals.length) result.warnings.unshift({
+    code: "BLOCKED_ARRIVAL", severity: "WARNING", roomIds: blockedArrivals.map((b) => b.roomId),
+    message: `Anreise in gesperrtes Zimmer: ${blockedArrivals.map((b) => b.room.number).sort().join(", ")} — bitte Zimmer tauschen oder Sperre aufheben.`,
+  });
   await prisma.autoPlanProposal.updateMany({ where: { date, status: "DRAFT" }, data: { status: "SUPERSEDED" } });
   const payload: ProposalPayload = { input, result, generatedAt: new Date().toISOString() };
   const row = await prisma.autoPlanProposal.create({ data: { date, createdById: userId, payload: JSON.stringify(payload) } });
@@ -268,8 +278,11 @@ export async function setAbsent(hkId: string, absent: boolean, userId: string, n
   const date = berlinDate(now);
   const u = await prisma.user.findUnique({ where: { id: hkId } });
   if (!u || u.role !== "room_attendant") throw new Error("Housekeeper nicht gefunden.");
-  await prisma.user.update({ where: { id: hkId }, data: { absentDate: absent ? date : null } });
+  // F4 (H11): die Krankmeldung bleibt als eigenes Datum stehen — saveTeam setzt sie nicht still zurück
+  await prisma.user.update({ where: { id: hkId }, data: { absentDate: absent ? date : null, sickDate: absent ? date : null } });
   await audit({ action: "HK_ABSENCE_SET", userId, meta: { hkId, absent, date } });
+  // F5 (H14, Frage 9): Krankmeldung → Duty Manager direkt (+ Supervisoren der Etagen, Annahme), danach Personal neu rechnen
+  if (absent) await alertSick(hkId, now).catch(() => 0);
   if (!absent) {
     const open = await prisma.redistributionSuggestion.findMany({ where: { date, status: "OPEN", kind: "ABSENT" } });
     const mine = open.filter((s) => (JSON.parse(s.reason) as { params: { from?: string } }).params.from === hkId);

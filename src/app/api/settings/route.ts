@@ -75,6 +75,7 @@ const Body = z.object({
   workdataMinSamples: z.number().int().min(1).max(50).optional(),
   workdataRetentionDays: z.number().int().min(7).max(365).optional(),
   shiftMinutes: z.number().int().min(60).max(720).optional(),
+  workStartHour: z.number().int().min(0).max(23).optional(),
   /** Gewichte der Zuteilungs-Kostenfunktion (autoplanWeight.<name>). Null = auf Standard zurück. */
   autoplanWeights: z.record(z.string(), z.number().min(0).max(100000)).optional(),
   /** Opera-Zimmerart-Code → Zimmerart (Einstellungen). */

@@ -29,11 +29,11 @@ export default function HubMissingNotice({ hub, planner, glass }: { hub: HubStat
     );
   }
   return (
-    <div role="status" className="mb-4 rounded-xl border border-gold-line/60 bg-parchment/70 p-4 text-sm text-graphite">
+    <div role="status" className="mb-4 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-4 text-sm text-text-secondary">
       <p className="font-medium">{t("hubDay.missingTitle", { date })}</p>
-      <p className="mt-1 text-graphite/75">{planner ? t("hubDay.missingPlanner") : t("hubDay.missingAttendant")}</p>
+      <p className="mt-1 text-text-secondary">{planner ? t("hubDay.missingPlanner") : t("hubDay.missingAttendant")}</p>
       {planner && (
-        <Link href="/planung" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-gold-line px-5 font-medium hover:bg-gold-line/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold-line">
+        <Link href="/planung" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border-accent px-5 font-medium focus-visible:ring-2 focus-visible:ring-gold-line">
           {t("hubDay.toHub")}
         </Link>
       )}

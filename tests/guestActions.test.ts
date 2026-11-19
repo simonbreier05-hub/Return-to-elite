@@ -23,6 +23,9 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
 vi.mock("@/lib/guestServer", () => ({ getGuestSystemUserId: async () => "guest-system-user-id" }));
+// F2: Gast-DND geht an Supervisor der Etage + DM (+ zugeteilte HK) über notifyFloorLeads
+const notifyLeadsMock = vi.fn(async () => 1);
+vi.mock("@/lib/rooms/notifyLeads", () => ({ notifyFloorLeads: (...args: unknown[]) => notifyLeadsMock(...(args as [])) }));
 
 import { runGuestAction } from "@/lib/guestActions";
 
@@ -43,10 +46,12 @@ describe("dnd", () => {
     broadcastMock.mockReset();
     auditMock.mockReset();
 
+    notifyLeadsMock.mockClear();
     const res = await runGuestAction("dnd", room, jsonRequest({ window: "NOW" }));
     expect(res.status).toBe(201);
     const body = await res.json();
     expect(body).toEqual({ ok: true, requestId: "req-1" });
+    expect(notifyLeadsMock).toHaveBeenCalledWith(expect.objectContaining({ roomId: "room-1", key: "notify.guestDnd" }));
 
     expect(guestRequestCreate).toHaveBeenCalledWith({
       data: { roomId: "room-1", kind: "DND", detail: JSON.stringify({ window: "NOW" }) },

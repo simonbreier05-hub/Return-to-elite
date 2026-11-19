@@ -91,7 +91,7 @@ export default function LoginPage() {
   return (
     // Light, paper-toned throughout — no dark panel behind the door, the
     // same "quiet luxury" register the whole app now carries.
-    <div className="relative flex min-h-screen items-center justify-center bg-ivory p-4">
+    <div className="theme-glass bg-atmosphere relative flex min-h-screen items-center justify-center bg-bg-canvas p-4">
       <LanguageButton className="absolute end-4 top-4" />
       <div className="w-full max-w-2xl">
         <div className="mb-9 text-center">
@@ -101,22 +101,22 @@ export default function LoginPage() {
             width={666}
             height={383}
             priority
-            className="mx-auto h-auto w-full max-w-[260px]"
+            className="mx-auto h-auto w-full max-w-[260px] brightness-0 invert opacity-90"
           />
-          <p className="mt-5 text-[0.68rem] uppercase tracking-[0.28em] text-graphite">{t("login.appName")}</p>
+          <p className="mt-5 text-[0.68rem] uppercase tracking-[0.28em] text-text-secondary">{t("login.appName")}</p>
         </div>
 
         {error && (
-          <p className="mx-auto mb-4 max-w-md animate-rise rounded-sm border border-status-out-of-order/30 bg-status-out-of-order/10 p-3 text-center text-sm text-status-out-of-order">
+          <p className="mx-auto mb-4 max-w-md rounded-sm border border-status-danger-fg/40 bg-status-danger-bg p-3 text-center text-sm text-status-danger-fg">
             {error}
           </p>
         )}
 
         {devUsers ? (
-          <div className="rounded-xl border border-charcoal/10 bg-linen p-6 shadow-card">
+          <div className="glass rounded-(--glass-radius-lg) p-6">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="font-serif text-2xl text-navy">{t("login.choosePosition")}</h2>
-              <span className="rounded-full bg-gold/10 px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wider text-gold-soft">
+              <h2 className="text-title-22 text-accent-text">{t("login.choosePosition")}</h2>
+              <span className="rounded-full bg-accent-subtle-bg px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wider text-accent-text">
                 {t("common.devMode")}
               </span>
             </div>
@@ -128,10 +128,10 @@ export default function LoginPage() {
                   onClick={() => quickLogin(user.email)}
                   disabled={busy}
                   style={{ "--stagger-i": i } as React.CSSProperties}
-                  className="flex h-20 animate-stagger flex-col items-center justify-center rounded-lg border border-charcoal/15 bg-ivory px-3 text-center transition hover:-translate-y-0.5 hover:border-gold hover:bg-parchment hover:shadow-card disabled:opacity-40 disabled:hover:translate-y-0"
+                  className="flex h-20 animate-stagger flex-col items-center justify-center rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised px-3 text-center transition hover:-translate-y-0.5 disabled:opacity-40 disabled:hover:translate-y-0"
                 >
                   <div className="text-sm font-semibold">{t(`role.${role}` as TKey)}</div>
-                  {count > 1 && <div className="text-xs text-graphite">{t("login.asName", { name: user.name })}</div>}
+                  {count > 1 && <div className="text-xs text-text-secondary">{t("login.asName", { name: user.name })}</div>}
                 </button>
               ))}
               {/* Permanent product showcase, not a login: lets us demo the
@@ -148,25 +148,25 @@ export default function LoginPage() {
                 <button
                   onClick={() => window.location.assign(guestPreviewUrl)}
                   disabled={busy}
-                  className="flex h-20 flex-col items-center justify-center rounded-xl border border-dashed border-gold-line/60 bg-linen px-3 text-center transition hover:border-navy-line hover:bg-parchment disabled:opacity-40"
+                  className="flex h-20 flex-col items-center justify-center rounded-(--glass-radius-md) border border-dashed border-border-subtle bg-surface-card-raised px-3 text-center transition disabled:opacity-40"
                 >
                   <div className="text-sm font-semibold">{t("login.guestPreview")}</div>
-                  <div className="text-xs text-graphite/60">{t("login.guestPreviewRoom")}</div>
+                  <div className="text-xs text-text-muted">{t("login.guestPreviewRoom")}</div>
                 </button>
               )}
             </div>
 
-            <p className="mt-5 text-center text-xs text-graphite">{t("login.devModeNote")}</p>
+            <p className="mt-5 text-center text-xs text-text-secondary">{t("login.devModeNote")}</p>
           </div>
         ) : (
-          <div className="mx-auto max-w-md rounded-xl border border-charcoal/10 bg-linen p-7 shadow-card">
+          <div className="glass mx-auto max-w-md rounded-(--glass-radius-lg) p-7">
             <PasswordForm
               {...{ email, setEmail, password, setPassword, busy, onSubmit: passwordLogin }}
             />
           </div>
         )}
 
-        <p className="mt-8 text-center text-[0.68rem] tracking-[0.04em] text-graphite/70">{t("login.address")}</p>
+        <p className="mt-8 text-center text-[0.68rem] tracking-[0.04em] text-text-secondary">{t("login.address")}</p>
       </div>
     </div>
   );
@@ -195,31 +195,31 @@ function PasswordForm({
         onSubmit();
       }}
     >
-      <label className="mb-2 block text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-graphite">
+      <label className="mb-2 block text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-text-secondary">
         {t("login.email")}
       </label>
       <input
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="mb-5 h-11 w-full border-0 border-b border-charcoal/20 bg-transparent px-0.5 text-base outline-none placeholder:text-charcoal/25 focus:border-gold"
+        className="mb-5 h-11 w-full border-0 border-b border-border-subtle bg-transparent px-0.5 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text placeholder:text-text-secondary"
         placeholder="name@hotel.test"
         autoComplete="username"
       />
-      <label className="mb-2 block text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-graphite">
+      <label className="mb-2 block text-[0.66rem] font-semibold uppercase tracking-[0.12em] text-text-secondary">
         {t("login.password")}
       </label>
       <input
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="mb-7 h-11 w-full border-0 border-b border-charcoal/20 bg-transparent px-0.5 text-base outline-none focus:border-gold"
+        className="mb-7 h-11 w-full border-0 border-b border-border-subtle bg-transparent px-0.5 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text"
         autoComplete="current-password"
       />
       <button
         type="submit"
         disabled={busy}
-        className="h-[3.1rem] w-full rounded-sm bg-navy text-[0.78rem] font-semibold uppercase tracking-[0.1em] text-ivory transition hover:-translate-y-px hover:bg-navy-line hover:shadow-lift disabled:opacity-50 disabled:hover:translate-y-0"
+        className="h-[3.1rem] w-full rounded-sm bg-champagne border border-border-accent text-[0.78rem] font-semibold uppercase tracking-[0.1em] text-text-on-accent transition hover:-translate-y-px disabled:opacity-50 disabled:hover:translate-y-0"
       >
         {busy ? t("login.signingIn") : t("login.signIn")}
       </button>

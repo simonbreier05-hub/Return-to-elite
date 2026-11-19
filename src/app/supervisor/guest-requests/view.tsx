@@ -1,10 +1,15 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, ApiError } from "@/components/api";
+import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
+import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
+import type { IconName } from "@/lib/ui/icons";
+import type { Tone } from "@/lib/ui/tone";
+import { Banner, Button, FilterChip, GlassCard, Pill, SectionLabel } from "@/components/ui";
+import { Glyph } from "@/components/ui/primitives";
 
 type Kind = "DND" | "CLEAN_REQUEST" | "CONTACT" | "GREEN"; // GREEN = Betrieb L2 Green Option (sofort erledigt)
 type Status = "RECEIVED" | "IN_PROGRESS" | "DONE" | "CANCELLED";
@@ -19,7 +24,8 @@ interface GuestRequest {
   createdAt: string;
 }
 
-const KIND_ICON: Record<Kind, string> = { DND: "🔕", CLEAN_REQUEST: "✨", CONTACT: "💬", GREEN: "🌿" };
+const KIND_ICON: Record<Kind, IconName> = { DND: "moon", CLEAN_REQUEST: "zap", CONTACT: "message", GREEN: "leaf" };
+const STATUS_TONE: Record<Status, Tone> = { RECEIVED: "accent", IN_PROGRESS: "info", DONE: "success", CANCELLED: "neutral" };
 
 function parseDetail(json: string | null): Record<string, string> {
   if (!json) return {};
@@ -42,14 +48,13 @@ function detailText(t: (k: TKey, vars?: Record<string, string | number>) => stri
 }
 
 /**
- * The write side of "jede Antwort/Erledigung wird dem Gast als Status
- * angezeigt" (Prompt G2 Teil 4): the guest screen already polls
- * GET /api/guest/{r,s}/.../status (Teil 3) — marking a request IN_PROGRESS/
- * DONE here is what that poll picks up.
+ * Gästeanfragen (Supervisor). Simon-Feedback 19.11.2026: im Design der App („Glas & Premium“) — Karten, Pillen, Knöpfe und
+ * Texte wie auf den übrigen Seiten, alle Texte übersetzt. Daten und Aktionen unverändert: Status hier ändern — der
+ * Gastbildschirm fragt GET /api/guest/{r,s}/.../status ab und zeigt die Änderung (Prompt G2 Teil 4).
  */
 export default function GuestRequestsView({ currentUserId }: { currentUserId: string }) {
-  const { t } = useLocale();
-  const [requests, setRequests] = useState<GuestRequest[]>([]);
+  const { t, fmt } = useLocale();
+  const [requests, setRequests] = useState<GuestRequest[] | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -58,120 +63,101 @@ export default function GuestRequestsView({ currentUserId }: { currentUserId: st
     try {
       const data = await api<{ guestRequests: GuestRequest[] }>(`/api/guest-requests${showAll ? "?all=1" : ""}`);
       setRequests(data.guestRequests);
+      setError(null);
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Konnte Gästeanfragen nicht laden.");
+      setError(errorText(e, t));
     }
-  }, [showAll]);
+  }, [showAll, t]);
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  useEffect(() => { void load(); }, [load]);
 
   useSocket({
-    "app:resync": () => load(),
-    "guestrequest:new": () => load(),
-    "guestrequest:update": () => load(),
+    "app:resync": () => void load(),
+    "guestrequest:new": () => void load(),
+    "guestrequest:update": () => void load(),
   });
 
   const update = async (id: string, body: { status?: Status; assignedToId?: string | null }) => {
     setBusyId(id);
     setError(null);
     try {
-      const { guestRequest } = await api<{ guestRequest: GuestRequest }>(`/api/guest-requests/${id}`, {
-        method: "PATCH",
-        body,
-      });
-      setRequests((prev) => prev.map((r) => (r.id === id ? guestRequest : r)));
+      const { guestRequest } = await api<{ guestRequest: GuestRequest }>(`/api/guest-requests/${id}`, { method: "PATCH", body });
+      setRequests((prev) => (prev ?? []).map((r) => (r.id === id ? guestRequest : r)));
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : "Aktualisieren fehlgeschlagen.");
+      setError(errorText(e, t));
     } finally {
       setBusyId(null);
     }
   };
 
-  const sorted = useMemo(() => [...requests].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [requests]);
+  const sorted = useMemo(() => [...(requests ?? [])].sort((a, b) => b.createdAt.localeCompare(a.createdAt)), [requests]);
+  const openCount = sorted.filter((r) => r.status === "RECEIVED" || r.status === "IN_PROGRESS").length;
 
   return (
-    <div className="animate-rise">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl leading-none">Gästeanfragen</h2>
-          <div className="rule-gold my-2 w-40" />
-          <p className="max-w-2xl text-sm text-graphite/70">
-            Bitte-nicht-stören-, Reinigungs- und Abteilungswünsche direkt vom Gästebildschirm. Status hier ändern —
-            der Gast sieht die Änderung auf seinem Gerät.
-          </p>
+    <div className="theme-glass flex flex-col gap-4 sm:gap-6" data-testid="guest-requests">
+      <GlassCard as="section" aria-label={t("guestRequestsPage.title")} className="flex flex-col gap-3">
+        <SectionLabel as="h2" icon="bell" title={t("guestRequestsPage.title")} count={openCount} />
+        <p className="text-body-16 text-text-muted">{t("guestRequestsPage.intro")}</p>
+        <div className="flex flex-wrap gap-2" role="group" aria-label={t("guestRequestsPage.filter")}>
+          <FilterChip active={!showAll} onClick={() => setShowAll(false)}>{t("guestRequestsPage.onlyOpen")}</FilterChip>
+          <FilterChip active={showAll} onClick={() => setShowAll(true)}>{t("guestRequestsPage.all")}</FilterChip>
         </div>
-        <button
-          onClick={() => setShowAll((v) => !v)}
-          className="h-11 rounded-lg border border-charcoal/15 bg-linen px-4 text-sm font-medium hover:border-gold-line"
-        >
-          {showAll ? "Nur offene anzeigen" : "Alle anzeigen"}
-        </button>
-      </div>
+      </GlassCard>
 
-      {error && <p className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-800">{error}</p>}
+      {error && <Banner tone="warning" title={error} />}
 
-      {sorted.length === 0 ? (
-        <p className="rounded-2xl border border-charcoal/10 bg-linen p-8 text-center text-graphite/60 shadow-card">
-          Keine {showAll ? "" : "offenen "}Gästeanfragen.
-        </p>
+      {requests && sorted.length === 0 ? (
+        <GlassCard className="flex items-center gap-3">
+          <Glyph name="check" size={22} className="text-status-success-fg" />
+          <p className="text-body-16 text-text-secondary">{showAll ? t("guestRequestsPage.emptyAll") : t("guestRequestsPage.emptyOpen")}</p>
+        </GlassCard>
       ) : (
-        <div className="grid gap-3 md:grid-cols-2">
+        <ul className="grid gap-3 md:grid-cols-2">
           {sorted.map((r) => {
             const busy = busyId === r.id;
+            const closed = r.status === "DONE" || r.status === "CANCELLED";
+            const detail = detailText(t, r);
             return (
-              <div key={r.id} className={`rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm ${r.status === "DONE" || r.status === "CANCELLED" ? "opacity-60" : ""}`}>
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="font-serif text-2xl">
-                    {KIND_ICON[r.kind]} {t(`guestRequestKind.${r.kind}` as TKey)}
-                  </span>
-                  <span className="rounded-full bg-navy/10 px-3 py-1 text-xs font-semibold text-navy">
-                    {t(`guestRequestStatus.${r.status}` as TKey)}
-                  </span>
-                </div>
-                <p className="text-sm">
-                  {t("supervisor.floorN", { floor: r.room.floor })} · Zimmer {r.room.number}
-                  {detailText(t, r) && ` — ${detailText(t, r)}`}
-                </p>
-                <p className="mt-1 text-xs text-graphite/60">
-                  {new Date(r.createdAt).toLocaleString([], { hour: "2-digit", minute: "2-digit", day: "2-digit", month: "2-digit" })}
-                  {r.assignedTo && ` · zugewiesen an ${r.assignedTo.name}`}
-                </p>
-
-                {r.status !== "DONE" && r.status !== "CANCELLED" && (
-                  <div className="mt-3 flex flex-wrap gap-2">
-                    {r.assignedTo?.id !== currentUserId && (
-                      <button
-                        onClick={() => update(r.id, { assignedToId: currentUserId })}
-                        disabled={busy}
-                        className="h-10 rounded-lg border border-charcoal/15 px-3 text-sm font-medium disabled:opacity-50"
-                      >
-                        Übernehmen
-                      </button>
-                    )}
-                    {r.status === "RECEIVED" && (
-                      <button
-                        onClick={() => update(r.id, { status: "IN_PROGRESS" })}
-                        disabled={busy}
-                        className="h-10 rounded-lg bg-status-in-progress px-3 text-sm font-semibold text-white disabled:opacity-50"
-                      >
-                        In Bearbeitung
-                      </button>
-                    )}
-                    <button
-                      onClick={() => update(r.id, { status: "DONE" })}
-                      disabled={busy}
-                      className="h-10 rounded-lg bg-emerald-600 px-3 text-sm font-semibold text-white disabled:opacity-50"
-                    >
-                      {busy ? "…" : "Erledigt"}
-                    </button>
+              <li key={r.id}>
+                <GlassCard as="article" aria-label={`${t(`guestRequestKind.${r.kind}` as TKey)} · ${t("guestRequestsPage.room", { n: r.room.number })}`}
+                  className={closed ? "flex h-full flex-col gap-3 opacity-60" : "flex h-full flex-col gap-3"}>
+                  <div className="flex items-start justify-between gap-3">
+                    <span className="flex min-w-0 items-center gap-3">
+                      <Glyph name={KIND_ICON[r.kind]} size={24} className="shrink-0 text-accent-text" />
+                      <span className="text-title-22 min-w-0 text-text-primary">{t(`guestRequestKind.${r.kind}` as TKey)}</span>
+                    </span>
+                    <Pill tone={STATUS_TONE[r.status]}>{t(`guestRequestStatus.${r.status}` as TKey)}</Pill>
                   </div>
-                )}
-              </div>
+                  <p className="text-body-16 text-text-primary">
+                    {t("guestRequestsPage.room", { n: r.room.number })} · {t("supervisor.floorN", { floor: r.room.floor })}
+                    {detail && <span className="text-text-secondary"> — {detail}</span>}
+                  </p>
+                  <p className="text-label text-text-muted">
+                    {fmt.dateTime(r.createdAt, { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                    {r.assignedTo && ` · ${t("guestRequestsPage.assignedTo", { name: r.assignedTo.name })}`}
+                  </p>
+                  {!closed && (
+                    <div className="mt-auto flex flex-wrap gap-2">
+                      {r.assignedTo?.id !== currentUserId && (
+                        <Button variant="secondary" icon="user" disabled={busy} onClick={() => void update(r.id, { assignedToId: currentUserId })}>
+                          {t("guestRequestsPage.take")}
+                        </Button>
+                      )}
+                      {r.status === "RECEIVED" && (
+                        <Button variant="secondary" icon="refresh" disabled={busy} onClick={() => void update(r.id, { status: "IN_PROGRESS" })}>
+                          {t("guestRequestsPage.inProgress")}
+                        </Button>
+                      )}
+                      <Button icon="check" disabled={busy} onClick={() => void update(r.id, { status: "DONE" })}>
+                        {t("guestRequestsPage.done")}
+                      </Button>
+                    </div>
+                  )}
+                </GlassCard>
+              </li>
             );
           })}
-        </div>
+        </ul>
       )}
     </div>
   );

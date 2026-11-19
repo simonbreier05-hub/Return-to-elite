@@ -8,11 +8,12 @@ export interface TabItemProps extends Omit<InteractiveProps, "aria-current" | "a
   active?: boolean;
   /** Zähler-Badge oben rechts am Symbol. */
   count?: number;
+  countQuiet?: boolean;
   className?: string;
 }
 
 /** Eintrag der unteren Tab-Leiste (Handy, max. 4 Einträge). Figma `39:1870`. */
-export function TabItem({ icon, label, active = false, count, className, ...action }: TabItemProps) {
+export function TabItem({ icon, label, active = false, count, countQuiet, className, ...action }: TabItemProps) {
   return (
     <Interactive
       {...action}
@@ -26,7 +27,7 @@ export function TabItem({ icon, label, active = false, count, className, ...acti
     >
       <Glyph name={icon} size={26} className={active ? "text-accent-text" : "text-text-secondary"} />
       <span className="text-label whitespace-nowrap">{label}</span>
-      {count ? <CountBadge value={count} className="absolute top-0 start-[calc(50%+6px)]" /> : null}
+      {count ? <CountBadge value={count} quiet={countQuiet} className="absolute top-0 start-[calc(50%+6px)]" /> : null}
     </Interactive>
   );
 }

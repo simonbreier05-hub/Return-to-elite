@@ -27,14 +27,14 @@ export default function MyWorkData() {
     <div className="mt-4">
       <Collapsible summary={<span className="text-sm font-medium">{t("workdata.mine")}</span>} onToggle={load}>
         <div className="px-3 pb-3 text-sm">
-          {!s ? <p className="text-graphite/70">{loaded ? t("workdata.tooLittle") : ""}</p> : (
+          {!s ? <p className="text-text-secondary">{loaded ? t("workdata.tooLittle") : ""}</p> : (
             <>
-              <p className="mb-2 text-graphite/80">{t("workdata.basisShort", { n: s.samples, days: s.days })}</p>
+              <p className="mb-2 text-text-secondary">{t("workdata.basisShort", { n: s.samples, days: s.days })}</p>
               <ul className="space-y-1">
                 {CATEGORIES.map((c) => (
                   <li key={c} className="flex justify-between gap-3">
                     <span>{t(`workdata.cat_${c}` as TKey)}</span>
-                    <span className="text-graphite/80">{s.byCategory[c].enough ? `${s.byCategory[c].median} min` : t("workdata.tooLittle")}</span>
+                    <span className="text-text-secondary">{s.byCategory[c].enough ? `${s.byCategory[c].median} min` : t("workdata.tooLittle")}</span>
                   </li>
                 ))}
               </ul>

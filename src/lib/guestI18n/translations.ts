@@ -9,7 +9,25 @@
  * — nothing else needs to change.
  */
 
-export const GUEST_LOCALES = ["de", "en"] as const;
+import { it, tr, fa, hi, vi } from "./extraLocales";
+
+// F7 (M14, entschieden): dieselben Sprachen wie die übrige App; it/tr/fa/hi/vi maschinell (siehe extraLocales.ts)
+export const GUEST_LOCALES = ["de", "en", "it", "tr", "fa", "hi", "vi"] as const;
+/** Rechts-nach-links gesetzte Gastsprachen. */
+export const GUEST_RTL: readonly string[] = ["fa"];
+/** Maschinell übersetzt — der Gast sieht einen Hinweis. */
+export const GUEST_MACHINE: readonly string[] = ["it", "tr", "fa", "hi", "vi"];
+
+/**
+ * F7 (M14): Sprache automatisch wählen — Gerätesprachen (navigator.languages, Region abgeschnitten: „en-US“ → en),
+ * dann die Gastsprache aus Opera (Stay.language), Rückfall Englisch (Annahme). Rein.
+ */
+export function pickGuestLocale(deviceLanguages: readonly string[], stayLanguage?: string | null): GuestLocale {
+  for (const l of deviceLanguages) { const c = l.slice(0, 2).toLowerCase(); if (isGuestLocale(c)) return c; }
+  const s = stayLanguage?.slice(0, 2).toLowerCase();
+  if (s && isGuestLocale(s)) return s;
+  return "en";
+}
 export type GuestLocale = (typeof GUEST_LOCALES)[number];
 
 export function isGuestLocale(value: string): value is GuestLocale {
@@ -36,12 +54,14 @@ const en = {
     confirmQuestion: "Skip today's change of towels and bed linen? Your room will still be cleaned. Thank you for helping the environment.",
     confirm: "Yes, no linen change today",
     chosen: "Chosen for today — thank you!",
+    undo: "Undo — change linen today after all",
   },
   dndActive: {
     banner: "Do Not Disturb is active",
     cancel: "Lift Do Not Disturb",
     short: "Active",
     confirmQuestion: "Lift Do Not Disturb now? Our team may then enter your room again.",
+    notCleanedHint: "Your room will not be cleaned today until you lift it.",
   },
   dndWindow: {
     NOW: "Now",
@@ -96,6 +116,7 @@ const en = {
     contact: "{{department}} has been notified.",
     note: "Thank you! Your message has been sent to Housekeeping.",
     green: "Thank you — no linen change today.",
+    greenUndone: "Linen will be changed today as usual.",
   },
   comment: {
     label: "Message to Housekeeping (optional)",
@@ -103,6 +124,8 @@ const en = {
     placeholder: "Your message to us …",
     send: "Send",
     empty: "Please enter a message first.",
+    counter: "{{n}} / {{max}}",
+    tooLong: "Please keep it to {{max}} characters.",
   },
   status: {
     title: "Your requests",
@@ -112,6 +135,7 @@ const en = {
     RECEIVED: "Received",
     IN_PROGRESS: "In progress",
     DONE: "Done",
+    FIXED: "Fixed",
     CANCELLED: "Cancelled",
     kind: {
       DND: "Do Not Disturb",
@@ -145,6 +169,12 @@ const en = {
     label: "Language",
     de: "DE",
     en: "EN",
+    it: "IT",
+    tr: "TR",
+    fa: "FA",
+    hi: "HI",
+    vi: "VI",
+    machine: "Machine translation",
   },
   legal: {
     privacy: "Privacy",
@@ -177,12 +207,14 @@ const de = {
     confirmQuestion: "Heute auf den Wechsel von Handtüchern und Bettwäsche verzichten? Ihr Zimmer wird trotzdem gereinigt. Danke, dass Sie die Umwelt schonen.",
     confirm: "Ja, heute kein Wäschewechsel",
     chosen: "Für heute gewählt — vielen Dank!",
+    undo: "Rückgängig — heute doch Wäsche wechseln",
   },
   dndActive: {
     banner: "Bitte nicht stören ist aktiv",
     cancel: "Bitte nicht stören zurücknehmen",
     short: "Aktiv",
     confirmQuestion: "Bitte nicht stören jetzt zurücknehmen? Unser Team darf Ihr Zimmer dann wieder betreten.",
+    notCleanedHint: "Ihr Zimmer wird heute nicht gereinigt, bis Sie es aufheben.",
   },
   dndWindow: {
     NOW: "Jetzt",
@@ -237,6 +269,7 @@ const de = {
     contact: "{{department}} wurde benachrichtigt.",
     note: "Danke! Ihre Nachricht wurde an das Housekeeping übermittelt.",
     green: "Danke — heute kein Wäschewechsel.",
+    greenUndone: "Die Wäsche wird heute wie gewohnt gewechselt.",
   },
   comment: {
     label: "Nachricht an das Housekeeping (optional)",
@@ -244,6 +277,8 @@ const de = {
     placeholder: "Ihre Nachricht an uns …",
     send: "Senden",
     empty: "Bitte geben Sie zuerst eine Nachricht ein.",
+    counter: "{{n}} / {{max}}",
+    tooLong: "Bitte höchstens {{max}} Zeichen.",
   },
   status: {
     title: "Ihre Anfragen",
@@ -253,6 +288,7 @@ const de = {
     RECEIVED: "Eingegangen",
     IN_PROGRESS: "In Bearbeitung",
     DONE: "Erledigt",
+    FIXED: "Behoben",
     CANCELLED: "Zurückgenommen",
     kind: {
       DND: "Bitte nicht stören",
@@ -286,6 +322,12 @@ const de = {
     label: "Sprache",
     de: "DE",
     en: "EN",
+    it: "IT",
+    tr: "TR",
+    fa: "FA",
+    hi: "HI",
+    vi: "VI",
+    machine: "Maschinelle Übersetzung",
   },
   legal: {
     privacy: "Datenschutz",
@@ -300,6 +342,7 @@ const de = {
 
 type Widen<T> = T extends string ? string : { [K in keyof T]: Widen<T[K]> };
 type Dict = Widen<typeof en>;
+export type GuestDict = Dict;
 
 type Join<K extends string | number, P extends string> = P extends "" ? `${K}` : `${K}.${P}`;
 type Paths<T> = T extends string
@@ -307,7 +350,7 @@ type Paths<T> = T extends string
   : { [K in keyof T & (string | number)]: Join<K, Paths<T[K]>> }[keyof T & (string | number)];
 export type GuestTKey = Paths<Dict>;
 
-const dictionaries = { en, de } satisfies Record<GuestLocale, Dict>;
+const dictionaries = { en, de, it, tr, fa, hi, vi } satisfies Record<GuestLocale, Dict>;
 
 function getPath(obj: unknown, path: string): unknown {
   return path.split(".").reduce<unknown>((o, k) => (o && typeof o === "object" ? (o as Record<string, unknown>)[k] : undefined), obj);

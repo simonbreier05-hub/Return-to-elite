@@ -1,3 +1,4 @@
+import { berlinHHMM } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -16,7 +17,7 @@ export async function GET() {
       room: {
         select: {
           id: true, number: true, status: true,
-          _count: { select: { notes: { where: { status: "OPEN" } } } },
+          _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
         },
       },
     },
@@ -25,7 +26,8 @@ export async function GET() {
     const { _count, ...room } = e.room;
     return { ...e, room: { ...room, openNotesCount: _count.notes } };
   });
-  return NextResponse.json({ excursions: withNoteCounts });
+  // F7 (M24): „mine“ = eigener Eintrag (bearbeiten/löschen); Reinigungsstand nur als Status, nie Namen von Kräften
+  return NextResponse.json({ excursions: withNoteCounts.map((e) => ({ ...e, mine: e.createdById === auth.session.userId || auth.session.role === "duty_manager" })) });
 }
 
 const CreateSchema = z
@@ -66,6 +68,6 @@ export async function POST(req: NextRequest) {
   broadcast("excursion:update", { excursion });
   // Gast außer Haus: die heute zuständige Kraft kann das Zimmer jetzt machen. Nur Zimmer + Etage, kein Gastname.
   // Nur wenn der Ausflug schon läuft oder heute beginnt — „kommt bald zurück“ meldet der Ticker (src/lib/escalations.ts).
-  if (excursion.startsAt.getTime() - Date.now() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}` });
+  if (excursion.startsAt.getTime() - Date.now() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}`, time: `${berlinHHMM(excursion.startsAt)}–${berlinHHMM(excursion.endsAt)}` });
   return NextResponse.json({ excursion }, { status: 201 });
 }

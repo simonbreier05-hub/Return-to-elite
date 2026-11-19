@@ -1,7 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { translateGuest, isGuestLocale, type GuestLocale, type GuestTKey } from "./translations";
+import { translateGuest, isGuestLocale, pickGuestLocale, GUEST_RTL, type GuestLocale, type GuestTKey } from "./translations";
 
 const STORAGE_KEY = "stayclean.guest.locale";
 
@@ -27,7 +27,7 @@ const GuestLocaleContext = createContext<GuestLocaleContextValue | null>(null);
  */
 export function GuestLocaleProvider({ initialLocale, children }: { initialLocale?: string | null; children: ReactNode }) {
   const [locale, setLocaleState] = useState<GuestLocale>(
-    initialLocale && isGuestLocale(initialLocale) ? initialLocale : "de"
+    initialLocale && isGuestLocale(initialLocale) ? initialLocale : "en"
   );
 
   useEffect(() => {
@@ -40,9 +40,9 @@ export function GuestLocaleProvider({ initialLocale, children }: { initialLocale
     } catch {
       // Private browsing / storage disabled — fall through to detection.
     }
-    if (initialLocale && isGuestLocale(initialLocale)) return; // server already knew the stay's language
-    const browserLang = window.navigator.language?.slice(0, 2).toLowerCase();
-    if (browserLang && isGuestLocale(browserLang)) setLocaleState(browserLang);
+    // F7 (M14): Gerätesprache zuerst, dann Gastsprache aus Opera, Rückfall Englisch
+    const langs = window.navigator.languages?.length ? window.navigator.languages : [window.navigator.language ?? ""];
+    setLocaleState(pickGuestLocale(langs, initialLocale));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -60,7 +60,12 @@ export function GuestLocaleProvider({ initialLocale, children }: { initialLocale
     [locale, setLocale]
   );
 
-  return <GuestLocaleContext.Provider value={value}>{children}</GuestLocaleContext.Provider>;
+  // F7: Persisch rechts nach links; lang-Attribut für Vorlesefunktionen
+  return (
+    <GuestLocaleContext.Provider value={value}>
+      <div lang={locale} dir={GUEST_RTL.includes(locale) ? "rtl" : "ltr"}>{children}</div>
+    </GuestLocaleContext.Provider>
+  );
 }
 
 export function useGuestLocale(): GuestLocaleContextValue {

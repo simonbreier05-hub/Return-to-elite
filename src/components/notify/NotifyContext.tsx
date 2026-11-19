@@ -28,6 +28,11 @@ interface NotifyState {
   panelOpen: boolean;
   setPanelOpen: (v: boolean | ((o: boolean) => boolean)) => void;
   ackAll: () => Promise<void>;
+  /** F5 (M2): „Alte schließen“ — alles vor heute als gelesen. */
+  ackOld: () => Promise<void>;
+  /** F5 (M2): nächste (ältere) Seite laden; `hasMore` = es gibt noch ältere Meldungen. */
+  loadMore: () => Promise<void>;
+  hasMore: boolean;
   /** Meldung antippen: Ziel öffnen (Zimmer/Chat/Auftrag/Liste) und als gelesen markieren. */
   openNotification: (n: NotificationRow) => void;
   toasts: NotifyToast[];
@@ -75,6 +80,10 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
   const meRef = useRef(me);
   meRef.current = me;
   const [notifications, setNotifications] = useState<NotificationRow[]>([]);
+  const [older, setOlder] = useState<NotificationRow[]>([]);
+  const [nextBefore, setNextBefore] = useState<string | null>(null);
+  const olderRef = useRef<NotificationRow[]>([]);
+  olderRef.current = older;
   const [panelOpen, setPanelOpen] = useState(false);
   const [toasts, setToasts] = useState<NotifyToast[]>([]);
   const [resyncCount, setResyncCount] = useState(0);
@@ -92,12 +101,14 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
 
   /** live = Pop-ups für Neues; resync = Banner „N neue Meldungen“ (+ Ton); silent = nur Liste aktualisieren. */
   const load = useCallback(async (mode: "live" | "resync" | "silent") => {
-    let d: { notifications?: NotificationRow[]; me?: NotifyMe };
+    let d: { notifications?: NotificationRow[]; me?: NotifyMe; nextBefore?: string | null };
     try {
-      d = await api<{ notifications?: NotificationRow[]; me?: NotifyMe }>("/api/notifications");
+      d = await api<{ notifications?: NotificationRow[]; me?: NotifyMe; nextBefore?: string | null }>("/api/notifications");
     } catch {
       return;
     }
+    // Live-Meldungen ersetzen nur die erste Seite — nachgeladene ältere Seiten bleiben stehen (Liste springt nicht zurück)
+    setNextBefore((cur) => (cur && olderRef.current.length ? cur : d.nextBefore ?? null));
     const list = Array.isArray(d.notifications) ? d.notifications : [];
     const who: NotifyMe = d.me?.userId ? { role: d.me.role, userId: d.me.userId } : meRef.current;
     setMe(who);
@@ -209,7 +220,9 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
   }, []);
 
   const ack = useCallback(async (id: string) => {
-    setNotifications((list) => list.map((n) => (n.id === id && isUnreadMine(n, meRef.current) ? { ...n, acknowledged: true } : n)));
+    const mark = (list: NotificationRow[]) => list.map((n) => (n.id === id && isUnreadMine(n, meRef.current) ? { ...n, acknowledged: true } : n));
+    setNotifications(mark);
+    setOlder(mark);
     try { await api("/api/notifications", { method: "PATCH", body: { id } }); } catch { /* beim nächsten Laden wieder offen */ }
   }, []);
 
@@ -217,6 +230,19 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
     try { await api("/api/notifications", { method: "PATCH", body: { all: true } }); } catch { /* egal */ }
     await load("silent");
   }, [load]);
+
+  const ackOld = useCallback(async () => {
+    try { await api("/api/notifications", { method: "PATCH", body: { olderThanToday: true } }); } catch { /* egal */ }
+    await load("silent");
+  }, [load]);
+
+  const loadMore = useCallback(async () => {
+    if (!nextBefore) return;
+    const d = await api<{ notifications?: NotificationRow[]; nextBefore?: string | null }>(`/api/notifications?before=${encodeURIComponent(nextBefore)}`).catch(() => null);
+    if (!d) return;
+    setOlder((cur) => [...cur, ...(d.notifications ?? [])]);
+    setNextBefore(d.nextBefore ?? null);
+  }, [nextBefore]);
 
   const dismissToast = useCallback((id: string) => setToasts((cur) => cur.filter((x) => x.id !== id)), []);
 
@@ -244,11 +270,12 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
 
   const openResync = useCallback(() => { setResyncCount(0); setPanelOpen(true); }, []);
 
+  const all = useMemo(() => { const ids = new Set(notifications.map((n) => n.id)); return [...notifications, ...older.filter((n) => !ids.has(n.id))]; }, [notifications, older]);
   const value = useMemo<NotifyState>(() => ({
-    me, notifications, unread: notifications.filter((n) => isUnreadMine(n, me)).length,
-    panelOpen, setPanelOpen, ackAll, openNotification, toasts, openToast, dismissToast,
+    me, notifications: all, unread: all.filter((n) => isUnreadMine(n, me)).length,
+    panelOpen, setPanelOpen, ackAll, ackOld, loadMore, hasMore: !!nextBefore, openNotification, toasts, openToast, dismissToast,
     resyncCount, openResync, offline, soundPref, setSound,
-  }), [me, notifications, panelOpen, ackAll, openNotification, toasts, openToast, dismissToast, resyncCount, openResync, offline, soundPref, setSound]);
+  }), [me, all, panelOpen, ackAll, ackOld, loadMore, nextBefore, openNotification, toasts, openToast, dismissToast, resyncCount, openResync, offline, soundPref, setSound]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

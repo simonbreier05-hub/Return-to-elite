@@ -54,7 +54,7 @@ describe("createRoomTask", () => {
     });
 
     expect(roomTaskCreate).toHaveBeenCalledWith({
-      data: { roomId: "room-1", type: "TWIN_SETUP", note: null, createdById: "user-1" },
+      data: { roomId: "room-1", type: "TWIN_SETUP", note: null, createdById: "user-1", dueDate: null, recurringTaskId: null }, // F7: Einmal-Datum/Herkunft
       include: expect.any(Object),
     });
 

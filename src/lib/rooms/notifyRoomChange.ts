@@ -1,10 +1,11 @@
+import { notifyFloorSupervisors } from "./notifyFloorSupervisors";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
 import { keyed } from "@/lib/i18n/notificationText";
 
 /** Was sich an einem Zimmer geändert hat (Zuteilung/Verschiebung melden `notifyReassignment`/`notifyBulkReassignment`). */
-export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY" | "REWORK" | "DEFECT_FIXED" | "EXCURSION" | "EXCURSION_SOON" | "CHECKED_OUT" | "LATE_CHECKOUT" | "DND_REMINDER";
+export type RoomChangeKind = "NOTE" | "TRACE" | "DND" | "DND_ENDED" | "GUEST_WISH" | "PRIORITY" | "REWORK" | "DEFECT_FIXED" | "EXCURSION" | "EXCURSION_SOON" | "CHECKED_OUT" | "LATE_CHECKOUT" | "DND_REMINDER" | "CHECKOUT_REVERTED" | "RUSH";
 
 const TEXT: Record<RoomChangeKind, string> = {
   NOTE: "neue Notiz",
@@ -21,12 +22,16 @@ const TEXT: Record<RoomChangeKind, string> = {
   CHECKED_OUT: "Gast ausgecheckt — Zimmer kann gereinigt werden",
   LATE_CHECKOUT: "Late Check-out geändert",
   DND_REMINDER: "Bitte nicht stören — Karte ans Zimmer hängen: nicht gereinigt",
+  // F3 Teil 2 (H7)
+  CHECKOUT_REVERTED: "Check-out zurückgenommen — Gast ist noch im Zimmer, bitte nicht reinigen",
+  // F6 (M23): Klartext statt „Priorität geändert“
+  RUSH: "Sofort — dieses Zimmer zuerst",
 };
 
 /** Eigene Meldungsart (Glocke/Pop-up-Kopf) für die neuen Anlässe aus Paket O1; alles andere bleibt „Zimmer geändert“. */
-const TYPE: Partial<Record<RoomChangeKind, string>> = { REWORK: "ROOM_REWORK", DEFECT_FIXED: "DEFECT_FIXED", EXCURSION: "EXCURSION", EXCURSION_SOON: "EXCURSION", CHECKED_OUT: "GUEST_CHECKED_OUT", DND_REMINDER: "DND_REMINDER" };
+const TYPE: Partial<Record<RoomChangeKind, string>> = { REWORK: "ROOM_REWORK", DEFECT_FIXED: "DEFECT_FIXED", EXCURSION: "EXCURSION", EXCURSION_SOON: "EXCURSION", CHECKED_OUT: "GUEST_CHECKED_OUT", DND_REMINDER: "DND_REMINDER", CHECKOUT_REVERTED: "GUEST_CHECKOUT_REVERTED" };
 /** Dringend (Pop-up bleibt bis Antippen, doppelter Ton). */
-const URGENT: ReadonlySet<RoomChangeKind> = new Set(["DND", "PRIORITY", "REWORK", "CHECKED_OUT", "DND_REMINDER"]); // Betrieb L2: Pop-up + Ton, beeinflusst den Arbeitsfluss
+const URGENT: ReadonlySet<RoomChangeKind> = new Set(["DND", "PRIORITY", "REWORK", "CHECKED_OUT", "DND_REMINDER", "CHECKOUT_REVERTED", "RUSH"]); // Betrieb L2: Pop-up + Ton, beeinflusst den Arbeitsfluss
 
 /** Meldetext: nur Zimmer, Etage und Art der Änderung — nie Notiz-/Trace-Text, nie Gastdaten. */
 export function roomChangeMessage(room: { number: string; floor: number }, kind: RoomChangeKind): string {
@@ -41,15 +46,30 @@ export function roomChangeMessage(room: { number: string; floor: number }, kind:
  * `skipUserId`: diese Person nicht melden (z. B. weil sie schon eine eigene Meldung bekommt). `dedupeKey`: höchstens
  * eine Meldung je Schlüssel (Ticker, „Gast kommt bald zurück“). Liefert die gemeldete Person (oder null).
  */
-export async function notifyHousekeeperOfRoomChange(opts: { roomId: string; kind: RoomChangeKind; actorId?: string | null; now?: Date; skipUserId?: string | null; dedupeKey?: string }): Promise<string | null> {
+export async function notifyHousekeeperOfRoomChange(opts: { roomId: string; kind: RoomChangeKind; actorId?: string | null; now?: Date; skipUserId?: string | null; dedupeKey?: string; time?: string }): Promise<string | null> {
   try {
     const room = await prisma.room.findUnique({ where: { id: opts.roomId }, select: { id: true, number: true, floor: true, assignedToId: true, assignedOn: true } });
     if (!room?.assignedToId || room.assignedOn !== berlinDate(opts.now ?? new Date()) || room.assignedToId === opts.actorId || room.assignedToId === opts.skipUserId) return null;
     if (opts.dedupeKey && (await prisma.notification.findFirst({ where: { dedupeKey: opts.dedupeKey }, select: { id: true } }))) return null;
+    // F6 (M20): krank/abwesend gemeldete Kraft bekommt nichts — die Meldung geht mit Hinweis an den Supervisor der Etage
+    const today = berlinDate(opts.now ?? new Date());
+    const hk = await prisma.user.findUnique({ where: { id: room.assignedToId }, select: { name: true, sickDate: true, absentDate: true } });
+    if (hk && (hk.sickDate === today || hk.absentDate === today)) {
+      await notifyFloorSupervisors({
+        room, actorId: opts.actorId, type: TYPE[opts.kind] ?? "ROOM_CHANGED", level: URGENT.has(opts.kind) ? "warning" : "info",
+        message: `${roomChangeMessage(room, opts.kind)} (${hk.name} ist heute abgemeldet)`,
+        k: keyed("notify.roomChangeAbsent", { n: room.number, floor: room.floor, whatKey: `notify.change${opts.kind}`, name: hk.name }),
+      });
+      return null;
+    }
     const notification = await prisma.notification.create({
       data: {
         type: TYPE[opts.kind] ?? "ROOM_CHANGED", level: URGENT.has(opts.kind) ? "warning" : "info", targetRole: "room_attendant", targetUserId: room.assignedToId, roomId: room.id,
-        message: roomChangeMessage(room, opts.kind), ...keyed("notify.roomChange", { n: room.number, floor: room.floor, whatKey: `notify.change${opts.kind}` }),
+        // F6 (M13): Uhrzeit (z. B. Ausflug „14:00–18:00“) steht in der Meldung
+        message: opts.time ? `${roomChangeMessage(room, opts.kind)} ${opts.time}` : roomChangeMessage(room, opts.kind),
+        ...(opts.time
+          ? keyed("notify.roomChangeTime", { n: room.number, floor: room.floor, whatKey: `notify.change${opts.kind}`, time: opts.time })
+          : keyed("notify.roomChange", { n: room.number, floor: room.floor, whatKey: `notify.change${opts.kind}` })),
         ...(opts.dedupeKey ? { dedupeKey: opts.dedupeKey } : {}),
       },
     });

@@ -19,70 +19,70 @@ export const STATUS_STYLES: Record<
   { chip: string; tile: string; dot: string; border: string; iconKey: "warning" | "clock" | "ban" | "check" }
 > = {
   DIRTY: {
-    chip: "bg-status-dirty/10 text-status-dirty border-status-dirty/30",
+    chip: "bg-status-danger-bg text-status-danger-fg border-status-danger-fg/40",
     tile: "bg-status-dirty text-linen border-black/20",
     dot: "bg-status-dirty",
     border: "border-s-status-dirty",
     iconKey: "warning",
   },
   IN_PROGRESS: {
-    chip: "bg-status-in-progress/10 text-status-in-progress border-status-in-progress/30",
+    chip: "bg-status-info-bg text-status-info-fg border-status-info-fg/40",
     tile: "bg-status-in-progress text-linen border-black/20",
     dot: "bg-status-in-progress",
     border: "border-s-status-in-progress",
     iconKey: "clock",
   },
   CLEAN: {
-    chip: "bg-status-clean/10 text-status-clean border-status-clean/30",
+    chip: "bg-status-warning-bg text-status-warning-fg border-status-warning-fg/40",
     tile: "bg-status-clean text-linen border-black/20",
     dot: "bg-status-clean",
     border: "border-s-status-clean",
     iconKey: "clock",
   },
   INSPECTED: {
-    chip: "bg-status-inspected/10 text-status-inspected border-status-inspected/30",
+    chip: "bg-status-success-bg text-status-success-fg border-status-success-fg/40",
     tile: "bg-status-inspected text-linen border-black/20",
     dot: "bg-status-inspected",
     border: "border-s-status-inspected",
     iconKey: "check",
   },
   PICKUP: {
-    chip: "bg-status-pickup/10 text-status-pickup border-status-pickup/30",
+    chip: "bg-status-warning-bg text-status-warning-fg border-status-warning-fg/40",
     tile: "bg-status-pickup text-linen border-black/20",
     dot: "bg-status-pickup",
     border: "border-s-status-pickup",
     iconKey: "warning",
   },
   BLOCKED: {
-    chip: "bg-status-blocked/10 text-status-blocked border-status-blocked/30",
+    chip: "bg-status-danger-bg text-status-danger-fg border-status-danger-fg/40",
     tile: "bg-status-blocked text-linen border-black/20",
     dot: "bg-status-blocked",
     border: "border-s-status-blocked",
     iconKey: "ban",
   },
   DEFECT_REPORTED: {
-    chip: "bg-status-defect/10 text-status-defect border-status-defect/30",
+    chip: "bg-status-danger-bg text-status-danger-fg border-status-danger-fg/40",
     tile: "bg-status-defect text-linen border-black/20",
     dot: "bg-status-defect",
     border: "border-s-status-defect",
     iconKey: "warning",
   },
   OUT_OF_ORDER: {
-    chip: "bg-status-out-of-order/10 text-status-out-of-order border-status-out-of-order/30",
+    chip: "bg-status-danger-bg text-status-danger-fg border-status-danger-fg/40",
     tile: "bg-status-out-of-order text-linen border-black/20",
     dot: "bg-status-out-of-order",
     border: "border-s-status-out-of-order",
     iconKey: "ban",
   },
   OUT_OF_SERVICE: {
-    chip: "bg-status-out-of-service/10 text-status-out-of-service border-status-out-of-service/30",
+    chip: "bg-pill-neutral-bg text-text-secondary border-pill-neutral-border",
     tile: "bg-status-out-of-service text-linen border-black/20",
     dot: "bg-status-out-of-service",
     border: "border-s-status-out-of-service",
     iconKey: "ban",
   },
   GREEN_OPT_OUT: {
-    chip: "bg-status-green-opt-out/10 text-status-green-opt-out border-status-green-opt-out/30",
+    chip: "bg-status-success-bg text-status-success-fg border-status-success-fg/40",
     tile: "bg-status-green-opt-out text-linen border-black/20",
     dot: "bg-status-green-opt-out",
     border: "border-s-status-green-opt-out",
@@ -96,8 +96,8 @@ export const STATUS_STYLES: Record<
  * gray, same tone already used for "removed from rotation" room states.
  */
 export const NOTE_STATUS_STYLES: Record<NoteStatus, { badge: string }> = {
-  OPEN: { badge: "bg-gold-soft/40 text-gold border-gold-line/60" },
-  DONE: { badge: "bg-gray-100 text-gray-600 border-gray-300" },
+  OPEN: { badge: "bg-accent-subtle-bg text-accent-text border-border-accent" },
+  DONE: { badge: "bg-surface-card-raised text-text-muted border-border-subtle" },
 };
 
 /**
@@ -109,17 +109,14 @@ export const NOTE_STATUS_STYLES: Record<NoteStatus, { badge: string }> = {
  * and Stayover reuse the parchment/white shading the morning-planning view
  * already uses for the same distinction (see planning/view.tsx's legend).
  */
+// Simon-Feedback 19.11.2026: im Glas-Design — dieselben Töne wie die Pillen (CATEGORY_PILL_TONE, src/lib/ui/pill-tone.ts)
 export const DAY_CATEGORY_STYLES: Record<RoomDayCategory, { chip: string; dot: string; label: string }> = {
-  ARRIVAL: { chip: "border-gold/40 bg-gold/10 text-gold-soft", dot: "bg-gold", label: "Arrival" },
-  DEPARTURE: { chip: "border-charcoal/30 bg-parchment text-charcoal", dot: "bg-charcoal/50", label: "Departure" },
-  STAYOVER: { chip: "border-charcoal/15 bg-white text-graphite", dot: "bg-graphite/40", label: "Stayover" },
-  SAME_DAY_TURN: {
-    chip: "border-status-in-progress/40 bg-status-in-progress/10 text-status-in-progress",
-    dot: "bg-status-in-progress",
-    label: "Same-day turn",
-  },
+  ARRIVAL: { chip: "bg-status-info-bg border-status-info-fg/40 text-status-info-fg", dot: "bg-status-info-fg", label: "Arrival" },
+  DEPARTURE: { chip: "bg-status-danger-bg border-status-danger-fg/40 text-status-danger-fg", dot: "bg-status-danger-fg", label: "Departure" },
+  STAYOVER: { chip: "bg-status-success-bg border-status-success-fg/40 text-status-success-fg", dot: "bg-status-success-fg", label: "Stayover" },
+  SAME_DAY_TURN: { chip: "bg-pill-gold-bg border-pill-gold-border text-text-primary", dot: "bg-accent-text", label: "Same-day turn" },
   DND: { chip: STATUS_STYLES.BLOCKED.chip, dot: STATUS_STYLES.BLOCKED.dot, label: "DND" },
-  NONE: { chip: "border-charcoal/10 bg-linen text-graphite/50", dot: "bg-charcoal/20", label: "—" },
+  NONE: { chip: "bg-surface-card-raised border-border-subtle text-text-muted", dot: "bg-text-muted", label: "—" },
 };
 
 /** Which badge variant a room's note-count indicator should render, if any. */

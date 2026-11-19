@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
+import { assignWarnings } from "@/lib/assignment/assignWarnings";
 import { isStartedStatus } from "@/lib/rooms/startedStatus";
 import { notifyBulkReassignment } from "@/lib/rooms/notifyBulkReassignment";
 
@@ -12,6 +13,7 @@ const Body = z.object({
   roomIds: z.array(z.string().min(1)).min(1).max(200),
   attendantId: z.string().nullable(),
   confirmStarted: z.boolean().optional(),
+  confirmWarnings: z.boolean().optional(), // F4 (H3): Warnungen (Stufe, Einschränkung, Suiten, Tagesziel, krank) gesehen
 }).strict();
 
 /**
@@ -24,7 +26,7 @@ export async function POST(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const parsed = Body.safeParse(await req.json().catch(() => null));
   if (!parsed.success) return NextResponse.json({ error: "roomIds und attendantId (oder null) erforderlich.", code: "INVALID_INPUT" }, { status: 400 });
-  const { roomIds, attendantId, confirmStarted } = parsed.data;
+  const { roomIds, attendantId, confirmStarted, confirmWarnings } = parsed.data;
   if (attendantId) {
     const a = await prisma.user.findUnique({ where: { id: attendantId } });
     if (!a || a.role !== "room_attendant") return NextResponse.json({ error: "attendantId muss ein Zimmermädchen sein.", code: "INVALID_ASSIGNEE" }, { status: 400 });
@@ -35,6 +37,11 @@ export async function POST(req: NextRequest) {
   const started = changing.filter((r) => isStartedStatus(r.status) && r.assignedToId);
   if (started.length && !confirmStarted) {
     return NextResponse.json({ error: `${started.length} Zimmer sind schon begonnen oder fertig. Trotzdem ändern?`, code: "STARTED_ROOMS", rooms: started.map((r) => r.number) }, { status: 409 });
+  }
+  // F4 (H3): Zuteilen von Hand bleibt erlaubt — Warnungen vor dem Speichern als Rückfrage
+  if (attendantId && !confirmWarnings) {
+    const warnings = await assignWarnings(attendantId, changing.map((r) => r.id));
+    if (warnings.length) return NextResponse.json({ error: warnings.map((w) => w.message).join(" "), code: "ASSIGN_WARNINGS", warnings }, { status: 409 });
   }
   const today = berlinDate(new Date());
   const nextOrder = attendantId

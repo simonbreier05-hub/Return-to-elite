@@ -72,6 +72,8 @@ export function HkNoteThread(props: { roomId: string; initialNotes: ThreadNote[]
       <SectionLabel as="h3" icon="message" title={t("supervisor.notesTitle")} count={th.notes.filter((n) => n.status === "OPEN").length || undefined} />
       {th.outOfScope && th.notes.some((n) => n.kind === "MESSAGE") && <Banner tone="warning" title={t("work.outOfScopeHint")} />}
       {th.notes.length === 0 && <p className="text-body-16 text-text-muted">{t("work.noNotes")}</p>}
+      {/* F6-Nachtrag: offline gespeicherte Notizen, die der Server abgelehnt hat, hier zeigen — für jede Rolle, nicht nur in der Housekeeping-Leiste */}
+      {th.offline.rejected.length > 0 && <HkOfflineBar state={{ ...th.offline, online: true, pending: [] }} />}
       <ul className="flex flex-col gap-2">
         {th.notes.map((n) => {
           const isMessage = n.kind === "MESSAGE";

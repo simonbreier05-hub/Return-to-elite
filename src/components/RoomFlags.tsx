@@ -41,7 +41,7 @@ export function RoomFlagIcons({
           role="img"
           aria-label={t("roomFlags.occupied")}
           title={t("roomFlags.occupied")}
-          className={`flex shrink-0 items-center justify-center rounded-full border border-navy/30 bg-navy/10 text-navy ${badgeClassName}`}
+          className={`flex shrink-0 items-center justify-center rounded-full border border-border-subtle bg-accent-subtle-bg text-accent-text ${badgeClassName}`}
         >
           <IconPerson className={iconClassName} />
         </span>
@@ -51,7 +51,7 @@ export function RoomFlagIcons({
           role="img"
           aria-label={t("roomFlags.checkoutToday")}
           title={t("roomFlags.checkoutToday")}
-          className={`flex shrink-0 items-center justify-center rounded-full border border-gold-line/60 bg-gold-soft/40 text-gold ${badgeClassName}`}
+          className={`flex shrink-0 items-center justify-center rounded-full border border-border-subtle bg-champagne-soft/40 text-accent-text ${badgeClassName}`}
         >
           <IconBroom className={iconClassName} />
         </span>

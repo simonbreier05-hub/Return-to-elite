@@ -1,3 +1,6 @@
+import { buildProfileSuggestion } from "@/lib/guest/profileSuggestion";
+import { archiveStayHistory, unarchiveStayHistory } from "@/lib/guest/stayArchive";
+import { berlinToUtc } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -28,6 +31,11 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
   const stay = await prisma.stay.findUnique({ where: { id: plan.stayId }, select: { status: true } });
   if (stay?.status === "CHECKED_OUT") return NextResponse.json({ ok: true, already: true });
   await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "CHECKED_OUT" } });
+  // F7 (H13): Verlauf des Aufenthalts archivieren — nächster Gast und die Listen starten leer
+  // F8: Vorschlag fürs Opera-Profil — vor dem Archivieren lesen, einmal je Aufenthalt (Rücknahme/Wiederholung legt keinen zweiten an)
+  await buildProfileSuggestion(plan.stayId).catch(() => null);
+  // Turn: der neue Gast reist heute an — was heute schon für ihn notiert wurde, bleibt stehen
+  await archiveStayHistory(id, { stayId: plan.stayId, ...(plan.arrivingStayId ? { before: berlinToUtc(date, "00:00") } : {}) });
   const room = await prisma.room.update({ where: { id }, data: { occupancy: "VACANT" } });
   await audit({ action: "GUEST_CHECKED_OUT", userId: auth.session.userId, roomId: id, meta: { date } });
   broadcast("room:update", { room });
@@ -37,6 +45,41 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
     room: { id: room.id, number: room.number, floor: room.floor }, actorId: auth.session.userId, type: "GUEST_CHECKED_OUT", level: "warning",
     message: `Zimmer ${room.number} (Etage ${room.floor}): Gast ausgecheckt.`,
     k: keyed("notify.guestCheckedOut", { n: room.number, floor: room.floor }),
+  }).catch(() => null);
+  return NextResponse.json({ ok: true });
+}
+
+/**
+ * DELETE /api/rooms/[id]/checkout — F3 Teil 2 (H7, entschieden: Front Office, Supervisor, Duty Manager): einen versehentlich
+ * gemeldeten Check-out zurücknehmen. **Annahme:** nur am selben Betriebstag. Aufenthalt wieder „im Haus“, Zimmer belegt,
+ * Logbuch `GUEST_CHECKOUT_REVERTED`, Korrekturmeldung an die zuständige Housekeeperin und die Supervisoren der Etage.
+ * Ist der neue Gast eines Turns schon eingecheckt, geht es nicht (sonst zwei Aufenthalte „im Haus“). Ohne Gastdaten.
+ */
+export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const auth = await requireRole(["front_office", "supervisor"]);
+  if (!auth.ok) return auth.response;
+  const { id } = await params;
+  const date = berlinToday();
+  const plan = await prisma.dayRoomPlan.findUnique({ where: { date_roomId: { date, roomId: id } } });
+  if (!plan || (plan.cleaningType !== "SAME_DAY_TURN" && plan.cleaningType !== "DEPARTURE") || !plan.stayId) {
+    return NextResponse.json({ error: "Heute kein Check-out in diesem Zimmer — Rücknahme nur am selben Betriebstag.", code: "NO_CHECKOUT_TODAY" }, { status: 409 });
+  }
+  const stay = await prisma.stay.findUnique({ where: { id: plan.stayId }, select: { status: true } });
+  if (stay?.status !== "CHECKED_OUT") return NextResponse.json({ ok: true, already: true });
+  if (plan.arrivingStayId && (await prisma.stay.findUnique({ where: { id: plan.arrivingStayId }, select: { status: true } }))?.status === "IN_HOUSE") {
+    return NextResponse.json({ error: "Der neue Gast ist schon eingecheckt — Rücknahme nicht möglich.", code: "NEW_GUEST_CHECKED_IN" }, { status: 409 });
+  }
+  await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "IN_HOUSE" } });
+  await unarchiveStayHistory(id, berlinToUtc(date, "00:00")); // F7: Rücknahme holt den heute archivierten Verlauf zurück
+  const room = await prisma.room.update({ where: { id }, data: { occupancy: "OCCUPIED" } });
+  await audit({ action: "GUEST_CHECKOUT_REVERTED", userId: auth.session.userId, roomId: id, meta: { date } });
+  broadcast("room:update", { room });
+  broadcast("dayplan:updated", { date, changedRooms: [room.number] });
+  await notifyHousekeeperOfRoomChange({ roomId: id, kind: "CHECKOUT_REVERTED", actorId: auth.session.userId }).catch(() => null);
+  await notifyFloorSupervisors({
+    room: { id: room.id, number: room.number, floor: room.floor }, actorId: auth.session.userId, type: "GUEST_CHECKOUT_REVERTED", level: "warning",
+    message: `Zimmer ${room.number} (Etage ${room.floor}): Check-out zurückgenommen — Gast ist noch im Zimmer.`,
+    k: keyed("notify.checkoutReverted", { n: room.number, floor: room.floor }),
   }).catch(() => null);
   return NextResponse.json({ ok: true });
 }

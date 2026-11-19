@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
+import { berlinDate } from "@/lib/dayplan/time";
 
 /**
  * Betrieb L2 (Punkt 9, Meeting 13.11.2026): wiederkehrende Hausmann-Aufgaben (Tabelle `RecurringTask`, z. B. „Blumen gießen
@@ -24,8 +25,22 @@ export async function ensureRecurringTasks(date: string): Promise<number> {
     // Erst den Tag markieren (bedingt) — so legen zwei gleichzeitige Aufrufe nie zwei Aufgaben an
     const claimed = await prisma.recurringTask.updateMany({ where: { id: t.id, OR: [{ lastCreatedOn: null }, { lastCreatedOn: { not: date } }] }, data: { lastCreatedOn: date } });
     if (claimed.count === 0) continue;
+    // F7 (M15): Ist die Aufgabe vom letzten Mal noch offen, keine zweite — die offene bekommt „überfällig seit …“
+    const open = await prisma.roomTask.findFirst({
+      where: { status: "OPEN", OR: [{ recurringTaskId: t.id }, { recurringTaskId: null, roomId: t.roomId, type: "SONSTIGES", note: t.label }] },
+      orderBy: { createdAt: "asc" },
+    });
+    if (open) {
+      const roomTask = await prisma.roomTask.update({
+        where: { id: open.id },
+        data: { overdueSince: open.overdueSince ?? open.dueDate ?? berlinDate(open.createdAt), recurringTaskId: t.id },
+        include: { room: { select: { id: true, number: true, floor: true } } },
+      });
+      broadcast("roomtask:update", { roomTask });
+      continue;
+    }
     const roomTask = await prisma.roomTask.create({
-      data: { roomId: t.roomId, type: "SONSTIGES", note: t.label, createdById: t.createdById },
+      data: { roomId: t.roomId, type: "SONSTIGES", note: t.label, createdById: t.createdById, recurringTaskId: t.id },
       include: { room: { select: { id: true, number: true, floor: true } } },
     });
     broadcast("roomtask:update", { roomTask });

@@ -5,12 +5,13 @@
  * Hauptlabel = Art des Tages (Turn > Abreise > Bleiber > Anreise). „Tidy" gibt es im Tagesplan nicht als eigene Art —
  * sobald Opera/der Tagesplan sie liefert, hier als weiteres Label ergänzen.
  */
-export type MainLabel = "TURN" | "DEPARTURE" | "STAYOVER" | "ARRIVAL" | "NONE";
+export type MainLabel = "CARRYOVER" | "TURN" | "DEPARTURE" | "EXTRA" | "STAYOVER" | "ARRIVAL" | "NONE";
 export type Marker = "VIP" | "DND" | "LAUNDRY" | "DEFECT" | "GUEST_WISH" | "HINT";
 export type SortMode = "suggested" | "route" | "kind";
 
 export interface LabelInput {
-  kind: "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | null;
+  /** F1: CARRYOVER = seit gestern offen, EXTRA = heute zugeteilt ohne Tagesplan-Eintrag. */
+  kind: "DEPARTURE" | "SAME_DAY_TURN" | "STAYOVER" | "ARRIVAL" | "CARRYOVER" | "EXTRA" | null;
   vip: boolean;
   dnd: boolean;
   laundry: boolean;
@@ -41,7 +42,7 @@ export function markers(r: LabelInput): Marker[] {
 }
 
 /** Reihenfolge der Gruppen „nach Art" — Turns zuerst (höchste Dringlichkeit). */
-export const LABEL_ORDER: MainLabel[] = ["TURN", "DEPARTURE", "STAYOVER", "ARRIVAL", "NONE"];
+export const LABEL_ORDER: MainLabel[] = ["CARRYOVER", "TURN", "DEPARTURE", "EXTRA", "STAYOVER", "ARRIVAL", "NONE"];
 
 const route = (r: LabelInput) => r.routeOrder ?? Number.POSITIVE_INFINITY;
 const byRoute = (a: LabelInput, b: LabelInput) => route(a) - route(b) || a.number.localeCompare(b.number);

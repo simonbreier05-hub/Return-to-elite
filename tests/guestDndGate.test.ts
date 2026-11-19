@@ -18,7 +18,7 @@ const broadcastMock = vi.fn();
 vi.mock("@/lib/db", () => ({
   prisma: {
     room: { findUnique: (...args: unknown[]) => roomFindUnique(...args), update: (...args: unknown[]) => roomUpdate(...args) },
-    guestRequest: { findFirst: (...args: unknown[]) => guestRequestFindFirst(...args) },
+    guestRequest: { findFirst: (...args: unknown[]) => guestRequestFindFirst(...args), updateMany: async () => ({ count: 0 }) }, // F7: Gaststatus läuft mit
     user: { update: (...args: unknown[]) => userUpdate(...args) },
     // Statusänderung beendet eine aktive Pause (src/lib/work/pauseData.ts) — hier gibt es keine.
     workPause: { updateMany: async () => ({ count: 0 }) },
@@ -27,6 +27,8 @@ vi.mock("@/lib/db", () => ({
 vi.mock("@/lib/audit", () => ({ audit: (...args: unknown[]) => auditMock(...args) }));
 vi.mock("@/lib/realtime", () => ({ broadcast: (...args: unknown[]) => broadcastMock(...args) }));
 vi.mock("@/lib/pms/MockPMSConnector", () => ({ pms: { pushRoomStatus: vi.fn() } }));
+// F3 Teil 1: „Vorgast noch im Zimmer?“ — in diesen Fällen nie (eigene Tests in tests/f3FrontOffice.integration.test.ts)
+vi.mock("@/lib/rooms/previousGuest", () => ({ previousGuest: async () => ({ present: false, lateCheckout: null, reason: null }), previousGuestText: () => "" }));
 
 import { applyStatusChange } from "@/lib/rooms/applyStatusChange";
 

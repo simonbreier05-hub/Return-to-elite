@@ -98,10 +98,10 @@ export function FloorPlanLegend({
 }) {
   return (
     <div
-      className={`flex flex-wrap items-center gap-3 rounded-xl border border-charcoal/10 bg-linen/95 p-3 text-xs shadow-card ${className}`}
+      className={`flex flex-wrap items-center gap-3 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-3 text-xs ${className}`}
     >
       {occupiedLabel && (
-        <span className="flex items-center gap-1.5 rounded-full border border-navy/30 bg-navy/10 px-2.5 py-1 font-medium text-navy">
+        <span className="flex items-center gap-1.5 rounded-full border border-border-subtle bg-accent-subtle-bg px-2.5 py-1 font-medium text-accent-text">
           <RoomFlagIcons occupancy="OCCUPIED" iconClassName="h-2.5 w-2.5" badgeClassName="h-4 w-4" />
           {occupiedLabel}
         </span>
@@ -128,7 +128,7 @@ export function FloorPlanLegend({
         </span>
       )}
       {guestDndLabel && (
-        <span className="flex items-center gap-1.5 rounded-full border border-status-out-of-order/40 bg-status-out-of-order/10 px-2.5 py-1 font-medium text-status-out-of-order">
+        <span className="flex items-center gap-1.5 rounded-full border border-status-out-of-order/40 bg-status-danger-bg px-2.5 py-1 font-medium text-status-danger-fg">
           <IconBellSlash className="h-3 w-3" />
           {guestDndLabel}
         </span>
@@ -212,10 +212,10 @@ export default function FloorPlanGrid({
             defaultOpen={i === 0}
             summary={
               <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                <h3 className="font-serif text-2xl">{t("shared.floor", { n: floor })}</h3>
-                <span className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/50">{t("shared.roomsCount", { n: rooms.length })}</span>
+                <h3 className="text-title-22 text-text-primary">{t("shared.floor", { n: floor })}</h3>
+                <span className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">{t("shared.roomsCount", { n: rooms.length })}</span>
                 {primaryHsk && (
-                  <span className="rounded-full bg-charcoal px-2.5 py-0.5 text-[0.68rem] font-semibold text-ivory">
+                  <span className="rounded-full bg-champagne px-2.5 py-0.5 text-[0.68rem] font-semibold text-text-on-accent">
                     {t("shared.hskNear", { n: primaryHsk.nearRoom ?? "" })}
                   </span>
                 )}
@@ -224,25 +224,25 @@ export default function FloorPlanGrid({
           >
             {wayfinding && (
               <div className="mb-3 grid gap-2 sm:grid-cols-2">
-                <div className="rounded-lg border border-charcoal/10 bg-white p-3">
-                  <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
+                <div className="rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised p-3">
+                  <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-text-muted">
                     {t("shared.liftStraight")}
                   </div>
                   {wayfinding.straight.map((leg, idx) => (
                     <div key={idx} className="text-sm">
-                      # {leg.range} <span className="text-graphite/50">{leg.side}</span>
-                      {leg.note && <span className="ms-1 text-xs text-amber-700">{leg.note}</span>}
+                      # {leg.range} <span className="text-text-muted">{leg.side}</span>
+                      {leg.note && <span className="ms-1 text-xs text-status-warning-fg">{leg.note}</span>}
                     </div>
                   ))}
                 </div>
-                <div className="rounded-lg border border-charcoal/10 bg-white p-3">
-                  <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
+                <div className="rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised p-3">
+                  <div className="mb-1 text-[0.68rem] font-semibold uppercase tracking-wider text-text-muted">
                     {t("shared.liftRight")}
                   </div>
                   {wayfinding.right.map((leg, idx) => (
                     <div key={idx} className="text-sm">
-                      # {leg.range} <span className="text-graphite/50">{leg.side}</span>
-                      {leg.note && <span className="ms-1 text-xs text-amber-700">{leg.note}</span>}
+                      # {leg.range} <span className="text-text-muted">{leg.side}</span>
+                      {leg.note && <span className="ms-1 text-xs text-status-warning-fg">{leg.note}</span>}
                     </div>
                   ))}
                 </div>
@@ -255,8 +255,8 @@ export default function FloorPlanGrid({
                   key={f.id}
                   title={f.notes ?? undefined}
                   className={`rounded-full border px-2.5 py-1 text-xs ${
-                    f.isPrimaryHsk ? "border-gold bg-gold/10 font-semibold text-espresso" : "border-charcoal/15 text-graphite/70"
-                  }`}
+ f.isPrimaryHsk ? "border-border-accent bg-accent-subtle-bg font-semibold text-accent-text" : "border-border-subtle text-text-secondary"
+ }`}
                 >
                   {FACILITY_ICON[f.type] ?? "•"} {f.label}
                   {f.nearRoom && ` (${t("shared.near", { n: f.nearRoom })})`}
@@ -268,8 +268,8 @@ export default function FloorPlanGrid({
             {/* Grundriss nie spiegeln (auch nicht auf Persisch/Arabisch): feste Links-nach-rechts-Anordnung. */}
             <div dir="ltr" className="grid gap-3 sm:grid-cols-2">
               {[...sections.entries()].map(([section, secRooms]) => (
-                <div key={section} className="overflow-x-auto rounded-lg border border-charcoal/10 bg-white p-3">
-                  <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-graphite/50">
+                <div key={section} className="overflow-x-auto rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised p-3">
+                  <div className="mb-2 text-[0.68rem] font-semibold uppercase tracking-wider text-text-muted">
                     {t("shared.section", { s: section })}
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -282,9 +282,9 @@ export default function FloorPlanGrid({
                           type="button"
                           onClick={() => onRoomClick?.(r)}
                           title={meta.title}
-                          className={`relative flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-md border px-2.5 text-xs transition active:scale-95 ${style.chip} ${
-                            meta.selected ? "ring-2 ring-navy ring-offset-1" : ""
-                          }`}
+                          className={`relative flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-(--glass-radius-sm) border px-2.5 text-xs transition active:scale-95 ${style.chip} ${
+ meta.selected ? "ring-2 ring-border-accent ring-offset-1 ring-offset-bg-canvas" : ""
+ }`}
                         >
                           {r.number}
                           <RoomFlagIcons
@@ -295,7 +295,7 @@ export default function FloorPlanGrid({
                           />
                           <CategoryGlyph category={meta.category} className="h-3 w-3" />
                           {meta.laundryDue && <IconLaundry className="h-3 w-3 text-status-in-progress" />}
-                          {meta.guestDndActive && <IconBellSlash className="h-3 w-3 text-status-out-of-order" />}
+                          {meta.guestDndActive && <IconBellSlash className="h-3 w-3 text-status-danger-fg" />}
                           {r.hasDisabledAccess && "♿"}
                           {r.isAntiAllergic && "🌼"}
                           {r.interconnectingGroup && "🔗"}
@@ -304,7 +304,7 @@ export default function FloorPlanGrid({
                           {meta.unassignedActionable && (
                             <span
                               aria-hidden
-                              className="absolute -end-1 -top-1 h-3 w-3 rounded-full border-2 border-dashed border-status-dirty bg-white"
+                              className="absolute -end-1 -top-1 h-3 w-3 rounded-full border-2 border-dashed border-status-dirty bg-surface-progress-track"
                             />
                           )}
                         </button>

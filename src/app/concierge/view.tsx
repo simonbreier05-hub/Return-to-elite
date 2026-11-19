@@ -66,6 +66,20 @@ export default function ConciergeView() {
     }
   };
 
+  // F7 (M24): eigenen Ausflug ändern/löschen, Nachricht an Housekeeping als Zimmernotiz (geht an die zuständige Kraft)
+  const update = async (id: string, patch: { end?: string; note?: string }) => {
+    try { await api(`/api/excursions/${id}`, { method: "PATCH", body: { ...(patch.end ? { endsAt: timeToIso(patch.end) } : {}), note: patch.note ?? null } }); void load(); return null; }
+    catch (e) { return errorText(e, t); }
+  };
+  const remove = async (id: string) => {
+    try { await api(`/api/excursions/${id}`, { method: "DELETE" }); setSelectedId(null); void load(); return null; }
+    catch (e) { return errorText(e, t); }
+  };
+  const messageHk = async (roomId: string, text: string) => {
+    try { await api(`/api/rooms/${roomId}/notes`, { body: { body: `${t("concierge.fromConcierge")}: ${text}` } }); return null; }
+    catch (e) { return errorText(e, t); }
+  };
+
   const endingSoon = ccKpis(excursions, now).endingSoon;
 
   return (
@@ -76,6 +90,9 @@ export default function ConciergeView() {
         onSelect={setSelectedId}
         onCreate={create}
         onOpenRoom={(n) => roomLookup.open(n)}
+        onUpdate={update}
+        onDelete={remove}
+        onMessageHk={messageHk}
         loading={raw === null && !loadError}
         loadError={raw === null ? loadError : null}
         onRetry={() => void load()}

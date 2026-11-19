@@ -34,6 +34,9 @@ export interface HmItemView {
   pause: PauseView | null;
   /** Betrieb L2 (Punkt 9): Anreisezeit des Gastes „HH:MM“ — Sortierung nach Anreise, sonst Zimmernummer. */
   eta: string | null;
+  /** F7 (H16/M15): offen seit „YYYY-MM-DD“ — aufgeschoben bzw. überfällig (wiederkehrend); steht oben. */
+  since: string | null;
+  sinceKind: "deferred" | "overdue" | null;
 }
 
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
@@ -68,6 +71,8 @@ export function traceItem(raw: unknown): HmItemView | null {
     waitsForDeparture: r.waitsForDeparture === true,
     pause: pauseOf(r.pause),
     eta: str(r.eta),
+    since: str(r.since),
+    sinceKind: str(r.since) ? "deferred" : null,
   };
 }
 
@@ -96,6 +101,8 @@ export function taskItem(raw: unknown): HmItemView | null {
     waitsForDeparture: false,
     pause: pauseOf(r.pause),
     eta: str(r.eta),
+    since: str(r.since),
+    sinceKind: str(r.since) ? (str(r.overdueSince) && !str(r.deferredSince) ? "overdue" : "deferred") : null,
   };
 }
 

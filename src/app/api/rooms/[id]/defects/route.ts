@@ -13,7 +13,7 @@ import { reportDefect } from "@/lib/rooms/reportDefect";
  * auto-created and routed to the engineering queue.
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const auth = await requireRole(["room_attendant", "supervisor", "engineering"]);
+  const auth = await requireRole(["room_attendant", "supervisor", "engineering", "duty_manager"]); // F6: DM darf Mängel melden (Entscheidung 16.11.)
   if (!auth.ok) return auth.response;
   const { id } = await params;
 

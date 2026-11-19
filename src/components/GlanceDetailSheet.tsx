@@ -96,21 +96,21 @@ export default function GlanceDetailSheet({ content, onClose, onOpenRoom }: { co
       <div className="space-y-4">
         {content.sections.map((section, i) => (
           <section key={section.title ?? i}>
-            {section.title && <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">{section.title} <span className="font-normal">· {section.items.length}</span></h4>}
+            {section.title && <h4 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">{section.title} <span className="font-normal">· {section.items.length}</span></h4>}
             {section.items.length === 0 ? (
-              <p className="text-sm text-graphite/60">{section.empty ?? t("glance.empty")}</p>
+              <p className="text-sm text-text-muted">{section.empty ?? t("glance.empty")}</p>
             ) : (
               <ul className="space-y-1.5">
                 {section.items.map((item) => {
-                  const tone = item.tone === "accent" ? "border-gold/40 bg-gold/10" : item.tone === "ok" ? "border-status-clean/30 bg-status-clean/10" : "border-charcoal/10 bg-white";
+                  const tone = item.tone === "accent" ? "border-border-accent bg-accent-subtle-bg" : item.tone === "ok" ? "border-status-clean/30 bg-status-clean/10" : "border-border-subtle bg-surface-card-raised";
                   const body = (
                     <>
-                      <span className="font-serif text-lg leading-tight">{item.title}</span>
-                      {item.meta && <span className="block text-xs text-graphite/70">{item.meta}</span>}
+                      <span className="text-body-18 text-text-primary leading-tight">{item.title}</span>
+                      {item.meta && <span className="block text-xs text-text-secondary">{item.meta}</span>}
                     </>
                   );
                   return (
-                    <li key={item.key} className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-lg border px-3 py-1 ${tone}`}>
+                    <li key={item.key} className={`flex flex-wrap items-center gap-x-2 gap-y-1 rounded-(--glass-radius-sm) border px-3 py-1 ${tone}`}>
                       {item.roomRef ? (
                         <button type="button" onClick={() => onOpenRoom(item.roomRef!)} aria-label={t("glance.openRoom", { n: item.title })}
                           className="min-h-11 flex-1 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
@@ -149,13 +149,13 @@ export function GlanceTile({ label, value, sub, accent, bar, onClick }: { label:
   }
   return (
     <button type="button" onClick={onClick}
-      className={`min-h-11 w-full rounded-2xl border p-4 text-start shadow-sm transition hover:border-gold-line active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${accent ? "border-gold/40 bg-gold/10" : "border-charcoal/10 bg-white"}`}>
-      <div className="text-xs uppercase tracking-wider text-graphite/60">{label}</div>
-      <div className="mt-1 font-serif text-3xl">{value}</div>
-      {sub && <div className="text-xs text-graphite/70">{sub}</div>}
+      className={`min-h-11 w-full rounded-(--glass-radius-lg) border p-4 text-start transition active:scale-[0.99] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${accent ? "border-border-accent bg-accent-subtle-bg" : "border-border-subtle bg-surface-card-raised"}`}>
+      <div className="text-xs uppercase tracking-wider text-text-muted">{label}</div>
+      <div className="mt-1 text-title-28 text-text-primary">{value}</div>
+      {sub && <div className="text-xs text-text-secondary">{sub}</div>}
       {bar != null && (
-        <div className="mt-2 h-2 overflow-hidden rounded-full bg-parchment" role="progressbar" aria-valuenow={bar} aria-valuemin={0} aria-valuemax={100}>
-          <div className="h-full rounded-full bg-gold transition-all" style={{ width: `${Math.max(0, Math.min(100, bar))}%` }} />
+        <div className="mt-2 h-2 overflow-hidden rounded-full bg-accent-subtle-bg" role="progressbar" aria-valuenow={bar} aria-valuemin={0} aria-valuemax={100}>
+          <div className="h-full rounded-full bg-champagne transition-all" style={{ width: `${Math.max(0, Math.min(100, bar))}%` }} />
         </div>
       )}
     </button>

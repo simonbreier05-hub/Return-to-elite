@@ -6,6 +6,8 @@ import { keyed } from "@/lib/i18n/notificationText";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { berlinHour, dndReminderDue } from "@/lib/rooms/dndReminder";
 import { berlinDate } from "@/lib/dayplan/time";
+import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
+import { alertBehindPlan } from "@/lib/notify/dmAlerts";
 
 /**
  * Escalation engine — executed every minute by the ticker in server.js
@@ -41,6 +43,21 @@ export async function runEscalations(now = new Date()) {
   const settings = await getSettings();
   const created: string[] = [];
 
+  // --- F2: abgelaufene Sperre (Annahme: endet nicht von selbst) — Erinnerung an Supervisor der Etage + DM,
+  // einmal sofort nach Ablauf, danach einmal täglich ab 06:00 (Berlin), bis jemand die Sperre aufhebt oder verlängert.
+  const expired = await prisma.room.findMany({ where: { status: { in: ["OUT_OF_ORDER", "OUT_OF_SERVICE"] }, oooUntil: { lt: now } }, select: { id: true, number: true, oooUntil: true } });
+  for (const room of expired) {
+    const base = `OOO_EXPIRED:${room.id}:${room.oooUntil!.getTime()}`;
+    const earlier = await prisma.notification.findFirst({ where: { dedupeKey: { startsWith: base } }, select: { id: true } });
+    if (earlier && berlinHour(now) < 6) continue;
+    const n = await notifyFloorLeads({
+      roomId: room.id, type: "OOO_EXPIRED", level: "warning", now,
+      message: `Sperre ${room.number} abgelaufen — wieder in Betrieb?`, key: "notify.oooExpired", vars: { n: room.number },
+      dedupeKey: `${base}:${berlinDate(now)}`,
+    });
+    if (n) created.push("OOO_EXPIRED");
+  }
+
   // --- BLOCKED rooms: re-check + welfare check --------------------------
   const blocked = await prisma.room.findMany({ where: { status: "BLOCKED" } });
   for (const room of blocked) {
@@ -55,7 +72,7 @@ export async function runEscalations(now = new Date()) {
         level: "warning",
         targetRole: "room_attendant",
         roomId: room.id,
-        message: `Room ${room.number}: ${room.blockReason ?? "BLOCKED"} for ${Math.round(ageMin)} min — please re-check.`,
+        message: `Zimmer ${room.number}: ${room.blockReason ?? "BLOCKIERT"} seit ${Math.round(ageMin)} Min. — bitte erneut prüfen.`,
         ...keyed("notify.blockedRecheck", { n: room.number, min: Math.round(ageMin), reasonKey: room.blockReason ? `blockReason.${room.blockReason}` : "status.BLOCKED" }),
         dedupeKey: `BLOCKED_RECHECK:${room.id}:${stamp}:${stage}`,
       });
@@ -68,7 +85,7 @@ export async function runEscalations(now = new Date()) {
         level: "critical",
         targetRole: "duty_manager",
         roomId: room.id,
-        message: `Room ${room.number}: DND for ${Math.round(ageMin)} min — welfare check recommended.`,
+        message: `Zimmer ${room.number}: Bitte nicht stören seit ${Math.round(ageMin)} Min. — Nachsehen empfohlen.`,
         ...keyed("notify.welfareCheck", { n: room.number, min: Math.round(ageMin) }),
         dedupeKey: `WELFARE_CHECK:${room.id}:${stamp}`,
       });
@@ -90,9 +107,9 @@ export async function runEscalations(now = new Date()) {
       level: minutes <= 0 ? "critical" : "warning",
       targetRole: "supervisor",
       roomId: arrival.roomId,
-      message: `Room ${arrival.room.number}: ${arrival.vip ? "VIP " : ""}arrival ETA ${
-        minutes <= 0 ? "passed" : `in ${minutes} min`
-      } but room is ${arrival.room.status}, not INSPECTED.`,
+      message: `Zimmer ${arrival.room.number}: ${arrival.vip ? "VIP-" : ""}Anreise ${
+        minutes <= 0 ? "überfällig" : `in ${minutes} Min.`
+      }, Zimmer noch ${arrival.room.status}, nicht freigegeben.`,
       ...(minutes <= 0
         ? keyed("notify.etaPassed", { n: arrival.room.number, statusKey: `status.${arrival.room.status}` })
         : keyed("notify.etaSoon", { n: arrival.room.number, min: minutes, statusKey: `status.${arrival.room.status}` })),
@@ -137,15 +154,19 @@ export async function runEscalations(now = new Date()) {
     }
   }
 
+  // --- F5 (H14): Fortschritt hinter Plan — höchstens einmal je Stunde an den Duty Manager -------------
+  if (await alertBehindPlan(now).catch(() => 0)) created.push("BEHIND_PLAN");
+
   // --- Release queue backlog --------------------------------------------
+  // F5 (Aufgabe 4): Rückstau-Alarm erst ab Arbeitsbeginn, mit aktueller Zahl, deutsch
   const cleanCount = await prisma.room.count({ where: { status: "CLEAN" } });
-  if (cleanCount >= settings.releaseQueueBacklogThreshold) {
+  if (cleanCount >= settings.releaseQueueBacklogThreshold && berlinHour(now) >= settings.workStartHour) {
     const bucket = Math.floor(now.getTime() / (30 * 60_000)); // at most every 30 min
     const n = await notifyOnce({
       type: "RELEASE_QUEUE_BACKLOG",
       level: "warning",
       targetRole: "supervisor",
-      message: `${cleanCount} rooms are CLEAN and waiting for inspection — release queue backlog.`,
+      message: `${cleanCount} Zimmer sind gereinigt und warten auf die Freigabe.`,
       ...keyed("notify.releaseBacklog", { n: cleanCount }),
       dedupeKey: `RELEASE_QUEUE_BACKLOG:${bucket}`,
     });

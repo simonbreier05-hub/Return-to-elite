@@ -1,5 +1,9 @@
 "use client";
 
+import RoomActionsCard from "@/components/roles/RoomActionsCard";
+import RoomWindowActions from "@/components/roles/RoomWindowActions";
+import FrontOfficeDnd from "@/components/roles/FrontOfficeDnd";
+import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
@@ -31,7 +35,8 @@ const etaInput = (iso: string | null) => {
  * Gleiche Wege wie bisher: `GET/POST /api/arrivals`, `PATCH /api/arrivals/[id]`, Live `arrival:update`, `room:update`
  * und die Meldung „Zimmer freigegeben“ (`ROOM_RELEASED`). Front Office ändert nie den Reinigungsstatus.
  */
-export default function FrontOfficeView() {
+/** mode „departures“: Abreisen als eigener Menüpunkt (Simon-Feedback 18.11.2026), sonst Anreisen-Hub ohne Abreisen. */
+export default function FrontOfficeView({ mode = "arrivals" }: { mode?: "arrivals" | "departures" }) {
   const { t } = useLocale();
   const [raw, setRaw] = useState<Record<string, unknown>[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -147,6 +152,28 @@ export default function FrontOfficeView() {
   const neededNowNotReady = expected.filter((a) => a.neededNow && a.room.status !== "INSPECTED").length;
   const overdueEta = expected.filter((a) => isOverdue(a)).length;
 
+  const departuresEl = (
+    <FrontOfficeDepartures
+      rows={departures}
+      busyId={depBusy}
+      error={depError}
+      onCheckout={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { body: {} }))}
+      onCheckoutMany={(roomIds) => void depAction(roomIds[0], async () => { for (const id of roomIds) await api(`/api/rooms/${id}/checkout`, { body: {} }); })}
+      onRevert={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { method: "DELETE" }))}
+      onLateCheckout={(roomId, time) => void depAction(roomId, () => api(`/api/rooms/${roomId}/late-checkout`, { method: "PATCH", body: { time } }))}
+    />
+  );
+  if (mode === "departures") {
+    return (
+      <div className="flex flex-col gap-4 sm:gap-6">
+        {departuresEl}
+        {/* Simon-Feedback 19.11.: „Reist heute ab (vorzeitig)“ gehört zu den Abreisen (statt Karte „Zimmer-Aktionen“) */}
+        <RoomActionsCard title={t("roomActions.earlyDeparture")} />
+        {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} editor={<RoomWindowActions room={roomLookup.room} onChanged={() => void loadDepartures()} />} />}
+      </div>
+    );
+  }
+
   return (
     <>
       <FrontOfficeHub
@@ -165,18 +192,12 @@ export default function FrontOfficeView() {
         loadError={raw === null ? loadError : null}
         onRetry={() => void load()}
         etaInput={etaInput}
-        departures={
-          <FrontOfficeDepartures
-            rows={departures}
-            busyId={depBusy}
-            error={depError}
-            onCheckout={(roomId) => void depAction(roomId, () => api(`/api/rooms/${roomId}/checkout`, { body: {} }))}
-            onLateCheckout={(roomId, time) => void depAction(roomId, () => api(`/api/rooms/${roomId}/late-checkout`, { method: "PATCH", body: { time } }))}
-          />
-        }
         notices={
           <>
             {released && <Banner tone="info" icon="bell" title={released} />}
+            <BlockedRoomsCard role="front_office" />
+            <FrontOfficeDnd />
+            {/* Zimmer-Aktionen-Karte entfällt (Simon-Feedback 19.11.): Zimmerwechsel im Zimmerfenster, vorzeitige Abreise unter „Abreisen“ */}
             <PriorityBanner
               items={[
                 { count: neededNowNotReady, label: t("priority.neededNowArrivals"), icon: "warning", tone: "urgent" },
@@ -186,7 +207,7 @@ export default function FrontOfficeView() {
           </>
         }
       />
-      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
+      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} editor={<RoomWindowActions room={roomLookup.room} onChanged={() => void loadDepartures()} />} />}
     </>
   );
 }

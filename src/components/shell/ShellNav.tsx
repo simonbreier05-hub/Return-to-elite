@@ -15,7 +15,7 @@ import { useShellNav } from "./useShellNav";
 /** Seitenleiste ab 1280 px: schwebende Glaskarte 264 px (Figma `22:68`). */
 export function Sidebar({ role, home, profile }: { role: string; home: string; profile: React.ReactNode }) {
   const { t } = useLocale();
-  const { entries, active, countOf } = useShellNav(role);
+  const { entries, active, countOf, quietOf } = useShellNav(role);
   return (
     <aside className="glass fixed inset-y-2 start-2 z-30 hidden w-(--size-sidebar-wide) flex-col gap-1 overflow-hidden rounded-(--glass-radius-xl) px-4 py-6 xl:flex">
       <Link href={home} className={cx("text-title-22 self-start rounded-(--glass-radius-sm) text-text-primary", FOCUS_RING)}>
@@ -27,7 +27,7 @@ export function Sidebar({ role, home, profile }: { role: string; home: string; p
         <ul className="flex flex-col gap-1">
           {entries.map((e) => (
             <li key={e.id}>
-              <NavItem icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} />
+              <NavItem icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} countQuiet={quietOf(e)} />
             </li>
           ))}
         </ul>
@@ -46,7 +46,7 @@ export function Sidebar({ role, home, profile }: { role: string; home: string; p
 /** Icon-Leiste 640–1279 px: 80 px, Beschriftung als aria-label/Tooltip (Figma `22:450`). */
 export function Rail({ role, home, monogram, footer }: { role: string; home: string; monogram: string; footer: React.ReactNode }) {
   const { t } = useLocale();
-  const { entries, active, countOf } = useShellNav(role);
+  const { entries, active, countOf, quietOf } = useShellNav(role);
   return (
     <aside className="glass fixed inset-y-2 start-2 z-30 hidden w-(--size-sidebar-rail) flex-col items-center gap-1 rounded-(--glass-radius-xl) py-6 sm:flex xl:hidden">
       <Link
@@ -62,7 +62,7 @@ export function Rail({ role, home, monogram, footer }: { role: string; home: str
         <ul className="flex flex-col items-center gap-1">
           {entries.map((e) => (
             <li key={e.id}>
-              <NavItem mode="rail" icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} />
+              <NavItem mode="rail" icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} countQuiet={quietOf(e)} />
             </li>
           ))}
         </ul>
@@ -76,10 +76,10 @@ export function Rail({ role, home, monogram, footer }: { role: string; home: str
 /** Tab-Leiste unter 640 px: höchstens vier Punkte, sonst drei + „Mehr“ (Figma `41:1914`). */
 export function TabBar({ role }: { role: string }) {
   const { t } = useLocale();
-  const { tabs, more, active, countOf } = useShellNav(role);
+  const { tabs, more, active, countOf, quietOf } = useShellNav(role);
   const [moreOpen, setMoreOpen] = useState(false);
   const moreActive = more.some((e) => e.id === active);
-  const moreCount = more.reduce((n, e) => n + (countOf(e) ?? 0), 0);
+  const moreCount = more.reduce((n, e) => n + (quietOf(e) ? 0 : (countOf(e) ?? 0)), 0); // ruhige Zähler (Freigabe) treiben „Mehr“ nicht
   return (
     <>
       <nav
@@ -87,7 +87,7 @@ export function TabBar({ role }: { role: string }) {
         className="glass fixed inset-x-0 bottom-0 z-30 flex items-center gap-1 rounded-t-(--glass-radius-xl) rounded-b-none px-3 pt-2.5 pb-[max(1rem,env(safe-area-inset-bottom))] sm:hidden"
       >
         {tabs.map((e) => (
-          <TabItem key={e.id} icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} className="min-w-0 flex-1" />
+          <TabItem key={e.id} icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} countQuiet={quietOf(e)} className="min-w-0 flex-1" />
         ))}
         {more.length > 0 && (
           <TabItem icon="list" label={t("nav.more")} active={moreActive} count={moreCount || undefined} onClick={() => setMoreOpen(true)} className="min-w-0 flex-1" />
@@ -106,7 +106,7 @@ export function TabBar({ role }: { role: string }) {
             <ul className="flex flex-col gap-1 overflow-y-auto">
               {more.map((e) => (
                 <li key={e.id}>
-                  <NavItem icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} />
+                  <NavItem icon={e.icon} label={t(e.labelKey)} href={e.href} active={active === e.id} count={countOf(e)} countQuiet={quietOf(e)} />
                 </li>
               ))}
             </ul>

@@ -10,6 +10,7 @@ import { statusTargetIcon } from "@/lib/ui/roomWindow";
 import { Field, Glyph, SectionLabel } from "@/components/ui";
 import { cx, FOCUS_RING } from "@/components/ui/primitives";
 import { ACTION_LABEL, DEPTS, useRoomEdit } from "./useRoomEdit";
+import { guestStillInText } from "@/lib/ui/guestPresence";
 
 const SELECT =
   "text-body-16 w-full min-h-(--size-touch-min) rounded-(--glass-radius-md) border border-border-subtle bg-surface-progress-track px-4 py-3 text-text-primary disabled:opacity-40";
@@ -69,8 +70,14 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
         <SectionLabel as="h3" icon="refresh" title={t("roomEdit.status")} />
         <p className="text-label text-text-muted">{t("roomEdit.statusHint")}</p>
         <div className="flex flex-wrap gap-2">
+          {e.isBlocked && room.allowedStatuses.includes("DIRTY") && (
+            <TwoTapButton onConfirm={() => e.setStatus("DIRTY")}>
+              <Glyph name="check" size={18} />
+              {t("blocked.release")}
+            </TwoTapButton>
+          )}
           {room.allowedStatuses.map((s) =>
-            s === "OUT_OF_ORDER" ? null : (
+            s === "OUT_OF_ORDER" || (e.isBlocked && s === "DIRTY") ? null : (
               <TwoTapButton key={s} onConfirm={() => e.setStatus(s)}>
                 <Glyph name={statusTargetIcon(s as RoomStatus)} size={18} />
                 {t("roomEdit.statusSet", { status: t(`status.${s}` as TKey) })}
@@ -80,11 +87,26 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
         </div>
         {room.allowedStatuses.includes("OUT_OF_ORDER") && (
           <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+            <Field className="min-w-0 flex-1" label={t("blocked.reason")} value={e.oooReason} maxLength={200} onChange={(ev) => e.setOooReason(ev.target.value)} />
             <Field className="min-w-0 flex-1" type="datetime-local" label={t("roomEdit.oooUntil")} value={e.ooo} onChange={(ev) => e.setOoo(ev.target.value)} />
-            <TwoTapButton disabled={!e.ooo} onConfirm={() => e.setStatus("OUT_OF_ORDER")}>
+            <TwoTapButton disabled={!e.ooo || !e.oooReason.trim()} onConfirm={() => e.setStatus("OUT_OF_ORDER")}>
               <Glyph name="wrench" size={18} />
               {t("roomEdit.statusSet", { status: t("status.OUT_OF_ORDER") })}
             </TwoTapButton>
+          </div>
+        )}
+        {e.guestPrompt && (
+          <div role="alert" className="flex flex-col gap-2 rounded-(--glass-radius-md) bg-status-warning-bg p-3 sm:flex-row sm:items-center">
+            <p className="text-body-16 flex-1 text-text-primary">{guestStillInText(t, room.number, e.guestPrompt.lateCheckout)}</p>
+            <TwoTapButton onConfirm={() => e.setStatus(e.guestPrompt!.status, false, true)}>{t("roomEdit.save")}</TwoTapButton>
+            <button type="button" className={linkBtn} onClick={() => e.setGuestPrompt(null)}>{t("roomEdit.cancel")}</button>
+          </div>
+        )}
+        {e.occupiedPrompt && (
+          <div role="alert" className="flex flex-col gap-2 rounded-(--glass-radius-md) bg-status-warning-bg p-3 sm:flex-row sm:items-center">
+            <p className="text-body-16 flex-1 text-text-primary">{t("blocked.confirmOccupied")}</p>
+            <TwoTapButton onConfirm={() => e.setStatus("OUT_OF_ORDER", true)}>{t("blocked.confirmBlock")}</TwoTapButton>
+            <button type="button" className={linkBtn} onClick={() => e.setOccupiedPrompt(null)}>{t("roomEdit.cancel")}</button>
           </div>
         )}
       </div>
@@ -108,7 +130,7 @@ export function RoomEditGlass({ room, onChanged }: { room: RoomDetail; onChanged
           <GlassSelect className="min-w-0 flex-1" label={t("roomEdit.assignment")} value={e.assignTo} onChange={(v) => { e.setAssignTo(v); e.setStartedPrompt(null); }}>
             <option value="">{t("roomEdit.assignPick")}</option>
             {room.attendants.map((a) => (
-              <option key={a.id} value={a.id}>{a.dailyNumber ? `#${a.dailyNumber} ` : ""}{a.name}</option>
+              <option key={a.id} value={a.id}>{a.dailyNumber ? `#${a.dailyNumber} ` : ""}{a.name}{a.skill ? ` · ${t("assign.level", { n: a.skill.level })}${a.skill.restrictions.length ? ` · ${a.skill.restrictions.map((r) => t(`assign.restr${r}` as TKey)).join(", ")}` : ""}` : ""}</option>
             ))}
           </GlassSelect>
           <TwoTapButton disabled={!e.assignTo} onConfirm={() => e.assign(e.assignTo)}>{t("roomEdit.save")}</TwoTapButton>

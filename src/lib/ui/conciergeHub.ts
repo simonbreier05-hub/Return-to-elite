@@ -14,7 +14,9 @@ export interface ExcursionView {
   startsAt: string | null;
   endsAt: string | null;
   note: string | null;
-  room: { id: string | null; number: string | null; openNotesCount: number };
+  room: { id: string | null; number: string | null; openNotesCount: number; status?: string | null };
+  /** F7 (M24): eigener Eintrag — darf bearbeitet/gelöscht werden. */
+  mine?: boolean;
 }
 
 const obj = (v: unknown): Record<string, unknown> => (v && typeof v === "object" ? (v as Record<string, unknown>) : {});
@@ -32,7 +34,8 @@ export function normalizeExcursion(raw: unknown): ExcursionView | null {
     startsAt: str(r.startsAt),
     endsAt: str(r.endsAt),
     note: str(r.note),
-    room: { id: str(room.id), number: str(room.number), openNotesCount: typeof room.openNotesCount === "number" ? room.openNotesCount : 0 },
+    room: { id: str(room.id), number: str(room.number), openNotesCount: typeof room.openNotesCount === "number" ? room.openNotesCount : 0, status: str(room.status) },
+    mine: r.mine === true,
   };
 }
 

@@ -49,6 +49,8 @@ model User {
   dailyTarget  Float? // überschreibt das Tagesziel des Typs (Credits)
   hkActive     Boolean  @default(true)
   absentDate   String? // "YYYY-MM-DD": an diesem Tag abwesend (ein Tap)
+  // F4 (additiv, H11): "YYYY-MM-DD" der Krankmeldung — Team-Speichern setzt sie nie zurück; nur DM/Supervisor nehmen sie aktiv zurück
+  sickDate     String?
   // Planung L1 (additiv): Einschränkungen je Person als feste Codes, komma-getrennt (NO_SUITE | NO_VIP | NO_ALLERGY), nie Freitext.
   // Beschäftigtendaten wie hkLevel: nur hinter requireRole(["supervisor"]), nie in Logs.
   hkRestrictions String   @default("")
@@ -95,6 +97,9 @@ model Room {
   blockedSince     DateTime?
   reworkNote       String? // supervisor note when sending CLEAN back to PICKUP
   oooUntil         DateTime? // end time for OUT_OF_ORDER
+  // F2 (additiv): Sperrgrund (Pflicht bei OUT_OF_ORDER, kurzer Text, keine Gastdaten) und Beginn der Sperre
+  oooReason        String?
+  oooSince         DateTime?
   baseCleanMinutes Int       @default(30) // baseline used by predictCleaningMinutes
   assignedToId     String?
   assignedTo       User?     @relation("RoomAssignee", fields: [assignedToId], references: [id])
@@ -213,6 +218,9 @@ model Stay {
   arrivalTime String? // "HH:MM"
   resStatus   String? // Opera-Status: RESV | CKIN | DUOT …
   needsReview Boolean  @default(false) // fehlt in einem neueren Import — nicht gelöscht, nur markiert
+  // F3 (additiv): Zimmerwechsel — Nummer des Zimmers, aus dem der Aufenthalt umgezogen ist. Der Import findet ihn darüber wieder,
+  // auch wenn die Opera-Liste den Gast noch im alten Zimmer führt (kein zweiter Aufenthalt „im Haus“ im alten Zimmer).
+  roomChangedFrom String?
   lastImportAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -245,6 +253,9 @@ model GuestRequest {
   assignedTo   User?    @relation(fields: [assignedToId], references: [id])
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  // F7 (H13): Aufenthalt, zu dem der Wunsch gehört; beim Check-out/Zimmerwechsel archiviert (nur Supervisor/DM, 30 Tage)
+  stayId     String?
+  archivedAt DateTime?
 }
 
 model Excursion {
@@ -275,6 +286,8 @@ model RoomNote {
   taskType  String?
   taskId    String?
   createdAt DateTime @default(now())
+  // F7 (H13): beim Check-out des Aufenthalts archiviert — erscheint nicht mehr beim nächsten Gast
+  archivedAt DateTime?
 }
 
 /**
@@ -319,6 +332,7 @@ model WorkOrder {
   ackAt        DateTime?
   startedAt    DateTime?
   resolvedAt   DateTime?
+  resolutionNote String? // F2 (additiv, M4): Pflicht-Notiz des Technikers bei „Erledigt“ (was wurde gemacht) — keine Gastdaten
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
 }
@@ -343,6 +357,12 @@ model RoomTask {
   assignedTo   User?     @relation("RoomTaskAssignee", fields: [assignedToId], references: [id])
   createdAt    DateTime  @default(now())
   doneAt       DateTime?
+  // F7 (H16/M15): Einmal-Aufgabe mit Datum, aufgeschoben seit (mit optionalem Grund), Herkunft wiederkehrend, überfällig seit
+  dueDate         String?
+  deferredSince   String?
+  deferReason     String?
+  recurringTaskId String?
+  overdueSince    String?
 }
 
 model AuditLog {
@@ -525,7 +545,7 @@ model DayRoomPlan {
   date           String // "YYYY-MM-DD"
   roomId         String
   room           Room     @relation(fields: [roomId], references: [id])
-  cleaningType   String // DEPARTURE | SAME_DAY_TURN | STAYOVER | ARRIVAL (NONE = keine Zeile)
+  cleaningType   String // DEPARTURE | SAME_DAY_TURN | STAYOVER | ARRIVAL | CARRYOVER (F1: Rest vom Vortag) (NONE = keine Zeile)
   laundryDue     Boolean  @default(false)
   nights         Int? // Nacht des Aufenthalts (Stayover) bzw. Nächte seit Anreise
   stayId         String? // bleibender bzw. abreisender Aufenthalt
@@ -538,6 +558,10 @@ model DayRoomPlan {
   // oder vom Front Office von Hand gesetzt (lateCheckoutManual). Keine Gastdaten.
   lateCheckout       String?
   lateCheckoutManual Boolean  @default(false)
+  // F3 Teil 4 (additiv, H9): Zimmerwechsel am Tag — altes Zimmer trägt das Ziel („Zimmerwechsel → 418“, bis freigegeben),
+  // das Zielzimmer die Herkunft („von 312“). Nur Zimmernummern, keine Gastdaten.
+  roomChangeTo   String?
+  roomChangeFrom String?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
@@ -688,4 +712,24 @@ model RecurringTask {
   createdAt     DateTime @default(now())
 
   @@index([active])
+}
+
+// F8 (entschieden 16.11.2026): Vorschlag fürs Opera-Gastprofil nach Abreise — einmal je Aufenthalt, nur Duty Manager,
+// wird von Hand in Opera gepflegt (StayClean schreibt nie nach Opera). Nur regelbasierte Punkte, keine Gesundheitsdaten,
+// kein Freitext. Gelöscht, sobald alle Punkte erledigt sind, spätestens nach 30 Tagen (Nachtlöschung).
+model ProfileSuggestion {
+  id              String    @id @default(cuid())
+  stayId          String    @unique // einmal je Aufenthalt (Rücknahme + erneuter Check-out legt keinen zweiten an)
+  roomNumber      String
+  guestSalutation String?
+  guestTitle      String?
+  guestLastName   String?
+  departure       DateTime
+  items           String // JSON: [{ code, vars, status: OPEN | TAKEN | DISCARDED }]
+  status          String    @default("OPEN") // OPEN | DONE
+  doneById        String?
+  doneAt          DateTime?
+  createdAt       DateTime  @default(now())
+
+  @@index([createdAt])
 }

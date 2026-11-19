@@ -307,6 +307,8 @@ export const DEFAULT_SETTINGS = {
   workdataMinSamples: 5,
   workdataRetentionDays: 90,
   shiftMinutes: 450,
+  // F5: Arbeitsbeginn (Stunde, Berlin) — Rückstau-Alarm und „Fortschritt hinter Plan“ erst ab dann; Schichtende = Beginn + shiftMinutes
+  workStartHour: 8,
 } as const;
 export type SettingsShape = { -readonly [K in keyof typeof DEFAULT_SETTINGS]: number };
 

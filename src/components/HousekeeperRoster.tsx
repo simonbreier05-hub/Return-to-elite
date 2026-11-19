@@ -75,7 +75,7 @@ export default function HousekeeperRoster({
   return (
     <>
       <div className="flex flex-wrap gap-2">
-        {sorted.length === 0 && <p className="text-sm text-graphite/60">{t("roster.noAttendants")}</p>}
+        {sorted.length === 0 && <p className="text-sm text-text-muted">{t("roster.noAttendants")}</p>}
         {sorted.map((a, i) => {
           const theirRooms = roomsFor(a.id);
           const done = theirRooms.filter((r) => DONE_STATUSES.has(r.status)).length;
@@ -83,14 +83,14 @@ export default function HousekeeperRoster({
             <button
               key={a.id}
               onClick={() => setOpenId(a.id)}
-              className="flex items-center gap-2 rounded-xl border border-charcoal/15 bg-ivory px-3 py-2 text-start text-sm hover:border-gold-line active:scale-[0.98]"
+              className="flex items-center gap-2 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-3 py-2 text-start text-sm active:scale-[0.98]"
             >
-              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-navy text-[0.68rem] font-semibold text-ivory">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-champagne text-[0.68rem] font-semibold text-text-on-accent">
                 {a.dailyNumber ?? i + 1}
               </span>
               <span>
                 <div className="font-medium">{a.name}</div>
-                <div className="text-xs text-graphite/60">{t("roster.roomsDone", { done, total: theirRooms.length })}</div>
+                <div className="text-xs text-text-muted">{t("roster.roomsDone", { done, total: theirRooms.length })}</div>
               </span>
             </button>
           );
@@ -104,12 +104,12 @@ export default function HousekeeperRoster({
           onClose={() => setOpenId(null)}
         >
           {error && (
-            <div className="mb-3 rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-3 py-2 text-sm text-status-out-of-order">
+            <div className="mb-3 rounded-(--glass-radius-sm) border border-status-danger-fg/40 bg-status-danger-bg px-3 py-2 text-sm text-status-danger-fg">
               {error}
             </div>
           )}
           <div className="space-y-1.5">
-            {roomsFor(openAttendant.id).length === 0 && <p className="text-sm text-graphite/60">{t("roster.noRooms")}</p>}
+            {roomsFor(openAttendant.id).length === 0 && <p className="text-sm text-text-muted">{t("roster.noRooms")}</p>}
             {roomsFor(openAttendant.id).map((room) => {
               const style = STATUS_STYLES[room.status];
               const isCurrent = room.id === openAttendant.currentRoomId;
@@ -121,26 +121,26 @@ export default function HousekeeperRoster({
               return (
                 <div
                   key={room.id}
-                  className={`rounded-lg border px-3 py-2 ${
-                    isCurrent
-                      ? "border-gold bg-parchment"
-                      : isDone
-                        ? "border-charcoal/10 bg-linen/60 opacity-70"
-                        : "border-charcoal/10 bg-white"
-                  }`}
+                  className={`rounded-(--glass-radius-sm) border px-3 py-2 ${
+ isCurrent
+ ? "border-gold bg-accent-subtle-bg"
+ : isDone
+ ? "border-border-subtle bg-surface-card-raised opacity-70"
+ : "border-border-subtle bg-surface-card-raised"
+ }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {isDone && <span aria-hidden className="text-status-inspected">✓</span>}
-                    <span className="font-serif text-lg">{room.number}</span>
+                    {isDone && <span aria-hidden className="text-status-success-fg">✓</span>}
+                    <span className="text-body-18 text-text-primary">{room.number}</span>
                     <span className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${style.chip}`}>
                       <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />
                       {t(`status.${room.status}` as TKey)}
                     </span>
-                    <span className="rounded-full bg-charcoal/10 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-graphite/70">
+                    <span className="rounded-full bg-surface-progress-track px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wider text-text-secondary">
                       {groupLabel}
                     </span>
                     {notArrivedYet && (
-                      <span className="rounded-full border border-gold-line/60 bg-gold-soft/30 px-2 py-0.5 text-[0.65rem] font-medium text-gold-soft">
+                      <span className="rounded-full border border-border-subtle bg-champagne-soft/30 px-2 py-0.5 text-[0.65rem] font-medium text-accent-text">
                         {t("roster.notArrivedYet")}
                       </span>
                     )}
@@ -153,7 +153,7 @@ export default function HousekeeperRoster({
                     <RoomFlagIcons occupancy={room.occupancy} isCheckoutToday={room.isCheckoutToday} badgeClassName="h-4 w-4" iconClassName="h-2.5 w-2.5" />
                   </div>
 
-                  <Link href="/floor-plan" className="mt-1.5 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">
+                  <Link href="/floor-plan" className="mt-1.5 inline-flex min-h-11 items-center text-xs font-medium text-accent-text hover:underline">
                     {t("roster.changeInFloorPlan")}
                   </Link>
                 </div>

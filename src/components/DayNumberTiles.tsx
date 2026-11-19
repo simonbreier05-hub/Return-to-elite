@@ -27,34 +27,34 @@ export default function DayNumberTiles({ numbers, onShowOpen, onTile, className 
   const tile = (label: string, value: string, tone = "", key?: DayTileKey) => {
     const inner = (
       <>
-        <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{label}</div>
-        <div className={`mt-1 font-serif ${valueSize} ${tone}`}>{value}</div>
+        <div className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">{label}</div>
+        <div className={`mt-1 ${valueSize} ${tone}`}>{value}</div>
       </>
     );
     return onTile && key
-      ? <button key={key} type="button" onClick={() => onTile(key)} className={`${width} min-h-11 rounded-lg text-start transition hover:bg-parchment focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}>{inner}</button>
+      ? <button key={key} type="button" onClick={() => onTile(key)} className={`${width} min-h-11 rounded-(--glass-radius-sm) text-start transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold`}>{inner}</button>
       : <div key={label} className={width}>{inner}</div>;
   };
   return (
-    <div className={`rounded-2xl border border-charcoal/10 ${compact ? "bg-white/60 p-3" : "bg-linen p-4 shadow-card"} ${className}`}>
+    <div className={`rounded-(--glass-radius-lg) border border-border-subtle ${compact ? "bg-surface-card-raised p-3" : "bg-surface-card-raised p-4 "} ${className}`}>
       <div className={`flex flex-wrap items-start ${compact ? "gap-x-4 gap-y-2" : "gap-x-6 gap-y-3"}`}>
         {tile(t("dayNumbers.occupied"), t("dayNumbers.ofTotal", { n: n.occupied, total: n.inventory }), "", "occupied")}
         {tile(t("dayNumbers.toClean"), String(n.toClean), "", "toClean")}
-        {tile(t("dayNumbers.assigned"), t("dayNumbers.xOfN", { x: n.assigned, n: n.toClean }), n.open > 0 ? "text-gold-soft" : "text-status-clean", "assigned")}
+        {tile(t("dayNumbers.assigned"), t("dayNumbers.xOfN", { x: n.assigned, n: n.toClean }), n.open > 0 ? "text-accent-text" : "text-status-success-fg", "assigned")}
         {tile(t("dayNumbers.cleaned"), t("dayNumbers.xOfN", { x: n.cleaned, n: n.toClean }), "", "cleaned")}
-        {onTile ? tile(t("dayNumbers.open"), String(n.open), n.open > 0 ? "text-gold-soft" : "text-status-clean", "open") : <div className={width}>
-          <div className="text-[0.7rem] uppercase tracking-[0.14em] text-graphite/55">{t("dayNumbers.open")}</div>
-          <div className={`mt-1 font-serif ${valueSize} ${n.open > 0 ? "text-gold-soft" : "text-status-clean"}`}>{n.open}</div>
-          {n.open > 0 && onShowOpen && <button type="button" onClick={onShowOpen} className="min-h-11 text-sm font-medium text-gold-soft underline underline-offset-2">{t("dayNumbers.showOpen")}</button>}
+        {onTile ? tile(t("dayNumbers.open"), String(n.open), n.open > 0 ? "text-accent-text" : "text-status-success-fg", "open") : <div className={width}>
+          <div className="text-[0.7rem] uppercase tracking-[0.14em] text-text-muted">{t("dayNumbers.open")}</div>
+          <div className={`mt-1 ${valueSize} ${n.open > 0 ? "text-accent-text" : "text-status-success-fg"}`}>{n.open}</div>
+          {n.open > 0 && onShowOpen && <button type="button" onClick={onShowOpen} className="min-h-11 text-sm font-medium text-accent-text underline underline-offset-2">{t("dayNumbers.showOpen")}</button>}
         </div>}
         {n.doneUnassigned > 0 && tile(t("dayNumbers.doneUnassigned"), String(n.doneUnassigned), "", "cleaned")}
         {n.laundryDue && tile(t("dayNumbers.laundry"), String(n.laundryDue.count), "text-status-in-progress", "laundry")}
         {n.arrivalChecks.total > 0 && tile(t("dayNumbers.arrivalChecks"), t("dayNumbers.xOfN", { x: n.arrivalChecks.released, n: n.arrivalChecks.total }),
-          n.arrivalChecks.released < n.arrivalChecks.total ? "text-gold-soft" : "text-status-clean", "arrivalChecks")}
+          n.arrivalChecks.released < n.arrivalChecks.total ? "text-accent-text" : "text-status-success-fg", "arrivalChecks")}
       </div>
       {n.notCleaned.total > 0 && (onTile
-        ? <button type="button" onClick={() => onTile("notCleaned")} className="mt-2 min-h-11 text-start text-sm text-graphite/75 underline-offset-2 hover:underline">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</button>
-        : <p className="mt-2 text-sm text-graphite/75">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</p>)}
+        ? <button type="button" onClick={() => onTile("notCleaned")} className="mt-2 min-h-11 text-start text-sm text-text-secondary underline-offset-2 hover:underline">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</button>
+        : <p className="mt-2 text-sm text-text-secondary">{t("dayNumbers.notCleaned", { n: n.notCleaned.total, reasons })}</p>)}
       {n.outsideTeam > 0 && <p role="status" className="mt-1 text-sm text-status-in-progress">{t("dayNumbers.outsideTeam", { n: n.outsideTeam })}</p>}
     </div>
   );

@@ -21,11 +21,13 @@ export default function RoomTaskModal({
 }: {
   room: { number: string };
   onClose: () => void;
-  onSubmit: (payload: { type: RoomTaskType; note?: string }) => Promise<void>;
+  onSubmit: (payload: { type: RoomTaskType; note?: string; dueDate?: string }) => Promise<void>;
 }) {
   const { t } = useLocale();
   const [type, setType] = useState<RoomTaskType>("TWIN_SETUP");
   const [note, setNote] = useState("");
+  // F7 (Nachtrag): Einmal-Aufgabe für einen späteren Tag (leer = heute); erscheint beim Hausmann erst an diesem Tag
+  const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
   const needsNote = type === "SONSTIGES";
 
@@ -33,7 +35,7 @@ export default function RoomTaskModal({
     if (needsNote && !note.trim()) return;
     setBusy(true);
     try {
-      await onSubmit({ type, note: note.trim() || undefined });
+      await onSubmit({ type, note: note.trim() || undefined, ...(dueDate ? { dueDate } : {}) });
     } finally {
       setBusy(false);
     }
@@ -51,6 +53,7 @@ export default function RoomTaskModal({
           ))}
         </div>
         <Field multiline label={t("supervisor.houseTaskNotePlaceholder")} value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder={t("supervisor.houseTaskNotePlaceholder")} />
+        <Field type="date" label={t("supervisor.houseTaskDue")} hint={t("supervisor.houseTaskDueHint")} value={dueDate} min={new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" })} onChange={(e) => setDueDate(e.target.value)} className="sm:max-w-xs" />
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <Button variant="secondary" icon="x" onClick={onClose}>{t("common.cancel")}</Button>
           <Button icon="check" onClick={submit} disabled={busy || (needsNote && !note.trim())}>
@@ -71,9 +74,9 @@ export default function RoomTaskModal({
           <button
             key={rt}
             onClick={() => setType(rt)}
-            className={`h-14 rounded-xl border px-4 text-start text-sm font-medium ${
-              type === rt ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
-            }`}
+            className={`h-14 rounded-(--glass-radius-md) border px-4 text-start text-sm font-medium ${
+ type === rt ? "border-gold bg-accent-subtle-bg font-semibold" : "border-border-subtle"
+ }`}
           >
             {t(`roomTaskType.${rt}` as TKey)}
           </button>
@@ -84,16 +87,16 @@ export default function RoomTaskModal({
         onChange={(e) => setNote(e.target.value)}
         rows={3}
         placeholder={t("supervisor.houseTaskNotePlaceholder")}
-        className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
+        className="mb-4 w-full rounded-(--glass-radius-sm) border border-border-subtle p-3 text-base"
       />
       <div className="grid grid-cols-2 gap-2">
-        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
+        <button onClick={onClose} className="h-14 rounded-(--glass-radius-md) border border-border-subtle text-base">
           {t("common.cancel")}
         </button>
         <button
           onClick={submit}
           disabled={busy || (needsNote && !note.trim())}
-          className="h-14 rounded-xl bg-navy text-base font-semibold text-ivory disabled:opacity-40"
+          className="h-14 rounded-(--glass-radius-md) bg-champagne text-base font-semibold text-text-on-accent disabled:opacity-40"
         >
           {busy ? t("supervisor.houseTaskSending") : t("supervisor.houseTaskSend")}
         </button>

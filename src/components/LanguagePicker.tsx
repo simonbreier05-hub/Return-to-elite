@@ -31,7 +31,7 @@ export function LanguageQualityBadge({ className = "" }: { className?: string })
   const { quality, t } = useLocale();
   const key = QUALITY_BADGE[quality];
   if (!key) return null;
-  return <span className={`rounded-full bg-gold/10 px-2 py-0.5 text-[0.65rem] font-medium text-gold-soft ${className}`}>{t(key)}</span>;
+  return <span className={`rounded-full bg-accent-subtle-bg px-2 py-0.5 text-[0.65rem] font-medium text-accent-text ${className}`}>{t(key)}</span>;
 }
 
 /**
@@ -67,7 +67,7 @@ export function LanguagePickerModal({ onClose }: { onClose: () => void }) {
         onChange={(e) => setQ(e.target.value)}
         placeholder={t("language.search")}
         aria-label={t("language.search")}
-        className="mb-3 h-12 w-full rounded-lg border border-charcoal/20 bg-white px-3 text-base outline-none focus:border-gold"
+        className="mb-3 h-12 w-full rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised px-3 text-base"
       />
       <ul role="listbox" aria-label={t("language.title")} className="max-h-[55vh] overflow-y-auto">
         {shown.map((l) => {
@@ -82,20 +82,20 @@ export function LanguagePickerModal({ onClose }: { onClose: () => void }) {
                   setLocale(l.code);
                   onClose();
                 }}
-                className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-lg px-3 py-2 text-start transition hover:bg-parchment ${active ? "bg-parchment" : ""}`}
+                className={`flex min-h-12 w-full items-center justify-between gap-3 rounded-(--glass-radius-sm) px-3 py-2 text-start transition ${active ? "bg-accent-subtle-bg" : ""}`}
               >
                 <span className="min-w-0">
-                  <span lang={l.code} dir="auto" className="block truncate text-base font-medium text-charcoal">{l.own}</span>
-                  {l.local !== l.own && <span className="block truncate text-xs text-graphite">{l.local}</span>}
+                  <span lang={l.code} dir="auto" className="block truncate text-base font-medium text-text-primary">{l.own}</span>
+                  {l.local !== l.own && <span className="block truncate text-xs text-text-secondary">{l.local}</span>}
                 </span>
-                <span className="shrink-0 text-end text-[0.65rem] text-graphite/80">
-                  {active ? <span className="font-semibold text-gold-soft">✓ {t("language.current")}</span> : t(tierLabel(l.code))}
+                <span className="shrink-0 text-end text-[0.65rem] text-text-secondary">
+                  {active ? <span className="font-semibold text-accent-text">✓ {t("language.current")}</span> : t(tierLabel(l.code))}
                 </span>
               </button>
             </li>
           );
         })}
-        {shown.length === 0 && <li className="p-3 text-sm text-graphite/70">{t("language.noResults")}</li>}
+        {shown.length === 0 && <li className="p-3 text-sm text-text-secondary">{t("language.noResults")}</li>}
       </ul>
     </Modal>
   );
@@ -113,7 +113,7 @@ export default function LanguageButton({ className = "" }: { className?: string 
         onClick={() => setOpen(true)}
         aria-label={t("language.change", { lang: name })}
         title={t("language.change", { lang: name })}
-        className={`inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-charcoal/15 bg-parchment/70 px-3 text-xs font-semibold text-charcoal transition hover:bg-white ${className}`}
+        className={`inline-flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border border-border-subtle bg-surface-card-raised px-3 text-xs font-semibold text-text-primary transition ${className}`}
       >
         <svg aria-hidden className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.6}>
           <circle cx="12" cy="12" r="9" />
@@ -159,19 +159,19 @@ export function LanguageSuggestion({ glass = false }: { glass?: boolean }) {
     );
   }
   return (
-    <div role="status" className="mx-auto mt-3 flex w-full max-w-7xl flex-wrap items-center gap-2 rounded-xl border border-gold-line/40 bg-parchment px-4 py-3 text-sm">
+    <div role="status" className="mx-auto mt-3 flex w-full max-w-7xl flex-wrap items-center gap-2 rounded-(--glass-radius-md) border border-border-subtle bg-accent-subtle-bg px-4 py-3 text-sm">
       <span className="min-w-0 flex-1">
         {text}
       </span>
-      <button type="button" onClick={() => setLocale(suggestion)} className="tap h-11 rounded-lg bg-navy px-4 font-semibold text-ivory">
+      <button type="button" onClick={() => setLocale(suggestion)} className="tap h-11 rounded-(--glass-radius-sm) bg-champagne px-4 font-semibold text-text-on-accent">
         {sameAsCurrent ? t("language.keep", { lang: sugName }) : t("language.useIt", { lang: sugName })}
       </button>
       {!sameAsCurrent && (
-        <button type="button" onClick={dismissSuggestion} className="tap h-11 rounded-lg border border-charcoal/15 px-4">
+        <button type="button" onClick={dismissSuggestion} className="tap h-11 rounded-(--glass-radius-sm) border border-border-subtle px-4">
           {t("language.stay", { lang: autonym(locale) })}
         </button>
       )}
-      <button type="button" onClick={() => setPicker(true)} className="tap h-11 rounded-lg px-3 text-gold-soft underline-offset-2 hover:underline">
+      <button type="button" onClick={() => setPicker(true)} className="tap h-11 rounded-(--glass-radius-sm) px-3 text-accent-text underline-offset-2 hover:underline">
         {t("language.other")}
       </button>
     </div>

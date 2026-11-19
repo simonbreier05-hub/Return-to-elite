@@ -1,3 +1,4 @@
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
@@ -55,7 +56,7 @@ export async function GET(req: NextRequest) {
       // Guest screen "Jetzt reinigen" (Prompt G2 Teil 4) — only the most
       // recent still-open one matters for scoring.
       guestRequests: {
-        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, createdAt: { gte: berlinToUtc(berlinDate(new Date()), "00:00") } }, // F7: nur heutige Wünsche
         orderBy: { createdAt: "desc" },
         take: 1,
       },

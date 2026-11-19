@@ -21,6 +21,7 @@ import { useGuestOfflineQueue } from "./useGuestOfflineQueue";
 import { useGuestStatusFeed, type GuestStatusItem } from "./useGuestStatusFeed";
 import { GuestLocaleProvider, useGuestLocale } from "@/lib/guestI18n/GuestLocaleContext";
 import type { GuestLocale, GuestTKey } from "@/lib/guestI18n/translations";
+import { GUEST_MACHINE } from "@/lib/guestI18n/translations";
 import type { GuestLegalLinkUrls } from "@/lib/guestLegalLinks";
 import { DEFECT_CATEGORIES, type DefectCategory } from "@/lib/domain";
 import { CLEAN_TIMINGS, CONTACT_DEPARTMENTS, DND_WINDOWS, type CleanTiming, type DndWindow } from "@/lib/guest";
@@ -45,7 +46,7 @@ const REQUEST_STATUS_UI: Record<GuestStatusItem["status"], { icon: IconName; ton
   CANCELLED: { icon: "x", tone: "neutral" },
 };
 
-const DATE_LOCALE: Record<GuestLocale, string> = { de: "de-DE", en: "en-GB" };
+const DATE_LOCALE: Record<GuestLocale, string> = { de: "de-DE", en: "en-GB", it: "it-IT", tr: "tr-TR", fa: "fa-IR", hi: "hi-IN", vi: "vi-VN" };
 
 /**
  * Guest screen for one room — shared between the two access-path pages
@@ -127,15 +128,16 @@ function GuestScreen({
     ? [t("dndActive.short"), dndDetail.window ? t(`dndWindow.${dndDetail.window}` as GuestTKey) : null].filter(Boolean).join(" · ")
     : undefined;
 
-  const greenToday = items.some((i) => i.kind === "GREEN" && new Date(i.createdAt).toDateString() === new Date().toDateString());
+  const greenToday = items.some((i) => i.kind === "GREEN" && i.status !== "CANCELLED" && new Date(i.createdAt).toDateString() === new Date().toDateString());
   const tiles: { kind: Exclude<ModalKind, null>; icon: IconName; title: string; ariaLabel: string; active?: boolean; hint?: string }[] = [
     activeDnd
       ? {
           kind: "dndCancel",
           icon: "moon",
           title: t("tiles.dnd.title"),
-          hint: dndHint,
-          ariaLabel: `${t("dndActive.banner")}. ${dndHint ?? ""}. ${t("dndActive.cancel")}`,
+          // F7 (Aufgabe 7): klarer Hinweis, dass heute nicht gereinigt wird, bis der Gast es aufhebt
+          hint: `${dndHint} — ${t("dndActive.notCleanedHint")}`,
+          ariaLabel: `${t("dndActive.banner")}. ${dndHint ?? ""}. ${t("dndActive.notCleanedHint")} ${t("dndActive.cancel")}`,
           active: true,
         }
       : { kind: "dnd", icon: "moon", title: t("tiles.dnd.title"), ariaLabel: `${t("tiles.dnd.title")}: ${t("tiles.dnd.hint")}` },
@@ -155,7 +157,8 @@ function GuestScreen({
     <div className="relative min-h-dvh overflow-hidden">
       <HeaderPhoto />
       <main className="relative mx-auto flex min-h-dvh max-w-2xl flex-col gap-4 px-4 pb-7 pt-4 sm:px-8">
-        <div className="flex justify-end">
+        <div className="flex items-center justify-end gap-3">
+          {GUEST_MACHINE.includes(locale) && <span className="text-label text-text-muted">{t("language.machine")}</span>}
           <GuestLanguageSwitcher />
         </div>
 
@@ -200,7 +203,7 @@ function GuestScreen({
             <span className="text-body-16 min-w-0 flex-1 break-words text-text-primary">
               {t("status.latest", { kind: t(`status.kind.${latest.kind}` as GuestTKey) })}
             </span>
-            <RequestStatus status={latest.status} />
+            <RequestStatus status={latest.status} kind={latest.kind} />
             <Glyph name="chevron-right" size={20} className="text-text-muted" />
             <span className="sr-only">{t("status.showAll")}</span>
           </button>
@@ -237,20 +240,22 @@ function GuestScreen({
         />
       )}
       {modal === "green" && (
-        <GreenModal actionBase={actionBase} offline={offline} already={greenToday} onClose={() => setModal(null)} onSubmit={() => announce(t("toast.green"))} />
+        <GreenModal actionBase={actionBase} offline={offline} already={greenToday} onClose={() => setModal(null)} onSubmit={() => announce(t(greenToday ? "toast.greenUndone" : "toast.green"))} />
       )}
       {modal === "requests" && <RequestsModal items={items} onClose={() => setModal(null)} />}
     </div>
   );
 }
 
-function RequestStatus({ status }: { status: GuestStatusItem["status"] }) {
+function RequestStatus({ status, kind }: { status: GuestStatusItem["status"]; kind?: string }) {
   const { t } = useGuestLocale();
   const ui = REQUEST_STATUS_UI[status];
+  // F7 (M10): ein erledigter Mangel heißt für den Gast „Behoben“
+  const label = kind === "DEFECT" && status === "DONE" ? t("status.FIXED") : t(`status.${status}` as GuestTKey);
   return (
     <span className={cx("text-body-16 inline-flex shrink-0 items-center gap-2 whitespace-nowrap", TONE_FG[ui.tone])}>
       <Glyph name={ui.icon} size={22} />
-      {t(`status.${status}` as GuestTKey)}
+      {label}
     </span>
   );
 }
@@ -285,6 +290,8 @@ function Choice({ active, onClick, children }: { active: boolean; onClick: () =>
 interface OfflineEnqueue {
   enqueue: (input: { url: string; body: unknown; label: string }) => void;
 }
+
+const MAX_GUEST_NOTE = 2000;
 
 function MessageForm({ actionBase, offline, onSent }: { actionBase: string; offline: OfflineEnqueue; onSent: () => void }) {
   const { t } = useGuestLocale();
@@ -336,8 +343,14 @@ function MessageForm({ actionBase, offline, onSent }: { actionBase: string; offl
           if (error) setError(null);
         }}
         error={error ?? undefined}
-        maxLength={2000}
+        maxLength={MAX_GUEST_NOTE}
       />
+      {/* F7 (M18): Zähler ab 80 % — die Grenze steht auch am Server (2000) */}
+      {body.length > MAX_GUEST_NOTE * 0.8 && (
+        <p className="text-label text-text-muted" aria-live="polite">
+          {t("comment.counter", { n: body.length, max: MAX_GUEST_NOTE })}{body.length >= MAX_GUEST_NOTE ? ` · ${t("comment.tooLong", { max: MAX_GUEST_NOTE })}` : ""}
+        </p>
+      )}
       <div className="flex-1" />
       <Button type="submit" variant="primary" icon="check" block disabled={busy} aria-busy={busy || undefined}>
         {busy ? t("common.sending") : t("comment.send")}
@@ -416,15 +429,16 @@ function GreenModal({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const confirm = async () => {
+  const confirm = async (undo = false) => {
     setBusy(true);
     setError(null);
+    const action = undo ? "green-cancel" : "green";
     try {
-      await api(`${actionBase}/green`, { body: {} });
+      await api(`${actionBase}/${action}`, { body: {} });
       onSubmit();
     } catch (e) {
       if (e instanceof NetworkError) {
-        offline.enqueue({ url: `${actionBase}/green`, body: {}, label: t("tiles.green.title") });
+        offline.enqueue({ url: `${actionBase}/${action}`, body: {}, label: t("tiles.green.title") });
         onSubmit();
         return;
       }
@@ -438,8 +452,14 @@ function GreenModal({
     <GuestModal title={t("tiles.green.title")} subtitle={already ? t("green.chosen") : t("green.confirmQuestion")} onClose={onClose}>
       <ModalError error={error} />
       {!already && (
-        <ConfirmButton busy={busy} onClick={confirm}>
+        <ConfirmButton busy={busy} onClick={() => confirm()}>
           {t("green.confirm")}
+        </ConfirmButton>
+      )}
+      {/* F7 (Aufgabe 7): am selben Tag zurücknehmbar */}
+      {already && (
+        <ConfirmButton busy={busy} onClick={() => confirm(true)}>
+          {t("green.undo")}
         </ConfirmButton>
       )}
     </GuestModal>
@@ -710,7 +730,7 @@ function RequestsModal({ items, onClose }: { items: GuestStatusItem[]; onClose: 
                 <p className="text-body-16 truncate text-text-primary">{t(`status.kind.${item.kind}` as GuestTKey)}</p>
                 <p className="text-label truncate text-text-secondary">{requestItemLabel(t, item)}</p>
               </div>
-              <RequestStatus status={item.status} />
+              <RequestStatus status={item.status} kind={item.kind} />
             </li>
           ))}
         </ul>

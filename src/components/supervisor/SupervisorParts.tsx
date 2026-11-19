@@ -4,6 +4,7 @@ import { useId, type ReactNode } from "react";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { hhmm } from "@/lib/i18n/format";
 import { withoutLeadingSymbol } from "@/lib/ui/hkHub";
+import { etaState } from "@/lib/ui/supervisorHub";
 import { Button, GlassCard, Pill } from "@/components/ui";
 import { cx, FOCUS_RING, Glyph, TONE_FG } from "@/components/ui/primitives";
 import { ROOM_STATUS_UI, STATUS_UI } from "@/lib/ui/status";
@@ -13,7 +14,7 @@ export interface ReleaseRoom {
   id: string;
   number: string;
   waitingMin: number;
-  arrival?: { guestName: string; eta?: string | null; vip: boolean } | null;
+  arrival?: { guestName: string; eta?: string | null; vip: boolean; neededNow?: boolean } | null;
 }
 
 /**
@@ -56,6 +57,10 @@ export function ReleaseQueueCard({
                     {r.arrival.vip && <Pill tone="accent">VIP</Pill>}
                     {r.arrival.guestName}
                     {r.arrival.eta && ` · ETA ${hhmm(r.arrival.eta)}`}
+                    {/* F6 (M11): Anreise gefährdet in zwei Stufen */}
+                    {etaState(r.arrival.eta) === "overdue" && <Pill tone="danger">{t("supervisor.etaOverdue")}</Pill>}
+                    {etaState(r.arrival.eta) === "soon" && <Pill tone="warning">{t("supervisor.etaSoon")}</Pill>}
+                    {r.arrival.neededNow && <Pill tone="danger">{t("frontOffice.neededNow")}</Pill>}
                   </span>
                 )}
               </button>

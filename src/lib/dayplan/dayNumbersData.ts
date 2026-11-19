@@ -1,7 +1,7 @@
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { isStartedStatus } from "@/lib/rooms/startedStatus";
-import { computeDayNumbers, rowsOnFloors, PLAN_KIND as KIND, type DayNumberRow } from "./dayNumbers";
+import { computeDayNumbers, rowsOnFloors, unplannedKind, PLAN_KIND as KIND, type DayNumberRow } from "./dayNumbers";
 
 /** Zeilen für `computeDayNumbers` aus Tagesplan + Board (eine Abfrage; alle Ansichten nutzen sie). */
 export async function loadDayNumberRows(date: string): Promise<DayNumberRow[]> {
@@ -12,9 +12,15 @@ export async function loadDayNumberRows(date: string): Promise<DayNumberRow[]> {
     status: p.room.status, occupied: p.room.occupancy === "OCCUPIED", assignedToId: p.room.assignedToId,
     assignedToday: p.room.assignedOn === date || isStartedStatus(p.room.status),
   }));
-  // Laut Board belegte Zimmer ohne Tagesplan-Eintrag zählen als belegt (nicht als zu reinigen)
-  const extra = await prisma.room.findMany({ where: { occupancy: "OCCUPIED", id: { notIn: [...planned] } } });
-  for (const r of extra) rows.push({ id: r.id, number: r.number, floor: r.floor, kind: "OCCUPIED", laundryDue: false, nightsKnown: false, status: r.status, occupied: true, assignedToId: r.assignedToId, assignedToday: false });
+  // Zimmer ohne Tagesplan-Eintrag: heute zugeteilt und nicht fertig → „Zusatz“ (zu reinigen, K3);
+  // sonst laut Board belegt → zählt nur als belegt (nicht als zu reinigen)
+  const extra = await prisma.room.findMany({ where: { id: { notIn: [...planned] }, OR: [{ occupancy: "OCCUPIED" }, { assignedOn: date, assignedToId: { not: null } }] } });
+  for (const r of extra) {
+    const assignedToday = r.assignedOn === date || isStartedStatus(r.status);
+    const kind = unplannedKind({ status: r.status, assignedToId: r.assignedToId, assignedToday }) ?? (r.occupancy === "OCCUPIED" ? "OCCUPIED" : null);
+    if (!kind) continue;
+    rows.push({ id: r.id, number: r.number, floor: r.floor, kind, laundryDue: false, nightsKnown: false, status: r.status, occupied: r.occupancy === "OCCUPIED", assignedToId: r.assignedToId, assignedToday: kind === "EXTRA" });
+  }
   return rows;
 }
 

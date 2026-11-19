@@ -8,7 +8,9 @@ import { WorkOrderStatusSchema, type WorkOrderStatus } from "@/lib/domain";
 import { endPauseOnChange } from "@/lib/work/pauseData";
 import { keyed } from "@/lib/i18n/notificationText";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
-import { ROLES } from "@/lib/domain";
+import { ROLES, type RoomStatus } from "@/lib/domain";
+import { SELL_BLOCKED } from "@/lib/stateMachine";
+import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 
 /**
  * PATCH /api/workorders/[id] — engineering advances a work order:
@@ -16,7 +18,8 @@ import { ROLES } from "@/lib/domain";
  */
 const ORDER: WorkOrderStatus[] = ["OPEN", "ACK", "IN_PROGRESS", "RESOLVED"];
 
-const Body = z.object({ status: WorkOrderStatusSchema });
+// F2 (M4): „Erledigt“ nur mit Notiz (was wurde gemacht) — Pflicht im Dialog und hier serverseitig
+const Body = z.object({ status: WorkOrderStatusSchema, note: z.string().max(500).optional() });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const auth = await requireRole(["engineering", "supervisor"]);
@@ -35,6 +38,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: `Illegal work order transition ${from} → ${to}.`, code: "ILLEGAL_TRANSITION" }, { status: 409 });
   }
 
+  const resolutionNote = parsed.data.note?.trim() ?? "";
+  if (to === "RESOLVED" && !resolutionNote) {
+    return NextResponse.json({ error: "A note is required to resolve a work order.", code: "RESOLUTION_NOTE_REQUIRED" }, { status: 400 });
+  }
+
   const now = new Date();
   const workOrder = await prisma.workOrder.update({
     where: { id },
@@ -44,6 +52,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       ackAt: to === "ACK" ? now : wo.ackAt,
       startedAt: to === "IN_PROGRESS" ? now : wo.startedAt,
       resolvedAt: to === "RESOLVED" ? now : wo.resolvedAt,
+      ...(to === "RESOLVED" ? { resolutionNote } : {}),
     },
     include: {
       defect: {
@@ -51,7 +60,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           room: {
             select: {
               id: true, number: true, status: true, floor: true,
-              _count: { select: { notes: { where: { status: "OPEN" } } } },
+              _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
             },
           },
           reportedBy: { select: { name: true, role: true } },
@@ -70,13 +79,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   if (to === "RESOLVED") {
     await endPauseOnChange("WORKORDER", id, auth.session.userId, wo.defect.roomId, wo.defect.room.number);
+    // F2 (entschieden): Zimmer ist gesperrt und kein offener Auftrag mehr → dringend an Supervisor der Etage und DM
+    // „Mangel behoben — wieder in Betrieb nehmen?“ (Antippen öffnet das Zimmerfenster mit dem Knopf „Wieder in Betrieb“).
+    const stillOpen = await prisma.workOrder.count({ where: { defect: { roomId: wo.defect.roomId }, status: { not: "RESOLVED" } } });
+    if (SELL_BLOCKED.has(wo.defect.room.status as RoomStatus) && stillOpen === 0) {
+      await notifyFloorLeads({
+        roomId: wo.defect.roomId, type: "OOO_READY", level: "warning", skipUserId: auth.session.userId, now,
+        message: `${wo.defect.room.number}: Mangel behoben — wieder in Betrieb nehmen?`, key: "notify.oooReady", vars: { n: wo.defect.room.number },
+        dedupeKey: `OOO_READY:${id}`,
+      });
+    }
     const notification = await prisma.notification.create({
       data: {
         type: "WORK_ORDER_RESOLVED",
         level: "info",
         targetRole: "supervisor",
         roomId: wo.defect.roomId,
-        message: `Work order resolved in room ${wo.defect.room.number} (${wo.defect.category}). Room may resume cleaning.`,
+        message: `Auftrag in Zimmer ${wo.defect.room.number} erledigt (${wo.defect.category}). Zimmer kann wieder gereinigt werden.`,
         ...keyed("notify.workOrderResolved", { n: wo.defect.room.number, categoryKey: `defectCategory.${wo.defect.category}` }),
         dedupeKey: `WORK_ORDER_RESOLVED:${id}`,
       },

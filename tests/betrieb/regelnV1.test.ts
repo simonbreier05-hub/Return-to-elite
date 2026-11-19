@@ -39,10 +39,11 @@ describe("Punkt 1 — Farben: Bleiber Grün, Abreise Rot, Anreise Blau, Turn Bla
     expect(CLEAN_KIND_UI.deep.tone).toBe("danger");
   });
   it("helle Listenzeile: gleiche Zuordnung (Turn: blaue Pille, roter Rand)", () => {
-    expect(LABEL_STYLE.STAYOVER.chip).toContain("status-clean");
-    expect(LABEL_STYLE.DEPARTURE.chip).toContain("status-dirty");
-    expect(LABEL_STYLE.ARRIVAL.chip).toContain("status-inspected");
-    expect(LABEL_STYLE.TURN.chip).toContain("status-inspected");
+    // Simon 19.11.: Glas-Töne mit Kontrast — Bleiber Grün (success), Abreise Rot (danger), Anreise/Turn Blau (info)
+    expect(LABEL_STYLE.STAYOVER.chip).toContain("status-success");
+    expect(LABEL_STYLE.DEPARTURE.chip).toContain("status-danger");
+    expect(LABEL_STYLE.ARRIVAL.chip).toContain("status-info");
+    expect(LABEL_STYLE.TURN.chip).toContain("status-info");
     expect(LABEL_STYLE.TURN.edge).toContain("status-dirty");
   });
   it("Wäschewechsel-Symbol bleibt unter den 2 sichtbaren Markern, auch mit Priorität", () => {

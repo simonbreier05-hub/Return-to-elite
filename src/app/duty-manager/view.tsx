@@ -1,11 +1,10 @@
 "use client";
 
+import ProfileSuggestionsCard from "@/components/ProfileSuggestionsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
-import WindowPanel from "@/components/WindowPanel";
-import LiveListsPanel from "@/components/lists/LiveListsPanel";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import TodayAtAGlance from "@/components/TodayAtAGlance";
 import { glanceKpis } from "@/lib/dayplan/glance";
@@ -16,7 +15,6 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import HubMissingNotice, { type HubState } from "@/components/HubMissingNotice";
 import { DutyHouse } from "@/components/dutymanager/DutyHouse";
-import { GlassMode } from "@/components/shell/GlassMode";
 import { Banner, Button, Field, GlassCard } from "@/components/ui";
 
 interface Room {
@@ -180,6 +178,8 @@ export default function DutyManagerView() {
               notices={
                 <>
                   <HubMissingNotice hub={hub} planner glass />
+                  <ProfileSuggestionsCard />
+                  {/* Gesperrte Zimmer und Zimmer-Aktionen: eigener Punkt „Probleme“ (Simon-Feedback 19.11.2026) */}
                   {HOTEL.unconfirmedFloors.length > 0 && (
                     <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
                   )}
@@ -190,16 +190,7 @@ export default function DutyManagerView() {
         />
       </ErrorBoundary>
 
-      {/* Live-Listen (ServiceOverview, RoomRowView, LiveRoomModal …) sind noch nicht umgestellt: bewusst ohne Glas-Modus auf
-          heller Fläche, damit alter dunkler Text lesbar bleibt (LegacySurface wurde mit D3b entfernt). Umstellung = eigenes Paket. */}
-      <GlassMode on={false}>
-        <section aria-label={t("dutyManager.liveListsTitle")} className="rounded-(--glass-radius-lg) bg-ivory p-3 font-sans text-charcoal sm:p-6">
-          <WindowPanel title={t("dutyManager.liveListsTitle")}>
-            <LiveListsPanel />
-          </WindowPanel>
-        </section>
-      </GlassMode>
-
+      {/* Live-Listen entfernt (Simon-Feedback 18.11.2026): der DM sieht die Zimmer im Menüpunkt „Zimmer“ (Grundriss). */}
       <GlassCard as="section" aria-labelledby="dm-tasks-title" className="flex flex-col gap-4">
         <div className="flex items-baseline justify-between gap-3">
           <h2 id="dm-tasks-title" className="text-title-22 text-text-primary">{t("dutyManager.houseTasksTitle")}</h2>

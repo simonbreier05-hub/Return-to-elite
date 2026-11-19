@@ -58,7 +58,7 @@ describe("planAssignments — coverage", () => {
     const plan = planAssignments(house(), []);
     expect(plan.assignments).toHaveLength(0);
     expect(plan.unassigned).toHaveLength(145);
-    expect(plan.unassigned[0].reason).toMatch(/no attendant/i);
+    expect(plan.unassigned[0].reason).toMatch(/keine housekeeperin/i); // F5 (M9): Text deutsch
   });
 });
 

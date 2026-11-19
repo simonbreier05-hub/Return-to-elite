@@ -59,7 +59,7 @@ export async function GET(req: NextRequest) {
       assignedTo: { select: { id: true, name: true, dailyNumber: true } },
       arrivals: { where: { status: "EXPECTED" } },
       excursions: { where: { endsAt: { gte: new Date() } } },
-      notes: { orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
+      notes: { where: { archivedAt: null }, orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
       defects: {
         include: { workOrder: true, reportedBy: { select: { name: true, role: true } } },
         orderBy: { createdAt: "desc" },
@@ -75,7 +75,7 @@ export async function GET(req: NextRequest) {
         orderBy: { createdAt: "desc" },
         take: 5,
       },
-      _count: { select: { notes: { where: { status: "OPEN" } } } },
+      _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
     },
   });
 
@@ -128,5 +128,13 @@ export async function GET(req: NextRequest) {
     select: { id: true, name: true, section: true, currentRoomId: true, lastSeenAt: true, dailyNumber: true },
   });
 
-  return NextResponse.json({ rooms: roomsWithCounts, attendants, floorScope, hub });
+  // F6 (M17): Housekeeper finden fremde Zimmer nur mit Nummer, Etage und Status — ohne Gastkennung, VIP, Anreisezeit, Notizen
+  const visible = attendantView
+    ? roomsWithCounts.map((r) => (r.assignedToId === me ? r : {
+        id: r.id, number: r.number, floor: r.floor, section: r.section, status: r.status, type: r.type, foreign: true,
+        assignedToId: null, assignedTo: null, routeOrder: null, arrivals: [], excursions: [], notes: [], defects: [], guestRequests: [],
+        openNotesCount: 0, pause: null, rewind: null, isCheckoutToday: false, // Belegung/DND/Sperrgrund bewusst weggelassen statt falsch
+      }))
+    : roomsWithCounts;
+  return NextResponse.json({ rooms: visible, attendants: attendantView ? [] : attendants, floorScope, hub });
 }

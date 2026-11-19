@@ -70,8 +70,8 @@ export async function GET(req: NextRequest) {
   });
   const openWorkOrders = workOrders.filter((w) => w.status !== "RESOLVED");
 
-  const notes = await prisma.roomNote.findMany({
-    where: { createdAt: { gte: since } },
+  const notes = await prisma.roomNote.findMany({ // F7: archivierter Verlauf früherer Aufenthalte gehört nicht in die Übergabe
+    where: { createdAt: { gte: since }, archivedAt: null },
     orderBy: { createdAt: "desc" },
     take: 8,
     include: { room: { select: { number: true } }, author: { select: { name: true, role: true } } },
@@ -140,7 +140,8 @@ export async function GET(req: NextRequest) {
     })),
   };
 
-  const result = await generateHandover(facts);
+  // Nachtrag: Übergabetext in der Sprache der Oberfläche (?lang=de); Deutsch hat einen eigenen Schreiber
+  const result = await generateHandover(facts, req.nextUrl.searchParams.get("lang") ?? "en");
   await audit({
     action: "HANDOVER_GENERATED",
     userId: auth.session.userId,

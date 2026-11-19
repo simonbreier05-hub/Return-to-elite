@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import { api } from "@/components/api";
 import RoomDetailModal, { type SearchedRoom } from "@/components/RoomDetailModal";
 import RoomEditPanel from "@/components/RoomEditPanel";
+import RoomWindowActions from "@/components/roles/RoomWindowActions";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -94,6 +95,10 @@ function LiveRoomModalInner({ roomRef, onClose, onChanged }: { roomRef: string; 
       summary={<RoomDayInfo day={room.day} />}
       actions={glass ? glassActions : pauseCtl ? { extra: pauseCtl } : undefined}
       task={room.canMessage ? { type: "ROOM", id: room.id } : undefined}
-      editor={<RoomEditPanel room={room} onChanged={async () => { await load(); onChanged?.(); }} />} />
+      editor={<>
+        <RoomEditPanel room={room} onChanged={async () => { await load(); onChanged?.(); }} />
+        {/* Simon-Feedback 19.11.2026: Zimmer-Aktionen (vorzeitige Abreise, Zimmerwechsel) im Zimmerfenster, einklappbar */}
+        <RoomWindowActions room={room} onChanged={reload} />
+      </>} />
   );
 }

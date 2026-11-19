@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
 import { broadcast } from "@/lib/realtime";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 
 /**
  * GET /api/notifications — alerts for my role (duty_manager sees all).
@@ -19,19 +20,35 @@ function scopeFor(session: { role: string; userId: string }) {
   return session.role === "duty_manager" ? {} : { targetRole: session.role, OR: [{ targetUserId: null }, { targetUserId: session.userId }] };
 }
 
-export async function GET() {
+/**
+ * F5 (M2): seitenweise statt fester Deckel — `?before=<ISO>` lädt die nächste Seite (älter als dieser Zeitpunkt), `?limit=` (1–200,
+ * Standard 60), `?urgent=1` nur dringende (warning/critical). `nextBefore` = Zeitpunkt für die nächste Seite oder null.
+ */
+export async function GET(req: NextRequest) {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
+  const q = req?.nextUrl?.searchParams; // ältere Aufrufer (Tests) ohne Request: erste Seite
+  const limit = Math.min(200, Math.max(1, Number(q?.get("limit")) || PAGE));
+  // Cursor „Zeit|Id“ — gleiche Zeitstempel (Massen-Check-out) werden nicht übersprungen
+  const [beforeIso, beforeId] = (q?.get("before") ?? "").split("|");
+  const before = beforeIso ? new Date(beforeIso) : null;
+  const cursor = before && !Number.isNaN(before.getTime())
+    ? { OR: [{ createdAt: { lt: before } }, ...(beforeId ? [{ createdAt: before, id: { lt: beforeId } }] : [])] } : {};
+  const urgent = q?.get("urgent") === "1";
   const rows = await prisma.notification.findMany({
-    where: scopeFor(auth.session),
-    orderBy: { createdAt: "desc" },
-    take: 50,
+    where: { AND: [scopeFor(auth.session), cursor, urgent ? { level: { in: ["warning", "critical"] } } : {}] },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit + 1,
     include: { reads: { where: { userId: auth.session.userId }, select: { id: true } } },
   });
-  const notifications = rows.map(({ reads, ...n }) => ({ ...n, acknowledged: n.acknowledged || reads.length > 0 }));
+  const page = rows.slice(0, limit);
+  const notifications = page.map(({ reads, ...n }) => ({ ...n, acknowledged: n.acknowledged || reads.length > 0 }));
+  const last = page[page.length - 1];
+  const nextBefore = rows.length > limit ? `${last.createdAt.toISOString()}|${last.id}` : null;
   // `me`: damit der Client „an mich gerichtet“ (Pop-up, Ton, Zähler) ohne eigene Abfrage entscheiden kann.
-  return NextResponse.json({ notifications, me: { role: auth.session.role, userId: auth.session.userId } });
+  return NextResponse.json({ notifications, nextBefore, me: { role: auth.session.role, userId: auth.session.userId } });
 }
+const PAGE = 60;
 
 const StaffingRequestBody = z.object({
   message: z.string().trim().min(1).max(500),
@@ -57,7 +74,8 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ notification }, { status: 201 });
 }
 
-const Body = z.union([z.object({ id: z.string() }), z.object({ all: z.literal(true) })]);
+// F5 (M2): `{olderThanToday:true}` = „Alte schließen“ — alles vor dem heutigen Betriebstag (Berlin) als gelesen
+const Body = z.union([z.object({ id: z.string() }), z.object({ all: z.literal(true) }), z.object({ olderThanToday: z.literal(true) })]);
 
 export async function PATCH(req: NextRequest) {
   const auth = await requireAuth();
@@ -68,7 +86,7 @@ export async function PATCH(req: NextRequest) {
   const { userId } = auth.session;
   // Nur Meldungen, die ich sehen darf; schon gelesene (von mir oder Altbestand) auslassen.
   const unread = await prisma.notification.findMany({
-    where: { ...scopeFor(auth.session), ...("id" in parsed.data ? { id: parsed.data.id } : {}), acknowledged: false, reads: { none: { userId } } },
+    where: { ...scopeFor(auth.session), ...("id" in parsed.data ? { id: parsed.data.id } : {}), ...("olderThanToday" in parsed.data ? { createdAt: { lt: berlinToUtc(berlinDate(new Date()), "00:00") } } : {}), acknowledged: false, reads: { none: { userId } } },
     select: { id: true },
   });
   if (unread.length) {

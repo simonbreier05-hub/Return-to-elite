@@ -105,6 +105,13 @@ export function FrontOfficeHub(p: FrontOfficeHubProps) {
             pill: pill ? { label: cap(t(pill.labelKey)), tone: pill.tone } : undefined,
             meta: a.eta ? hhmm(a.eta) : undefined,
             done: a.status === "CHECKED_IN",
+            // F6 (M23): Rush direkt in der Zeile — einmal nachfragen, dann sofort an die Housekeeperin
+            action: a.status === "EXPECTED" ? (
+              <Button variant={a.neededNow ? "primary" : "secondary"} icon="zap" className="min-h-(--size-touch-min)! shrink-0 px-4!" aria-pressed={a.neededNow}
+                onClick={() => { if (a.neededNow || window.confirm(t("frontOffice.rushConfirm", { n: a.room.number ?? "?" }))) void p.onSave(a, { neededNow: !a.neededNow }); }}>
+                {t("frontOffice.neededNow")}
+              </Button>
+            ) : undefined,
           };
         })}
         selectedKey={p.selectedId}
@@ -172,6 +179,12 @@ function ArrivalDetail({ a, roomStatusLabel, ...p }: FrontOfficeHubProps & { a: 
             {a.room.status ? <StatusChip status={ROOM_STATUS_UI[a.room.status]} label={roomStatusLabel} /> : <span className="text-text-secondary">{roomStatusLabel}</span>}
           </span>
         </DetailLine>
+        {/* F3 (K4): Einchecken gesperrt, solange der Vorgast laut Front Office noch im Zimmer ist — Grund dabei */}
+        {expected && a.prevGuest?.present && (
+          <Banner tone="warning" icon="triangle-alert" title={t("prevGuest.checkinBlocked")}
+            detail={a.prevGuest.lateCheckout ? t("lists.lateCheckout", { time: a.prevGuest.lateCheckout }) : undefined} />
+        )}
+        {a.conflict && <Banner tone="warning" icon="clock" title={t("prevGuest.conflict")} />}
         {/* Betrieb L2 (Punkt 5): Schritte live — erreichte Schritte mit Haken, aktueller fett (Text + Symbol, nie nur Farbe) */}
         <ol aria-label={t("frontOffice.stageTitle")} className="flex flex-wrap items-center gap-2" data-testid="fo-stages">
           {FO_STAGES.map((s, i) => {

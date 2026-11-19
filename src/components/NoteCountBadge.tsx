@@ -24,14 +24,14 @@ export default function NoteCountBadge({
   if (!variant) return null;
   return variant === "open" ? (
     <span
-      className={`flex h-4 min-w-4 items-center justify-center rounded-full border border-gold-line bg-gold px-1 text-[9px] font-bold text-white ${className}`}
+      className={`flex h-4 min-w-4 items-center justify-center rounded-full border border-border-accent bg-champagne px-1 text-[9px] font-bold text-text-on-accent ${className}`}
       title={t("roomFlags.notesOpen", { count: openCount })}
     >
       {openCount}
     </span>
   ) : (
     <span
-      className={`flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 bg-gray-100 text-[9px] text-gray-600 ${className}`}
+      className={`flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle bg-surface-card-raised text-[9px] text-text-muted ${className}`}
       title={t("roomFlags.notesAllDone")}
     >
       ✓

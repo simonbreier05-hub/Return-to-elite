@@ -22,7 +22,11 @@ export interface SupDetailRoom {
   blockReason?: string | null;
   reworkNote?: string | null;
   oooUntil?: string | null;
+  oooReason?: string | null;
   assignedLabel: string | null;
+  /** F6 (M1): bei „In Arbeit“ Start (ISO) und Sollzeit in Minuten — Anzeige „seit 10:12 · 23 von ~45 Min“. */
+  startedAt?: string | null;
+  estMinutes?: number;
   arrivals: { guestName: string; eta?: string | null; vip: boolean; neededNow: boolean }[];
   defects: { id: string; category: string; note: string; workOrder?: { status: string } | null }[];
 }
@@ -39,13 +43,16 @@ export function SupervisorRoomDetail({
   onAct,
   onOpenDialog,
   thread,
+  extra,
 }: {
   room: SupDetailRoom;
   busy: boolean;
   isDutyManager: boolean;
   onAct: (status: RoomStatus) => void;
-  onOpenDialog: (kind: "rework" | "ooo" | "roomTask") => void;
+  onOpenDialog: (kind: "rework" | "ooo" | "roomTask" | "defect") => void;
   thread: ReactNode;
+  /** Simon-Feedback 19.11.2026: Zimmer-Aktionen und „Alle Anpassungen“ (einklappbar) vor den Notizen. */
+  extra?: ReactNode;
 }) {
   const { t } = useLocale();
   const ui = ROOM_STATUS_UI[room.status];
@@ -61,7 +68,7 @@ export function SupervisorRoomDetail({
           <StatusChip status={ui} label={t(`status.${room.status}` as TKey)} />
           {room.blockReason && <Pill tone="danger">{t(`blockReason.${room.blockReason}` as TKey)}</Pill>}
         </div>
-        {room.oooUntil && <p className="text-body-16 text-text-secondary">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}</p>}
+        {room.oooUntil && <p className="text-body-16 text-text-secondary">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}{room.oooReason ? ` · ${t("blocked.reason")}: ${room.oooReason}` : ""}</p>}
         {room.reworkNote && room.status === "PICKUP" && <Banner tone="warning" icon="refresh" title={t("attendant.reworkNote")} detail={room.reworkNote} />}
       </div>
 
@@ -83,18 +90,18 @@ export function SupervisorRoomDetail({
         )}
         {outOfOrder ? (
           <Button variant="secondary" icon="refresh" block onClick={() => onAct("DIRTY")} disabled={busy}>
-            {withoutLeadingSymbol(t("supervisor.returnToInventory"))}
+            {t("blocked.release")}
           </Button>
         ) : (
-          <div className="grid grid-cols-2 gap-3">
-            <Button variant="secondary" icon="wrench" className="px-4!" onClick={() => onOpenDialog("ooo")} disabled={busy}>
-              {withoutLeadingSymbol(t("supervisor.setOoo"))}
-            </Button>
-            <Button variant="secondary" icon="x" className="px-4!" onClick={() => onAct("OUT_OF_SERVICE")} disabled={busy}>
-              {withoutLeadingSymbol(t("supervisor.setOos"))}
-            </Button>
-          </div>
+          // F2 (entschieden): „Nicht im Service“ entfällt — nur noch „Außer Betrieb“ (mit Grund und Ende)
+          <Button variant="secondary" icon="wrench" block onClick={() => onOpenDialog("ooo")} disabled={busy}>
+            {withoutLeadingSymbol(t("supervisor.setOoo"))}
+          </Button>
         )}
+        {/* F6 (M3/B9): Mangel melden mit Foto auch für Supervisor/DM (Kamera direkt aus der App) */}
+        <Button variant="secondary" icon="wrench" block onClick={() => onOpenDialog("defect")}>
+          {withoutLeadingSymbol(t("attendant.defectAction")).replace(/…$/, "")}
+        </Button>
         <Button variant="secondary" icon="list" block onClick={() => onOpenDialog("roomTask")}>
           {withoutLeadingSymbol(t("supervisor.houseTaskBtn"))}
         </Button>
@@ -103,6 +110,11 @@ export function SupervisorRoomDetail({
       <div className="flex flex-col gap-2">
         <SectionLabel as="h3" icon="user" title={t("supervisor.assignedAttendant")} />
         <p className="text-body-18 text-text-primary">{room.assignedLabel ?? t("supervisor.unassignedOption")}</p>
+        {room.startedAt && (
+          <p className="text-body-16 text-text-secondary" data-testid="sup-running">
+            {t("hk.running", { start: hhmm(room.startedAt), min: Math.max(0, Math.round((Date.now() - new Date(room.startedAt).getTime()) / 60_000)), target: room.estMinutes ?? 0 })}
+          </p>
+        )}
         <Link href="/floor-plan" className={cx("text-body-16 inline-flex min-h-(--size-touch-min) items-center text-accent-text underline underline-offset-4", FOCUS_RING)}>
           {t("roster.changeInFloorPlan")}
         </Link>
@@ -138,6 +150,7 @@ export function SupervisorRoomDetail({
         </div>
       )}
 
+      {extra}
       {thread}
 
       {isDutyManager && <p className="text-label text-center text-text-muted">{t("supervisor.dutyManagerAudit")}</p>}
@@ -178,9 +191,10 @@ export function ReworkDialog({ number, onClose, onSubmit }: { number: string; on
 const OOO_PRESET_HOURS = [4, 12, 24, 48, 72, 168];
 
 /** Außer Betrieb bis … (Status OUT_OF_ORDER mit `oooUntil`) — gleiche Vorgaben wie bisher. */
-export function OooDialog({ number, onClose, onSubmit }: { number: string; onClose: () => void; onSubmit: (until: Date) => void }) {
+export function OooDialog({ number, onClose, onSubmit }: { number: string; onClose: () => void; onSubmit: (until: Date, reason: string) => void }) {
   const { t } = useLocale();
   const [hours, setHours] = useState<number>(48);
+  const [reason, setReason] = useState(""); // F2: Pflicht, kurzer Text, keine Gastdaten
   const until = new Date(Date.now() + hours * 3600_000);
   const presetLabel = (h: number) => (h < 24 ? `${h} h` : h % 24 === 0 ? `${h / 24} d` : `${h} h`);
   return (
@@ -193,6 +207,7 @@ export function OooDialog({ number, onClose, onSubmit }: { number: string; onClo
         ))}
       </div>
       <Field label={t("supervisor.customHours")} type="number" min={1} value={hours} onChange={(e) => setHours(Math.max(1, Number(e.target.value) || 1))} />
+      <Field label={t("blocked.reason")} value={reason} maxLength={200} onChange={(e) => setReason(e.target.value)} />
       <p className="text-body-16 text-text-secondary">
         {t("supervisor.backInInventory")} <strong className="text-text-primary">{dateTime(until)}</strong>
       </p>
@@ -200,7 +215,7 @@ export function OooDialog({ number, onClose, onSubmit }: { number: string; onClo
         <Button variant="secondary" icon="x" onClick={onClose}>
           {t("common.cancel")}
         </Button>
-        <Button icon="wrench" onClick={() => onSubmit(until)}>
+        <Button icon="wrench" disabled={!reason.trim()} onClick={() => onSubmit(until, reason.trim())}>
           {withoutLeadingSymbol(t("supervisor.setOutOfOrder"))}
         </Button>
       </div>

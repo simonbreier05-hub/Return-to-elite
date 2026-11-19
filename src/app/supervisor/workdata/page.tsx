@@ -6,7 +6,7 @@ import WorkDataView from "./view";
 export default async function WorkDataPage() {
   const session = await requirePage(["supervisor"]);
   return (
-    <AppShell title="nav.workdata" userName={session.name} role={session.role} backHref="/supervisor">
+    <AppShell title="nav.workdata" userName={session.name} role={session.role} backHref="/supervisor" legacy={false}>
       <WorkDataView />
     </AppShell>
   );

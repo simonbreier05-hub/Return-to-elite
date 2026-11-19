@@ -17,6 +17,10 @@ const BodySchema = z.object({
   blockReason: BlockReasonSchema.optional(),
   note: z.string().max(1000).optional(),
   oooUntil: z.coerce.date().optional(),
+  oooReason: z.string().max(200).optional(), // F2: Pflicht bei OUT_OF_ORDER (geprüft in applyStatusChange)
+  confirmOccupied: z.boolean().optional(),
+  confirmGuestPresent: z.boolean().optional(), // F3: Start/Freigabe trotz Vorgast
+  laundryChanged: z.boolean().optional(), // F6: Wäschewechsel bestätigt
 });
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -30,7 +34,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   const result = await applyStatusChange(auth.session, id, parsed.data);
-  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code }, { status: result.status });
+  if (!result.ok) return NextResponse.json({ error: result.error, code: result.code, ...result.data }, { status: result.status });
 
   return NextResponse.json({ room: result.room });
 }

@@ -19,7 +19,7 @@ describe("Zimmerzeile: alles auf einen Blick", () => {
   it("Nummer, Typ, Art, Wäsche, VIP, DND, Mangel, Gästewunsch, Traces (Anzahl + Text) — jeweils mit Wort", () => {
     for (const s of ["208", "Junior", "Bleiber", "Wäsche", "VIP", "Bitte nicht stören", "Mangel (2)", "Reinigungswunsch", "Traces (2)", "Allergiker Federn", "Zusatzkissen", "Herr Dr. Krüger"]) expect(out, s).toContain(s);
   });
-  it("Status steht als Wort in der Zeile", () => expect(out).toMatch(/Schmutzig|Dirty/i));
+  it("Status steht als Wort in der Zeile", () => expect(out).toMatch(/>(Unrein|Schmutzig|Dirty)</)); // Review 19.11.: sichtbarer Text, nicht ein Klassenname
   it("ist antippbar (Knopf ≥ 44 px) — ohne onOpen (Housekeeper) nicht", () => {
     expect(out).toContain("<button");
     expect(out).toContain("min-h-11");

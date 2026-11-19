@@ -68,12 +68,12 @@ export default function PriorityBanner({ items, children }: { items: PriorityIte
   }
 
   return (
-    <div className="mb-5 animate-rise rounded-2xl border border-charcoal/10 bg-linen p-4 shadow-card">
-      <p className="mb-2.5 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-gold-soft">
+    <div className="mb-5 theme-glass rounded-(--glass-radius-lg) border border-border-subtle bg-surface-card-raised p-4">
+      <p className="mb-2.5 text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-accent-text">
         {t("priority.importantNow")}
       </p>
       {active.length === 0 ? (
-        <div className="flex items-center gap-2 text-status-clean">
+        <div className="flex items-center gap-2 text-status-success-fg">
           <IconCheckCircle className="h-5 w-5 shrink-0" />
           <span className="text-sm font-medium">{t("priority.allClear")}</span>
         </div>
@@ -81,11 +81,11 @@ export default function PriorityBanner({ items, children }: { items: PriorityIte
         <div className="flex flex-wrap gap-2">
           {active.map((item, i) => {
             const Icon = ICONS[item.icon];
-            const className = `flex min-h-11 items-center gap-1.5 rounded-xl border px-3 py-2 text-sm font-semibold ${
+            const className = `flex min-h-11 items-center gap-1.5 rounded-(--glass-radius-md) border px-3 py-2 text-sm font-semibold ${
               item.tone === "urgent"
-                ? "border-status-out-of-order/35 bg-status-out-of-order/10 text-status-out-of-order"
-                : "border-gold/40 bg-gold/10 text-gold-soft"
-            } ${item.onClick ? "cursor-pointer transition hover:brightness-95 active:scale-[0.98]" : ""}`;
+                ? "border-status-out-of-order/35 bg-status-danger-bg text-status-danger-fg"
+                : "border-border-accent bg-accent-subtle-bg text-accent-text"
+            } ${item.onClick ? "cursor-pointer transition  active:scale-[0.98]" : ""}`;
             const content = (
               <>
                 <Icon className="h-4 w-4 shrink-0" />

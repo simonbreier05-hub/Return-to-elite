@@ -20,7 +20,8 @@ import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { sanitizeGuestText } from "@/lib/guestSanitize";
 import { keyed } from "@/lib/i18n/notificationText";
 import { GREEN_KIND, greenRoomsOn } from "@/lib/guest/green";
-import { berlinDate } from "@/lib/dayplan/time";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
+import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
 
 /**
  * The five guest write actions, shared by both access paths
@@ -34,7 +35,7 @@ import { berlinDate } from "@/lib/dayplan/time";
 
 type GuestActionRoom = { id: string; number: string };
 
-export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes", "green"] as const;
+export const GUEST_ACTIONS = ["dnd", "dnd-cancel", "clean-request", "defect", "contact", "notes", "green", "green-cancel"] as const;
 export type GuestAction = (typeof GUEST_ACTIONS)[number];
 
 export function isGuestAction(value: string): value is GuestAction {
@@ -57,7 +58,30 @@ export function runGuestAction(action: GuestAction, room: GuestActionRoom, req: 
       return handleNotes(room, req);
     case "green":
       return handleGreen(room);
+    case "green-cancel":
+      return handleGreenCancel(room);
   }
+}
+
+/** F7 (Aufgabe 7): Green Option am selben Tag zurücknehmen — der Wäschewechsel ist wieder fällig; Housekeeper und Supervisor erfahren es. */
+async function handleGreenCancel(room: GuestActionRoom): Promise<NextResponse> {
+  const today = berlinDate(new Date());
+  const from = berlinToUtc(today, "00:00");
+  const res = await prisma.guestRequest.updateMany({ where: { roomId: room.id, kind: GREEN_KIND, status: { not: "CANCELLED" }, createdAt: { gte: from } }, data: { status: "CANCELLED" } });
+  if (res.count === 0) return NextResponse.json({ ok: true, already: true }, { status: 200 });
+  const guestUserId = await getGuestSystemUserId();
+  const notification = await prisma.notification.create({
+    data: {
+      type: "GUEST_REQUEST", level: "info", targetRole: "supervisor", roomId: room.id,
+      message: `Zimmer ${room.number}: Gast nimmt die Green Option zurück — heute doch Wäschewechsel.`,
+      ...keyed("notify.guestGreenUndone", { n: room.number }),
+    },
+  });
+  await audit({ action: "GUEST_GREEN_OPTION_UNDONE", userId: guestUserId, roomId: room.id, meta: { date: today } });
+  broadcast("notification:new", { notification });
+  broadcast("guestrequest:update", { roomId: room.id });
+  await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "GUEST_WISH" });
+  return NextResponse.json({ ok: true }, { status: 200 });
 }
 
 /**
@@ -73,7 +97,7 @@ async function handleGreen(room: GuestActionRoom): Promise<NextResponse> {
     prisma.notification.create({
       data: {
         type: "GUEST_REQUEST", level: "info", targetRole: "supervisor", roomId: room.id,
-        message: `Room ${room.number}: guest chose the Green Option — no linen change today.`,
+        message: `Zimmer ${room.number}: Gast wählt die Green Option — heute kein Wäschewechsel.`,
         ...keyed("notify.guestGreen", { n: room.number }),
       },
     }),
@@ -103,23 +127,16 @@ async function handleDnd(room: GuestActionRoom, req: NextRequest): Promise<NextR
   if (!parsed.success) return NextResponse.json({ error: "Invalid time window.", code: "INVALID_INPUT" }, { status: 400 });
 
   const guestUserId = await getGuestSystemUserId();
-  const [notification, guestRequest] = await Promise.all([
-    prisma.notification.create({
-      data: {
-        type: "GUEST_REQUEST",
-        level: "info",
-        targetRole: "supervisor",
-        roomId: room.id,
-        message: `Room ${room.number}: guest requests Do Not Disturb — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
-        ...keyed("notify.guestDnd", { n: room.number, windowKey: `dndWindow.${parsed.data.window}` }),
-      },
-    }),
-    prisma.guestRequest.create({
-      data: { roomId: room.id, kind: "DND", detail: JSON.stringify({ window: parsed.data.window }) },
-    }),
-  ]);
+  const guestRequest = await prisma.guestRequest.create({
+    data: { roomId: room.id, kind: "DND", detail: JSON.stringify({ window: parsed.data.window }) },
+  });
+  // F2 (entschieden): DND eines belegten Zimmers sehen DM, Supervisor der Etage und die zugeteilte Housekeeperin (unten)
+  await notifyFloorLeads({
+    roomId: room.id, type: "GUEST_REQUEST", level: "info",
+    message: `Zimmer ${room.number}: Gast wünscht „Bitte nicht stören“ — ${DND_WINDOW_LABELS[parsed.data.window]}.`,
+    key: "notify.guestDnd", vars: { n: room.number, windowKey: `dndWindow.${parsed.data.window}` },
+  });
   await audit({ action: "GUEST_DND_REQUESTED", userId: guestUserId, roomId: room.id, meta: { window: parsed.data.window } });
-  broadcast("notification:new", { notification });
   broadcast("guestrequest:new", { guestRequest });
   await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "DND" });
   return NextResponse.json({ ok: true, requestId: guestRequest.id }, { status: 201 });
@@ -148,7 +165,7 @@ async function handleDndCancel(room: GuestActionRoom): Promise<NextResponse> {
         level: "info",
         targetRole: "supervisor",
         roomId: room.id,
-        message: `Room ${room.number}: guest lifted Do Not Disturb.`,
+        message: `Zimmer ${room.number}: Gast hat „Bitte nicht stören“ aufgehoben.`,
         ...keyed("notify.guestDndLifted", { n: room.number }),
       },
     }),
@@ -184,7 +201,7 @@ async function handleCleanRequest(room: GuestActionRoom, req: NextRequest): Prom
         level: "info",
         targetRole: "supervisor",
         roomId: room.id,
-        message: `Room ${room.number}: guest requests cleaning — ${timingLabel}.`,
+        message: `Zimmer ${room.number}: Gast wünscht Reinigung — ${timingLabel}.`,
         ...(timing === "LATER" && time ? keyed("notify.guestCleanAt", { n: room.number, time }) : keyed("notify.guestClean", { n: room.number, timingKey: `cleanTiming.${timing}` })),
       },
     }),
@@ -256,7 +273,7 @@ async function handleContact(room: GuestActionRoom, req: NextRequest): Promise<N
         level: "info",
         targetRole: dept.role,
         roomId: room.id,
-        message: `Room ${room.number}: guest wants to be contacted by ${dept.label}.`,
+        message: `Zimmer ${room.number}: Gast möchte Kontakt (${dept.label}).`,
         ...keyed("notify.guestContact", { n: room.number, deptKey: `department.${dept.key}` }),
       },
     }),

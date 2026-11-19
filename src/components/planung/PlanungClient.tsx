@@ -23,7 +23,8 @@ import PlanEditorWindow, { type EditorTab } from "./PlanEditorWindow";
 import PlanConfirmDialog from "./PlanConfirmDialog";
 import { GlassDialog } from "@/components/shell/GlassDialog";
 import { GlassMode } from "@/components/shell/GlassMode";
-import { Button } from "@/components/ui";
+import { Banner, Button } from "@/components/ui";
+import { useChat } from "@/components/chat/ChatContext";
 import PlanStep from "./PlanStep";
 import ProgressRing from "./ProgressRing";
 import StepSegments from "./StepSegments";
@@ -107,7 +108,8 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
   };
   const router = useRouter();
   const team = usePlanungTeam(house.date);
-  const plan = usePlanRun(house.date);
+  const chatMe = useChat().me;
+  const plan = usePlanRun(house.date, chatMe?.id ?? null);
   // Schritt „Plan“: Kräfte (auch bewusst nicht eingeplante), Supervisor- und Hausmann-Listen für den Entwurf
   const hkNames = Object.fromEntries((team.state?.members.hk ?? []).map((m) => [m.id, m.name]));
   const planHkRows = (team.state?.members.hk ?? []).map((m) => {
@@ -327,9 +329,12 @@ export default function PlanungClient({ initialHouse }: { initialHouse: HouseDat
             {floorTeam.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {floorTeam.error}</p>}
           </>
         ) : (
+          <>
+          {plan.restoredAt && !plan.confirmed && <Banner tone="info" icon="clock" title={t("planungTool.draftRestored", { time: new Date(plan.restoredAt).toLocaleTimeString(intl, { hour: "2-digit", minute: "2-digit" }) })} />}
           <PlanStep states={plan.states} counts={plan.result?.counts ?? null} warnings={plan.view?.warnings ?? []} error={plan.error} started={plan.started}
             summary={plan.view && plan.draft ? { assigned: plan.draft.input.rooms.length - plan.view.unassigned.length, total: plan.draft.input.rooms.length, open: plan.view.unassigned.length } : null}
             hkRows={planHkRows} onEdit={() => setTagesplanOpen(true)} onOpen={(tab, view) => setEditor({ tab, view: view ?? "plan" })} onToggleHk={toggleHk} confirmed={plan.confirmed} />
+          </>
         )}
         {step >= 2 && team.error && <p role="alert" className="mt-2 text-sm text-brass-ink">{t("planungTool.saveFailed")} {team.error}</p>}
       </div>

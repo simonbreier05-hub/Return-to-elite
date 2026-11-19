@@ -6,7 +6,7 @@ import { ROLES, type Role } from "@/lib/domain";
 import { ALL_CHANNEL_ROLES, CHANNEL_ROLES, CHAT_CHANNELS, canDirectMessage, canUseChannel, channelsForRole, directKey, type ChatChannelKey } from "./policy";
 import { resolveMentions } from "./text";
 import { keyed } from "@/lib/i18n/notificationText";
-import { readReceipt, type ReadReceipt } from "./readReceipt";
+import { readReceiptWithNames, type ReadReceipt } from "./readReceipt";
 
 /**
  * Chat-Hub — Datenbankseite. Jede Funktion bekommt die Session und prüft selbst über `policy.ts`; die API-Routen sind dünn.
@@ -110,10 +110,10 @@ export async function listMessages(channelId: string, before?: Date, viewerId?: 
   if (viewerId && page.some((m) => m.author.id === viewerId)) {
     const ch = await prisma.chatChannel.findUnique({ where: { id: channelId }, include: { members: { select: { userId: true } } } });
     if (ch) {
-      const readerIds = (await readersOf(ch)).map((r) => r.id);
+      const readers = await readersOf(ch);
       const reads = new Map((await prisma.chatReadState.findMany({ where: { channelId } })).map((r) => [r.userId, r.lastReadAt]));
       page.forEach((m, i) => {
-        if (m.author.id === viewerId && !m.retractedAt && !m.hiddenAt) messages[i].readBy = readReceipt(m.createdAt, viewerId, readerIds, reads);
+        if (m.author.id === viewerId && !m.retractedAt && !m.hiddenAt) messages[i].readBy = readReceiptWithNames(m.createdAt, viewerId, readers, reads);
       });
     }
   }

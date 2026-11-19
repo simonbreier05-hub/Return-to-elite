@@ -137,7 +137,7 @@ export function RoomDetailGlass({
 
         {pauseText && <Banner tone="warning" icon="pause" title={t("ui.status.paused")} detail={pauseText} />}
         {room.guestDndActive && <Banner tone="warning" icon="moon" title={withoutLeadingSymbol(t("supervisor.guestDndBanner"))} />}
-        {room.oooUntil && <p className="text-label text-text-muted">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}</p>}
+        {room.oooUntil && <p className="text-label text-text-muted">{t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}{room.oooReason ? ` · ${t("blocked.reason")}: ${room.oooReason}` : ""}</p>}
         {room.reworkNote && room.status === "PICKUP" && <Banner tone="warning" icon="refresh" title={t("attendant.reworkNote")} detail={room.reworkNote} />}
 
         {summary}

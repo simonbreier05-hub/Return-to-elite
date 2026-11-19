@@ -20,10 +20,12 @@ export interface GlassDialogProps {
   cancelLabel?: string;
   onCancel: () => void;
   busy?: boolean;
+  /** Bestätigen gesperrt (z. B. Pflichtfeld leer). */
+  confirmDisabled?: boolean;
 }
 
 /** Bestätigungsdialog im Glas-Stil (Figma `36:2364`): Titel, Text, Abbrechen (secondary) + Bestätigen (primary). Escape = Abbrechen. */
-export function GlassDialog({ open, title, message, children, confirmLabel, confirmIcon = "check", onConfirm, cancelLabel, onCancel, busy }: GlassDialogProps) {
+export function GlassDialog({ open, title, message, children, confirmLabel, confirmIcon = "check", onConfirm, cancelLabel, onCancel, busy, confirmDisabled }: GlassDialogProps) {
   const { t } = useLocale();
   const id = useId();
   if (!open) return null;
@@ -39,7 +41,7 @@ export function GlassDialog({ open, title, message, children, confirmLabel, conf
           <Button variant="secondary" icon="x" onClick={onCancel} data-autofocus disabled={busy}>
             {cancelLabel ?? t("common.cancel")}
           </Button>
-          <Button icon={confirmIcon} onClick={onConfirm} disabled={busy}>
+          <Button icon={confirmIcon} onClick={onConfirm} disabled={busy || confirmDisabled}>
             {confirmLabel}
           </Button>
         </div>

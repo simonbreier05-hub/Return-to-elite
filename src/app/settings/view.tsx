@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { ALL_LANGUAGE_CODES, autonym, languageNameIn } from "@/lib/i18n/languages";
-import Link from "next/link";
 import { api } from "@/components/api";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
@@ -11,6 +10,8 @@ import HousekeeperSettingsPanel from "@/components/HousekeeperSettingsPanel";
 import { RecurringTasksPanel } from "@/components/roles/RecurringTasksPanel";
 import LearnedRulesPanel from "@/components/LearnedRulesPanel";
 import type { TKey } from "@/lib/i18n/translations";
+import { Banner, Button, GlassCard, SectionLabel } from "@/components/ui";
+import { cx, FOCUS_RING } from "@/components/ui/primitives";
 
 interface Thresholds {
   blockedRecheckMinutes: number;
@@ -119,120 +120,84 @@ export default function SettingsView() {
   const changed = data ? Object.keys(weights).filter((k) => weights[k] !== data.weightDefaults[k]) : [];
 
   if (!data || !thresholds) {
-    return <p className="text-sm text-graphite/60">{error ?? t("common.loading")}</p>;
+    return <p className="text-body-16 text-text-muted">{error ?? t("common.loading")}</p>;
   }
 
+  // Simon-Feedback 19.11.2026: Einstellungen im Design der App („Glas & Premium“) — Werte, Speichern und Logbuch unverändert.
+  const numberInput = (value: number, onChange: (n: number) => void, opts: { min: number; max?: number; label: string }) => (
+    <input type="number" min={opts.min} max={opts.max} value={value} aria-label={opts.label}
+      onChange={(e) => onChange(Number(e.target.value))}
+      className={cx("text-title-22 h-12 w-28 rounded-(--glass-radius-md) border border-border-subtle bg-surface-progress-track px-3 text-center text-text-primary", FOCUS_RING)} />
+  );
+  const field = (key: string, title: string, hint: string, input: React.ReactNode, unit?: string, highlight = false) => (
+    <label key={key} className={cx("flex flex-col gap-2 rounded-(--glass-radius-md) border p-4", highlight ? "border-border-accent bg-accent-subtle-bg" : "border-border-subtle bg-surface-card-raised")}>
+      <span className="text-body-16 text-text-primary">{title}</span>
+      {hint && <span className="text-label text-text-muted">{hint}</span>}
+      <span className="flex items-center gap-2">{input}{unit && <span className="text-label text-text-muted">{unit}</span>}</span>
+    </label>
+  );
+
   return (
-    <div className="animate-rise pb-28">
-      <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-4xl leading-none">{t("settings.title")}</h2>
-          <div className="rule-gold my-2 w-40" />
-          <p className="text-sm text-graphite/70">{t("settings.dutyManagerOnly")}</p>
-        </div>
-      </div>
+    <div className="theme-glass flex flex-col gap-4 pb-28 sm:gap-6" data-testid="settings">
+      <GlassCard as="section" aria-label={t("settings.title")} className="flex flex-col gap-2">
+        <SectionLabel as="h2" icon="wrench" title={t("settings.title")} />
+        <p className="text-body-16 text-text-muted">{t("settings.dutyManagerOnly")}</p>
+      </GlassCard>
 
-      {error && (
-        <div className="mb-4 rounded-xl border border-status-out-of-order/30 bg-status-out-of-order/10 p-4 text-sm text-status-out-of-order">
-          {error}
-        </div>
-      )}
+      {error && <Banner tone="warning" title={error} />}
 
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-        <h3 className="mb-1 font-serif text-2xl">{t("settings.escalationThresholds")}</h3>
-        <p className="mb-4 text-sm text-graphite/60">{t("settings.escalationHint")}</p>
+      <GlassCard as="section" aria-label={t("settings.escalationThresholds")} className="flex flex-col gap-3">
+        <h3 className="text-title-22 text-text-primary">{t("settings.escalationThresholds")}</h3>
+        <p className="text-body-16 text-text-muted">{t("settings.escalationHint")}</p>
         <div className="grid gap-3 sm:grid-cols-2">
-          {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => (
-            <label key={key} className="rounded-xl border border-charcoal/15 bg-white p-4">
-              <div className="text-sm font-medium">{t(THRESHOLD_LABELS[key].titleKey)}</div>
-              <div className="mb-2 text-xs text-graphite/60">{t(THRESHOLD_LABELS[key].hintKey)}</div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  value={thresholds[key]}
-                  onChange={(e) => setThresholds({ ...thresholds, [key]: Math.max(1, Number(e.target.value) || 1) })}
-                  className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
-                />
-                <span className="text-sm text-graphite/60">{t(THRESHOLD_LABELS[key].unitKey)}</span>
-              </div>
-            </label>
-          ))}
+          {(Object.keys(THRESHOLD_LABELS) as ThresholdKey[]).map((key) => field(key, t(THRESHOLD_LABELS[key].titleKey), t(THRESHOLD_LABELS[key].hintKey),
+            numberInput(thresholds[key], (n) => setThresholds({ ...thresholds, [key]: Math.max(1, n || 1) }), { min: 1, label: t(THRESHOLD_LABELS[key].titleKey) }),
+            t(THRESHOLD_LABELS[key].unitKey)))}
         </div>
-      </section>
+      </GlassCard>
 
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-        <h3 className="mb-1 font-serif text-2xl">{t("settings.staffingGuideline")}</h3>
-        <p className="mb-4 text-sm text-graphite/60">{t("settings.staffingGuidelineHint")}</p>
-        <div className="grid gap-3 sm:grid-cols-3">
-          {(Object.keys(STAFFING_LABELS) as StaffingKey[]).map((key) => (
-            <label key={key} className="rounded-xl border border-charcoal/15 bg-white p-4">
-              <div className="text-sm font-medium">{t(STAFFING_LABELS[key].titleKey)}</div>
-              <div className="mb-2 text-xs text-graphite/60">{t(STAFFING_LABELS[key].hintKey)}</div>
-              <div className="flex items-center gap-2">
-                <input
-                  type="number"
-                  min={1}
-                  value={thresholds[key]}
-                  onChange={(e) => setThresholds({ ...thresholds, [key]: Math.max(1, Number(e.target.value) || 1) })}
-                  className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
-                />
-                <span className="text-sm text-graphite/60">{t(STAFFING_LABELS[key].unitKey)}</span>
-              </div>
-            </label>
-          ))}
+      <GlassCard as="section" aria-label={t("settings.staffingGuideline")} className="flex flex-col gap-3">
+        <h3 className="text-title-22 text-text-primary">{t("settings.staffingGuideline")}</h3>
+        <p className="text-body-16 text-text-muted">{t("settings.staffingGuidelineHint")}</p>
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {(Object.keys(STAFFING_LABELS) as StaffingKey[]).map((key) => field(key, t(STAFFING_LABELS[key].titleKey), t(STAFFING_LABELS[key].hintKey),
+            numberInput(thresholds[key], (n) => setThresholds({ ...thresholds, [key]: Math.max(1, n || 1) }), { min: 1, label: t(STAFFING_LABELS[key].titleKey) }),
+            t(STAFFING_LABELS[key].unitKey)))}
         </div>
-      </section>
+      </GlassCard>
 
       <HousekeeperSettingsPanel />
-      {/* Betrieb L2 (Punkt 9): wiederkehrende Hausmann-Aufgaben — Glas-Baustein auf eigener Glas-Fläche */}
-      <div className="theme-glass bg-atmosphere mb-4 rounded-2xl p-3"><RecurringTasksPanel /></div>
+      {/* Betrieb L2 (Punkt 9): wiederkehrende Hausmann-Aufgaben */}
+      <RecurringTasksPanel />
       <LearnedRulesPanel />
 
       <PurgePanel />
 
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-        <h3 className="mb-1 font-serif text-2xl">{t("shared.hotelLanguageTitle")}</h3>
-        <p className="mb-4 text-sm text-graphite/60">{t("shared.hotelLanguageHint")}</p>
-        <select
-          aria-label={t("shared.hotelLanguageTitle")}
-          value={hotelLanguage}
-          onChange={(e) => setHotelLanguage(e.target.value)}
-          className="h-12 w-full max-w-sm rounded-lg border border-charcoal/20 bg-white px-3 text-base outline-none focus:border-gold"
-        >
-          {languageOptions.map((l) => (
-            <option key={l.code} value={l.code}>{l.label}</option>
-          ))}
+      <GlassCard as="section" aria-label={t("shared.hotelLanguageTitle")} className="flex flex-col gap-3">
+        <h3 className="text-title-22 text-text-primary">{t("shared.hotelLanguageTitle")}</h3>
+        <p className="text-body-16 text-text-muted">{t("shared.hotelLanguageHint")}</p>
+        <select aria-label={t("shared.hotelLanguageTitle")} value={hotelLanguage} onChange={(e) => setHotelLanguage(e.target.value)}
+          className={cx("text-body-16 min-h-(--size-touch-min) w-full max-w-sm rounded-(--glass-radius-md) border border-border-subtle bg-surface-progress-track px-4 py-3 text-text-primary", FOCUS_RING)}>
+          {languageOptions.map((l) => <option key={l.code} value={l.code}>{l.label}</option>)}
         </select>
-      </section>
+      </GlassCard>
 
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-        <h3 className="mb-1 font-serif text-2xl">{t("settings.chatTitle")}</h3>
-        <p className="mb-4 text-sm text-graphite/60">{t("settings.chatHint")}</p>
-        <label className="block max-w-sm rounded-xl border border-charcoal/15 bg-white p-4">
-          <div className="text-sm font-medium">{t("settings.chatRetentionDays")}</div>
-          <div className="mt-2 flex items-center gap-2">
-            <input
-              type="number"
-              min={1}
-              max={365}
-              value={thresholds.chatRetentionDays}
-              onChange={(e) => setThresholds({ ...thresholds, chatRetentionDays: Math.min(365, Math.max(1, Number(e.target.value) || 1)) })}
-              className="h-12 w-28 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
-            />
-            <span className="text-sm text-graphite/60">{t("settings.days")}</span>
-          </div>
-        </label>
-      </section>
-
-      <section className="mb-4 rounded-2xl border border-charcoal/10 bg-linen p-5 shadow-card">
-        <div className="mb-1 flex flex-wrap items-baseline justify-between gap-2">
-          <h3 className="font-serif text-2xl">{t("settings.priorityWeights")}</h3>
-          <button onClick={resetWeights} className="h-10 rounded-lg px-3 text-sm text-gold hover:bg-parchment">
-            {t("settings.resetDefaults")}
-          </button>
+      <GlassCard as="section" aria-label={t("settings.chatTitle")} className="flex flex-col gap-3">
+        <h3 className="text-title-22 text-text-primary">{t("settings.chatTitle")}</h3>
+        <p className="text-body-16 text-text-muted">{t("settings.chatHint")}</p>
+        <div className="max-w-sm">
+          {field("chat", t("settings.chatRetentionDays"), "",
+            numberInput(thresholds.chatRetentionDays, (n) => setThresholds({ ...thresholds, chatRetentionDays: Math.min(365, Math.max(1, n || 1)) }), { min: 1, max: 365, label: t("settings.chatRetentionDays") }),
+            t("settings.days"))}
         </div>
-        <p className="mb-4 text-sm text-graphite/60">
+      </GlassCard>
+
+      <GlassCard as="section" aria-label={t("settings.priorityWeights")} className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-title-22 text-text-primary">{t("settings.priorityWeights")}</h3>
+          <Button variant="secondary" icon="refresh" onClick={resetWeights}>{t("settings.resetDefaults")}</Button>
+        </div>
+        <p className="text-body-16 text-text-muted">
           {t("settings.weightsExplain", {
             note: changed.length > 0 ? t("settings.weightsChanged", { count: changed.length }) : t("settings.weightsAllDefault"),
           })}
@@ -241,42 +206,18 @@ export default function SettingsView() {
           {Object.keys(data.weightDefaults).map((key) => {
             const label = WEIGHT_LABELS[key];
             const isChanged = weights[key] !== data.weightDefaults[key];
-            return (
-              <label
-                key={key}
-                className={`rounded-xl border p-4 ${isChanged ? "border-gold-line bg-parchment" : "border-charcoal/15 bg-white"}`}
-              >
-                <div className="text-sm font-medium">{label ? t(label.titleKey) : key}</div>
-                <div className="mb-2 text-xs text-graphite/60">{label ? t(label.hintKey) : ""}</div>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    min={0}
-                    value={weights[key] ?? data.weightDefaults[key]}
-                    onChange={(e) => setWeights({ ...weights, [key]: Math.max(0, Number(e.target.value) || 0) })}
-                    className="h-12 w-24 rounded-lg border border-charcoal/20 px-3 text-center font-serif text-2xl outline-none focus:border-gold"
-                  />
-                  {isChanged && (
-                    <span className="text-xs text-graphite/60">{t("settings.default", { value: data.weightDefaults[key] })}</span>
-                  )}
-                </div>
-              </label>
-            );
+            return field(key, label ? t(label.titleKey) : key, label ? t(label.hintKey) : "",
+              <>
+                {numberInput(weights[key] ?? data.weightDefaults[key], (n) => setWeights({ ...weights, [key]: Math.max(0, n || 0) }), { min: 0, label: label ? t(label.titleKey) : key })}
+                {isChanged && <span className="text-label text-text-muted">{t("settings.default", { value: data.weightDefaults[key] })}</span>}
+              </>, undefined, isChanged);
           })}
         </div>
-      </section>
+      </GlassCard>
 
-      <div className="sticky bottom-3 rounded-2xl border border-charcoal/10 bg-linen/95 p-4 shadow-lift backdrop-blur">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm text-graphite/70">{saved ? t("settings.savedNote") : t("settings.auditNote")}</p>
-          <button
-            onClick={save}
-            disabled={busy}
-            className="h-14 rounded-xl bg-gold px-8 text-base font-semibold text-charcoal transition hover:brightness-95 disabled:opacity-40"
-          >
-            {busy ? t("common.saving") : t("settings.saveSettings")}
-          </button>
-        </div>
+      <div className="glass sticky bottom-3 z-10 flex flex-wrap items-center justify-between gap-3 rounded-(--glass-radius-lg) p-4">
+        <p className="text-body-16 text-text-secondary">{saved ? t("settings.savedNote") : t("settings.auditNote")}</p>
+        <Button icon="check" disabled={busy} onClick={() => void save()}>{busy ? t("common.saving") : t("settings.saveSettings")}</Button>
       </div>
     </div>
   );

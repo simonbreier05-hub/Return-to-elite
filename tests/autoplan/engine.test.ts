@@ -38,19 +38,17 @@ describe("Zuteilungsvorschlag: harte Regeln", () => {
     for (const x of started.filter((y) => y.state === "STARTED")) expect(res.assignment[x.id]).toBe("c");
   });
 
-  it("nur Stufe 1 anwesend: trotzdem bleibt kein Zimmer offen — nur eine Warnung je anspruchsvollem Zimmer", () => {
+  it("Simon 20.11.: nur Stufe 1 anwesend — anspruchsvolle Zimmer werden nach Zimmervorgabe verteilt (nicht offen), Warnung ganz oben", () => {
     const res = proposePlan(makeInput(rooms, [hk("x", "VOLLZEIT", 1), hk("y", "VOLLZEIT", 1)]));
     expect(res.unassigned).toEqual([]);
-    const demanding = rooms.filter((x) => x.demanding.length).map((x) => x.id).sort();
-    const warned = res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING").flatMap((w) => w.roomIds ?? []).sort();
-    expect(warned).toEqual(demanding);
+    const w = res.warnings.find((x) => x.code === "LEVEL_RULE_RELAXED")!;
+    expect(w.message).toContain("Keine Kraft ab Stufe 2");
+    expect(res.warnings.findIndex((x) => x.code === "LEVEL_RULE_RELAXED")).toBeLessThanOrEqual(1);
   });
 
-  it("jede Kraft darf jedes Zimmer bekommen: bei beliebigem Team bleibt nach dem Vorschlag nichts offen", () => {
+  it("Simon 20.11.: die Zimmeranzahl überwiegt die Regeln — kein Zimmer bleibt offen, egal welches Team", () => {
     for (const team of [[hk("a", "VOLLZEIT", 1)], [hk("a", "AZUBI", 1), hk("b", "TEILZEIT", 1)], TEAM(), [hk("a", "VOLLZEIT", 3)]]) {
-      const res = proposePlan(makeInput(rooms, team));
-      expect(res.unassigned, `Team ${team.length}`).toEqual([]);
-      expect(Object.values(res.assignment).every((v) => v !== null)).toBe(true);
+      expect(proposePlan(makeInput(rooms, team)).unassigned, `Team ${team.length}`).toEqual([]);
     }
   });
 });

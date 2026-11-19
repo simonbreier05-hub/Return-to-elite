@@ -1,4 +1,6 @@
+import { closeStaleCleanRequests, purgeArchivedStayHistory } from "@/lib/guest/stayArchive";
 import { unlink } from "fs/promises";
+import { deleteResolvedDefectPhotos } from "@/lib/rooms/defectPhotoCleanup";
 import path from "path";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -55,12 +57,18 @@ export async function runGuestDataRetention(now = new Date()) {
     });
   }
 
+  // F6 (M3, B9): Sicherheitsnetz — Fotos erledigter Mängel in Zimmern, die wieder in Betrieb sind
+  const resolvedPhotosRemoved = await deleteResolvedDefectPhotos().catch(() => 0);
+  // F7 (H13): archivierter Verlauf der Aufenthalte nach 30 Tagen löschen
+  const archived = await purgeArchivedStayHistory(now).catch(() => ({ requests: 0, notes: 0 }));
+  await closeStaleCleanRequests(now).catch(() => 0);
+
   const { count: roomNotesDeleted } = await prisma.roomNote.deleteMany({
     where: { authorId: guestSystemUserId, status: "DONE", createdAt: { lt: cutoff } },
   });
 
-  const result = { guestRequestsDeleted, defectPhotosRemoved: expiredPhotos.length, roomNotesDeleted };
-  if (guestRequestsDeleted > 0 || expiredPhotos.length > 0 || roomNotesDeleted > 0) {
+  const result = { guestRequestsDeleted: guestRequestsDeleted + archived.requests, defectPhotosRemoved: expiredPhotos.length + resolvedPhotosRemoved, roomNotesDeleted: roomNotesDeleted + archived.notes };
+  if (guestRequestsDeleted > 0 || expiredPhotos.length > 0 || resolvedPhotosRemoved > 0 || roomNotesDeleted > 0) {
     await audit({ action: "GUEST_DATA_RETENTION_RUN", meta: { ...result, cutoff: cutoff.toISOString() } });
   }
   return result;

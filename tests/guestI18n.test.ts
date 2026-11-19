@@ -28,3 +28,28 @@ describe("isGuestLocale", () => {
     expect(isGuestLocale("")).toBe(false);
   });
 });
+
+describe("F7 (M14): Sprachen wie die App", () => {
+  const keysOf = (o: unknown, p = ""): string[] =>
+    o && typeof o === "object" ? Object.entries(o as Record<string, unknown>).flatMap(([k, v]) => keysOf(v, p ? `${p}.${k}` : k)) : [p];
+  it("jede Sprache hat alle Schlüssel, keiner leer", async () => {
+    const mod = await import("@/lib/guestI18n/translations");
+    const enKeys = keysOf((await import("@/lib/guestI18n/extraLocales")).it); // Form = en (per Typ erzwungen)
+    for (const l of mod.GUEST_LOCALES) for (const k of enKeys) {
+      const v = mod.translateGuest(l, k as never);
+      expect(v, `${l}:${k}`).not.toBe(k);
+      expect(v.trim().length, `${l}:${k}`).toBeGreaterThan(0);
+    }
+  });
+  it("Auswahl: Gerätesprache (Region abgeschnitten), dann Opera-Gastsprache, sonst Englisch", async () => {
+    const { pickGuestLocale } = await import("@/lib/guestI18n/translations");
+    expect(pickGuestLocale(["it-IT", "en-US"], "de")).toBe("it");
+    expect(pickGuestLocale(["fr-FR"], "tr")).toBe("tr");
+    expect(pickGuestLocale(["fr-FR", "es"], null)).toBe("en");
+    expect(pickGuestLocale(["en-US"], "de")).toBe("en");
+  });
+  it("Persisch wird rechts nach links gesetzt", async () => {
+    const { GUEST_RTL } = await import("@/lib/guestI18n/translations");
+    expect(GUEST_RTL).toContain("fa");
+  });
+});

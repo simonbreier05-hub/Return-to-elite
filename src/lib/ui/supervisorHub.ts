@@ -205,3 +205,21 @@ export function averageCredits(perAttendant: number[]): number | null {
   if (!withRooms.length) return null;
   return roundCredits(withRooms.reduce((a, b) => a + b, 0) / withRooms.length);
 }
+
+/**
+ * F6 (M11): Freigabe-Warteschlange nach Dringlichkeit — Sofort/Rush zuerst, dann früheste Anreisezeit (bei gleicher Zeit VIP
+ * zuerst), dann Zimmer mit VIP-Anreise ohne Zeit, dann übrige Anreisen, zuletzt längste Wartezeit. Rein, client-sicher.
+ * `etaState`: Anreise gefährdet in zwei Stufen — „bald“ (innerhalb `soonMin` Minuten, Warnung) und „überfällig“ (dringend).
+ */
+export interface QueueItem { id: string; waitingMin: number; arrival: { eta?: string | null; vip: boolean; neededNow: boolean } | null }
+export function sortReleaseQueue<T extends QueueItem>(items: T[]): T[] {
+  const rank = (x: T) => (x.arrival?.neededNow ? 0 : x.arrival?.eta ? 1 : x.arrival?.vip ? 2 : x.arrival ? 3 : 4);
+  const eta = (x: T) => (x.arrival?.eta ? new Date(x.arrival.eta).getTime() : Number.POSITIVE_INFINITY);
+  return [...items].sort((a, b) => rank(a) - rank(b) || eta(a) - eta(b) || Number(!!b.arrival?.vip) - Number(!!a.arrival?.vip) || b.waitingMin - a.waitingMin);
+}
+export function etaState(eta: string | null | undefined, now = Date.now(), soonMin = 45): "overdue" | "soon" | null {
+  if (!eta) return null;
+  const t = new Date(eta).getTime();
+  if (t < now) return "overdue";
+  return t - now <= soonMin * 60_000 ? "soon" : null;
+}

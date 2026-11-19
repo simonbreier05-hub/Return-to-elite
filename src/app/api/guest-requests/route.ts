@@ -14,7 +14,8 @@ export async function GET(req: NextRequest) {
 
   const includeAll = req.nextUrl.searchParams.get("all") === "1";
   const guestRequests = await prisma.guestRequest.findMany({
-    where: includeAll ? {} : { status: { in: ["RECEIVED", "IN_PROGRESS"] } },
+    // F7: archivierter Verlauf früherer Aufenthalte nicht in der Liste (Archiv: GET /api/rooms/[id]/notes?archived=1)
+    where: includeAll ? { archivedAt: null } : { status: { in: ["RECEIVED", "IN_PROGRESS"] }, archivedAt: null },
     orderBy: { createdAt: "desc" },
     take: 100,
     include: {

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { api } from "./api";
+import { api, NetworkError } from "./api";
+import { useOfflineQueue } from "./useOfflineQueue";
 import { NOTE_STATUS_STYLES } from "./status";
 import type { NoteStatus, PauseTarget } from "@/lib/domain";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -36,6 +37,8 @@ export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated
   const [noteBody, setNoteBody] = useState("");
   const [savingNote, setSavingNote] = useState(false);
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  const offline = useOfflineQueue();
+  const { t } = useLocale();
   const [canMessage, setCanMessage] = useState(false);
   const [asMessage, setAsMessage] = useState(true);
   const [outOfScope, setOutOfScope] = useState(false);
@@ -55,13 +58,18 @@ export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated
   const addNote = async () => {
     if (!noteBody.trim() || savingNote) return;
     setSavingNote(true);
+    const body = messageMode ? { body: noteBody, kind: "MESSAGE", task } : { body: noteBody };
     try {
-      const body = messageMode ? { body: noteBody, kind: "MESSAGE", task } : { body: noteBody };
       const res = await api<{ note: ThreadNote }>(`/api/rooms/${roomId}/notes`, { body });
       const note = { ...res.note, roomId };
       setNotes((prev) => [note, ...prev]);
       setNoteBody("");
       onNoteAdded?.(note);
+    } catch (e) {
+      // F6 (H12): Funkloch — Notiz in dieselbe Warteliste wie Statuswechsel; sie wird nachgesendet, nie still verworfen
+      if (!(e instanceof NetworkError)) throw e;
+      offline.enqueue({ url: `/api/rooms/${roomId}/notes`, body, label: t("offline.noteLabel", { text: noteBody.slice(0, 40) }) });
+      setNoteBody("");
     } finally {
       setSavingNote(false);
     }
@@ -84,7 +92,7 @@ export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated
     }
   };
 
-  return { notes, noteBody, setNoteBody, savingNote, togglingId, canMessage, asMessage, setAsMessage, outOfScope, messageMode, addNote, toggleStatus };
+  return { notes, noteBody, setNoteBody, savingNote, togglingId, canMessage, asMessage, setAsMessage, outOfScope, messageMode, addNote, toggleStatus, offline };
 }
 
 /** Rollenname für die Kopfzeile einer Notiz (Gast, bekannte Rolle oder Rohwert). */
@@ -132,18 +140,18 @@ export default function NoteThread({
   return (
     <div>
       {outOfScope && notes.some((n) => n.kind === "MESSAGE") && (
-        <p role="note" className="mb-2 rounded-lg border border-gold-line/60 bg-parchment p-2 text-xs">⚠ {t("work.outOfScopeHint")}</p>
+        <p role="note" className="mb-2 rounded-(--glass-radius-sm) border border-border-subtle bg-accent-subtle-bg p-2 text-xs">⚠ {t("work.outOfScopeHint")}</p>
       )}
-      {notes.length === 0 && <p className={`${textSize} text-graphite/50`}>{t("work.noNotes")}</p>}
+      {notes.length === 0 && <p className={`${textSize} text-text-muted`}>{t("work.noNotes")}</p>}
       {notes.map((n) => {
         const isMessage = n.kind === "MESSAGE";
         return (
-          <div key={n.id} className={`mb-1 rounded-lg ${isMessage ? "border-s-4 border-gold bg-parchment" : "bg-ivory"} ${pad} ${textSize}`}>
+          <div key={n.id} className={`mb-1 rounded-(--glass-radius-sm) ${isMessage ? "border-s-4 border-gold bg-accent-subtle-bg" : "bg-surface-card-raised"} ${pad} ${textSize}`}>
             <div className="flex items-start justify-between gap-2">
-              <span className="text-xs text-graphite/60">
-                {isMessage && <span className="me-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
-                {isMessage && outOfScope && <span className="me-1 rounded-full border border-gold-line/60 bg-white px-1.5 py-0.5 font-semibold text-gold-soft">{t("work.outOfScope")}</span>}
-                <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({roleLabel(n.author?.role ?? "")}) ·{" "}
+              <span className="text-xs text-text-muted">
+                {isMessage && <span className="me-1 rounded-full bg-accent-subtle-bg px-1.5 py-0.5 font-semibold text-text-primary">💬 {t("work.message")}</span>}
+                {isMessage && outOfScope && <span className="me-1 rounded-full border border-border-subtle bg-surface-progress-track px-1.5 py-0.5 font-semibold text-accent-text">{t("work.outOfScope")}</span>}
+                <span className="font-medium text-text-secondary">{n.author?.name ?? "—"}</span> ({roleLabel(n.author?.role ?? "")}) ·{" "}
                 {hhmm(n.createdAt)}
               </span>
               <button
@@ -163,7 +171,7 @@ export default function NoteThread({
         <div role="radiogroup" aria-label={t("work.message")} className="mt-2 flex flex-wrap gap-2 text-xs">
           {([true, false] as const).map((m) => (
             <button key={String(m)} type="button" role="radio" aria-checked={asMessage === m} onClick={() => setAsMessage(m)}
-              className={`min-h-11 rounded-full border px-3 font-medium ${asMessage === m ? "border-gold-line bg-parchment" : "border-charcoal/15 bg-white"}`}>
+              className={`min-h-11 rounded-full border px-3 font-medium ${asMessage === m ? "border-border-accent bg-accent-subtle-bg" : "border-border-subtle bg-surface-card-raised"}`}>
               {m ? `💬 ${t("work.asMessage")}` : t("work.asNote")}
             </button>
           ))}
@@ -176,12 +184,12 @@ export default function NoteThread({
           onKeyDown={(e) => e.key === "Enter" && addNote()}
           placeholder={messageMode ? t("work.messagePlaceholder") : t("work.notePlaceholder")}
           maxLength={2000}
-          className={`${compact ? "h-11" : "h-12"} min-w-0 flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold`}
+          className={`${compact ? "h-11" : "h-12"} min-w-0 flex-1 rounded-(--glass-radius-sm) border border-border-subtle px-3`}
         />
         <button
           onClick={addNote}
           disabled={savingNote || !noteBody.trim()}
-          className={`${compact ? "h-11" : "h-12"} rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40`}
+          className={`${compact ? "h-11" : "h-12"} rounded-(--glass-radius-sm) bg-champagne px-4 text-text-on-accent disabled:opacity-40`}
         >
           {savingNote ? "…" : t("work.send")}
         </button>

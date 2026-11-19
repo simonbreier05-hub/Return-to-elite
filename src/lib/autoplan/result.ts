@@ -114,41 +114,64 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
       }
     });
   }
-  // Planung L1 (Regel 5): Einschränkung der Kraft verletzt — nur Warnung, Zuteilen bleibt möglich
+  // F4 (M7): Warnungen je Art bündeln — eine Zeile mit Namen und Zimmernummern statt einer Zeile je Zimmer
+  // Eine Zeile je Kraft und Art (mit hkId — der Tagesplan ordnet Hinweise der Kraft zu, src/lib/ui/tagesplan.ts planHints)
+  const bundle = (code: string, pairs: { k: number; r: PlanRoom }[], head: string) => {
+    const byPerson = new Map<number, PlanRoom[]>();
+    for (const p of pairs) byPerson.set(p.k, [...(byPerson.get(p.k) ?? []), p.r]);
+    for (const [k, rs] of byPerson) {
+      warnings.push({ code, severity: "WARNING", hkId: input.housekeepers[k].id, roomIds: rs.map((r) => r.id),
+        message: `${head}: ${input.housekeepers[k].name} ${rs.map((r) => r.number).join(", ")} — bitte prüfen.` });
+    }
+  };
+  // Planung L1 (Regel 5): Einschränkung der Kraft verletzt (nur bei Handzuteilung möglich; „keine Suiten“ filtert der Vorschlag)
   const RESTRICTION_LABEL = { NO_SUITE: "keine Suiten", NO_VIP: "keine VIP-Zimmer", NO_ALLERGY: "keine Allergiker-Zimmer" } as const;
-  c.rooms.forEach((r, i) => {
-    const k = idx[i];
-    const hit = k >= 0 ? restrictionHit(input.housekeepers[k], r, input.suiteMinCredit) : null;
-    if (hit) {
-      warnings.push({ code: "RESTRICTION", severity: "WARNING", roomIds: [r.id], hkId: input.housekeepers[k].id,
-        message: `${input.housekeepers[k].name} hat Zimmer ${r.number}, ist aber eingetragen mit „${RESTRICTION_LABEL[hit]}“ — bitte prüfen.` });
-    }
-  });
-  c.rooms.forEach((r, i) => {
-    const k = idx[i];
-    if (k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length) {
-      warnings.push({ code: "LEVEL1_DEMANDING", severity: "WARNING", roomIds: [r.id], hkId: input.housekeepers[k].id,
-        message: `${input.housekeepers[k].name} (Stufe 1) hat das anspruchsvolle Zimmer ${r.number}. Wurde zugeteilt, weil sonst niemand mehr frei ist — bitte prüfen.` });
-    }
-  });
-  if (unassigned.length) {
-    const rs = unassigned.map((id) => roomById.get(id)!);
-    warnings.push({ code: "UNASSIGNED", severity: "WARNING", roomIds: unassigned,
-      message: `${unassigned.length} Zimmer sind noch offen (${rs.map((r) => r.number).join(", ")}). Bitte im Grundriss zuteilen.` });
+  for (const label of Object.keys(RESTRICTION_LABEL) as (keyof typeof RESTRICTION_LABEL)[]) {
+    bundle("RESTRICTION", c.rooms.flatMap((r, i) => { const k = idx[i]; return k >= 0 && restrictionHit(input.housekeepers[k], r, input.suiteMinCredit) === label ? [{ k, r }] : []; }),
+      `Gegen Einschränkung „${RESTRICTION_LABEL[label]}“`);
+  }
+  // Stufe 1 mit anspruchsvollen Zimmern — nur über eine feste Zuteilung (von Hand) möglich, der Vorschlag filtert hart (P6 neu)
+  bundle("LEVEL1_DEMANDING", c.rooms.flatMap((r, i) => { const k = idx[i]; return k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length && !c.relaxed[i] ? [{ k, r }] : []; }),
+    "Stufe 1 mit anspruchsvollen Zimmern");
+  // F4 (Simon 19.11.): Überhang — die passenden Kräfte wären über ihrer Zimmervorgabe; Stufe 1 bekommt deshalb anspruchsvolle Zimmer
+  bundle("LEVEL1_DEMANDING", c.rooms.flatMap((r, i) => { const k = idx[i]; return k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length && c.relaxed[i] ? [{ k, r }] : []; }),
+    "Stufe 1 mit anspruchsvollen Zimmern, weil das Personal ab Stufe 2 nicht reicht");
+  const relaxedRooms = c.rooms.filter((_, i) => c.relaxed[i]);
+  if (relaxedRooms.length) {
+    const staff = input.housekeepers.filter((h) => h.level >= 2).map((h) => h.name).join(", ");
+    const list = `${relaxedRooms.length} anspruchsvolle Zimmer (${relaxedRooms.map((r) => r.number).join(", ")})`;
+    warnings.push({ code: "LEVEL_RULE_RELAXED", severity: "WARNING", roomIds: relaxedRooms.map((r) => r.id),
+      message: staff
+        ? `Personal ab Stufe 2 reicht nicht: ${list} gehen nach der Zimmervorgabe auch an Stufe 1 — sonst lägen ${staff} über ihrer Zimmervorgabe. Bitte prüfen.`
+        : `Keine Kraft ab Stufe 2 eingeplant: ${list} gehen nach der Zimmervorgabe an Stufe 1. Bitte prüfen.` });
+  }
+  const demandingOpen = unassigned.filter((id) => roomById.get(id)!.demanding.length);
+  const plainOpen = unassigned.filter((id) => !roomById.get(id)!.demanding.length);
+  if (demandingOpen.length) {
+    warnings.push({ code: "DEMANDING_UNASSIGNED", severity: "WARNING", roomIds: demandingOpen,
+      message: `${demandingOpen.length} anspruchsvolle Zimmer ohne passende Kraft (${demandingOpen.map((id) => roomById.get(id)!.number).join(", ")}) — bitte von Hand zuteilen.` });
+  }
+  if (plainOpen.length) {
+    warnings.push({ code: "UNASSIGNED", severity: "WARNING", roomIds: plainOpen,
+      message: `${plainOpen.length} Zimmer sind noch offen (${plainOpen.map((id) => roomById.get(id)!.number).join(", ")}). Bitte im Grundriss zuteilen.` });
   }
   const totalCredits = totalAll;
   const perHk = input.fullTimeRooms ? `${fmt(input.fullTimeRooms)} Zimmern` : `${fmt(input.fullTimeTarget)} Credits`;
   const needed = input.fullTimeRooms ? Math.ceil(c.rooms.length / Math.max(1, input.fullTimeRooms)) : Math.ceil(totalCredits / Math.max(1, input.fullTimeTarget));
   const present = input.housekeepers.length;
-  if (overstaffed) {
+  // F4 (M6): kein „mehr Kräfte als nötig“, solange jemand voraussichtlich nicht vor Schichtende fertig wird
+  if (overstaffed && !warnings.some((w) => w.code === "OVER_SHIFT")) {
     warnings.push({ code: "TOO_MANY_STAFF", severity: "INFO",
       message: `Mehr Kräfte als nötig: benötigt werden ${needed} Housekeeper bei ${perHk} je Vollzeitkraft, anwesend sind ${present}. Wenn jemand nicht eingeplant werden soll, bitte „Nicht einplanen“ wählen — sonst sind alle Anwesenden gleichmäßig eingeplant.` });
   }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
-      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${perHk} je Vollzeitkraft). Alle Zimmer sind trotzdem verteilt — Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
+      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${perHk} je Vollzeitkraft). Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
   }
 
+  // F4 (M7): „Personal reicht nicht“ und „anspruchsvolle Zimmer ohne passende Kraft“ ganz oben
+  const TOP = ["TOO_FEW_STAFF", "LEVEL_RULE_RELAXED", "DEMANDING_UNASSIGNED"];
+  warnings.sort((a, b) => (TOP.includes(a.code) ? TOP.indexOf(a.code) : 9) - (TOP.includes(b.code) ? TOP.indexOf(b.code) : 9));
   const { total, parts } = cost(c, idx);
   return {
     assignment, routes, metrics, reasons, warnings, unassigned,

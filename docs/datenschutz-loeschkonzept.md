@@ -23,6 +23,10 @@ am nächsten Morgen kommen Namen und Traces über den Import aus den Opera-Liste
 | `RoomNote` vom Gäste-Systemkonto | gelöscht (alle Status) |
 | `AuditLog.meta`: Schlüssel `guestName`, `name`, `text`, `note`, `body`, `message` | Schlüssel entfernt, Rest des Eintrags bleibt |
 | Gäste-Fotos, geschlossene `GuestRequest` | bestehende Regel (`guestDataRetention`), im selben Lauf |
+| `ProfileSuggestion` (F8, Opera-Profil-Vorschlag) | Anrede/Titel/Nachname: **bewusste Ausnahme von der Nachtlöschung (Entscheidung Simon 19.11.2026)** — sichtbar bis 24 Uhr am Abreisetag, dann `NULL` (Löschtakt alle 10 Minuten); kein Notfallzugriff, nachts schlägt man den Gast in Opera nach. „Gastdaten jetzt löschen“ (DM) löscht sofort; ganzer Vorschlag gelöscht, sobald alle Punkte erledigt sind, sonst nach 30 Tagen; Einzellöschung eines Aufenthalts löscht seinen Vorschlag. Punkte enthalten nie Gesundheitsdaten oder Freitext |
+| `GuestRequest`/`RoomNote` mit `archivedAt` (F7, Verlauf beim Check-out) | nach 30 Tagen gelöscht; Gast-Notizen wie bisher jede Nacht |
+| `Defect.note` mit „Opera-Hinweis: …“ (F7, Technikauftrag aus Opera) | Text jede Nacht ersetzt durch „Opera-Hinweis (Text nachts gelöscht)“ |
+| `RoomTask.deferReason` (F7, Grund beim Aufschieben) | jede Nacht `NULL`; im Logbuch als `reasonText` (wird entfernt) |
 | `AutoPlanProposal`, `RedistributionSuggestion` (M2b) | enthalten nur Zimmer-/Housekeeper-IDs und Zähler, keine Gastdaten — bleiben (Beschäftigtendaten: siehe `docs/autoplan.md`) |
 | **Bleibt** (nicht personenbezogen) | Zimmer, Reinigungsart, Zeiten, Status, Credits, Wäschewechsel, Zähler, Personenzahl, An-/Abreisedatum, VIP-Kennzeichen am Tagesplan, Zuteilungen, Hausmann-Aufgaben (Typ, Standardnotiz) |
 

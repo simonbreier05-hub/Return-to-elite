@@ -102,7 +102,8 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     const traceN = traceCount.get(r.id) ?? 0;
     const demanding: DemandingReason[] = [];
     if (p.vip) demanding.push("VIP");
-    if ((SUITE_TYPES as readonly string[]).includes(r.type)) demanding.push("SUITE");
+    // F4: eine Suiten-Regel — nach Zimmertyp ODER nach Credit ab der Schwelle (Zimmerliste v2.1; Typ ist oft UNVERIFIED)
+    if ((SUITE_TYPES as readonly string[]).includes(r.type) || (settings.suiteMinCredit && credits >= settings.suiteMinCredit)) demanding.push("SUITE");
     if (r.isAntiAllergic) demanding.push("ALLERGY");
     if (traceN >= settings.autoplanManyTraces) demanding.push("TRACES");
     const interconnect = (r.interconnectingGroup ?? "").split(",").map((n) => idByNumber.get(n.trim())).filter((x): x is string => !!x);

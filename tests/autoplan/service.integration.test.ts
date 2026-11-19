@@ -167,7 +167,10 @@ describe("Zuteilungsvorschlag und Umverteilung (Wegwerf-DB)", () => {
 
   it("Protokoll und Meldungen enthalten keine Namen oder Stufen", async () => {
     // Meldungen an Supervisoren über verschobene Zimmer (ROOM_MOVED) nennen bewusst, wer von wem zu wem verschoben hat (Prompt 3, Verschieben über Etagen).
-    const notes = (await prisma.notification.findMany()).filter((n) => n.type !== "ROOM_MOVED");
+    // F5 (H14): Krankmeldung nennt die Kraft („Sena krank gemeldet“) — geht nur an Duty Manager/Supervisor (Grenzen F5)
+    const all = await prisma.notification.findMany();
+    expect(all.filter((n) => n.type === "STAFF_SICK").every((n) => n.targetRole === "duty_manager" || n.targetRole === "supervisor")).toBe(true);
+    const notes = all.filter((n) => n.type !== "ROOM_MOVED" && n.type !== "STAFF_SICK");
     const dump = JSON.stringify([await prisma.auditLog.findMany(), notes]);
     expect(dump).not.toMatch(/Anna|Bea|Cem|Dora|hkLevel|Stufe/);
   });

@@ -5,7 +5,7 @@ import ImportView from "./view";
 export default async function ImportPage() {
   const session = await requirePage(["supervisor", "duty_manager"]);
   return (
-    <AppShell title="importPage.title" userName={session.name} role={session.role} backHref="/planung">
+    <AppShell title="importPage.title" userName={session.name} role={session.role} backHref="/planung" legacy={false}>
       <ImportView />
     </AppShell>
   );

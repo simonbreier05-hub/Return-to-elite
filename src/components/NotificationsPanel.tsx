@@ -84,22 +84,22 @@ export default function NotificationsPanel({ targetRole }: { targetRole: string 
       title={t("appShell.notifications")}
       right={
         unread > 0 && (
-          <button onClick={ackAll} className="h-11 rounded-sm px-3 text-xs font-medium text-gold-soft hover:bg-parchment">
+          <button onClick={ackAll} className="h-11 rounded-sm px-3 text-xs font-medium text-accent-text">
             {t("appShell.markAllRead")} ({unread})
           </button>
         )
       }
     >
-      {notifications.length === 0 && <p className="text-sm text-graphite/60">{t("appShell.noNotifications")}</p>}
+      {notifications.length === 0 && <p className="text-sm text-text-muted">{t("appShell.noNotifications")}</p>}
       <div className="max-h-64 space-y-1.5 overflow-y-auto">
         {notifications.map((n) => (
           <div
             key={n.id}
-            className={`rounded-lg border border-charcoal/5 border-s-4 bg-ivory p-2.5 text-sm ${LEVEL_STYLES[n.level] ?? ""} ${
-              n.acknowledged ? "opacity-50" : ""
-            }`}
+            className={`rounded-(--glass-radius-sm) border border-border-subtle border-s-4 bg-surface-card-raised p-2.5 text-sm ${LEVEL_STYLES[n.level] ?? ""} ${
+ n.acknowledged ? "opacity-50" : ""
+ }`}
           >
-            <div className="text-[0.68rem] uppercase tracking-wider text-graphite/60">
+            <div className="text-[0.68rem] uppercase tracking-wider text-text-muted">
               {notificationTypeLabel(n.type, t)} · {fmt.time(n.createdAt)}
             </div>
             <div className="mt-0.5">{notificationText(n, t)}</div>

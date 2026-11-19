@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, type ReactNode } from "react";
+import type { TKey } from "@/lib/i18n/translations";
 import { useLocale } from "@/lib/i18n/LocaleContext";
 import { hhmm } from "@/lib/i18n/format";
 import { CC_FILTER_LABEL, ccFilterCounts, ccKpis, matchesCcFilter, PHASE_PILL, phaseOf, sortExcursions, type CcFilter, type ExcursionView } from "@/lib/ui/conciergeHub";
@@ -25,6 +26,10 @@ export interface ConciergeHubProps {
   onSelect: (id: string | null) => void;
   onCreate: (input: NewExcursionInput) => Promise<string | null>;
   onOpenRoom: (number: string) => void;
+  /** F7 (M24): eigenen Ausflug ändern (Ende „HH:MM“, Notiz) bzw. löschen; Nachricht an Housekeeping (Zimmernotiz). */
+  onUpdate?: (id: string, patch: { end?: string; note?: string }) => Promise<string | null>;
+  onDelete?: (id: string) => Promise<string | null>;
+  onMessageHk?: (roomId: string, text: string) => Promise<string | null>;
   loading: boolean;
   loadError: string | null;
   onRetry: () => void;
@@ -67,7 +72,9 @@ export function ConciergeHub(p: ConciergeHubProps) {
           <DetailLine icon="user">{sel.guest ?? t("concierge.guestFallback")}</DetailLine>
           <DetailLine icon="clock">{t("roleHub.outWindow", { from: sel.startsAt ? hhmm(sel.startsAt) : "?", to: sel.endsAt ? hhmm(sel.endsAt) : "?" })}</DetailLine>
           {sel.note && <DetailLine icon="file-text">{sel.note}</DetailLine>}
+          {sel.room.status && <DetailLine icon="bed-single">{t("concierge.roomState", { status: t(`status.${sel.room.status}` as TKey) })}</DetailLine>}
           <p className="text-label text-text-muted">{t("concierge.outOfHouseHint")}</p>
+          <ExcursionActions key={sel.id} sel={sel} {...p} />
           {sel.room.number && (
             <TextAction icon="bed-single" onClick={() => p.onOpenRoom(sel.room.number!)}>
               {t("lists.hmOpenRoom", { n: sel.room.number })}
@@ -104,7 +111,8 @@ export function ConciergeHub(p: ConciergeHubProps) {
             key: e.id,
             icon: "calendar-days",
             title: `${e.note ?? t("roleHub.excursion")} · ${e.startsAt ? hhmm(e.startsAt) : "?"}`,
-            subtitle: `${e.guest ?? t("concierge.guestFallback")} (${e.room.number ?? unknown})`,
+            // F7 (M24): Reinigungsstand des Zimmers (nur Status, keine Namen von Kräften)
+            subtitle: [`${e.guest ?? t("concierge.guestFallback")} (${e.room.number ?? unknown})`, e.room.status ? t(`status.${e.room.status}` as TKey) : null].filter(Boolean).join(" · "),
             pill: { label: t(pill.labelKey), tone: pill.tone },
             meta: span(e),
             done: phaseOf(e, now) === "back",
@@ -161,5 +169,48 @@ function NewExcursionWindow({ onClose, onCreate }: { onClose: () => void; onCrea
         </Button>
       </div>
     </HkWindow>
+  );
+}
+
+/** F7 (M24): Ende/Notiz ändern und löschen (nur eigener Eintrag), Nachricht an Housekeeping als Zimmernotiz. */
+function ExcursionActions({ sel, ...p }: ConciergeHubProps & { sel: ExcursionView }) {
+  const { t } = useLocale();
+  const [end, setEnd] = useState(sel.endsAt ? hhmm(sel.endsAt) : "");
+  const [note, setNote] = useState(sel.note ?? "");
+  const [msg, setMsg] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [info, setInfo] = useState<string | null>(null);
+  const run = async (fn: () => Promise<string | null>, ok: string) => {
+    setBusy(true);
+    const err = await fn();
+    setBusy(false);
+    setInfo(err ?? ok);
+  };
+  return (
+    <div className="flex flex-col gap-3">
+      {sel.mine && p.onUpdate && (
+        <>
+          <Field label={t("concierge.endTime")} type="time" value={end} onChange={(e) => setEnd(e.target.value)} />
+          <Field label={t("concierge.note")} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
+          <div className="flex flex-wrap gap-2">
+            <Button icon="check" disabled={busy} onClick={() => void run(() => p.onUpdate!(sel.id, { end, note }), t("concierge.saved"))}>{t("concierge.save")}</Button>
+            {p.onDelete && (
+              <Button variant="secondary" icon="x" disabled={busy} onClick={() => { if (window.confirm(t("concierge.deleteConfirm"))) void run(() => p.onDelete!(sel.id), t("concierge.deleted")); }}>
+                {t("concierge.delete")}
+              </Button>
+            )}
+          </div>
+        </>
+      )}
+      {sel.room.id && p.onMessageHk && (
+        <>
+          <Field label={t("concierge.messageHk")} value={msg} onChange={(e) => setMsg(e.target.value)} maxLength={500} />
+          <Button variant="secondary" icon="message" disabled={busy || !msg.trim()} onClick={() => void run(async () => { const e = await p.onMessageHk!(sel.room.id!, msg.trim()); if (!e) setMsg(""); return e; }, t("concierge.messageSent"))}>
+            {t("concierge.sendToHk")}
+          </Button>
+        </>
+      )}
+      {info && <p className="text-label text-text-secondary" role="status">{info}</p>}
+    </div>
   );
 }

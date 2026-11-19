@@ -28,6 +28,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   if (parsed.data.hkLevel !== undefined && auth.session.role !== "duty_manager") {
     return NextResponse.json({ error: "Die Stufe ändert nur der Duty Manager.", code: "HK_LEVEL_DM_ONLY" }, { status: 403 });
   }
+  // F4 (Entscheidung Frage 12, P5): Präferenz-Etagen pflegt nur der Duty Manager; der Supervisor sieht sie nur
+  if (parsed.data.homeFloors !== undefined && auth.session.role !== "duty_manager") {
+    return NextResponse.json({ error: "Präferenz-Etagen ändert nur der Duty Manager.", code: "HK_FLOORS_DM_ONLY" }, { status: 403 });
+  }
   const u = await prisma.user.findUnique({ where: { id } });
   if (!u || u.role !== "room_attendant") return NextResponse.json({ error: "Housekeeper nicht gefunden.", code: "USER_NOT_FOUND" }, { status: 404 });
   const { homeFloors, hkRestrictions, ...rest } = parsed.data;

@@ -49,7 +49,7 @@ export default function LiveListsPanel() {
       <div className="mb-3 flex flex-wrap gap-2" role="tablist">
         {tabs.map(([id, label]) => (
           <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-            className={`h-11 rounded-lg border px-4 text-sm font-medium ${tab === id ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white"}`}>{label}</button>
+            className={`h-11 rounded-(--glass-radius-sm) border px-4 text-sm font-medium ${tab === id ? "border-border-accent bg-accent-subtle-bg " : "border-border-subtle bg-surface-card-raised"}`}>{label}</button>
         ))}
       </div>
 
@@ -57,26 +57,26 @@ export default function LiveListsPanel() {
       {tab === "hk" && <SupervisorList />}
 
       {tab === "sup" && (
-        !data ? <p className="text-sm text-graphite/60">{t("common.loading")}</p> : (
+        !data ? <p className="text-sm text-text-muted">{t("common.loading")}</p> : (
           <div className="space-y-2">
-            {data.uncoveredFloors.length > 0 && <p role="alert" className="rounded-xl border border-status-in-progress/40 bg-status-in-progress/10 p-3 text-sm font-medium">{t("dutyManager.liveUncovered", { floors: data.uncoveredFloors.join(", ") })}</p>}
+            {data.uncoveredFloors.length > 0 && <p role="alert" className="rounded-(--glass-radius-md) border border-status-in-progress/40 bg-status-in-progress/10 p-3 text-sm font-medium">{t("dutyManager.liveUncovered", { floors: data.uncoveredFloors.join(", ") })}</p>}
             <RowLegend />
             {data.supervisors.map((s) => {
               const isOpen = supOpen.has(s.id);
               const pct = s.rooms ? Math.round((s.done / s.rooms) * 100) : 0;
               return (
-                <div key={s.id} className="rounded-xl border border-charcoal/10 bg-ivory">
+                <div key={s.id} className="rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised">
                   <button type="button" aria-expanded={isOpen} onClick={() => toggleSup(s.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm font-semibold">{s.name} <span className="text-xs font-normal text-graphite/60">· {t("planungTool.floorsLabel")} {s.floors.join(", ") || "—"}</span></span>
-                      <span className="block text-xs text-graphite/70">{t("lists.progress", { done: s.done, total: s.rooms })} · {t("lists.supRooms", { n: s.rooms })}</span>
-                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-charcoal/10" aria-hidden><span className="block h-full rounded-full bg-status-clean" style={{ width: `${pct}%` }} /></span>
+                      <span className="block truncate text-sm font-semibold">{s.name} <span className="text-xs font-normal text-text-muted">· {t("planungTool.floorsLabel")} {s.floors.join(", ") || "—"}</span></span>
+                      <span className="block text-xs text-text-secondary">{t("lists.progress", { done: s.done, total: s.rooms })} · {t("lists.supRooms", { n: s.rooms })}</span>
+                      <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-progress-track" aria-hidden><span className="block h-full rounded-full bg-status-clean" style={{ width: `${pct}%` }} /></span>
                     </span>
-                    <span aria-hidden className="text-graphite/60">{isOpen ? "▾" : "▸"}</span>
+                    <span aria-hidden className="text-text-muted">{isOpen ? "▾" : "▸"}</span>
                   </button>
                   {isOpen && (
-                    <div className="border-t border-charcoal/10 px-3 py-3">
-                      {s.list.length === 0 ? <p className="text-sm text-graphite/60">{t("lists.supNoRooms")}</p> : (
+                    <div className="border-t border-border-subtle px-3 py-3">
+                      {s.list.length === 0 ? <p className="text-sm text-text-muted">{t("lists.supNoRooms")}</p> : (
                         <ol className="space-y-2">{s.list.map((r) => <RoomRowView key={r.id} room={r} showDept precheck onOpen={(x) => setRoomRef(x.id)} />)}</ol>
                       )}
                     </div>
@@ -89,21 +89,21 @@ export default function LiveListsPanel() {
       )}
 
       {tab === "hm" && (
-        !data ? <p className="text-sm text-graphite/60">{t("common.loading")}</p> : (
+        !data ? <p className="text-sm text-text-muted">{t("common.loading")}</p> : (
           <div>
             <div className="mb-3 flex flex-wrap gap-2 text-sm">
-              {data.housemen.map((h) => <span key={h.id} className="rounded-full border border-charcoal/15 bg-white px-3 py-1">{h.name} · {h.done} / {h.assigned}</span>)}
-              <span className="rounded-full border border-charcoal/15 bg-white px-3 py-1">{t("dutyManager.liveUnassigned")} · {data.unassignedTasks.done} / {data.unassignedTasks.total}</span>
+              {data.housemen.map((h) => <span key={h.id} className="rounded-full border border-border-subtle bg-surface-card-raised px-3 py-1">{h.name} · {h.done} / {h.assigned}</span>)}
+              <span className="rounded-full border border-border-subtle bg-surface-card-raised px-3 py-1">{t("dutyManager.liveUnassigned")} · {data.unassignedTasks.done} / {data.unassignedTasks.total}</span>
             </div>
-            {data.tasks.length === 0 ? <p className="text-sm text-graphite/60">{t("planungTool.noHousemanTasks")}</p> : (
+            {data.tasks.length === 0 ? <p className="text-sm text-text-muted">{t("planungTool.noHousemanTasks")}</p> : (
               <ul className="space-y-1.5">
                 {data.tasks.map((it) => (
-                  <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 bg-white p-3 text-sm">
-                    <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-start font-medium underline decoration-charcoal/20 underline-offset-4">{it.roomNumber}</button>
-                    <span className="min-w-0 flex-1 text-graphite/70">{it.text}</span>
+                  <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-3 text-sm">
+                    <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-start font-medium underline decoration-border-subtle underline-offset-4">{it.roomNumber}</button>
+                    <span className="min-w-0 flex-1 text-text-secondary">{it.text}</span>
                     {it.status === "OPEN" && <PauseBadge pause={it.pause} showBy />}
-                    <span className="text-xs text-graphite/60">{it.assignedToName ?? t("planungTool.housemanAll")}</span>
-                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${it.status === "DONE" ? "bg-status-clean/15 text-status-clean" : "bg-parchment"}`}>
+                    <span className="text-xs text-text-muted">{it.assignedToName ?? t("planungTool.housemanAll")}</span>
+                    <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${it.status === "DONE" ? "bg-status-clean/15 text-status-success-fg" : "bg-accent-subtle-bg"}`}>
                       {it.status === "DONE" ? `✓ ${t("dutyManager.liveDone")}${it.doneByName ? ` · ${it.doneByName}` : ""}${it.doneAt ? ` · ${hhmm(it.doneAt)}` : ""}` : t("dutyManager.liveOpen")}
                     </span>
                   </li>
@@ -126,11 +126,11 @@ function ManualTasks({ tasks, onOpen }: { tasks: ManualTask[]; onOpen: (roomNumb
     const open = tasks.filter((x) => x.status === "OPEN");
   const done = tasks.filter((x) => x.status === "DONE").slice(0, 10);
   const row = (x: ManualTask) => (
-    <li key={x.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl border border-charcoal/10 p-3 text-sm ${x.status === "DONE" ? "bg-linen/60" : "bg-white"}`}>
-      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-start font-medium underline decoration-charcoal/20 underline-offset-4">{x.room.number}</button>
-      <span className={`min-w-0 flex-1 ${x.status === "DONE" ? "text-graphite/60 line-through" : "text-graphite/80"}`}>{label(x)}</span>
+    <li key={x.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-(--glass-radius-md) border border-border-subtle p-3 text-sm ${x.status === "DONE" ? "bg-surface-card-raised" : "bg-surface-progress-track"}`}>
+      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-start font-medium underline decoration-border-subtle underline-offset-4">{x.room.number}</button>
+      <span className={`min-w-0 flex-1 ${x.status === "DONE" ? "text-text-muted line-through" : "text-text-secondary"}`}>{label(x)}</span>
       {x.status === "OPEN" && <PauseBadge pause={x.pause} showBy />}
-      <span className="text-xs text-graphite/60">
+      <span className="text-xs text-text-muted">
         {x.createdBy?.name && `${t("houseman.requestedBy", { name: x.createdBy.name })} · `}{hhmm(x.createdAt)}
         {x.status === "DONE" && x.doneAt && ` · ✓ ${hhmm(x.doneAt)}${x.assignedTo?.name ? ` · ${x.assignedTo.name}` : ""}`}
       </span>
@@ -138,15 +138,15 @@ function ManualTasks({ tasks, onOpen }: { tasks: ManualTask[]; onOpen: (roomNumb
   );
   return (
     <div className="mt-4">
-      <h4 className="mb-2 font-serif text-lg">{t("lists.hmOtherTasks")}</h4>
+      <h4 className="mb-2 text-body-18 text-text-primary">{t("lists.hmOtherTasks")}</h4>
       <div className="grid gap-4 sm:grid-cols-2">
         <div>
-          <h5 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">{t("dutyManager.openTasksLabel")}</h5>
-          {open.length === 0 ? <p className="text-sm text-graphite/60">{t("dutyManager.noOpenTasks")}</p> : <ul className="space-y-1.5">{open.map(row)}</ul>}
+          <h5 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">{t("dutyManager.openTasksLabel")}</h5>
+          {open.length === 0 ? <p className="text-sm text-text-muted">{t("dutyManager.noOpenTasks")}</p> : <ul className="space-y-1.5">{open.map(row)}</ul>}
         </div>
         <div>
-          <h5 className="mb-2 text-xs font-semibold uppercase tracking-wider text-graphite/60">{t("dutyManager.doneTasksLabel")}</h5>
-          {done.length === 0 ? <p className="text-sm text-graphite/60">{t("dutyManager.noDoneTasks")}</p> : <ul className="space-y-1.5">{done.map(row)}</ul>}
+          <h5 className="mb-2 text-xs font-semibold uppercase tracking-wider text-text-muted">{t("dutyManager.doneTasksLabel")}</h5>
+          {done.length === 0 ? <p className="text-sm text-text-muted">{t("dutyManager.noDoneTasks")}</p> : <ul className="space-y-1.5">{done.map(row)}</ul>}
         </div>
       </div>
     </div>

@@ -11,7 +11,9 @@ const FIELD = /\b(hkLevel|hkType|homeFloors|dailyTarget|hkRestrictions)\b/;
 // Dateien, die diese Felder bewusst kennen (alle hinter requireRole(["supervisor"]) bzw. reine Rechenlogik)
 const ALLOWED = [
   "lib/autoplan/", "app/api/autoplan/", "app/api/housekeepers/", "app/api/redistribution/", "app/api/internal/redistribution-check/",
-  "lib/planung/teamData", "lib/planung/floorTeamData", "lib/learning/", "app/api/planung/team/", "app/api/planung/floors/", "components/planung/TeamStep", "components/AutoPlanPanel", "components/HousekeeperSettingsPanel", "components/RedistributionCards", "app/settings/view.tsx",
+  "lib/planung/teamData", "lib/planung/floorTeamData",
+  // F4 (H3): Warnungen beim Zuteilen von Hand (nur über Supervisor/DM-Routen) und Stufe in der Auswahlliste (nur für Supervisor/DM)
+  "lib/assignment/assignWarnings", "lib/rooms/roomDetail", "lib/learning/", "app/api/planung/team/", "app/api/planung/floors/", "components/planung/TeamStep", "components/AutoPlanPanel", "components/HousekeeperSettingsPanel", "components/RedistributionCards", "app/settings/view.tsx",
 ];
 
 describe("Beschäftigtendaten (Typ, Stufe)", () => {

@@ -19,5 +19,5 @@ export default function MyFloorsToday() {
   const { t } = useLocale();
   const floors = useMyFloors();
   if (!floors.length) return null;
-  return <p className="mb-3 text-sm text-graphite/80"><span aria-hidden>▦ </span>{t("lists.myFloors", { list: floors.join(", ") })}</p>;
+  return <p className="mb-3 text-sm text-text-secondary"><span aria-hidden>▦ </span>{t("lists.myFloors", { list: floors.join(", ") })}</p>;
 }

@@ -86,7 +86,7 @@ describe("Mangel behoben → meldende und zuständige HK", () => {
     };
     const wo1 = await mkWo("hkB");
     as("eng", "engineering");
-    expect((await workorderPatch(req({ status: "RESOLVED" }), ctx(wo1))).status).toBe(200);
+    expect((await workorderPatch(req({ status: "RESOLVED", note: "Dichtung getauscht" }), ctx(wo1))).status).toBe(200);
     const list = await all();
     const targets = list.filter((x) => x.type === "DEFECT_FIXED").map((x) => x.targetUserId).sort();
     expect(targets).toEqual([ids.hkA, ids.hkB].sort());
@@ -94,7 +94,7 @@ describe("Mangel behoben → meldende und zuständige HK", () => {
 
     await fresh();
     const wo2 = await mkWo("guest");
-    expect((await workorderPatch(req({ status: "RESOLVED" }), ctx(wo2))).status).toBe(200);
+    expect((await workorderPatch(req({ status: "RESOLVED", note: "Dichtung getauscht" }), ctx(wo2))).status).toBe(200);
     expect((await all()).filter((x) => x.type === "DEFECT_FIXED").map((x) => x.targetUserId)).toEqual([ids.hkA]);
   });
 });

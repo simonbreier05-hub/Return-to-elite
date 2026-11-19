@@ -72,7 +72,7 @@ export default function SupervisorList() {
 
   if (!data) return null;
   const mover = (_room: SupRoom, _fromId: string | null) => (
-    <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-gold-soft hover:underline">{t("roster.changeInFloorPlan")}</Link>
+    <Link href="/floor-plan" className="mt-1 inline-flex min-h-11 items-center text-xs font-medium text-accent-text hover:underline">{t("roster.changeInFloorPlan")}</Link>
   );
   const roomItem = (room: SupRoom, fromId: string | null) => (
     <div key={room.id}>
@@ -84,40 +84,40 @@ export default function SupervisorList() {
   if (glass) return <GlassSupervisorList data={data} open={open} toggle={toggle} flash={flash} stand={stand} error={error} roomRef={roomRef} setRoomRef={setRoomRef} reload={() => { void load(); }} />;
 
   return (
-    <section aria-labelledby="sup-list-title" className="mb-6 rounded-2xl border border-charcoal/10 bg-white p-4 shadow-sm">
-      <h3 id="sup-list-title" className="font-serif text-2xl">{t("lists.supTitle")}</h3>
-      <p className="mt-0.5 text-xs text-graphite/70">
+    <section aria-labelledby="sup-list-title" className="mb-6 rounded-(--glass-radius-lg) border border-border-subtle bg-surface-card-raised p-4">
+      <h3 id="sup-list-title" className="text-title-22 text-text-primary">{t("lists.supTitle")}</h3>
+      <p className="mt-0.5 text-xs text-text-secondary">
         {!data.noFloors && <>{t("lists.supFloors", { list: data.floors.join(", ") })}</>}
         {stand && <> · {t("lists.stand", { time: stand })}</>} · {t("lists.live")}
       </p>
       <div className="mt-3"><RowLegend /></div>
       {data.noFloors ? (
-        <p className="mt-3 rounded-lg border border-gold-line/50 bg-parchment p-3 text-sm">{t("lists.supNoFloors")}</p>
+        <p className="mt-3 rounded-(--glass-radius-sm) border border-border-subtle bg-accent-subtle-bg p-3 text-sm">{t("lists.supNoFloors")}</p>
       ) : (
         <div className="mt-3 space-y-2">
-          {error && <p role="alert" className="rounded-lg border border-status-out-of-order/30 bg-status-out-of-order/10 px-3 py-2 text-sm text-status-out-of-order">{error}</p>}
+          {error && <p role="alert" className="rounded-(--glass-radius-sm) border border-status-danger-fg/40 bg-status-danger-bg px-3 py-2 text-sm text-status-danger-fg">{error}</p>}
           {data.housekeepers.map((h) => {
             const isOpen = open.has(h.id);
             const pct = h.progress.total ? Math.round((h.progress.done / h.progress.total) * 100) : 0;
             return (
-              <div key={h.id} className="rounded-xl border border-charcoal/10 bg-ivory">
+              <div key={h.id} className="rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised">
                 <button type="button" aria-expanded={isOpen} onClick={() => toggle(h.id)} className="flex min-h-14 w-full items-center gap-3 px-3 py-2 text-start focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold">
-                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-navy text-xs font-semibold text-ivory">{h.dailyNumber ?? h.name.charAt(0)}</span>
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-champagne text-xs font-semibold text-text-on-accent">{h.dailyNumber ?? h.name.charAt(0)}</span>
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm font-semibold">{h.name}</span>
-                    <span className="block text-xs text-graphite/70">{t("lists.progress", { done: h.progress.done, total: h.progress.total })} · {t("lists.credits", { done: num(h.progress.creditsDone), total: num(h.progress.credits) })}</span>
-                    <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-charcoal/10" aria-hidden><span className="block h-full rounded-full bg-gold" style={{ width: `${pct}%` }} /></span>
+                    <span className="block text-xs text-text-secondary">{t("lists.progress", { done: h.progress.done, total: h.progress.total })} · {t("lists.credits", { done: num(h.progress.creditsDone), total: num(h.progress.credits) })}</span>
+                    <span className="mt-1 block h-1.5 overflow-hidden rounded-full bg-surface-progress-track" aria-hidden><span className="block h-full rounded-full bg-champagne" style={{ width: `${pct}%` }} /></span>
                   </span>
-                  <span aria-hidden className="text-graphite/60">{isOpen ? "▾" : "▸"}</span>
+                  <span aria-hidden className="text-text-muted">{isOpen ? "▾" : "▸"}</span>
                 </button>
                 {isOpen && (
-                  <div className="space-y-3 border-t border-charcoal/10 px-3 py-3">
+                  <div className="space-y-3 border-t border-border-subtle px-3 py-3">
                     {GROUPS.map((g) => {
                       const rs = h.rooms.filter((r) => r.group === g);
                       if (!rs.length) return null;
                       return (
                         <div key={g}>
-                          <h4 className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-graphite/70">{t(GROUP_KEY[g])} ({rs.length})</h4>
+                          <h4 className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-text-secondary">{t(GROUP_KEY[g])} ({rs.length})</h4>
                           <div className="space-y-2">{rs.map((r) => roomItem(r, h.id))}</div>
                         </div>
                       );
@@ -128,8 +128,8 @@ export default function SupervisorList() {
             );
           })}
           {data.unassigned.length > 0 && (
-            <div className="rounded-xl border border-dashed border-charcoal/25 p-3">
-              <h4 className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-graphite/70">{t("lists.supUnassigned")} ({data.unassigned.length})</h4>
+            <div className="rounded-(--glass-radius-md) border border-dashed border-border-subtle p-3">
+              <h4 className="mb-1 text-[0.7rem] font-semibold uppercase tracking-wider text-text-secondary">{t("lists.supUnassigned")} ({data.unassigned.length})</h4>
               <div className="space-y-2">{data.unassigned.map((r) => roomItem(r, null))}</div>
             </div>
           )}
@@ -174,6 +174,9 @@ function GlassSupervisorList({ data, open, toggle, flash, stand, error, roomRef,
       ? { label: t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }), tone: "warning" }
       : { label: t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin }), tone: "info" });
     if (room.lateCheckout) extra.push({ label: t("lists.lateCheckout", { time: room.lateCheckout }), tone: "warning" });
+    // F3 Teil 4 (H9): Zimmerwechsel sichtbar — altes Zimmer bis zur Freigabe, Zielzimmer für den Tag
+    if (room.roomChangeTo) extra.push({ label: t("lists.roomChangeTo", { n: room.roomChangeTo }), tone: "warning" });
+    if (room.roomChangeFrom) extra.push({ label: t("lists.roomChangeFrom", { n: room.roomChangeFrom }), tone: "info" });
     if (room.checkedOut && (room.kind === "SAME_DAY_TURN" || room.kind === "DEPARTURE")) extra.push({ label: t("lists.checkedOut"), tone: "success" });
     if (room.dndCard) extra.push({ label: t("lists.dndCard"), tone: "warning" });
     if (room.green) extra.push({ label: t("lists.green"), tone: "success" });

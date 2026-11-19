@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import { useSocket } from "@/components/useSocket";
-import TodayAtAGlance, { type GlanceSource } from "@/components/TodayAtAGlance";
+import TodayAtAGlance, { GlanceTitle, useGlanceCollapse, type GlanceSource } from "@/components/TodayAtAGlance";
 import DayNumberTiles from "@/components/DayNumberTiles";
 import { GlanceDetailHost, GlanceTile, useGlanceDetail, type DetailContent } from "@/components/GlanceDetailSheet";
 import type { DayNumberRow, DayNumbers } from "@/lib/dayplan/dayNumbers";
@@ -62,6 +62,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
   const source: GlanceSource = { rooms, rows: data?.rows ?? [], workOrders: orders, roomTasks: tasks, floors: ownFloors };
   const detail = useGlanceDetail<"house" | "queue">();
   const glass = useGlassMode();
+  const fold = useGlanceCollapse();
   if (!data) return null;
 
   const changed = () => { void load(); onChanged?.(); };
@@ -81,9 +82,9 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
         actions: (
           <>
             <button type="button" onClick={() => releaseQueue.onRelease(r.id)} disabled={busy}
-              className="h-11 rounded-lg bg-status-inspected px-3 text-sm font-semibold text-linen disabled:opacity-50">{busy ? "…" : t("supervisor.inspectRelease")}</button>
+              className="h-11 rounded-(--glass-radius-sm) bg-status-inspected px-3 text-sm font-semibold text-linen disabled:opacity-50">{busy ? "…" : t("supervisor.inspectRelease")}</button>
             <button type="button" onClick={() => { detail.close(); releaseQueue.onRework(r.id); }} disabled={busy}
-              className="h-11 rounded-lg border-2 border-status-pickup px-3 text-sm font-semibold text-status-pickup disabled:opacity-50">{t("supervisor.reworkBtn")}</button>
+              className="h-11 rounded-(--glass-radius-sm) border-2 border-status-pickup px-3 text-sm font-semibold text-status-pickup disabled:opacity-50">{t("supervisor.reworkBtn")}</button>
           </>
         ),
       };
@@ -94,8 +95,8 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
     <div className="mt-3 space-y-3">
       {data.numbers && (
         <button type="button" onClick={() => detail.open("house")} aria-label={t("glance.houseTitle")}
-          className={glass ? cx("press block min-h-(--size-touch-min) w-full rounded-(--glass-radius-md) text-start", FOCUS_RING) : "min-h-11 rounded-2xl text-start transition hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"}>
-          <p className={glass ? "text-label mb-2 text-text-muted" : "mb-1 text-xs font-semibold uppercase tracking-wider text-graphite/55"}>{t("glance.houseTitle")} <span className="font-normal normal-case tracking-normal">· {t("glance.houseHint")} · {t("glance.houseTileHint")}</span></p>
+          className={glass ? cx("press block min-h-(--size-touch-min) w-full rounded-(--glass-radius-md) text-start", FOCUS_RING) : "min-h-11 rounded-(--glass-radius-lg) text-start transition hover:brightness-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold"}>
+          <p className={glass ? "text-label mb-2 text-text-muted" : "mb-1 text-xs font-semibold uppercase tracking-wider text-text-muted"}>{t("glance.houseTitle")} <span className="font-normal normal-case tracking-normal">· {t("glance.houseHint")} · {t("glance.houseTileHint")}</span></p>
           <DayNumberTiles numbers={data.numbers} compact />
         </button>
       )}
@@ -109,7 +110,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
   // Duty Manager auf dem Supervisor-Board: kein Etagenbezug, nur das Haus
   if (!data.mine) {
     return (
-      <TodayAtAGlance numbers={data.numbers} kpis={glanceKpis({ rooms, workOrders: orders, roomTasks: tasks })} source={{ ...source, floors: null }} variant="supervisor" onChanged={changed}>
+      <TodayAtAGlance collapsible numbers={data.numbers} kpis={glanceKpis({ rooms, workOrders: orders, roomTasks: tasks })} source={{ ...source, floors: null }} variant="supervisor" onChanged={changed}>
         {releaseQueue && <div className="mt-3"><GlanceTile label={t("glance.releaseQueueTile")} value={releaseQueue.rooms.length} sub={t("glance.releaseQueueSub")} accent={releaseQueue.backlog} onClick={() => detail.open("queue")} /><GlanceDetailHost state={detail} content={content} onChanged={changed} /></div>}
       </TodayAtAGlance>
     );
@@ -117,14 +118,16 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
   if (!data.mine.floors.length) {
     return (
       <section className={glass ? "glass flex flex-col gap-3 rounded-(--glass-radius-lg) p-4 sm:p-6" : "mb-6"} aria-label={t("dutyManager.dashboardTitle")}>
-        <h3 className={glass ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl"}>{t("dutyManager.dashboardTitle")}</h3>
-        <p role="status" className={glass ? "text-body-16 rounded-(--glass-radius-md) bg-accent-subtle-bg p-3 text-text-primary" : "rounded-xl border border-gold-line/60 bg-parchment p-3 text-sm"}>{t("glance.noFloors")}</p>
-        {houseAndQueue}
+        <GlanceTitle title={t("dutyManager.dashboardTitle")} fold={fold} />
+        {!fold.collapsed && <>
+          <p role="status" className={glass ? "text-body-16 rounded-(--glass-radius-md) bg-accent-subtle-bg p-3 text-text-primary" : "rounded-(--glass-radius-md) border border-border-subtle bg-accent-subtle-bg p-3 text-sm"}>{t("glance.noFloors")}</p>
+          {houseAndQueue}
+        </>}
       </section>
     );
   }
   return (
-    <TodayAtAGlance title={t("glance.myFloorsTitle", { floors: data.mine.floors.join(", ") })} numbers={data.mine.numbers} kpis={kpis} source={source} variant="supervisor" onChanged={changed}>
+    <TodayAtAGlance collapsible title={t("glance.myFloorsTitle", { floors: data.mine.floors.join(", ") })} numbers={data.mine.numbers} kpis={kpis} source={source} variant="supervisor" onChanged={changed}>
       {houseAndQueue}
     </TodayAtAGlance>
   );

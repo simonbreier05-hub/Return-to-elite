@@ -1,21 +1,25 @@
 "use client";
 
+import RoomWindowActions from "@/components/roles/RoomWindowActions";
+import LiveRoomModal from "@/components/lists/LiveRoomModal";
+import { sortReleaseQueue } from "@/lib/ui/supervisorHub";
+import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { api } from "@/components/api";
+import { api, ApiError } from "@/components/api";
+import { guestStillInText } from "@/lib/ui/guestPresence";
 import { useSocket } from "@/components/useSocket";
 import { useCoalescedRefetch } from "@/components/useCoalescedRefetch";
 import Collapsible from "@/components/Collapsible";
 import type { ThreadNote } from "@/components/NoteThread";
 import PriorityBanner from "@/components/PriorityBanner";
-import SupervisorList from "@/components/lists/SupervisorList";
 import RoomTaskModal from "@/components/RoomTaskModal";
 import SupervisorGlance from "@/components/SupervisorGlance";
 import SupervisorFeed from "@/components/SupervisorFeed";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { DetailContainer } from "@/components/shell/DetailContainer";
-import { HkNoteThread } from "@/components/hk/HkParts";
-import { Banner, Field, FilterChip, GlassCard, Glyph } from "@/components/ui";
+import { HkDefectDialog, HkNoteThread } from "@/components/hk/HkParts";
+import { Banner, Button, Field, FilterChip, GlassCard, Glyph } from "@/components/ui";
 import { SupervisorHub, type HubTile } from "@/components/supervisor/SupervisorHub";
 import { OooDialog, ReworkDialog, SupervisorRoomDetail } from "@/components/supervisor/SupervisorRoomDetail";
 import { GlassSelect, ReleaseQueueCard, StatusLegend, StatusTile } from "@/components/supervisor/SupervisorParts";
@@ -99,15 +103,22 @@ const LEGEND: RoomStatus[] = [
  * to flag the stat card and to decide the priority banner's urgency tone. */
 const RELEASE_QUEUE_BACKLOG = 5;
 
-export default function SupervisorView({ isDutyManager }: { isDutyManager: boolean }) {
+/** Zimmer mit Problemen (Simon-Feedback 18.11.): gesperrt, blockiert, Gast-DND oder offener Mangel. */
+const isProblemRoom = (r: Room) =>
+  ["BLOCKED", "OUT_OF_ORDER", "OUT_OF_SERVICE", "DEFECT_REPORTED"].includes(r.status) || !!r.guestDndActive || r.defects.some((d) => d.workOrder?.status !== "RESOLVED");
+
+/** mode: „home“ = Übersicht, „release“ = Freigabe-Warteschlange, „problems“ = Zimmer mit Problemen (eigene Menüpunkte). */
+export default function SupervisorView({ isDutyManager, mode = "home" }: { isDutyManager: boolean; mode?: "home" | "release" | "problems" }) {
   const { t } = useLocale();
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Simon-Feedback 19.11.: „Alle Anpassungen öffnen“ — dasselbe volle Zimmerfenster wie im Grundriss (Status, Zuteilung, DND, Traces …)
+  const [fullRoomId, setFullRoomId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
-  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo" | "roomTask"; room: Room } | null>(null);
+  const [dialog, setDialog] = useState<{ kind: "rework" | "ooo" | "roomTask" | "defect"; room: Room } | null>(null);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<RoomStatus | "ALL">("ALL");
   const [floorFilter, setFloorFilter] = useState<number | "ALL">("ALL");
@@ -123,6 +134,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const [selectedAttendantId, setSelectedAttendantId] = useState<string | null>(null);
   const [creditSettings, setCreditSettings] = useState<CreditSettings | null>(null);
   const [laundryIds, setLaundryIds] = useState<Set<string>>(new Set());
+  const [minutesPerCredit, setMinutesPerCredit] = useState(0);
 
   const load = useCallback(async () => {
     const data = await api<{ rooms: Room[]; attendants: Attendant[]; floorScope: number[] | null; hub?: HubState }>("/api/rooms");
@@ -135,10 +147,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   // Nur Anzeige (Credits in „Team heute“): dieselben Quellen wie der Grundriss, Fehler lassen die Credits leer (0).
   const loadCredits = useCallback(async () => {
     const [settings, day] = await Promise.all([
-      api<{ roomTypeCredits: Record<string, number> }>("/api/settings").catch(() => null),
+      api<{ roomTypeCredits: Record<string, number>; minutesPerCredit?: number }>("/api/settings").catch(() => null),
       api<{ numbers: { laundryDue: { ids: string[] } | null } | null }>("/api/day-numbers").catch(() => null),
     ]);
     if (settings) setCreditSettings({ roomTypeCredits: settings.roomTypeCredits });
+    if (settings?.minutesPerCredit) setMinutesPerCredit(settings.minutesPerCredit);
     if (day) setLaundryIds(new Set(day.numbers?.laundryDue?.ids ?? []));
   }, []);
 
@@ -209,6 +222,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   const visible = useMemo(() => {
     const q = search.trim().toLowerCase();
     return rooms.filter((room) => {
+      if (mode === "problems" && !isProblemRoom(room)) return false;
       if (statusFilter !== "ALL" && room.status !== statusFilter) return false;
       if (floorFilter !== "ALL" && room.floor !== floorFilter) return false;
       if (attendantFilter === "NONE" && room.assignedTo) return false;
@@ -222,7 +236,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         room.arrivals.some((a) => a.guestName.toLowerCase().includes(q))
       );
     });
-  }, [rooms, search, statusFilter, floorFilter, attendantFilter, guestDndOnly]);
+  }, [rooms, search, statusFilter, floorFilter, attendantFilter, guestDndOnly, mode]);
 
   const filtersActive =
     search.trim() !== "" ||
@@ -250,6 +264,10 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
   /** Single place where a status change is issued, so busy-state and error handling are consistent. */
   const act = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
     if (busyRoomId) return; // guards against a double tap while a request is in flight
+    // F6-Nachtrag (M19): Fertigmelden durch Supervisor/DM — Wäschewechsel wie bei der Housekeeperin einmal bestätigen, nie automatisch
+    if ((status === "CLEAN" || status === "INSPECTED") && room.status !== "CLEAN" && room.status !== "INSPECTED" && extra.laundryChanged === undefined && laundryIds.has(room.id)) {
+      extra = { ...extra, laundryChanged: window.confirm(t("hk.laundryConfirm", { n: room.number })) };
+    }
     setBusyRoomId(room.id);
     setError(null);
     try {
@@ -257,6 +275,12 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       // Apply immediately; the socket echo will simply re-apply the same values.
       setRooms((prev) => prev.map((r) => (r.id === res.room.id ? { ...r, ...res.room } : r)));
     } catch (e) {
+      if (e instanceof ApiError && e.code === "GUEST_STILL_IN_ROOM" && !extra.confirmGuestPresent) {
+        // F3 (H10): Freigabe/Start trotz Vorgast nur nach Rückfrage mit Klartext
+        setBusyRoomId(null);
+        if (window.confirm(guestStillInText(t, room.number, e.data?.lateCheckout as string | null | undefined))) await act(room, status, { ...extra, confirmGuestPresent: true });
+        return;
+      }
       setError(`${room.number}: ${errorText(e, t)}`);
     } finally {
       setBusyRoomId(null);
@@ -302,7 +326,14 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         : [],
     [rooms, activeAttendantId, t]
   );
-  const onKpi = (k: SupKpi) => focusStatus(SUP_KPI_STATUS[k] as RoomStatus);
+  // Übersicht ohne Live-Board: Kennzahl öffnet die passende Seite (Freigabe, Probleme, sonst Grundriss)
+  const onKpi = (k: SupKpi) => {
+    const s = SUP_KPI_STATUS[k] as RoomStatus | null;
+    if (mode === "problems") return focusStatus(s);
+    if (s === "CLEAN") return router.push("/supervisor/release");
+    if (k === "dnd" || k === "defects" || (s && ["BLOCKED", "OUT_OF_ORDER", "DEFECT_REPORTED"].includes(s))) return router.push("/supervisor/problems");
+    router.push("/floor-plan");
+  };
 
   const notices = (
     <>
@@ -319,12 +350,13 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
 
   const release = (
     <ReleaseQueueCard
-      rooms={releaseQueue.map((r) => ({
+      rooms={sortReleaseQueue(releaseQueue.map((r) => ({
         id: r.id,
         number: r.number,
         waitingMin: Math.round((Date.now() - new Date(r.statusSince).getTime()) / 60000),
-        arrival: r.arrivals[0] ?? null,
-      }))}
+        // F6 (M11): die dringendste Anreise des Zimmers zählt (Sofort vor früher Zeit)
+        arrival: [...r.arrivals].filter((a) => !a.eta || Date.now() - new Date(a.eta).getTime() < 12 * 3_600_000).sort((a, b) => Number(b.neededNow) - Number(a.neededNow) || (a.eta ?? "9").localeCompare(b.eta ?? "9"))[0] ?? null,
+      })))}
       busyRoomId={busyRoomId}
       onRelease={(id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); }}
       onRework={(id) => { const room = roomById.get(id); if (room) setDialog({ kind: "rework", room }); }}
@@ -340,9 +372,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
       {HOTEL.unconfirmedFloors.length > 0 && (
         <Banner tone="warning" title={t("common.unconfirmedFloorNotice", { floors: HOTEL.unconfirmedFloors.join(", ") })} />
       )}
-      <ErrorBoundary>
-        <SupervisorGlance rooms={rooms} onChanged={load} />
-      </ErrorBoundary>
       <PriorityBanner
         items={[
           {
@@ -350,21 +379,26 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
             label: t("priority.releaseQueue"),
             icon: "clock",
             tone: releaseQueue.length >= RELEASE_QUEUE_BACKLOG ? "urgent" : "watch",
-            onClick: () => focusStatus("CLEAN"),
+            onClick: () => router.push("/supervisor/release"),
           },
-          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => focusStatus("BLOCKED") },
+          { count: blockedCount, label: t("priority.blockedRooms"), icon: "ban", tone: "urgent", onClick: () => router.push("/supervisor/problems") },
         ]}
       >
         <ErrorBoundary>
           <SupervisorFeed />
         </ErrorBoundary>
       </PriorityBanner>
+    </>
+  );
 
+  // Live-Board nur noch auf der Seite „Probleme“ (vorgefiltert); Etagenliste entfällt — der Grundriss deckt sie ab (Simon-Feedback 18.11.)
+  const board = (
+    <>
       {/* Live-Board (Status-Raster): dieselben Filter und Zimmer wie bisher, im Glas-Design (D3b). */}
       <GlassCard as="section" aria-labelledby="sup-board-title" className="flex flex-col gap-4">
         <div ref={gridRef} className="scroll-mt-4">
-          <h2 id="sup-board-title" className="text-title-22 text-text-primary">{t("supervisor.liveBoard")}</h2>
-          <p className="text-label text-text-muted">{t("supervisor.fiveFloorsKeys", { count: rooms.length })}</p>
+          <h2 id="sup-board-title" className="text-title-22 text-text-primary">{t("supervisor.problemRooms")}</h2>
+          <p className="text-label text-text-muted">{t("supervisor.fiveFloorsKeys", { count: visible.length })}</p>
         </div>
         {/* Ein Zimmer unter 145 finden, ohne zu scrollen. */}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))]">
@@ -458,8 +492,6 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           ))}
         </div>
       </GlassCard>
-
-      <SupervisorList />
     </>
   );
 
@@ -467,6 +499,8 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
     ? {
         ...selected,
         assignedLabel: selected.assignedTo ? attendantLabel(selected.assignedTo) : null,
+        startedAt: selected.status === "IN_PROGRESS" ? selected.statusSince : null,
+        estMinutes: Math.round(creditOf(selected.id) * minutesPerCredit),
       }
     : null;
 
@@ -483,8 +517,10 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
         onOpenRoom={setSelectedId}
         onMoveRooms={() => router.push("/floor-plan")}
         notices={notices}
-        release={release}
+        glance={<ErrorBoundary><SupervisorGlance rooms={rooms} onChanged={load} /></ErrorBoundary>}
         below={below}
+        // Simon-Feedback 19.11.: Zimmer-Aktionen (vorzeitige Abreise, Zimmerwechsel) stehen im Zimmerfenster (einklappbar), nicht als Karte
+        only={mode === "release" ? release : mode === "problems" ? <><BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} />{board}</> : undefined}
         detailOpen={!!detailRoom}
         detail={
           <DetailContainer open={!!detailRoom} onClose={() => setSelectedId(null)} title={detailRoom ? t("hkHub.roomTitle", { n: detailRoom.number }) : ""}>
@@ -496,6 +532,11 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
                 isDutyManager={isDutyManager}
                 onAct={(status) => void act(detailRoom, status)}
                 onOpenDialog={(kind) => setDialog({ kind, room: detailRoom })}
+                extra={<>
+                  {/* Review: „Alle Anpassungen“ gut sichtbar außerhalb des eingeklappten Bereichs; das Detail schließt, damit nur ein Fenster den Fokus hält */}
+                  <Button variant="secondary" icon="wrench" block onClick={() => { setFullRoomId(detailRoom.id); setSelectedId(null); }}>{t("roomActions.openFull")}</Button>
+                  <RoomWindowActions room={detailRoom} onChanged={() => void load()} />
+                </>}
                 thread={
                   <HkNoteThread
                     roomId={detailRoom.id}
@@ -531,13 +572,33 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           }}
         />
       )}
+      {dialog?.kind === "defect" && (
+        <HkDefectDialog
+          room={dialog.room.number}
+          onClose={() => setDialog(null)}
+          onSubmit={async (fd) => {
+            await api(`/api/rooms/${dialog.room.id}/defects`, { formData: fd });
+            setDialog(null);
+            refetchSoon();
+          }}
+        />
+      )}
       {dialog?.kind === "ooo" && (
         <OooDialog
           number={dialog.room.number}
           onClose={() => setDialog(null)}
-          onSubmit={async (until) => {
+          onSubmit={async (until, reason) => {
             setDialog(null);
-            await act(dialog.room, "OUT_OF_ORDER", { oooUntil: until.toISOString() });
+            const body = { oooUntil: until.toISOString(), oooReason: reason };
+            // F2: belegtes Zimmer / Anreise heute → Rückfrage mit Klartext, erst dann sperren (Server: 409 OCCUPIED_CONFIRM_REQUIRED)
+            try {
+              await api(`/api/rooms/${dialog.room.id}/status`, { body: { status: "OUT_OF_ORDER", ...body } });
+              await load();
+            } catch (e) {
+              if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED" && window.confirm(t("blocked.confirmOccupied"))) {
+                await act(dialog.room, "OUT_OF_ORDER", { ...body, confirmOccupied: true });
+              } else if (!(e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED")) setError(`${dialog.room.number}: ${errorText(e, t)}`);
+            }
           }}
         />
       )}
@@ -551,6 +612,7 @@ export default function SupervisorView({ isDutyManager }: { isDutyManager: boole
           }}
         />
       )}
+      {fullRoomId && <LiveRoomModal roomRef={fullRoomId} onClose={() => setFullRoomId(null)} onChanged={() => void load()} />}
     </div>
   );
 }

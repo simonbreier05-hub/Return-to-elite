@@ -21,7 +21,7 @@ const dayStart = new Date("2026-11-19T00:00:00+01:00");
 const yesterday = new Date("2026-11-18T10:00:00+01:00");
 
 describe("K1 Morgenstatus: gestern nicht gereinigt darf nicht „geprüft“ werden", () => {
-  it.fails("ein gestern schmutzig gebliebenes Zimmer ohne Eintrag im heutigen Plan bleibt schmutzig", () => {
+  it("ein gestern schmutzig gebliebenes Zimmer ohne Eintrag im heutigen Plan bleibt schmutzig", () => {
     const { updates } = planBoardStatus({
       rooms: [{ id: "r126", status: "DIRTY", statusSince: yesterday }],
       needsCleaning: new Set(), marker: {}, dayStart,
@@ -55,7 +55,7 @@ describe("K3 Tageszahlen: nachträglich zugeteilte Zimmer ohne Tagesplan-Eintrag
     expect(computeDayNumbers({ rows: [row({})], inventory: 145 }).toClean).toBe(1);
   });
 
-  it.fails("ein heute zugeteiltes, schmutziges Zimmer ohne Tagesplan-Art zählt als zu reinigen", () => {
+  it("ein heute zugeteiltes, schmutziges Zimmer ohne Tagesplan-Art zählt als zu reinigen", () => {
     // Heute: solche Zimmer haben keine Art (in der Liste `kind: null`) und fallen aus allen Zahlen (Tag 4: 70 statt 96).
     const rows = [row({ kind: null as unknown as DayNumberRow["kind"] })];
     expect(computeDayNumbers({ rows, inventory: 145 }).toClean).toBe(1);
@@ -78,7 +78,7 @@ describe("H4 Sperren: „außer Betrieb“ endet", () => {
     expect(LEGAL_TRANSITIONS.OUT_OF_SERVICE).toContain("DIRTY");
   });
 
-  it.fails("der Minutentakt (escalations.ts) wertet das Ende der Sperre (oooUntil) aus", () => {
+  it("der Minutentakt (escalations.ts) wertet das Ende der Sperre (oooUntil) aus", () => {
     expect(src("src/lib/escalations.ts")).toMatch(/oooUntil/);
   });
 
@@ -89,20 +89,20 @@ describe("H4 Sperren: „außer Betrieb“ endet", () => {
 });
 
 describe("H7 Check-out lässt sich zurücknehmen", () => {
-  it.fails("die Check-out-Route kennt ein Zurücknehmen (DELETE)", () => {
+  it("die Check-out-Route kennt ein Zurücknehmen (DELETE)", () => {
     expect(src("src/app/api/rooms/[id]/checkout/route.ts")).toMatch(/export async function DELETE/);
   });
 });
 
 describe("H11 Krankmeldung bleibt beim Team-Speichern erhalten", () => {
-  it.fails("saveTeam setzt eine heutige Krankmeldung nicht still zurück", () => {
+  it("saveTeam setzt eine heutige Krankmeldung nicht still zurück", () => {
     // Heute: Kraft ist in der Auswahl UND heute krank gemeldet → absentDate wird auf null gesetzt (teamData.ts).
     expect(src("src/lib/planung/teamData.ts")).not.toMatch(/if \(u\.absentDate === date\) await prisma\.user\.update\(\{ where: \{ id: u\.id \}, data: \{ absentDate: null \} \}\)/);
   });
 });
 
 describe("M2 Meldungen: der Duty Manager verliert nichts hinter einem 50er-Deckel", () => {
-  it.fails("GET /api/notifications schneidet nicht pauschal bei 50 ab", () => {
+  it("GET /api/notifications schneidet nicht pauschal bei 50 ab", () => {
     expect(src("src/app/api/notifications/route.ts")).not.toMatch(/take: 50/);
   });
 });
@@ -113,8 +113,9 @@ describe("M14 Gastsprache (B12): mehr als Deutsch und Englisch", () => {
     expect(isGuestLocale("en")).toBe(true);
   });
 
-  it.fails("Französisch, Spanisch und Chinesisch werden als Gastsprache angenommen", () => {
-    expect(["fr", "es", "zh"].every(isGuestLocale)).toBe(true);
+  // F7 (entschieden 16.11.): dieselben Sprachen wie die übrige App — fr/es/zh gehören nicht dazu
+  it("die Sprachen der App werden als Gastsprache angenommen", () => {
+    expect(["de", "en", "it", "tr", "fa", "hi", "vi"].every(isGuestLocale)).toBe(true);
   });
 });
 

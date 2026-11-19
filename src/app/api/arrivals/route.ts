@@ -4,6 +4,8 @@ import { prisma } from "@/lib/db";
 import { requireAuth, requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
+import { arrivalBeforeLateCheckout, previousGuest } from "@/lib/rooms/previousGuest";
+import { berlinHHMM } from "@/lib/dayplan/time";
 
 export async function GET() {
   const auth = await requireAuth();
@@ -15,7 +17,7 @@ export async function GET() {
       room: {
         select: {
           id: true, number: true, status: true, floor: true, type: true,
-          _count: { select: { notes: { where: { status: "OPEN" } } } },
+          _count: { select: { notes: { where: { status: "OPEN", archivedAt: null } } } },
         },
       },
     },
@@ -24,8 +26,17 @@ export async function GET() {
     const { _count, ...room } = a.room;
     return { ...a, room: { ...room, openNotesCount: _count.notes } };
   });
-  const readyForArrival = arrivals.filter((a) => a.status === "EXPECTED" && a.room.status === "INSPECTED").length;
-  return NextResponse.json({ arrivals: withNoteCounts, readyForArrival });
+  // F3 Teil 1 (K4, H10): Vorgast noch im Zimmer? Konflikt „Anreise vor Late Check-out“? — eine Regel (previousGuest.ts)
+  const now = new Date();
+  const prevBy = new Map<string, Awaited<ReturnType<typeof previousGuest>>>();
+  for (const roomId of new Set(arrivals.filter((a) => a.status === "EXPECTED").map((a) => a.roomId))) prevBy.set(roomId, await previousGuest(roomId, now));
+  const enriched = withNoteCounts.map((a) => {
+    const prev = prevBy.get(a.roomId);
+    const eta = a.eta ? berlinHHMM(a.eta) : null;
+    return { ...a, prevGuest: prev?.present ? { present: true, lateCheckout: prev.lateCheckout } : null, conflict: !!prev?.present && arrivalBeforeLateCheckout(eta, prev.lateCheckout) };
+  });
+  const readyForArrival = enriched.filter((a) => a.status === "EXPECTED" && a.room.status === "INSPECTED" && !a.prevGuest).length;
+  return NextResponse.json({ arrivals: enriched, readyForArrival });
 }
 
 const CreateSchema = z.object({

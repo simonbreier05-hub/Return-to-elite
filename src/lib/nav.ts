@@ -14,7 +14,7 @@ import type { TKey } from "@/lib/i18n/translations";
 import type { IconName } from "@/lib/ui/icons";
 
 /** Woher ein Zähler-Badge kommt — nur bestehende Datenquellen (keine neuen API-Routen). */
-export type NavCountSource = "chat";
+export type NavCountSource = "chat" | "release";
 
 export interface NavEntry {
   id: string;
@@ -39,9 +39,12 @@ export const NAV: Record<Role, NavEntry[]> = {
   supervisor: [
     { id: "overview", labelKey: "nav.overview", icon: "home", href: "/supervisor", mobileRank: 1 },
     { id: "planning", labelKey: "nav.planning", icon: "calendar-days", href: "/planung", mobileRank: 2 },
-    { id: "rooms", labelKey: "nav.rooms", icon: "bed-single", href: "/supervisor/service", mobileRank: 3 },
-    messages(4),
+    // Simon-Feedback 18.11.: „Zimmer“ (Service-Liste) entfällt — Grundriss deckt es ab; Freigabe und Probleme als eigene Punkte
+    // Simon-Feedback 19.11.: Grundriss ist der 3. Punkt der Leiste (Handy-Leiste unverändert: Freigabe bleibt Rang 3)
     { id: "floorPlan", labelKey: "appShell.floorPlan", icon: "list", href: "/floor-plan", mobileRank: 5 },
+    { id: "release", labelKey: "nav.release", icon: "clock", href: "/supervisor/release", count: "release", mobileRank: 3 },
+    { id: "problems", labelKey: "nav.problems", icon: "triangle-alert", href: "/supervisor/problems", mobileRank: 10 },
+    messages(4),
     { id: "handover", labelKey: "nav.handover", icon: "file-text", href: "/supervisor/handover", mobileRank: 6 },
     { id: "guestRequests", labelKey: "nav.guestRequests", icon: "bell", href: "/supervisor/guest-requests", mobileRank: 7 },
     { id: "guestAccess", labelKey: "nav.guestAccess", icon: "users", href: "/supervisor/guest-access", mobileRank: 8 },
@@ -51,6 +54,8 @@ export const NAV: Record<Role, NavEntry[]> = {
     { id: "house", labelKey: "nav.house", icon: "home", href: "/duty-manager", mobileRank: 1 },
     { id: "planning", labelKey: "nav.planning", icon: "calendar-days", href: "/planung", mobileRank: 2 },
     floorPlan(3, "nav.rooms"),
+    // Simon-Feedback 19.11.: gesperrte Zimmer und Zimmer-Aktionen von der Startseite in einen eigenen Punkt „Probleme“
+    { id: "problems", labelKey: "nav.problems", icon: "triangle-alert", href: "/duty-manager/problems", mobileRank: 6 },
     messages(4),
     { id: "settings", labelKey: "nav.settings", icon: "wrench", href: "/settings", mobileRank: 5 },
   ],
@@ -65,8 +70,9 @@ export const NAV: Record<Role, NavEntry[]> = {
   ],
   front_office: [
     { id: "arrivals", labelKey: "nav.arrivals", icon: "log-in", href: "/front-office", mobileRank: 1 },
-    floorPlan(2, "nav.rooms"),
-    messages(3),
+    { id: "departures", labelKey: "nav.departures", icon: "log-out", href: "/front-office/departures", mobileRank: 2 },
+    floorPlan(3, "nav.rooms"),
+    messages(4),
   ],
   concierge: [
     { id: "excursions", labelKey: "nav.excursions", icon: "star", href: "/concierge", mobileRank: 1 },
