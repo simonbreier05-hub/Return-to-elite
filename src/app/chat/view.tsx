@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { api } from "@/components/api";
 import Modal from "@/components/Modal";
@@ -98,7 +98,7 @@ export default function ChatView() {
 }
 
 function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary; me: { id: string; role: string }; onBack: () => void; onRead: () => void }) {
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [messages, setMessages] = useState<ChatMessageView[]>([]);
   const [hasMore, setHasMore] = useState(false);
   const [text, setText] = useState("");
@@ -175,11 +175,20 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
       <div className="flex-1 space-y-2 overflow-y-auto overflow-x-hidden px-3 py-3">
         {hasMore && <button type="button" onClick={() => void older()} className="mx-auto block min-h-11 text-sm text-accent-text underline underline-offset-2">{t("chat.loadOlder")}</button>}
         {messages.length === 0 && <p className="text-sm text-text-muted">{t("chat.empty")}</p>}
-        {messages.map((m) => {
+        {messages.map((m, idx) => {
           const mine = m.author.id === me.id;
+          // F5-Nachtrag (M16): Datum im Verlauf — Trenner, wenn ein neuer Tag beginnt (Berlin)
+          const dayOf = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+          const newDay = idx === 0 || dayOf(messages[idx - 1].createdAt) !== dayOf(m.createdAt);
           const canRetract = !m.retracted && !m.hidden && ((mine && Date.now() - Date.parse(m.createdAt) < RETRACT_MS) || me.role === "duty_manager");
           return (
-            <article key={m.id} className={`max-w-[85%] rounded-(--glass-radius-lg) border px-3 py-2 ${mine ? "ms-auto border-border-accent bg-accent-subtle-bg" : "border-border-subtle bg-surface-card-raised"} ${m.urgent ? "border-s-4 border-s-status-danger-fg" : ""}`}>
+            <Fragment key={m.id}>
+            {newDay && (
+              <div role="separator" aria-label={fmt.date(m.createdAt, { weekday: "long", day: "2-digit", month: "2-digit" })} className="my-2 flex items-center gap-3 text-xs text-text-muted" data-testid="chat-day">
+                <span className="h-px flex-1 bg-border-subtle" />{fmt.date(m.createdAt, { weekday: "long", day: "2-digit", month: "2-digit" })}<span className="h-px flex-1 bg-border-subtle" />
+              </div>
+            )}
+            <article className={`max-w-[85%] rounded-(--glass-radius-lg) border px-3 py-2 ${mine ? "ms-auto border-border-accent bg-accent-subtle-bg" : "border-border-subtle bg-surface-card-raised"} ${m.urgent ? "border-s-4 border-s-status-danger-fg" : ""}`}>
               <div className="flex flex-wrap items-baseline gap-x-2 text-xs text-text-secondary">
                 <span className="font-semibold text-text-primary">{mine ? t("chat.you") : m.author.name}</span>
                 <span>{t(`role.${m.author.role}` as TKey)}</span>
@@ -197,20 +206,29 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
                 </p>
               )}
               {/* Betrieb L2 (Punkt 10): Lesebestätigung der eigenen Nachricht — Text + Zeichen, nie nur Farbe */}
-              {mine && m.readBy && m.readBy.total > 0 && (
+              {mine && m.readBy && m.readBy.total > 0 && (channel.kind === "DIRECT" ? (
                 <p className="mt-1 text-xs text-text-secondary" data-testid="chat-receipt">
                   <span aria-hidden="true">{m.readBy.read >= m.readBy.total ? "✓✓ " : "✓ "}</span>
-                  {channel.kind === "DIRECT"
-                    ? (m.readBy.read > 0 ? t("chat.readDirect") : t("chat.delivered"))
-                    : t("chat.readBy", { read: m.readBy.read, total: m.readBy.total })}
+                  {m.readBy.read > 0 ? t("chat.readDirect") : t("chat.delivered")}
                 </p>
-              )}
+              ) : (
+                // F5-Nachtrag (M16, B10): „gelesen: 5 von 13“ aufklappbar mit Namen
+                <details className="mt-1 text-xs text-text-secondary" data-testid="chat-receipt">
+                  <summary className="min-h-11 cursor-pointer list-none py-2 underline-offset-2 hover:underline">
+                    <span aria-hidden="true">{m.readBy.read >= m.readBy.total ? "✓✓ " : "✓ "}</span>
+                    {t("chat.readBy", { read: m.readBy.read, total: m.readBy.total })}
+                  </summary>
+                  {!!m.readBy.readNames?.length && <p><span className="font-semibold">{t("chat.readNames")}</span> {m.readBy.readNames.join(", ")}</p>}
+                  {!!m.readBy.unreadNames?.length && <p><span className="font-semibold">{t("chat.unreadNames")}</span> {m.readBy.unreadNames.join(", ")}</p>}
+                </details>
+              ))}
               {canRetract && (
                 <button type="button" onClick={() => void retract(m.id)} className="mt-1 min-h-11 text-xs text-text-secondary underline underline-offset-2">
                   {mine ? t("chat.retract") : t("chat.hide")}
                 </button>
               )}
             </article>
+            </Fragment>
           );
         })}
         <div ref={endRef} />

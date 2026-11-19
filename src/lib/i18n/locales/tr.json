@@ -942,6 +942,8 @@
     "glance.arrivalsCount": "{{n}} giriş",
     "glance.openRoom": "{{n}} numaralı odayı aç",
     "glance.notCleanedTitle": "Bugün temizlenmedi",
+    "chat.unreadNames": "Henüz değil:",
+    "chat.readNames": "Okudu:",
     "chat.title": "Sohbet",
     "chat.readBy": "{{total}} kişiden {{read}} kişi okudu",
     "chat.readDirect": "Okundu",

@@ -942,6 +942,8 @@
     "glance.arrivalsCount": "{{n}} arrivo/i",
     "glance.openRoom": "Apri camera {{n}}",
     "glance.notCleanedTitle": "Non pulite oggi",
+    "chat.unreadNames": "Non ancora:",
+    "chat.readNames": "Letto:",
     "chat.title": "Chat",
     "chat.readBy": "Letto da {{read}} su {{total}}",
     "chat.readDirect": "Letto",

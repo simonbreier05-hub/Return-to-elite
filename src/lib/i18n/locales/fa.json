@@ -942,6 +942,8 @@
     "glance.arrivalsCount": "{{n}} ورود",
     "glance.openRoom": "باز کردن اتاق {{n}}",
     "glance.notCleanedTitle": "امروز نظافت نشده",
+    "chat.unreadNames": "هنوز نه:",
+    "chat.readNames": "خوانده‌اند:",
     "chat.title": "گفتگو",
     "chat.readBy": "خوانده‌شده توسط {{read}} از {{total}}",
     "chat.readDirect": "خوانده شد",

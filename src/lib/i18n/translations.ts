@@ -1088,6 +1088,8 @@ const en = {
     notCleanedTitle: "Not cleaned today",
   },
   chat: {
+    readNames: "Read:",
+    unreadNames: "Not yet:",
     readBy: "Read by {{read}} of {{total}}",
     readDirect: "Read",
     delivered: "Delivered",
@@ -3243,6 +3245,8 @@ const de = {
     notCleanedTitle: "Heute nicht gereinigt",
   },
   chat: {
+    readNames: "Gelesen:",
+    unreadNames: "Noch nicht:",
     readBy: "Gelesen von {{read}} von {{total}}",
     readDirect: "Gelesen",
     delivered: "Zugestellt",

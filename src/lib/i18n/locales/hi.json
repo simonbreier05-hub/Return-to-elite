@@ -942,6 +942,8 @@
     "glance.arrivalsCount": "{{n}} चेक-इन",
     "glance.openRoom": "कमरा {{n}} खोलें",
     "glance.notCleanedTitle": "आज साफ़ नहीं हुए",
+    "chat.unreadNames": "अभी नहीं:",
+    "chat.readNames": "पढ़ा:",
     "chat.title": "चैट",
     "chat.readBy": "{{total}} में से {{read}} ने पढ़ा",
     "chat.readDirect": "पढ़ा गया",

@@ -942,6 +942,8 @@
     "glance.arrivalsCount": "{{n}} Check-in",
     "glance.openRoom": "Mở phòng {{n}}",
     "glance.notCleanedTitle": "Hôm nay không dọn",
+    "chat.unreadNames": "Chưa:",
+    "chat.readNames": "Đã đọc:",
     "chat.title": "Chat",
     "chat.readBy": "Đã đọc {{read}}/{{total}}",
     "chat.readDirect": "Đã đọc",
