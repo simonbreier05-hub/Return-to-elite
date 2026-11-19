@@ -54,31 +54,31 @@ export default function RedistributionCards() {
   if (!r.items.length) return null;
 
   return (
-    <div className="mb-4 rounded-2xl border border-gold-line bg-parchment p-4" role="status">
+    <div className="mb-4 rounded-(--glass-radius-lg) border border-border-accent bg-accent-subtle-bg p-4" role="status">
       <div className="mb-2 text-sm font-medium">{t("redist.banner", { n: r.items.length })}</div>
-      {r.error && <p className="mb-2 text-sm text-status-out-of-order">{r.error}</p>}
+      {r.error && <p className="mb-2 text-sm text-status-danger-fg">{r.error}</p>}
       <div className="space-y-3">
         {r.items.map((s) => (
-          <div key={s.id} className="rounded-xl border border-charcoal/10 bg-white p-3">
-            <div className="mb-1 font-serif text-lg">{r.head(s)}</div>
+          <div key={s.id} className="rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-3">
+            <div className="mb-1 text-body-18 text-text-primary">{r.head(s)}</div>
             <ul className="mb-2 space-y-1 text-sm">
               {s.moves.map((m) => (
                 <li key={m.roomId} className="flex flex-wrap items-center gap-2">
                   <span>{r.moveText(s, m)}</span>
                   {r.editing === s.id && (
                     <select value={r.override[m.roomId] ?? m.toId} onChange={(e) => r.setTarget(m.roomId, e.target.value)}
-                      className="h-10 rounded-lg border border-charcoal/20 bg-white px-2 text-sm">
+                      className="h-10 rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised px-2 text-sm">
                       {r.attendants.map((a) => <option key={a.id} value={a.id}>{a.name}</option>)}
                     </select>
                   )}
                 </li>
               ))}
             </ul>
-            <p className="mb-2 text-xs text-graphite/60">{t("redist.startedStay")}</p>
+            <p className="mb-2 text-xs text-text-muted">{t("redist.startedStay")}</p>
             <div className="flex flex-wrap gap-2">
-              <button type="button" disabled={r.busy} onClick={() => r.decide(s, "confirm")} className="h-12 rounded-xl bg-navy px-5 text-sm font-medium text-white hover:bg-navy-line disabled:opacity-40">{t("redist.confirm")}</button>
-              <button type="button" disabled={r.busy} onClick={() => r.toggleEdit(s.id)} className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("redist.change")}</button>
-              <button type="button" disabled={r.busy} onClick={() => r.decide(s, "reject")} className="h-12 rounded-xl border border-charcoal/15 bg-white px-5 text-sm">{t("redist.reject")}</button>
+              <button type="button" disabled={r.busy} onClick={() => r.decide(s, "confirm")} className="h-12 rounded-(--glass-radius-md) bg-champagne px-5 text-sm font-medium text-text-on-accent disabled:opacity-40">{t("redist.confirm")}</button>
+              <button type="button" disabled={r.busy} onClick={() => r.toggleEdit(s.id)} className="h-12 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-5 text-sm">{t("redist.change")}</button>
+              <button type="button" disabled={r.busy} onClick={() => r.decide(s, "reject")} className="h-12 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-5 text-sm">{t("redist.reject")}</button>
             </div>
           </div>
         ))}

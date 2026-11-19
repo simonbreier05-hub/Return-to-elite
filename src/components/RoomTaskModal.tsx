@@ -71,9 +71,9 @@ export default function RoomTaskModal({
           <button
             key={rt}
             onClick={() => setType(rt)}
-            className={`h-14 rounded-xl border px-4 text-start text-sm font-medium ${
-              type === rt ? "border-gold bg-parchment font-semibold" : "border-charcoal/20"
-            }`}
+            className={`h-14 rounded-(--glass-radius-md) border px-4 text-start text-sm font-medium ${
+ type === rt ? "border-gold bg-accent-subtle-bg font-semibold" : "border-border-subtle"
+ }`}
           >
             {t(`roomTaskType.${rt}` as TKey)}
           </button>
@@ -84,16 +84,16 @@ export default function RoomTaskModal({
         onChange={(e) => setNote(e.target.value)}
         rows={3}
         placeholder={t("supervisor.houseTaskNotePlaceholder")}
-        className="mb-4 w-full rounded-lg border border-charcoal/20 p-3 text-base outline-none focus:border-gold"
+        className="mb-4 w-full rounded-(--glass-radius-sm) border border-border-subtle p-3 text-base"
       />
       <div className="grid grid-cols-2 gap-2">
-        <button onClick={onClose} className="h-14 rounded-xl border border-charcoal/20 text-base">
+        <button onClick={onClose} className="h-14 rounded-(--glass-radius-md) border border-border-subtle text-base">
           {t("common.cancel")}
         </button>
         <button
           onClick={submit}
           disabled={busy || (needsNote && !note.trim())}
-          className="h-14 rounded-xl bg-navy text-base font-semibold text-ivory disabled:opacity-40"
+          className="h-14 rounded-(--glass-radius-md) bg-champagne text-base font-semibold text-text-on-accent disabled:opacity-40"
         >
           {busy ? t("supervisor.houseTaskSending") : t("supervisor.houseTaskSend")}
         </button>

@@ -26,7 +26,7 @@ export default function TwoTapButton({ children, onConfirm, disabled, className 
     <button type="button" disabled={disabled} onClick={click} aria-live="polite"
       className={glass
         ? cx("press text-body-16 inline-flex min-h-(--size-touch-min) items-center justify-center gap-2 rounded-pill border px-4 disabled:cursor-not-allowed disabled:opacity-40", armed ? "bg-champagne border-border-accent text-text-on-accent" : "glass-fill border-border-subtle text-text-primary", FOCUS_RING, className)
-        : `min-h-11 rounded-lg border px-3 text-sm font-medium disabled:opacity-40 ${armed ? "border-gold bg-gold text-white" : "border-charcoal/20 bg-white"} ${className}`}>
+        : `min-h-11 rounded-(--glass-radius-sm) border px-3 text-sm font-medium disabled:opacity-40 ${armed ? "border-border-accent bg-champagne text-text-on-accent" : "border-border-subtle bg-surface-card-raised"} ${className}`}>
       {armed ? t("roomEdit.confirm") : children}
     </button>
   );

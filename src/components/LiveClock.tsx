@@ -22,9 +22,9 @@ export default function LiveClock({ tone = "shell" }: { tone?: "shell" | "pl" })
     return <span role="timer" aria-label={`${date}, ${time}`} className="tabular-nums">{short} · {time}</span>;
   }
   return (
-    <div className="flex shrink-0 flex-col items-end leading-tight text-charcoal/85 md:hidden lg:flex" role="timer" aria-label={`${date}, ${time}`}>
-      <span className="font-serif text-base tabular-nums text-navy">{time}</span>
-      <span className="hidden text-[0.65rem] uppercase tracking-wider text-charcoal/60 lg:block">{date}</span>
+    <div className="flex shrink-0 flex-col items-end leading-tight text-text-secondary md:hidden lg:flex" role="timer" aria-label={`${date}, ${time}`}>
+      <span className="text-base tabular-nums text-accent-text">{time}</span>
+      <span className="hidden text-[0.65rem] uppercase tracking-wider text-text-secondary lg:block">{date}</span>
     </div>
   );
 }

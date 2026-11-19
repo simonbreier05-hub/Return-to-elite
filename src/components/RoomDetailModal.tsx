@@ -115,32 +115,32 @@ export default function RoomDetailModal({
       {room.pause && <div className="mt-2"><PauseBadge pause={room.pause} showBy /></div>}
       {summary}
       {room.guestDndActive && (
-        <p className="mt-2 flex items-center gap-1.5 rounded-lg bg-status-out-of-order/10 p-2 text-sm font-medium text-status-out-of-order">
+        <p className="mt-2 flex items-center gap-1.5 rounded-(--glass-radius-sm) bg-status-danger-bg p-2 text-sm font-medium text-status-danger-fg">
           <IconBellSlash className="h-4 w-4 shrink-0" />
           {t("supervisor.guestDndBanner")}
         </p>
       )}
       {room.oooUntil && (
-        <p className="mt-1 text-xs text-graphite/60">
+        <p className="mt-1 text-xs text-text-muted">
           {t("supervisor.oooUntil", { date: dateTime(room.oooUntil) })}
           {room.oooReason ? ` · ${t("blocked.reason")}: ${room.oooReason}` : ""}
         </p>
       )}
       {room.reworkNote && room.status === "PICKUP" && (
-        <p className="mt-2 rounded-lg bg-status-pickup/10 p-2 text-sm text-status-pickup">
+        <p className="mt-2 rounded-(--glass-radius-sm) bg-status-pickup/10 p-2 text-sm text-status-pickup">
           {t("attendant.reworkNote")} {room.reworkNote}
         </p>
       )}
 
       {actions?.priority && actions.priority.score > 0 && (
-        <div className="mt-3 rounded-lg border border-gold/30 bg-ivory p-3 text-xs text-graphite">
-          <p className="mb-1 font-medium text-graphite">
+        <div className="mt-3 rounded-(--glass-radius-sm) border border-border-accent bg-surface-card-raised p-3 text-xs text-text-secondary">
+          <p className="mb-1 font-medium text-text-secondary">
             {t("attendant.priorityScore", { score: actions.priority.score, minutes: actions.priority.estimatedMinutes })}
           </p>
           <ul className="space-y-1">
             {actions.priority.reasons.map((r, i) => (
               <li key={i}>
-                <span className="font-semibold text-gold">+{r.points}</span> {r.reason}
+                <span className="font-semibold text-accent-text">+{r.points}</span> {r.reason}
               </li>
             ))}
           </ul>
@@ -153,7 +153,7 @@ export default function RoomDetailModal({
             <button
               onClick={actions.primary.onClick}
               disabled={actions.busy}
-              className="col-span-2 h-14 rounded-xl bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
+              className="col-span-2 h-14 rounded-(--glass-radius-md) bg-status-in-progress text-lg font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50"
             >
               {actions.busy ? "…" : actions.primary.label}
             </button>
@@ -162,7 +162,7 @@ export default function RoomDetailModal({
             <button
               onClick={actions.onBlock}
               disabled={actions.busy}
-              className="h-12 rounded-xl border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
+              className="h-12 rounded-(--glass-radius-md) border-2 border-status-blocked text-sm font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50"
             >
               {actions.blockLabel ?? t("attendant.blockedAction")}
             </button>
@@ -170,7 +170,7 @@ export default function RoomDetailModal({
           {actions.onReportDefect && (
             <button
               onClick={actions.onReportDefect}
-              className="h-12 rounded-xl border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
+              className="h-12 rounded-(--glass-radius-md) border-2 border-status-defect text-sm font-medium text-status-defect transition active:scale-[0.98]"
             >
               {actions.defectLabel ?? t("attendant.defectAction")}
             </button>
@@ -180,7 +180,7 @@ export default function RoomDetailModal({
       {actions?.extra && <div className="mt-2 space-y-2">{actions.extra}</div>}
 
       <div className="mt-4">
-        <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.assignedAttendant")}</h4>
+        <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-text-muted">{t("supervisor.assignedAttendant")}</h4>
         <p className="text-sm">
           {room.assignedTo
             ? room.assignedTo.dailyNumber
@@ -192,7 +192,7 @@ export default function RoomDetailModal({
 
       {arrivals.length > 0 && (
         <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.expectedArrivals")}</h4>
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-text-muted">{t("supervisor.expectedArrivals")}</h4>
           {arrivals.map((a, i) => (
             <p key={i} className="text-sm">
               {a.vip && "★ "}
@@ -206,13 +206,13 @@ export default function RoomDetailModal({
 
       {defects.length > 0 && (
         <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.defectsTitle")}</h4>
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-text-muted">{t("supervisor.defectsTitle")}</h4>
           {defects.map((d) => (
             <p key={d.id} className="text-sm">
               🔧 {t(`defectCategory.${d.category}` as TKey)}: {d.note}
-              {d.workOrder && <span className="ms-1 text-xs text-graphite/60">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
+              {d.workOrder && <span className="ms-1 text-xs text-text-muted">[{t(`workOrderStatus.${d.workOrder.status}` as TKey)}]</span>}
               {d.reportedBy?.role === "guest" && (
-                <span className="ms-1 text-xs font-medium text-status-out-of-order">{t("supervisor.reportedByGuest")}</span>
+                <span className="ms-1 text-xs font-medium text-status-danger-fg">{t("supervisor.reportedByGuest")}</span>
               )}
             </p>
           ))}
@@ -221,12 +221,12 @@ export default function RoomDetailModal({
 
       {room.guestRequests && room.guestRequests.length > 0 && (
         <div className="mt-4">
-          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.guestRequestsTitle")}</h4>
+          <h4 className="mb-1 text-sm font-semibold uppercase tracking-wider text-text-muted">{t("supervisor.guestRequestsTitle")}</h4>
           {room.guestRequests.map((r) => (
             <p key={r.id} className="text-sm">
               {r.kind === "DND" ? "🔕" : r.kind === "CLEAN_REQUEST" ? "✨" : "💬"}{" "}
               {t(`guestRequestKind.${r.kind}` as TKey)}
-              <span className="ms-1 text-xs text-graphite/60">
+              <span className="ms-1 text-xs text-text-muted">
                 [{t(`guestRequestStatus.${r.status}` as TKey)} · {hhmm(r.createdAt)}]
               </span>
             </p>
@@ -238,7 +238,7 @@ export default function RoomDetailModal({
 
       <div className="mt-4">
         <div className="mb-1 flex items-center gap-2">
-          <h4 className="text-sm font-semibold uppercase tracking-wider text-graphite/60">{t("supervisor.notesTitle")}</h4>
+          <h4 className="text-sm font-semibold uppercase tracking-wider text-text-muted">{t("supervisor.notesTitle")}</h4>
           <NoteCountBadge openCount={room.openNotesCount ?? 0} totalCount={notes.length} />
         </div>
         <NoteThread key={notes.map((n) => `${n.id}${n.status}`).join()} roomId={room.id} initialNotes={notes} onNoteAdded={actions?.onNoteAdded} onNoteUpdated={actions?.onNoteUpdated} task={task} />

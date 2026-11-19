@@ -46,16 +46,16 @@ export default function Collapsible({
     );
   }
   return (
-    <div className="mb-2 overflow-hidden rounded-xl border border-charcoal/10 bg-linen/50">
+    <div className="mb-2 overflow-hidden rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-start transition hover:bg-parchment/60"
+        className="flex min-h-11 w-full items-center justify-between gap-2 px-3 py-2.5 text-start transition"
         aria-expanded={open}
       >
         {summary}
         <svg
-          className={`h-4 w-4 shrink-0 text-graphite/45 transition-transform duration-150 ${open ? "rotate-180" : ""}`}
+          className={`h-4 w-4 shrink-0 text-text-muted transition-transform duration-150 ${open ? "rotate-180" : ""}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -64,7 +64,7 @@ export default function Collapsible({
           <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
-      {open && <div className="animate-rise border-t border-charcoal/5 px-3 pb-3 pt-2.5">{children}</div>}
+      {open && <div className="theme-glass border-t border-border-subtle px-3 pb-3 pt-2.5">{children}</div>}
     </div>
   );
 }

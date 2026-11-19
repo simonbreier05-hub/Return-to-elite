@@ -140,18 +140,18 @@ export default function NoteThread({
   return (
     <div>
       {outOfScope && notes.some((n) => n.kind === "MESSAGE") && (
-        <p role="note" className="mb-2 rounded-lg border border-gold-line/60 bg-parchment p-2 text-xs">⚠ {t("work.outOfScopeHint")}</p>
+        <p role="note" className="mb-2 rounded-(--glass-radius-sm) border border-border-subtle bg-accent-subtle-bg p-2 text-xs">⚠ {t("work.outOfScopeHint")}</p>
       )}
-      {notes.length === 0 && <p className={`${textSize} text-graphite/50`}>{t("work.noNotes")}</p>}
+      {notes.length === 0 && <p className={`${textSize} text-text-muted`}>{t("work.noNotes")}</p>}
       {notes.map((n) => {
         const isMessage = n.kind === "MESSAGE";
         return (
-          <div key={n.id} className={`mb-1 rounded-lg ${isMessage ? "border-s-4 border-gold bg-parchment" : "bg-ivory"} ${pad} ${textSize}`}>
+          <div key={n.id} className={`mb-1 rounded-(--glass-radius-sm) ${isMessage ? "border-s-4 border-gold bg-accent-subtle-bg" : "bg-surface-card-raised"} ${pad} ${textSize}`}>
             <div className="flex items-start justify-between gap-2">
-              <span className="text-xs text-graphite/60">
-                {isMessage && <span className="me-1 rounded-full bg-gold/20 px-1.5 py-0.5 font-semibold text-charcoal">💬 {t("work.message")}</span>}
-                {isMessage && outOfScope && <span className="me-1 rounded-full border border-gold-line/60 bg-white px-1.5 py-0.5 font-semibold text-gold-soft">{t("work.outOfScope")}</span>}
-                <span className="font-medium text-graphite">{n.author?.name ?? "—"}</span> ({roleLabel(n.author?.role ?? "")}) ·{" "}
+              <span className="text-xs text-text-muted">
+                {isMessage && <span className="me-1 rounded-full bg-accent-subtle-bg px-1.5 py-0.5 font-semibold text-text-primary">💬 {t("work.message")}</span>}
+                {isMessage && outOfScope && <span className="me-1 rounded-full border border-border-subtle bg-surface-progress-track px-1.5 py-0.5 font-semibold text-accent-text">{t("work.outOfScope")}</span>}
+                <span className="font-medium text-text-secondary">{n.author?.name ?? "—"}</span> ({roleLabel(n.author?.role ?? "")}) ·{" "}
                 {hhmm(n.createdAt)}
               </span>
               <button
@@ -171,7 +171,7 @@ export default function NoteThread({
         <div role="radiogroup" aria-label={t("work.message")} className="mt-2 flex flex-wrap gap-2 text-xs">
           {([true, false] as const).map((m) => (
             <button key={String(m)} type="button" role="radio" aria-checked={asMessage === m} onClick={() => setAsMessage(m)}
-              className={`min-h-11 rounded-full border px-3 font-medium ${asMessage === m ? "border-gold-line bg-parchment" : "border-charcoal/15 bg-white"}`}>
+              className={`min-h-11 rounded-full border px-3 font-medium ${asMessage === m ? "border-border-accent bg-accent-subtle-bg" : "border-border-subtle bg-surface-card-raised"}`}>
               {m ? `💬 ${t("work.asMessage")}` : t("work.asNote")}
             </button>
           ))}
@@ -184,12 +184,12 @@ export default function NoteThread({
           onKeyDown={(e) => e.key === "Enter" && addNote()}
           placeholder={messageMode ? t("work.messagePlaceholder") : t("work.notePlaceholder")}
           maxLength={2000}
-          className={`${compact ? "h-11" : "h-12"} min-w-0 flex-1 rounded-lg border border-charcoal/20 px-3 outline-none focus:border-gold`}
+          className={`${compact ? "h-11" : "h-12"} min-w-0 flex-1 rounded-(--glass-radius-sm) border border-border-subtle px-3`}
         />
         <button
           onClick={addNote}
           disabled={savingNote || !noteBody.trim()}
-          className={`${compact ? "h-11" : "h-12"} rounded-lg bg-charcoal px-4 text-ivory disabled:opacity-40`}
+          className={`${compact ? "h-11" : "h-12"} rounded-(--glass-radius-sm) bg-champagne px-4 text-text-on-accent disabled:opacity-40`}
         >
           {savingNote ? "…" : t("work.send")}
         </button>

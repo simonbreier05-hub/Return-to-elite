@@ -75,10 +75,10 @@ export default function PauseControl({ targetType, targetId, pause, canPause, on
       <div className="space-y-2" data-testid="pause-control">
         {showBadge && <PauseBadge pause={pause} showBy />}
         <button type="button" onClick={() => send("resume")} disabled={busy}
-          className={`w-full rounded-xl bg-status-in-progress font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50 ${h}`}>
+          className={`w-full rounded-(--glass-radius-md) bg-status-in-progress font-semibold text-linen transition active:scale-[0.98] disabled:opacity-50 ${h}`}>
           {busy ? "…" : `▶ ${t("work.resume")}`}
         </button>
-        {error && <p role="alert" className="text-sm text-status-out-of-order">{error}</p>}
+        {error && <p role="alert" className="text-sm text-status-danger-fg">{error}</p>}
       </div>
     );
   }
@@ -87,25 +87,25 @@ export default function PauseControl({ targetType, targetId, pause, canPause, on
     <div className="space-y-2" data-testid="pause-control">
       {!asking ? (
         <button type="button" onClick={() => setAsking(true)} disabled={busy}
-          className={`w-full rounded-xl border-2 border-status-blocked font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50 ${h}`}>
+          className={`w-full rounded-(--glass-radius-md) border-2 border-status-blocked font-medium text-status-blocked transition active:scale-[0.98] disabled:opacity-50 ${h}`}>
           ⏸ {t("work.pause")}
         </button>
       ) : (
-        <div role="group" aria-label={t("work.reasonPrompt")} className="rounded-xl border border-status-blocked/40 bg-status-blocked/5 p-2">
+        <div role="group" aria-label={t("work.reasonPrompt")} className="rounded-(--glass-radius-md) border border-status-blocked/40 bg-status-blocked/5 p-2">
           <p className="mb-2 text-sm font-medium">{t("work.reasonPrompt")}</p>
           <div className="grid grid-cols-2 gap-2">
             {PAUSE_REASONS.map((r) => (
               <button key={r} type="button" disabled={busy} onClick={() => send("pause", r)}
-                className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm font-medium disabled:opacity-50">{t(reasonKey(r))}</button>
+                className="min-h-11 rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised px-3 text-sm font-medium disabled:opacity-50">{t(reasonKey(r))}</button>
             ))}
             <button type="button" disabled={busy} onClick={() => send("pause", null)}
-              className="min-h-11 rounded-lg border border-charcoal/15 bg-white px-3 text-sm disabled:opacity-50">{t("work.noReason")}</button>
+              className="min-h-11 rounded-(--glass-radius-sm) border border-border-subtle bg-surface-card-raised px-3 text-sm disabled:opacity-50">{t("work.noReason")}</button>
             <button type="button" disabled={busy} onClick={() => setAsking(false)}
-              className="min-h-11 rounded-lg px-3 text-sm text-graphite/70 underline">{t("work.cancel")}</button>
+              className="min-h-11 rounded-(--glass-radius-sm) px-3 text-sm text-text-secondary underline">{t("work.cancel")}</button>
           </div>
         </div>
       )}
-      {error && <p role="alert" className="text-sm text-status-out-of-order">{error}</p>}
+      {error && <p role="alert" className="text-sm text-status-danger-fg">{error}</p>}
     </div>
   );
 }

@@ -54,7 +54,7 @@ export function useGlanceCollapse(enabled = true) {
 export function GlanceTitle({ title, fold }: { title: string; fold?: { collapsed: boolean; toggle: () => void } }) {
   const { t } = useLocale();
   const glassMode = useGlassMode();
-  const cls = glassMode ? "text-title-22 text-text-primary" : "mb-2 font-serif text-xl";
+  const cls = glassMode ? "text-title-22 text-text-primary" : "mb-2 text-title-22 text-text-primary";
   if (!fold) return <h3 className={cls}>{title}</h3>;
   return (
     <h3 className={cls}>
@@ -177,7 +177,7 @@ export default function TodayAtAGlance({ title, numbers, kpis, source, variant =
     <section aria-label={title ?? t("dutyManager.dashboardTitle")} className={glassMode ? "glass flex flex-col gap-1 rounded-(--glass-radius-lg) p-4 sm:p-6" : "mb-6"}>
       <GlanceTitle title={title ?? t("dutyManager.dashboardTitle")} fold={collapsible ? fold : undefined} />
       {shown && <>
-      {source && <p className={glassMode ? "text-label mb-3 text-text-muted" : "mb-2 text-xs text-graphite/60"}>{t("glance.tapHint")}</p>}
+      {source && <p className={glassMode ? "text-label mb-3 text-text-muted" : "mb-2 text-xs text-text-muted"}>{t("glance.tapHint")}</p>}
       {numbers && <DayNumberTiles className="mb-3" numbers={numbers} onTile={source ? detail.open : undefined} />}
       {kpis && (
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">

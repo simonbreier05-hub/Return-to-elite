@@ -53,11 +53,11 @@ export default function PlanEditorWindow({
   const taskItem = (it: HousemanItem) => ({ id: it.id, label: it.roomNumber, sub: it.text.length > 28 ? `${it.text.slice(0, 27)}…` : it.text, title: it.text });
   const floorItem = (f: number) => ({ id: String(f), label: t("planungTool.floorLabel", { n: f }), sub: `${roomsByFloor(f).length} ${t("planungTool.roomsShort")}` });
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto bg-ivory text-charcoal" role="dialog" aria-modal="true" aria-label={t("planungTool.editorTitle")}>
-      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-charcoal/10 bg-linen px-4 py-3">
+    <div className="theme-glass bg-atmosphere fixed inset-0 z-50 overflow-y-auto bg-bg-canvas text-text-primary" role="dialog" aria-modal="true" aria-label={t("planungTool.editorTitle")}>
+      <div className="sticky top-0 z-10 flex items-center justify-between gap-3 border-b border-border-subtle bg-surface-card-raised px-4 py-3">
         <div className="min-w-0">
-          <h2 className="truncate font-serif text-2xl leading-tight">{t("planungTool.editorTitle")}</h2>
-          <p className="text-label text-graphite/70">{t("planungTool.editorHint")}</p>
+          <h2 className="truncate text-title-22 text-text-primary leading-tight">{t("planungTool.editorTitle")}</h2>
+          <p className="text-label text-text-secondary">{t("planungTool.editorHint")}</p>
         </div>
         <CloseButton onClick={onClose} label={t("planungTool.backToPlan")} />
       </div>
@@ -65,7 +65,7 @@ export default function PlanEditorWindow({
         <div className="mb-4 flex flex-wrap gap-2" role="tablist">
           {tabs.map(([id, label]) => (
             <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}
-              className={`h-11 rounded-lg border px-4 text-sm font-medium ${tab === id ? "border-gold-line bg-parchment shadow-sm" : "border-charcoal/15 bg-white"}`}>{label}</button>
+              className={`h-11 rounded-(--glass-radius-sm) border px-4 text-sm font-medium ${tab === id ? "border-border-accent bg-accent-subtle-bg " : "border-border-subtle bg-surface-card-raised"}`}>{label}</button>
           ))}
         </div>
 
@@ -83,7 +83,7 @@ export default function PlanEditorWindow({
 
         {tab === "supervisors" && (
           <div>
-            <p className="mb-3 text-sm text-graphite/70">{t("planungTool.supervisorsHint")}</p>
+            <p className="mb-3 text-sm text-text-secondary">{t("planungTool.supervisorsHint")}</p>
             <DragDropBoard
               hint={t("board.hint")}
               onMove={(ids, to) => { if (to) for (const f of ids) onPickFloor(Number(f), to); }}
@@ -97,8 +97,8 @@ export default function PlanEditorWindow({
 
         {tab === "houseman" && (
           <div>
-            <p className="mb-3 text-sm text-graphite/70">{t("planungTool.housemanHint")}</p>
-            {tasks === null ? <p className="text-sm text-graphite/60">{t("common.loading")}</p> : tasks.length === 0 ? <p className="text-sm text-graphite/70">{t("planungTool.noHousemanTasks")}</p> : (
+            <p className="mb-3 text-sm text-text-secondary">{t("planungTool.housemanHint")}</p>
+            {tasks === null ? <p className="text-sm text-text-muted">{t("common.loading")}</p> : tasks.length === 0 ? <p className="text-sm text-text-secondary">{t("planungTool.noHousemanTasks")}</p> : (
               <DragDropBoard
                 hint={t("board.hint")}
                 onMove={(ids, to) => { for (const id of ids) onHmEdit(id, to); }}

@@ -72,46 +72,46 @@ export default function HousemanList({ onLinkedTasks }: { onLinkedTasks?: (roomT
   return (
     <section aria-labelledby="hm-list-title" className="mb-6">
       <div className="flex flex-wrap items-baseline justify-between gap-x-4">
-        <h3 id="hm-list-title" className="font-serif text-3xl">{t("lists.hmTitle")}</h3>
-        <p className="text-sm text-graphite/70" aria-live="polite">{t("lists.hmOpen", { n: open })} · {t("lists.hmDone", { n: done })}</p>
+        <h3 id="hm-list-title" className="text-title-28 text-text-primary">{t("lists.hmTitle")}</h3>
+        <p className="text-sm text-text-secondary" aria-live="polite">{t("lists.hmOpen", { n: open })} · {t("lists.hmDone", { n: done })}</p>
       </div>
       <HubMissingNotice hub={data.hub} planner={false} />
       {data.floors.length > 1 && (
         <div role="group" aria-label={t("lists.floorN", { n: "" }).trim()} className="mt-3 flex flex-wrap gap-2">
           {[null, ...data.floors].map((f) => (
             <button key={f ?? "all"} type="button" aria-pressed={floor === f} onClick={() => setFloor(f)}
-              className={`min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${floor === f ? "border-navy bg-navy text-ivory" : "border-charcoal/20 bg-white"}`}>
+              className={`min-h-11 rounded-full border px-4 text-sm font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${floor === f ? "border-navy bg-champagne text-text-on-accent" : "border-border-subtle bg-surface-card-raised"}`}>
               {f === null ? t("lists.hmAllFloors") : t("lists.floorN", { n: f })}
             </button>
           ))}
         </div>
       )}
-      {error && <p role="alert" className="mt-2 text-sm text-status-out-of-order">{error}</p>}
+      {error && <p role="alert" className="mt-2 text-sm text-status-danger-fg">{error}</p>}
       {shown.length === 0 ? (
-        <p className="mt-3 rounded-2xl border border-charcoal/10 bg-linen p-6 text-center text-graphite/60">{t("lists.hmNone")}</p>
+        <p className="mt-3 rounded-(--glass-radius-lg) border border-border-subtle bg-surface-card-raised p-6 text-center text-text-muted">{t("lists.hmNone")}</p>
       ) : (
         <ul className="mt-3 grid gap-3 md:grid-cols-2">
           {shown.map((i) => (
-            <li key={i.id} data-status={i.status} className={`rounded-2xl border p-4 shadow-sm ${i.status === "DONE" ? "border-charcoal/10 bg-linen/70" : "border-charcoal/10 bg-white"}`}>
+            <li key={i.id} data-status={i.status} className={`rounded-(--glass-radius-lg) border p-4 ${i.status === "DONE" ? "border-border-subtle bg-surface-card-raised" : "border-border-subtle bg-surface-card-raised"}`}>
               <div className="flex items-baseline gap-2">
-                <span className="font-serif text-3xl leading-none">{i.roomNumber}</span>
-                <span className="text-xs text-graphite/60">{t("lists.floorN", { n: i.floor })}</span>
+                <span className="text-title-28 text-text-primary leading-none">{i.roomNumber}</span>
+                <span className="text-xs text-text-muted">{t("lists.floorN", { n: i.floor })}</span>
               </div>
-              <p className={`mt-1.5 text-base ${i.status === "DONE" ? "text-graphite/60 line-through" : "font-medium"}`}>{i.text}</p>
-              <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-graphite/70">
+              <p className={`mt-1.5 text-base ${i.status === "DONE" ? "text-text-muted line-through" : "font-medium"}`}>{i.text}</p>
+              <div className="mt-1 flex flex-wrap gap-x-3 text-xs text-text-secondary">
                 {i.times.length > 0 && <span>{t("lists.hmTimes", { list: i.times.join(", ") })}</span>}
                 {i.guest && <span>{i.guest}</span>}
-                {i.waitsForDeparture && i.status === "OPEN" && <span className="font-medium text-gold">⏳ {t("lists.hmWaitsDeparture")}</span>}
+                {i.waitsForDeparture && i.status === "OPEN" && <span className="font-medium text-accent-text">⏳ {t("lists.hmWaitsDeparture")}</span>}
                 {i.status === "DONE" && i.doneAt && <span>✓ {t("lists.hmDoneAt", { time: time(i.doneAt) })}</span>}
               </div>
               <button type="button" onClick={() => toggle(i)} disabled={busy === i.id} aria-pressed={i.status === "DONE"}
-                className={`mt-3 h-12 w-full rounded-xl text-base font-semibold transition active:scale-[0.98] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${i.status === "DONE" ? "border border-charcoal/20 bg-white text-graphite" : "bg-status-inspected text-linen"}`}>
+                className={`mt-3 h-12 w-full rounded-(--glass-radius-md) text-base font-semibold transition active:scale-[0.98] disabled:opacity-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-gold ${i.status === "DONE" ? "border border-border-subtle bg-surface-card-raised text-text-secondary" : "bg-status-inspected text-linen"}`}>
                 {busy === i.id ? "…" : i.status === "DONE" ? t("lists.hmUntick") : `✓ ${t("lists.hmTick")}`}
               </button>
               {i.status === "OPEN" && (
                 <div className="mt-2 grid grid-cols-[1fr_auto] items-start gap-2">
                   <PauseControl targetType="TRACE" targetId={i.id} pause={i.pause} canPause onChanged={(p) => setPause(i.id, p)} />
-                  {i.roomId && <button type="button" onClick={() => setMessageFor(i)} className="h-12 rounded-xl border border-charcoal/20 bg-white px-4 text-sm font-medium">💬 {t("work.messageBtn")}</button>}
+                  {i.roomId && <button type="button" onClick={() => setMessageFor(i)} className="h-12 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised px-4 text-sm font-medium">💬 {t("work.messageBtn")}</button>}
                 </div>
               )}
             </li>

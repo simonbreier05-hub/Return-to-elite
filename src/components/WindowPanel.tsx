@@ -5,7 +5,7 @@ import type { ReactNode } from "react";
 /**
  * A titled panel that sits in-flow inside an existing hub page — a "window"
  * onto a focused slice of that hub's data (e.g. "Meine Zimmer", "Zimmerstatus"),
- * additive to whatever the hub already renders. `shadow-card` rather than the
+ * additive to whatever the hub already renders. `` rather than the
  * heavier `shadow-2xl` used by floating overlays (RoomDrawer, the notification
  * dropdown): this panel is normal page content, not an overlay.
  */
@@ -23,11 +23,11 @@ export default function WindowPanel({
   children: ReactNode;
 }) {
   return (
-    <div className="mb-4 overflow-hidden rounded-2xl border border-charcoal/10 bg-white shadow-card">
-      <div className="flex items-center justify-between gap-2 border-b border-charcoal/10 bg-parchment/40 px-4 py-3">
+    <div className="mb-4 overflow-hidden rounded-(--glass-radius-lg) border border-border-subtle bg-surface-card-raised">
+      <div className="flex items-center justify-between gap-2 border-b border-border-subtle bg-surface-card-raised px-4 py-3">
         <div className="flex items-center gap-2">
-          {icon ?? <span className="h-2 w-2 rounded-full bg-gold" />}
-          <span className="font-serif text-lg text-charcoal">{title}</span>
+          {icon ?? <span className="h-2 w-2 rounded-full bg-champagne" />}
+          <span className="text-body-18 text-text-primary text-text-primary">{title}</span>
         </div>
         {right}
       </div>

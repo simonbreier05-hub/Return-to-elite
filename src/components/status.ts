@@ -109,17 +109,14 @@ export const NOTE_STATUS_STYLES: Record<NoteStatus, { badge: string }> = {
  * and Stayover reuse the parchment/white shading the morning-planning view
  * already uses for the same distinction (see planning/view.tsx's legend).
  */
+// Simon-Feedback 19.11.2026: im Glas-Design — dieselben Töne wie die Pillen (CATEGORY_PILL_TONE, src/lib/ui/pill-tone.ts)
 export const DAY_CATEGORY_STYLES: Record<RoomDayCategory, { chip: string; dot: string; label: string }> = {
-  ARRIVAL: { chip: "border-gold/40 bg-gold/10 text-gold-soft", dot: "bg-gold", label: "Arrival" },
-  DEPARTURE: { chip: "border-charcoal/30 bg-parchment text-charcoal", dot: "bg-charcoal/50", label: "Departure" },
-  STAYOVER: { chip: "border-charcoal/15 bg-white text-graphite", dot: "bg-graphite/40", label: "Stayover" },
-  SAME_DAY_TURN: {
-    chip: "border-status-in-progress/40 bg-status-in-progress/10 text-status-in-progress",
-    dot: "bg-status-in-progress",
-    label: "Same-day turn",
-  },
+  ARRIVAL: { chip: "bg-status-info-bg border-status-info-fg/40 text-status-info-fg", dot: "bg-status-info-fg", label: "Arrival" },
+  DEPARTURE: { chip: "bg-status-danger-bg border-status-danger-fg/40 text-status-danger-fg", dot: "bg-status-danger-fg", label: "Departure" },
+  STAYOVER: { chip: "bg-status-success-bg border-status-success-fg/40 text-status-success-fg", dot: "bg-status-success-fg", label: "Stayover" },
+  SAME_DAY_TURN: { chip: "bg-pill-gold-bg border-pill-gold-border text-text-primary", dot: "bg-accent-text", label: "Same-day turn" },
   DND: { chip: STATUS_STYLES.BLOCKED.chip, dot: STATUS_STYLES.BLOCKED.dot, label: "DND" },
-  NONE: { chip: "border-charcoal/10 bg-linen text-graphite/50", dot: "bg-charcoal/20", label: "—" },
+  NONE: { chip: "bg-surface-card-raised border-border-subtle text-text-muted", dot: "bg-text-muted", label: "—" },
 };
 
 /** Which badge variant a room's note-count indicator should render, if any. */

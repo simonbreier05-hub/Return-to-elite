@@ -23,9 +23,9 @@ export default async function FloorPlanPage() {
       </AppShell>
     );
   }
-  // Zuteilungsansicht ist im Design „Glas & Premium“ (D3); der reine Orientierungs-Grundriss der übrigen Rollen noch nicht.
+  // Simon-Feedback 19.11.2026: auch der Orientierungs-Grundriss der übrigen Rollen im Glas-Design
   return (
-    <AppShell title="appShell.floorPlan" userName={session.name} role={session.role} backHref={roleHome(session.role)} legacy={!canAssign}>
+    <AppShell title="appShell.floorPlan" userName={session.name} role={session.role} backHref={roleHome(session.role)} legacy={false}>
       <FloorPlanView canAssign={canAssign} />
     </AppShell>
   );

@@ -68,13 +68,13 @@ export default function LiveListBoards({ date }: { date: string }) {
   const taskItem = (it: HousemanItem) => ({ id: it.id, label: it.roomNumber, sub: it.text.length > 28 ? `${it.text.slice(0, 27)}…` : it.text, title: it.text });
   return (
     <section className="mb-4" aria-label={t("planungTool.liveBoardsTitle")}>
-      <Collapsible summary={<span><span className={g ? "text-title-22 text-text-primary" : "font-serif text-lg"}>{t("planungTool.liveBoardsTitle")}</span><span className={g ? "text-label block text-text-muted" : "block text-xs text-graphite/60"}>{t("planungTool.liveBoardsHint")}</span></span>}>
-        {error && <p role="alert" className={g ? "text-body-16 mb-2 text-status-danger-fg" : "mb-2 text-sm text-status-out-of-order"}>{error}</p>}
-        <h4 className={g ? "text-section mb-2 text-text-muted" : "mb-1 font-serif text-base"}>{t("planungTool.tabSupervisors")}</h4>
+      <Collapsible summary={<span><span className={g ? "text-title-22 text-text-primary" : "text-body-18 text-text-primary"}>{t("planungTool.liveBoardsTitle")}</span><span className={g ? "text-label block text-text-muted" : "block text-xs text-text-muted"}>{t("planungTool.liveBoardsHint")}</span></span>}>
+        {error && <p role="alert" className={g ? "text-body-16 mb-2 text-status-danger-fg" : "mb-2 text-sm text-status-danger-fg"}>{error}</p>}
+        <h4 className={g ? "text-section mb-2 text-text-muted" : "mb-1  text-base"}>{t("planungTool.tabSupervisors")}</h4>
         <DragDropBoard hint={t("board.hint")} onMove={moveFloors}
           columns={sups.map((sp) => ({ id: sp.id as string | null, title: sp.name, items: FLOORS.filter((f) => floors[f] === sp.id).map(floorItem) }))} />
-        <h4 className={g ? "text-section mt-4 mb-2 text-text-muted" : "mb-1 mt-4 font-serif text-base"}>{t("planungTool.tabHouseman")}</h4>
-        {open.length === 0 ? <p className={g ? "text-body-16 text-text-muted" : "text-sm text-graphite/70"}>{t("planungTool.noHousemanTasks")}</p> : (
+        <h4 className={g ? "text-section mt-4 mb-2 text-text-muted" : "mb-1 mt-4  text-base"}>{t("planungTool.tabHouseman")}</h4>
+        {open.length === 0 ? <p className={g ? "text-body-16 text-text-muted" : "text-sm text-text-secondary"}>{t("planungTool.noHousemanTasks")}</p> : (
           <DragDropBoard hint={t("board.hint")} onMove={moveTasks}
             columns={[
               ...hms.map((h) => ({ id: h.id as string | null, title: h.name, items: open.filter((it) => hmNow[it.id] === h.id).map(taskItem) })),
