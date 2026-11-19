@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
+import { profileNameVisibleUntil } from "@/lib/guest/profileSuggestion";
 
 /**
  * GET /api/profile-suggestions — F8: offene Opera-Profil-Vorschläge. Nur Duty Manager (403 für alle anderen, auch
@@ -10,11 +11,17 @@ export async function GET() {
   const auth = await requireRole(["duty_manager"]);
   if (!auth.ok) return auth.response;
   const rows = await prisma.profileSuggestion.findMany({ where: { status: "OPEN" }, orderBy: { departure: "desc" } });
+  const now = new Date();
   return NextResponse.json({
-    suggestions: rows.map((r) => ({
-      id: r.id, roomNumber: r.roomNumber, departure: r.departure.toISOString(),
-      guest: [r.guestSalutation, r.guestTitle, r.guestLastName].filter(Boolean).join(" ") || null,
-      items: JSON.parse(r.items),
-    })),
+    suggestions: rows.map((r) => {
+      const name = [r.guestSalutation, r.guestTitle, r.guestLastName].filter(Boolean).join(" ") || null;
+      // Simon 19.11.: Name bis 24 Uhr am Abreisetag; danach nur über den Notfallzugriff (POST …/reveal, mit Logbuch)
+      const visible = now < profileNameVisibleUntil(r.departure);
+      return {
+        id: r.id, roomNumber: r.roomNumber, departure: r.departure.toISOString(),
+        guest: visible ? name : null, nameHidden: !visible && !!name,
+        items: JSON.parse(r.items),
+      };
+    }),
   });
 }

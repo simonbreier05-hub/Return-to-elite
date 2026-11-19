@@ -7,9 +7,10 @@ import { useLocale } from "@/lib/i18n/LocaleContext";
 import { errorText } from "@/lib/i18n/errorText";
 import type { TKey } from "@/lib/i18n/translations";
 import { Button, GlassCard, SectionLabel } from "@/components/ui";
+import { GlassDialog } from "@/components/shell/GlassDialog";
 import type { ProfileItem } from "@/lib/guest/profileSuggestion";
 
-interface Suggestion { id: string; roomNumber: string; departure: string; guest: string | null; items: ProfileItem[] }
+interface Suggestion { id: string; roomNumber: string; departure: string; guest: string | null; nameHidden?: boolean; items: ProfileItem[] }
 
 /**
  * F8: Kachel „Opera-Profil-Vorschläge (N)“ — nur Duty Manager. Je abgereistem Aufenthalt eine kurze Liste regelbasierter
@@ -21,6 +22,15 @@ export default function ProfileSuggestionsCard() {
   const [rows, setRows] = useState<Suggestion[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  // Simon 19.11.: nach 24 Uhr am Abreisetag Name nur über den Notfallzugriff (Rückfrage, Logbuch); nur in dieser Ansicht gehalten
+  const [revealed, setRevealed] = useState<Record<string, string>>({});
+  const [askReveal, setAskReveal] = useState<string | null>(null);
+  const reveal = async (id: string) => {
+    setAskReveal(null); setBusy(id);
+    try { const r = await api<{ guest: string }>(`/api/profile-suggestions/${id}/reveal`, { body: {} }); setRevealed((m) => ({ ...m, [id]: r.guest })); }
+    catch (e) { setError(errorText(e, t)); await load(); }
+    finally { setBusy(null); }
+  };
 
   const load = useCallback(async () => {
     try {
@@ -52,8 +62,14 @@ export default function ProfileSuggestionsCard() {
         {(rows ?? []).map((s) => (
           <li key={s.id} className="flex flex-col gap-2 rounded-(--glass-radius-sm) bg-surface-card-raised p-3">
             <p className="text-body-18 text-text-primary">
-              {[s.guest ?? t("profile.guestUnknown"), t("profile.departure", { date: new Date(s.departure).toLocaleDateString(intl, { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" }) }), t("profile.room", { n: s.roomNumber })].join(" · ")}
+              {[s.guest ?? revealed[s.id] ?? t("profile.guestUnknown"), t("profile.departure", { date: new Date(s.departure).toLocaleDateString(intl, { day: "2-digit", month: "2-digit", timeZone: "Europe/Berlin" }) }), t("profile.room", { n: s.roomNumber })].join(" · ")}
             </p>
+            {s.nameHidden && !revealed[s.id] && (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-label min-w-0 flex-1 text-text-muted">{t("profile.nameHiddenHint")}</span>
+                <Button variant="secondary" icon="user" disabled={busy === s.id} onClick={() => setAskReveal(s.id)}>{t("profile.revealName")}</Button>
+              </div>
+            )}
             <ul className="flex flex-col gap-2">
               {s.items.map((it, i) => (
                 <li key={i} className="flex flex-wrap items-center gap-2">
@@ -71,6 +87,8 @@ export default function ProfileSuggestionsCard() {
           </li>
         ))}
       </ul>
+      <GlassDialog open={!!askReveal} title={t("profile.revealConfirmTitle")} message={t("profile.revealConfirmText")}
+        confirmLabel={t("profile.revealName")} onCancel={() => setAskReveal(null)} onConfirm={() => askReveal && void reveal(askReveal)} busy={!!busy} />
     </GlassCard>
   );
 }

@@ -1,4 +1,4 @@
-import { purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
+import { purgeExpiredProfileNames, purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
 import { purgeOperaOrderNotes } from "@/lib/engineering/operaTraces";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -80,7 +80,8 @@ async function purgeTraceTexts(): Promise<number> {
 const legacyText = (key: string, t: { code: string; date: string }) => key.split(`|${t.code}|${t.date}|`)[1] ?? "";
 
 /** Kernlauf: löscht alle Gastdaten laut Datenkarte. Idempotent — ein zweiter Lauf findet nichts mehr. */
-export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> {
+/** `opts.all`: „Gastdaten jetzt löschen“ (DM) — auch Namen, deren Notfall-Frist noch läuft (F8). */
+export async function purgeGuestDataNow(now = new Date(), opts: { all?: boolean } = {}): Promise<PurgeCounts> {
   const settings = await getSettings();
   // Fehlt das Gäste-Systemkonto (nicht gesät), darf das nicht die ganze Nachtlöschung verhindern.
   const guestSystemUserId = await getGuestSystemUserId().catch(() => null);
@@ -95,8 +96,8 @@ export async function purgeGuestDataNow(now = new Date()): Promise<PurgeCounts> 
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },
   })).count;
   counts.traceTexts = await purgeTraceTexts();
-  // F8: Opera-Profil-Vorschläge — Namen jede Nacht leeren (Kachel zeigt dann „Gast · Zimmer“), nach 30 Tagen ganz löschen
-  counts.profileSuggestions = await purgeProfileSuggestions(now);
+  // F8: Opera-Profil-Vorschläge — Namen bis Folgetag 12 Uhr (Notfallzugriff, Simon 19.11.), nach 30 Tagen ganz löschen
+  counts.profileSuggestions = await purgeProfileSuggestions(now, 30, !!opts.all);
   // F7-Review: Opera-Text in Technikaufträgen und Freitext-Grund beim Aufschieben (Hausmann) nachts löschen
   counts.operaOrderNotes = await purgeOperaOrderNotes();
   counts.deferReasons = (await prisma.roomTask.updateMany({ where: { deferReason: { not: null } }, data: { deferReason: null } })).count;
@@ -128,7 +129,7 @@ export async function runGuestDataPurge(trigger: "SCHEDULE" | "MANUAL", userId?:
   if (running) return { skipped: true as const, reason: "RUNNING" };
   const run = await prisma.purgeRun.create({ data: { trigger, status: "RUNNING", userId: userId ?? null } });
   try {
-    const counts = await purgeGuestDataNow(now);
+    const counts = await purgeGuestDataNow(now, { all: trigger === "MANUAL" });
     await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "OK", finishedAt: new Date(), counts: JSON.stringify(counts) } });
     await audit({ action: "GUEST_DATA_PURGED", userId: userId ?? null, meta: { trigger, counts } });
     return { skipped: false as const, runId: run.id, counts };
@@ -147,7 +148,9 @@ export async function lastSuccessfulPurge() {
 export async function runDuePurge(now = new Date()) {
   const settings = await getSettings();
   const last = await lastSuccessfulPurge();
-  if (!isPurgeDue(now, last?.finishedAt ?? null, settings.guestPurgeHour)) return { ran: false as const };
+  // F8: Namen in Profil-Vorschlägen zur Frist (Folgetag 12 Uhr) löschen — unabhängig von der Nachtlöschung, in jedem Takt
+  const profileNames = await purgeExpiredProfileNames(now).catch(() => 0);
+  if (!isPurgeDue(now, last?.finishedAt ?? null, settings.guestPurgeHour)) return { ran: false as const, profileNames };
   return { ran: true as const, ...(await runGuestDataPurge("SCHEDULE", null, now)) };
 }
 

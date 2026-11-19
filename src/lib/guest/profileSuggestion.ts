@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/db";
-import { berlinDate } from "@/lib/dayplan/time";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import { parseCleanWish } from "@/lib/planung/listOrder";
 import { GREEN_KIND } from "@/lib/guest/green";
@@ -103,10 +103,33 @@ export async function buildProfileSuggestion(stayId: string, now = new Date()): 
   return s.id;
 }
 
-/** Nachtlöschung (aus `purgeGuestDataNow`): Namen jede Nacht leeren (wie überall), Vorschläge älter als `days` Tage löschen. */
-export async function purgeProfileSuggestions(now = new Date(), days = 30): Promise<number> {
+/*
+ * Gastname im Vorschlag (Entscheidung Simon 19.11.2026 — bewusste Ausnahme von der Nachtlöschung um 22 Uhr):
+ *  - sichtbar bis 24 Uhr am Abreisetag (Berlin),
+ *  - danach ausgeblendet; der Duty Manager kann ihn im Notfall einblenden (Rückfrage, Logbuch PROFILE_NAME_REVEALED),
+ *  - endgültig gelöscht am Folgetag um 12 Uhr (Annahme, Frist noch offen) — vom Löschtakt alle 10 Minuten.
+ */
+const nextBerlinDay = (d: Date) => { const t = new Date(`${berlinDate(d)}T12:00:00Z`); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); };
+/** Ende der normalen Anzeige: 24 Uhr am Abreisetag (= 0 Uhr am Folgetag, Berlin). */
+export const profileNameVisibleUntil = (departure: Date) => berlinToUtc(nextBerlinDay(departure), "00:00");
+/** Endgültige Löschung des Namens: Folgetag 12 Uhr (Berlin). */
+export const profileNameDeleteAt = (departure: Date) => berlinToUtc(nextBerlinDay(departure), "12:00");
+
+/** Namen löschen, deren Frist abgelaufen ist (`all`: sofort alle — „Gastdaten jetzt löschen“ des DM). Gibt die Anzahl zurück. */
+export async function purgeExpiredProfileNames(now = new Date(), all = false): Promise<number> {
+  const rows = await prisma.profileSuggestion.findMany({
+    where: { OR: [{ guestSalutation: { not: null } }, { guestTitle: { not: null } }, { guestLastName: { not: null } }] },
+    select: { id: true, departure: true },
+  });
+  const ids = rows.filter((r) => all || profileNameDeleteAt(r.departure) <= now).map((r) => r.id);
+  if (!ids.length) return 0;
+  return (await prisma.profileSuggestion.updateMany({ where: { id: { in: ids } }, data: { guestSalutation: null, guestTitle: null, guestLastName: null } })).count;
+}
+
+/** Nachtlöschung (aus `purgeGuestDataNow`): abgelaufene Namen leeren (siehe oben), Vorschläge älter als `days` Tage löschen. */
+export async function purgeProfileSuggestions(now = new Date(), days = 30, all = false): Promise<number> {
   const cutoff = new Date(now.getTime() - days * 86_400_000);
-  await prisma.profileSuggestion.updateMany({ where: { OR: [{ guestSalutation: { not: null } }, { guestTitle: { not: null } }, { guestLastName: { not: null } }] }, data: { guestSalutation: null, guestTitle: null, guestLastName: null } });
+  await purgeExpiredProfileNames(now, all);
   const r = await prisma.profileSuggestion.deleteMany({ where: { createdAt: { lt: cutoff } } });
   return r.count;
 }

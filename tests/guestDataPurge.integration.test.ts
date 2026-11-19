@@ -88,7 +88,7 @@ describe("Nachtlöschung der Gastdaten (Wegwerf-DB)", () => {
     await prisma.arrival.create({ data: { roomId: r105.id, guestName: "Demo, Jonas", status: "EXPECTED", createdById: userId } });
     await prisma.auditLog.create({ data: { action: "STATUS_CHANGE", roomId: r105.id, meta: JSON.stringify({ note: "Herr Testmann wünscht Zustellbett bitte", role: "supervisor" }) } });
     // F8: Opera-Profil-Vorschlag mit Gastnamen — die Nachtlöschung leert ihn
-    await prisma.profileSuggestion.create({ data: { stayId: "scan-f8", roomNumber: "105", guestSalutation: "Herr", guestLastName: "Probst", departure: new Date(), items: "[]" } });
+    await prisma.profileSuggestion.create({ data: { stayId: "scan-f8", roomNumber: "105", guestSalutation: "Herr", guestLastName: "Probst", departure: new Date(Date.now() - 3 * 86_400_000), items: "[]" } }); // Frist (Folgetag 12 Uhr) abgelaufen
     // Chat-Freitext (trotz Hinweis mit Gastname), älter als chatRetentionDays → die Nachtlöschung entfernt ihn
     const chat = await prisma.chatChannel.create({ data: { kind: "CHANNEL", key: "HOUSEKEEPING" } });
     await prisma.chatMessage.create({ data: { channelId: chat.id, authorId: userId, body: "Fiktivo in #105 reist früher ab", originalLanguage: "de", createdAt: new Date("2026-09-01T08:00:00Z") } });

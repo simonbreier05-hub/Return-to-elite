@@ -20,11 +20,12 @@ vi.mock("@/lib/auth", () => ({ getSession: (...a: unknown[]) => getSessionMock(.
 vi.mock("@/lib/realtime", () => ({ broadcast: vi.fn() }));
 
 import { prisma } from "@/lib/db";
-import { berlinDate } from "@/lib/dayplan/time";
-import { EXCLUDED_PROFILE_TYPES, isExcludedTrace, profileItemsFrom, purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
+import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
+import { EXCLUDED_PROFILE_TYPES, isExcludedTrace, profileItemsFrom, profileNameVisibleUntil, purgeExpiredProfileNames, purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
 import { POST as checkoutPost, DELETE as checkoutDelete } from "@/app/api/rooms/[id]/checkout/route";
 import { GET as listGet } from "@/app/api/profile-suggestions/route";
 import { PATCH as itemPatch } from "@/app/api/profile-suggestions/[id]/route";
+import { POST as revealPost } from "@/app/api/profile-suggestions/[id]/reveal/route";
 import type { Role } from "@/lib/domain";
 
 const ids: Record<string, string> = {};
@@ -161,10 +162,44 @@ describe("Nachbesserung nach Review", () => {
     expect((await itemPatch(req("PATCH", { all: true }), p(s.id))).status).toBe(404);
   });
 
-  it("Nachtlöschung leert Namen im Vorschlag jede Nacht", async () => {
-    await prisma.profileSuggestion.create({ data: { stayId: "namen", roomNumber: "697", guestSalutation: "Frau", guestLastName: "Probst", departure: new Date(), items: "[]" } });
-    await purgeProfileSuggestions();
+  it("Simon 19.11.: Name bleibt über die Nachtlöschung (22 Uhr) hinaus bis Folgetag 12 Uhr, dann gelöscht", async () => {
+    const dep = berlinToUtc("2026-11-10", "11:00");
+    await prisma.profileSuggestion.create({ data: { stayId: "namen", roomNumber: "697", guestSalutation: "Frau", guestLastName: "Probst", departure: dep, items: "[]" } });
+    await purgeProfileSuggestions(berlinToUtc("2026-11-10", "22:00")); // Nachtlöschung am Abreisetag
+    expect((await prisma.profileSuggestion.findUniqueOrThrow({ where: { stayId: "namen" } })).guestLastName).toBe("Probst");
+    expect(await purgeExpiredProfileNames(berlinToUtc("2026-11-11", "11:59"))).toBe(0);
+    expect(await purgeExpiredProfileNames(berlinToUtc("2026-11-11", "12:00"))).toBe(1);
     const s = await prisma.profileSuggestion.findUniqueOrThrow({ where: { stayId: "namen" } });
     expect([s.guestSalutation, s.guestTitle, s.guestLastName]).toEqual([null, null, null]);
+  });
+
+  it("„Gastdaten jetzt löschen“ (DM) löscht auch Namen, deren Frist noch läuft", async () => {
+    await prisma.profileSuggestion.create({ data: { stayId: "sofort", roomNumber: "698", guestSalutation: "Herr", guestLastName: "Sofort", departure: new Date(), items: "[]" } });
+    await purgeProfileSuggestions(new Date(), 30, true);
+    expect((await prisma.profileSuggestion.findUniqueOrThrow({ where: { stayId: "sofort" } })).guestLastName).toBeNull();
+  });
+
+  it("Anzeige bis 24 Uhr am Abreisetag; danach ausgeblendet, Notfallzugriff nur DM, mit Logbuch ohne Namen", async () => {
+    expect(profileNameVisibleUntil(berlinToUtc("2026-11-10", "11:00")).toISOString()).toBe(berlinToUtc("2026-11-11", "00:00").toISOString());
+    const items = JSON.stringify([{ code: "BABY_COT", status: "OPEN" }]);
+    const fresh = await prisma.profileSuggestion.create({ data: { stayId: "heute", roomNumber: "693", guestSalutation: "Frau", guestLastName: "Heute", departure: new Date(), items } });
+    const old = await prisma.profileSuggestion.create({ data: { stayId: "gestern", roomNumber: "694", guestSalutation: "Herr", guestLastName: "Gestern", departure: dayAgo(1), items } });
+    as("dm", "duty_manager");
+    const list = (await (await listGet()).json()).suggestions as { id: string; guest: string | null; nameHidden?: boolean }[];
+    expect(list.find((x) => x.id === fresh.id)).toMatchObject({ guest: "Frau Heute", nameHidden: false });
+    expect(list.find((x) => x.id === old.id)).toMatchObject({ guest: null, nameHidden: true });
+    for (const [k, role] of [["sup", "supervisor"], ["fo", "front_office"], ["hk", "room_attendant"]] as const) {
+      as(k, role);
+      expect((await revealPost(req("POST"), p(old.id))).status, role).toBe(403);
+    }
+    as("dm", "duty_manager");
+    const r = await revealPost(req("POST"), p(old.id));
+    expect(await r.json()).toEqual({ guest: "Herr Gestern" });
+    const log = await prisma.auditLog.findFirstOrThrow({ where: { action: "PROFILE_NAME_REVEALED" }, orderBy: { createdAt: "desc" } });
+    expect(log.userId).toBe(ids.dm);
+    expect(log.meta).toContain(old.id);
+    expect(log.meta).not.toContain("Gestern");
+    await prisma.profileSuggestion.update({ where: { id: old.id }, data: { guestSalutation: null, guestLastName: null } });
+    expect((await revealPost(req("POST"), p(old.id))).status).toBe(410);
   });
 });

@@ -2095,6 +2095,10 @@ const en = {
     warnConfirm: "Assign anyway?",
   },
   profile: {
+    nameHiddenHint: "Name hidden after midnight on the departure day (deleted the next day at 12:00).",
+    revealName: "Show name (emergency)",
+    revealConfirmTitle: "Show guest name?",
+    revealConfirmText: "Only in an emergency. The access is recorded in the log (who, when, which suggestion).",
     title: "Opera profile suggestions ({{n}})",
     hint: "Observations from departed stays — enter them in Opera by hand if suitable. StayClean never writes to Opera.",
     guestUnknown: "Guest",
@@ -4211,6 +4215,10 @@ const de = {
     warnConfirm: "Trotzdem zuteilen?",
   },
   profile: {
+    nameHiddenHint: "Name nach 24 Uhr am Abreisetag ausgeblendet (gelöscht am Folgetag um 12 Uhr).",
+    revealName: "Name anzeigen (Notfall)",
+    revealConfirmTitle: "Gastnamen anzeigen?",
+    revealConfirmText: "Nur im Notfall. Der Zugriff wird im Logbuch festgehalten (wer, wann, welcher Vorschlag).",
     title: "Opera-Profil-Vorschläge ({{n}})",
     hint: "Beobachtungen aus abgereisten Aufenthalten — bei Bedarf von Hand in Opera eintragen. StayClean schreibt nie nach Opera.",
     guestUnknown: "Gast",
