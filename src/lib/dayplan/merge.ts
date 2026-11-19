@@ -1,4 +1,5 @@
 import { recordRoomTypes } from "@/lib/import/roomTypes";
+import { closeDepartedImportStays } from "@/lib/guest/stayArchive";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
@@ -131,6 +132,10 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
     await prisma.stay.updateMany({ where: { id: { in: missing.map((s) => s.id) } }, data: { needsReview: true } });
     issues.push(issue("WARNING", "STAY_MISSING", `${missing.length} bekannte Aufenthalt(e) stehen in diesem Stand nicht mehr in den Listen (Zimmer ${missing.map((s) => s.room.number).sort().join(", ")}) — zur Prüfung markiert, nicht gelöscht.`));
   }
+
+  // F7-Nachtrag: Abreise nur über Opera (ohne Check-out-Knopf) — Aufenthalte vor diesem Tag abschließen wie beim Check-out
+  const departed = await closeDepartedImportStays(date).catch(() => 0);
+  if (departed) issues.push(issue("INFO", "STAYS_CLOSED", `${departed} abgereiste(r) Aufenthalt(e) ohne Check-out-Meldung abgeschlossen (Verlauf archiviert).`));
 
   // ── Tagesplan (DayRoomPlan) ──────────────────────────────────────────────
   const existingPlan = await prisma.dayRoomPlan.findMany({ where: { date }, include: { room: { select: { number: true, assignedToId: true } } } });

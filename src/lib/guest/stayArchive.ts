@@ -44,3 +44,28 @@ export async function closeStaleCleanRequests(now = new Date()): Promise<number>
   const r = await prisma.guestRequest.updateMany({ where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, createdAt: { lt: todayStart } }, data: { status: "CANCELLED" } });
   return r.count;
 }
+
+/**
+ * F7-Nachtrag (Abreise nur über Opera): Aufenthalte, deren Abreisetag vor `date` liegt und die noch „im Haus“ stehen
+ * (das Front Office hat nicht auf „Check-out“ gedrückt), schließt der Import des Tages `date` ab — wie der Check-out-Knopf:
+ * Profilvorschlag (F8, einmal je Aufenthalt), Verlauf archivieren (nur bis zur Anreise eines Folgegastes im selben Zimmer),
+ * Status CHECKED_OUT. Ein verlängerter Aufenthalt hat im heutigen Import ein späteres Abreisedatum und bleibt unberührt.
+ * Logbuch `GUEST_DEPARTED_IMPORT` (nur Ids, keine Gastdaten). Gibt die Anzahl zurück.
+ */
+export async function closeDepartedImportStays(date: string, now = new Date()): Promise<number> {
+  const { berlinDate, berlinToUtc } = await import("@/lib/dayplan/time");
+  const { buildProfileSuggestion } = await import("@/lib/guest/profileSuggestion");
+  const stays = await prisma.stay.findMany({
+    where: { source: "IMPORT", status: "IN_HOUSE", checkOut: { lt: new Date(`${date}T00:00:00Z`) } },
+    select: { id: true, roomId: true, checkOut: true },
+  });
+  for (const s of stays) {
+    const depDay = berlinDate(s.checkOut);
+    await buildProfileSuggestion(s.id, berlinToUtc(depDay, "23:59")).catch(() => null);
+    const next = await prisma.stay.findFirst({ where: { roomId: s.roomId, id: { not: s.id }, checkIn: { gt: new Date(s.checkOut.getTime() - 86_400_000) } }, orderBy: { checkIn: "asc" }, select: { checkIn: true } });
+    await archiveStayHistory(s.roomId, { stayId: s.id, now, ...(next ? { before: berlinToUtc(berlinDate(next.checkIn), "00:00") } : {}) });
+    await prisma.stay.update({ where: { id: s.id }, data: { status: "CHECKED_OUT" } });
+    await prisma.auditLog.create({ data: { action: "GUEST_DEPARTED_IMPORT", roomId: s.roomId, meta: JSON.stringify({ stayId: s.id, date }) } });
+  }
+  return stays.length;
+}
