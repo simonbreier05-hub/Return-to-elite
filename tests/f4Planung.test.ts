@@ -15,10 +15,12 @@ const byId = new Map(rooms.map((r) => [r.id, r]));
 const level = new Map(team.map((h) => [h.id, h.level]));
 
 describe("F4: Tag-3-Szenario (3× Stufe 1)", () => {
-  it("keine Suite, kein VIP, kein Allergiker-Zimmer bei Stufe 1 im Vorschlag", () => {
+  it("Stufe 1 bekommt anspruchsvolle Zimmer nur aus dem Überhang (Simon 19.11.) — dann mit Warnung ganz oben", () => {
+    const relaxed = new Set(res.warnings.find((w) => w.code === "LEVEL_RULE_RELAXED")?.roomIds ?? []);
     for (const [roomId, hkId] of Object.entries(res.assignment)) {
-      if (hkId && level.get(hkId) === 1) expect(byId.get(roomId)!.demanding, `${hkId}:${byId.get(roomId)!.number}`).toEqual([]);
+      if (hkId && level.get(hkId) === 1 && byId.get(roomId)!.demanding.length) expect(relaxed.has(roomId), `${hkId}:${byId.get(roomId)!.number}`).toBe(true);
     }
+    if (relaxed.size) expect(res.warnings.findIndex((x) => x.code === "LEVEL_RULE_RELAXED")).toBeLessThanOrEqual(1);
   });
 
   it("nicht deckbare anspruchsvolle Zimmer bleiben offen — ein Hinweis mit Zimmernummern ganz oben", () => {
@@ -31,14 +33,54 @@ describe("F4: Tag-3-Szenario (3× Stufe 1)", () => {
     }
   });
 
-  it("Warnungen sind gebündelt: höchstens eine Zeile je Art „Stufe 1“ bzw. „offen“", () => {
-    expect(res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING").length).toBeLessThanOrEqual(1);
+  it("Warnungen sind gebündelt: höchstens eine Zeile je Kraft und Art „Stufe 1“ bzw. eine Zeile „offen“", () => {
+    const l1 = res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING");
+    expect(new Set(l1.map((w) => `${w.hkId}|${w.message.split(":")[0]}`)).size).toBe(l1.length);
     expect(res.warnings.filter((w) => w.code === "DEMANDING_UNASSIGNED").length).toBeLessThanOrEqual(1);
   });
 
   it("kein Widerspruch: nie gleichzeitig „mehr Kräfte als nötig“ und „nicht vor Schichtende fertig“", () => {
     const codes = new Set(res.warnings.map((w) => w.code));
     expect(codes.has("TOO_MANY_STAFF") && codes.has("OVER_SHIFT")).toBe(false);
+  });
+});
+
+describe("F4 Kapazität (Entscheidung Simon 19.11.): Stufen-Regel nur, solange die passenden Kräfte es schaffen", () => {
+  // Extremfall aus dem Review: 5 Kräfte, nur eine ab Stufe 2, alle Suiten des Testhauses — vorher bekam sie alle
+  const suites = makeDay(94).filter((r) => r.demanding.includes("SUITE")).slice(0, 27);
+  const plain = makeDay(94).filter((r) => r.demanding.length === 0).slice(0, 25);
+  const five = [hk("m", "VOLLZEIT", 3), hk("p", "VOLLZEIT", 1), hk("l", "VOLLZEIT", 1), hk("i", "VOLLZEIT", 1), hk("j", "VOLLZEIT", 1)];
+  const r = proposePlan(makeInput([...suites, ...plain], five));
+  const mine = (id: string) => Object.values(r.assignment).filter((h) => h === id).length;
+
+  it("die eine passende Kraft bleibt in ihrer Zimmervorgabe (höchstens 13), der Rest geht an die anderen", () => {
+    expect(mine("m")).toBeLessThanOrEqual(13);
+    expect(r.unassigned).toEqual([]);
+    const level1Suites = suites.filter((s) => r.assignment[s.id] !== "m");
+    expect(level1Suites.length).toBeGreaterThanOrEqual(suites.length - 13);
+    expect(suites.length).toBeGreaterThan(13); // Szenario muss den Überhang wirklich erzeugen
+  });
+
+  it("deutliche Warnung ganz oben und je Stufe-1-Kraft eine Zeile mit Zimmernummern", () => {
+    const top = r.warnings.findIndex((w) => w.code === "LEVEL_RULE_RELAXED");
+    expect(top).toBeGreaterThanOrEqual(0);
+    expect(top).toBeLessThanOrEqual(1);
+    expect(r.warnings[top].message).toContain("Stufe 1");
+    const l1 = r.warnings.filter((w) => w.code === "LEVEL1_DEMANDING" && w.message.includes("nicht reicht"));
+    expect(l1.length).toBeGreaterThan(0);
+    for (const w of l1) expect(["p", "l", "i", "j"]).toContain(w.hkId);
+  });
+
+  it("reicht die Kapazität, bleibt alles wie bisher: kein Überhang, Stufe 1 ohne anspruchsvolle Zimmer", () => {
+    const few = proposePlan(makeInput([...suites.slice(0, 8), ...plain], five));
+    expect(few.warnings.some((w) => w.code === "LEVEL_RULE_RELAXED")).toBe(false);
+    for (const s of suites.slice(0, 8)) expect(few.assignment[s.id]).toBe("m");
+  });
+
+  it("„keine Suiten“ bleibt hart, auch im Überhang", () => {
+    const noSuite = [hk("m", "VOLLZEIT", 3), hk("p", "VOLLZEIT", 1, { restrictions: ["NO_SUITE"] }), hk("l", "VOLLZEIT", 1)];
+    const x = proposePlan(makeInput([...suites.slice(0, 20), ...plain.slice(0, 10)], noSuite));
+    for (const s of suites.slice(0, 20)) expect(x.assignment[s.id], s.number).not.toBe("p");
   });
 });
 
