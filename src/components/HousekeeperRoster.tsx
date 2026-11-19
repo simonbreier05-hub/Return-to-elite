@@ -130,7 +130,7 @@ export default function HousekeeperRoster({
  }`}
                 >
                   <div className="flex flex-wrap items-center gap-1.5">
-                    {isDone && <span aria-hidden className="text-status-inspected">✓</span>}
+                    {isDone && <span aria-hidden className="text-status-success-fg">✓</span>}
                     <span className="text-body-18 text-text-primary">{room.number}</span>
                     <span className={`flex items-center gap-1 rounded-full border px-2 py-0.5 text-[0.65rem] font-medium ${style.chip}`}>
                       <StatusIcon iconKey={style.iconKey} className="h-3 w-3 shrink-0" />

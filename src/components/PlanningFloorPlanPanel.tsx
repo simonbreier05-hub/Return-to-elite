@@ -176,7 +176,7 @@ export default function PlanningFloorPlanPanel({
  }`}
                 >
                   {a.name}{" "}
-                  <span className={over ? "font-semibold text-status-dirty" : "text-text-muted"}>
+                  <span className={over ? "font-semibold text-status-danger-fg" : "text-text-muted"}>
                     · {credits} {t("planning.floorPlanCreditsShort")}
                   </span>
                 </button>
@@ -200,7 +200,7 @@ export default function PlanningFloorPlanPanel({
                 const bad = band ? credits > band.hi + 0.25 || (rooms.length > 0 && credits < band.lo - 0.25) : credits > targetCredits;
                 return {
                   id: a.id, title: a.name, items: rooms.map(roomItem),
-                  summary: <span className={`text-sm ${bad ? "font-semibold text-status-dirty" : "text-text-muted"}`}>{Math.round(credits * 10) / 10}{band ? ` / ${band.lo}–${band.hi}` : ""} {t("planning.floorPlanCreditsShort")}</span>,
+                  summary: <span className={`text-sm ${bad ? "font-semibold text-status-danger-fg" : "text-text-muted"}`}>{Math.round(credits * 10) / 10}{band ? ` / ${band.lo}–${band.hi}` : ""} {t("planning.floorPlanCreditsShort")}</span>,
                 };
               }),
               {
@@ -246,7 +246,7 @@ export default function PlanningFloorPlanPanel({
           <Collapsible
             defaultOpen={roomsDueForLinen.length <= 8}
             summary={
-              <h4 className="text-body-18 text-text-primary text-status-in-progress">
+              <h4 className="text-body-18 text-status-info-fg">
                 {t("planning.floorPlanLinenSectionTitle")} · {roomsDueForLinen.length}
               </h4>
             }
@@ -323,7 +323,7 @@ export default function PlanningFloorPlanPanel({
                   className="flex h-14 items-center justify-between rounded-(--glass-radius-md) border border-border-subtle px-4 text-start"
                 >
                   <span className="font-medium">{a.name}</span>
-                  <span className={`text-sm ${over ? "font-semibold text-status-dirty" : "text-text-muted"}`}>
+                  <span className={`text-sm ${over ? "font-semibold text-status-danger-fg" : "text-text-muted"}`}>
                     {credits} {t("planning.floorPlanCreditsShort")}
                   </span>
                 </button>

@@ -57,10 +57,10 @@ const LABEL_ICON = { CARRYOVER: IconBroom, TURN: IconClock, DEPARTURE: IconBroom
  * Anreise Blau, Turn Blau/Rot (blaue Pille, roter Rand). Gleiche Zuordnung wie `KIND_PILL` im Glas-Design.
  */
 export const LABEL_STYLE: Record<MainLabel, { chip: string; edge: string }> = {
-  TURN: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected font-semibold", edge: "border-s-status-dirty" },
-  DEPARTURE: { chip: "border-status-dirty/40 bg-status-dirty/10 text-status-dirty", edge: "border-s-status-dirty" },
-  STAYOVER: { chip: "border-status-clean/40 bg-status-clean/10 text-status-success-fg", edge: "border-s-status-clean" },
-  ARRIVAL: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected", edge: "border-s-status-inspected" },
+  TURN: { chip: "border-status-info-fg/40 bg-status-info-bg text-status-info-fg font-semibold", edge: "border-s-status-dirty" },
+  DEPARTURE: { chip: "border-status-danger-fg/40 bg-status-danger-bg text-status-danger-fg", edge: "border-s-status-dirty" },
+  STAYOVER: { chip: "border-status-success-fg/40 bg-status-success-bg text-status-success-fg", edge: "border-s-status-clean" },
+  ARRIVAL: { chip: "border-status-info-fg/40 bg-status-info-bg text-status-info-fg", edge: "border-s-status-inspected" },
   NONE: { chip: "border-border-subtle bg-surface-card-raised text-text-primary", edge: "border-s-border-subtle" },
   // F1: seit gestern offen — Gold (Achtung), Rand Rot wie Abreise; Zusatz ohne Tagesplan — neutral, Rand Rot
   CARRYOVER: { chip: "border-gold bg-champagne-soft/40 text-text-primary font-semibold", edge: "border-s-status-dirty" },
@@ -107,27 +107,27 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             </span>
             {room.laundry && <span className={`${chip} border-border-subtle bg-champagne-soft/30 text-text-primary`}><IconLaundry className="h-3.5 w-3.5" />{t("lists.laundry")}</span>}
             {room.vip && <span className={`${chip} border-gold bg-champagne-soft/40 text-text-primary`}><span aria-hidden>★</span>{t("lists.vip")}</span>}
-            {room.dnd && <span className={`${chip} border-status-blocked/40 bg-status-blocked/10 text-status-blocked`}><IconBan className="h-3.5 w-3.5" />{t("lists.dnd")}</span>}
+            {room.dnd && <span className={`${chip} border-status-danger-fg/40 bg-status-danger-bg text-status-danger-fg`}><IconBan className="h-3.5 w-3.5" />{t("lists.dnd")}</span>}
             {precheck && room.kind === "ARRIVAL" && (room.status === "INSPECTED"
               ? <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-text-primary`}><span aria-hidden>✓</span>{t("lists.arrivalReleased")}</span>
               : <span className={`${chip} border-gold bg-champagne-soft/40 text-text-primary`}><span aria-hidden>🔎</span>{t("lists.precheckArrival")}</span>)}
             {precheck && room.kind === "DEPARTURE" && <span className={`${chip} border-border-subtle bg-accent-subtle-bg text-text-primary`}><span aria-hidden>📌</span>{t("lists.precheckNoted")}</span>}
             {room.type && <span className={`${chip} border-border-subtle bg-surface-card-raised text-text-secondary`}>{t(`roomType.${room.type}` as TKey)}</span>}
             {traces.length > 0 && <span className={`${chip} border-border-subtle bg-surface-card-raised text-text-secondary`}><span aria-hidden>▸</span>{t("lists.rowTraces", { n: traces.length })}</span>}
-            {(room.defects ?? 0) > 0 && <span className={`${chip} border-status-defect/40 bg-status-defect/10 text-status-defect`}><IconWrench className="h-3.5 w-3.5" />{t("lists.rowDefects", { n: room.defects ?? 0 })}</span>}
+            {(room.defects ?? 0) > 0 && <span className={`${chip} border-status-danger-fg/40 bg-status-danger-bg text-status-danger-fg`}><IconWrench className="h-3.5 w-3.5" />{t("lists.rowDefects", { n: room.defects ?? 0 })}</span>}
             {room.wish && <span className={`${chip} border-border-subtle bg-accent-subtle-bg text-text-primary`}><span aria-hidden>{room.wish === "CLEAN_REQUEST" ? "✨" : "💬"}</span>{t(`lists.wish${room.wish}` as TKey)}</span>}
             {marks.has("HINT") && <span className={`${chip} border-border-subtle bg-accent-subtle-bg text-accent-text`}><span aria-hidden>📝</span>{t("lists.hint")}</span>}
             {room.pax != null && <span className={`${chip} border-border-subtle text-text-secondary`}><IconPerson className="h-3.5 w-3.5" />{room.pax === 1 ? t("lists.paxOne") : t("lists.pax", { n: room.pax })}</span>}
             {room.changed && <span className={`${chip} border-gold bg-accent-subtle-bg text-text-primary`}>↻ {t("lists.changed")}</span>}
             {room.pause && <PauseBadge pause={room.pause} showBy={showDept} />}
             {/* Betrieb L2: In Arbeit (Start/Laufzeit/Rest), Late Check-out, Ausgecheckt, Green Option, Gastsprache — immer Symbol + Text */}
-            {wp && <span className={`${chip} ${wp.overMin > 0 ? "border-status-dirty/40 bg-status-dirty/10 text-status-dirty" : "border-status-inspected/40 bg-status-inspected/10 text-status-inspected"}`}><IconClock className="h-3.5 w-3.5" />{wp.overMin > 0 ? t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }) : t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin })}</span>}
+            {wp && <span className={`${chip} ${wp.overMin > 0 ? "border-status-danger-fg/40 bg-status-danger-bg text-status-danger-fg" : "border-status-info-fg/40 bg-status-info-bg text-status-info-fg"}`}><IconClock className="h-3.5 w-3.5" />{wp.overMin > 0 ? t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }) : t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin })}</span>}
             {room.lateCheckout && <span className={`${chip} border-gold bg-champagne-soft/40 text-text-primary`}><IconClock className="h-3.5 w-3.5" />{t("lists.lateCheckout", { time: room.lateCheckout })}</span>}
             {room.checkedOut && (room.kind === "SAME_DAY_TURN" || room.kind === "DEPARTURE") && <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-status-success-fg`}><span aria-hidden>✓</span>{t("lists.checkedOut")}</span>}
-            {room.dndCard && <span className={`${chip} border-status-blocked/40 bg-status-blocked/10 text-status-blocked`}><IconBan className="h-3.5 w-3.5" />{t("lists.dndCard")}</span>}
+            {room.dndCard && <span className={`${chip} border-status-danger-fg/40 bg-status-danger-bg text-status-danger-fg`}><IconBan className="h-3.5 w-3.5" />{t("lists.dndCard")}</span>}
             {room.green && <span className={`${chip} border-status-clean/40 bg-status-clean/10 text-status-success-fg`}><span aria-hidden>🌿</span>{t("lists.green")}</span>}
             {room.roomChangeTo && <span className={`${chip} border-gold bg-champagne-soft/40 text-text-primary`}><span aria-hidden>⇄</span>{t("lists.roomChangeTo", { n: room.roomChangeTo })}</span>}
-            {room.roomChangeFrom && <span className={`${chip} border-status-inspected/40 bg-status-inspected/10 text-status-inspected`}><span aria-hidden>⇄</span>{t("lists.roomChangeFrom", { n: room.roomChangeFrom })}</span>}
+            {room.roomChangeFrom && <span className={`${chip} border-status-info-fg/40 bg-status-info-bg text-status-info-fg`}><span aria-hidden>⇄</span>{t("lists.roomChangeFrom", { n: room.roomChangeFrom })}</span>}
             {room.lang && <span className={`${chip} border-border-subtle bg-surface-card-raised text-text-secondary`} title={t("lists.guestLanguage")}><span aria-hidden>🗣</span>{room.lang.toUpperCase()}</span>}
             {badges}
           </div>
