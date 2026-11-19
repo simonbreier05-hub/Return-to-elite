@@ -131,8 +131,17 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
       `Gegen Einschränkung „${RESTRICTION_LABEL[label]}“`);
   }
   // Stufe 1 mit anspruchsvollen Zimmern — nur über eine feste Zuteilung (von Hand) möglich, der Vorschlag filtert hart (P6 neu)
-  bundle("LEVEL1_DEMANDING", c.rooms.flatMap((r, i) => { const k = idx[i]; return k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length ? [{ k, r }] : []; }),
+  bundle("LEVEL1_DEMANDING", c.rooms.flatMap((r, i) => { const k = idx[i]; return k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length && !c.relaxed[i] ? [{ k, r }] : []; }),
     "Stufe 1 mit anspruchsvollen Zimmern");
+  // F4 (Simon 19.11.): Überhang — die passenden Kräfte wären über ihrer Zimmervorgabe; Stufe 1 bekommt deshalb anspruchsvolle Zimmer
+  bundle("LEVEL1_DEMANDING", c.rooms.flatMap((r, i) => { const k = idx[i]; return k >= 0 && input.housekeepers[k].level < 2 && r.demanding.length && c.relaxed[i] ? [{ k, r }] : []; }),
+    "Stufe 1 mit anspruchsvollen Zimmern, weil das Personal ab Stufe 2 nicht reicht");
+  const relaxedRooms = c.rooms.filter((_, i) => c.relaxed[i]);
+  if (relaxedRooms.length) {
+    const staff = input.housekeepers.filter((h) => h.level >= 2).map((h) => h.name).join(", ");
+    warnings.push({ code: "LEVEL_RULE_RELAXED", severity: "WARNING", roomIds: relaxedRooms.map((r) => r.id),
+      message: `Personal ab Stufe 2 reicht nicht: ${relaxedRooms.length} anspruchsvolle Zimmer (${relaxedRooms.map((r) => r.number).join(", ")}) gehen nach der Zimmervorgabe auch an Stufe 1 — sonst lägen ${staff} über ihrer Zimmervorgabe. Bitte prüfen.` });
+  }
   const demandingOpen = unassigned.filter((id) => roomById.get(id)!.demanding.length);
   const plainOpen = unassigned.filter((id) => !roomById.get(id)!.demanding.length);
   if (demandingOpen.length) {
@@ -158,7 +167,7 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   }
 
   // F4 (M7): „Personal reicht nicht“ und „anspruchsvolle Zimmer ohne passende Kraft“ ganz oben
-  const TOP = ["TOO_FEW_STAFF", "DEMANDING_UNASSIGNED"];
+  const TOP = ["TOO_FEW_STAFF", "LEVEL_RULE_RELAXED", "DEMANDING_UNASSIGNED"];
   warnings.sort((a, b) => (TOP.includes(a.code) ? TOP.indexOf(a.code) : 9) - (TOP.includes(b.code) ? TOP.indexOf(b.code) : 9));
   const { total, parts } = cost(c, idx);
   return {
