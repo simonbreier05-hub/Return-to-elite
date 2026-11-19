@@ -18,6 +18,8 @@ vi.mock("@/lib/realtime", () => ({ broadcast: vi.fn() }));
 
 import { prisma } from "@/lib/db";
 import { closeDepartedImportStays } from "@/lib/guest/stayArchive";
+import { importHistory } from "@/lib/import/history";
+import { berlinDate } from "@/lib/dayplan/time";
 
 const day = (iso: string, h = "10:00") => new Date(`${iso}T${h}:00Z`);
 let roomId = "", userId = "";
@@ -56,5 +58,17 @@ describe("Abreise nur über Opera", () => {
     const today = await prisma.stay.create({ data: { roomId, guestName: "Heute", checkIn: day("2026-11-17", "00:00"), checkOut: day("2026-11-19"), status: "IN_HOUSE", stayToken: "f7n-today-00000000000000000000000000", source: "IMPORT" } });
     expect(await closeDepartedImportStays("2026-11-19")).toBe(0);
     expect((await prisma.stay.findUniqueOrThrow({ where: { id: today.id } })).status).toBe("IN_HOUSE");
+  });
+});
+
+describe("F4-Nachtrag (M8): Importverlauf des Tages", () => {
+  it("übernommene und gelöschte Listen von heute, neueste zuerst, mit Person — ohne Gastdaten", async () => {
+    const now = Date.now();
+    await prisma.importBatch.create({ data: { type: "ARRIVALS", businessDate: berlinDate(new Date()), uploadedById: userId, status: "APPLIED", rowCount: 12, fileHash: "h1", appliedAt: new Date(now - 60_000) } });
+    await prisma.importBatch.create({ data: { type: "TRACES", businessDate: "2026-01-01", uploadedById: userId, status: "APPLIED", rowCount: 3, fileHash: "h2", appliedAt: new Date("2026-01-01T08:00:00Z") } });
+    await prisma.auditLog.create({ data: { action: "IMPORT_LIST_DELETED", userId, meta: JSON.stringify({ type: "FORECAST", businessDate: berlinDate(new Date()) }) } });
+    const h = await importHistory(berlinDate(new Date()));
+    expect(h.map((x) => [x.type, x.action])).toEqual([["FORECAST", "DELETED"], ["ARRIVALS", "APPLIED"]]);
+    expect(h[1]).toMatchObject({ by: "fo", rows: 12 });
   });
 });

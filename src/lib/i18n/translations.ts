@@ -665,6 +665,10 @@ const en = {
     etaSoonWindowMinutes: { title: "Arrival window (minutes)", hint: "How early an ETA starts to count." },
   },
   importPage: {
+    historyTitle: "Import history today",
+    historyNone: "No list imported today yet.",
+    historyApplied: "applied ({{rows}} rows)",
+    historyDeleted: "deleted",
     title: "Opera import",
     intro: "Drop this morning's Opera lists (forecast, departures, arrivals, traces). They are read in your browser — only the fields StayClean needs are sent, never card numbers, prices or balances.",
     dropHere: "Drop files here",
@@ -2822,6 +2826,10 @@ const de = {
     etaSoonWindowMinutes: { title: "Ankunftsfenster (Minuten)", hint: "Ab wann eine Ankunftszeit zählt." },
   },
   importPage: {
+    historyTitle: "Importverlauf heute",
+    historyNone: "Heute wurde noch keine Liste übernommen.",
+    historyApplied: "übernommen ({{rows}} Zeilen)",
+    historyDeleted: "gelöscht",
     title: "Opera-Import",
     intro: "Die Opera-Listen von heute Morgen ablegen (Forecast, Departures, Arrivals, Traces). Sie werden im Browser gelesen — gesendet werden nur die Felder, die StayClean braucht, nie Kartennummern, Preise oder Salden.",
     dropHere: "Dateien hier ablegen",

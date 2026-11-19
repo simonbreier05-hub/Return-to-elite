@@ -39,10 +39,10 @@ function previewColumns(type: ImportType | null): { head: ColHead; key: string }
 }
 
 export default function ImportView() {
-  const { t } = useLocale();
+  const { t, fmt } = useLocale();
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);
-  const { items, day, setDay, status, today, acceptStale, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready } = useImportSession();
+  const { items, day, setDay, status, history, today, acceptStale, addFiles, reparse, discard, applyOne, applyAll, issuesOf, isCritical, ready } = useImportSession();
   const anyApplied = items.some((x) => x.phase === "applied");
 
   const statusLabel = (it: Item) => {
@@ -215,6 +215,26 @@ export default function ImportView() {
           ))}
         </ul>
         <p className="mt-2 text-xs text-text-muted">{t("importPage.replaces")}</p>
+      </section>
+
+      {/* F4-Nachtrag (M8): Importverlauf des Tages — wer, wann, welche Liste (ohne Gastdaten) */}
+      <section className="glass mt-4 flex flex-col gap-2 rounded-(--glass-radius-lg) p-4" aria-labelledby="import-history" data-testid="import-history">
+        <h3 id="import-history" className="text-title-22 text-text-primary">{t("importPage.historyTitle")}</h3>
+        {history.length === 0 ? <p className="text-sm text-text-muted">{t("importPage.historyNone")}</p> : (
+          <ul className="flex flex-col gap-1 text-sm">
+            {history.map((h, i) => (
+              <li key={i} className="flex flex-wrap gap-x-2 border-t border-border-subtle py-1 first:border-t-0">
+                <span className="w-14 text-text-muted">{fmt.time(h.at)}</span>
+                <span className="font-medium">{t(`importPage.type${h.type}` as "importPage.typeFORECAST")}</span>
+                <span className="text-text-secondary">
+                  {h.action === "APPLIED" ? t("importPage.historyApplied", { rows: h.rows ?? 0 }) : t("importPage.historyDeleted")}
+                  {h.businessDate ? ` · ${t("planungTool.asOf", { date: h.businessDate })}` : ""}
+                  {h.by ? ` · ${h.by}` : ""}
+                </span>
+              </li>
+            ))}
+          </ul>
+        )}
       </section>
     </div>
   );

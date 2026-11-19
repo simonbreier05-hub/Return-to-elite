@@ -1,4 +1,5 @@
 "use client";
+import type { ImportHistoryEntry } from "@/lib/import/history";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, ApiError, NetworkError } from "@/components/api";
@@ -61,6 +62,7 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
   const [inventory, setInventory] = useState<number | undefined>();
   const [status, setStatus] = useState<ImportStatus | null>(null);
   const [plan, setPlan] = useState<PlanHint | null>(null);
+  const [history, setHistory] = useState<ImportHistoryEntry[]>([]);
   const [today, setToday] = useState(todayIso());
   const [layout, setLayout] = useState<Partial<Record<ImportType, DateFormatId>>>({});
   const layoutRef = useRef(layout);
@@ -74,8 +76,8 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
 
   const patch = useCallback((id: string, p: Partial<ImportItem>) => setItems((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x))), []);
   /** Stand der Daten neu laden. Gibt den frischen Stand zurück (null bei Fehler). */
-  const loadStatus = useCallback(() => api<{ status: ImportStatus; today?: string; plan?: PlanHint }>("/api/import/status")
-    .then((d) => { setStatus(d.status); setPlan(d.plan ?? null); if (d.today) setToday(d.today); return d.status; }).catch(() => null), []);
+  const loadStatus = useCallback(() => api<{ status: ImportStatus; today?: string; plan?: PlanHint; history?: ImportHistoryEntry[] }>("/api/import/status")
+    .then((d) => { setStatus(d.status); setPlan(d.plan ?? null); setHistory(Array.isArray(d.history) ? d.history : []); if (d.today) setToday(d.today); return d.status; }).catch(() => null), []);
 
   useEffect(() => { void loadStatus(); }, [loadStatus]);
   useEffect(() => {
@@ -200,5 +202,5 @@ export function useImportSession(onApplied?: (types: ImportType[]) => void | Pro
     return null;
   }, [loadStatus]);
 
-  return { items, day, setDay, status, plan, today, acceptStale, loadStatus, addFiles, reparse, discard, applyOne, applyAll, retry, removeList, issuesOf, isCritical, ready };
+  return { items, day, setDay, status, plan, history, today, acceptStale, loadStatus, addFiles, reparse, discard, applyOne, applyAll, retry, removeList, issuesOf, isCritical, ready };
 }
