@@ -893,6 +893,8 @@
     "board.saveFailed": "Impossibile salvare — la modifica è stata annullata.",
     "board.open": "Aperte",
     "board.dueLinen": "Cambio biancheria dovuto",
+    "glance.collapse": "Comprimi",
+    "glance.expand": "Espandi",
     "glance.myFloorsTitle": "Oggi in sintesi — piano {{floors}}",
     "glance.houseTitle": "Tutto l'hotel",
     "glance.houseHint": "per orientarsi",

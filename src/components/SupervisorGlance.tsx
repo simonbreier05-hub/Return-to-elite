@@ -124,7 +124,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
     );
   }
   return (
-    <TodayAtAGlance title={t("glance.myFloorsTitle", { floors: data.mine.floors.join(", ") })} numbers={data.mine.numbers} kpis={kpis} source={source} variant="supervisor" onChanged={changed}>
+    <TodayAtAGlance collapsible title={t("glance.myFloorsTitle", { floors: data.mine.floors.join(", ") })} numbers={data.mine.numbers} kpis={kpis} source={source} variant="supervisor" onChanged={changed}>
       {houseAndQueue}
     </TodayAtAGlance>
   );

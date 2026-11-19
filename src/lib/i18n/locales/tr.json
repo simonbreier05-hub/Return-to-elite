@@ -893,6 +893,8 @@
     "board.saveFailed": "Kaydedilemedi — değişiklik geri alındı.",
     "board.open": "Açık",
     "board.dueLinen": "Çarşaf değişimi gerekli",
+    "glance.collapse": "Daralt",
+    "glance.expand": "Genişlet",
     "glance.myFloorsTitle": "Bugün bir bakışta — kat {{floors}}",
     "glance.houseTitle": "Tüm otel",
     "glance.houseHint": "genel bakış için",

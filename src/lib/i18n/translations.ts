@@ -1037,6 +1037,8 @@ const en = {
     dueLinen: "Linen change due",
   },
   glance: {
+    expand: "Expand",
+    collapse: "Collapse",
     myFloorsTitle: "Today at a glance — floor {{floors}}",
     houseTitle: "Whole house",
     houseHint: "for orientation",
@@ -3120,6 +3122,8 @@ const de = {
     dueLinen: "Wäschewechsel fällig",
   },
   glance: {
+    expand: "Aufklappen",
+    collapse: "Einklappen",
     myFloorsTitle: "Heute auf einen Blick — Etage {{floors}}",
     houseTitle: "Gesamtes Haus",
     houseHint: "zur Orientierung",

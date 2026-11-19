@@ -40,10 +40,11 @@ export const NAV: Record<Role, NavEntry[]> = {
     { id: "overview", labelKey: "nav.overview", icon: "home", href: "/supervisor", mobileRank: 1 },
     { id: "planning", labelKey: "nav.planning", icon: "calendar-days", href: "/planung", mobileRank: 2 },
     // Simon-Feedback 18.11.: „Zimmer“ (Service-Liste) entfällt — Grundriss deckt es ab; Freigabe und Probleme als eigene Punkte
+    // Simon-Feedback 19.11.: Grundriss ist der 3. Punkt der Leiste (Handy-Leiste unverändert: Freigabe bleibt Rang 3)
+    { id: "floorPlan", labelKey: "appShell.floorPlan", icon: "list", href: "/floor-plan", mobileRank: 5 },
     { id: "release", labelKey: "nav.release", icon: "clock", href: "/supervisor/release", mobileRank: 3 },
     { id: "problems", labelKey: "nav.problems", icon: "triangle-alert", href: "/supervisor/problems", mobileRank: 10 },
     messages(4),
-    { id: "floorPlan", labelKey: "appShell.floorPlan", icon: "list", href: "/floor-plan", mobileRank: 5 },
     { id: "handover", labelKey: "nav.handover", icon: "file-text", href: "/supervisor/handover", mobileRank: 6 },
     { id: "guestRequests", labelKey: "nav.guestRequests", icon: "bell", href: "/supervisor/guest-requests", mobileRank: 7 },
     { id: "guestAccess", labelKey: "nav.guestAccess", icon: "users", href: "/supervisor/guest-access", mobileRank: 8 },

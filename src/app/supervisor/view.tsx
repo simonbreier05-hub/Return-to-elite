@@ -510,10 +510,11 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
         selectedRoomId={selectedId}
         onOpenRoom={setSelectedId}
         onMoveRooms={() => router.push("/floor-plan")}
-        notices={<>{notices}{mode === "home" && <RoomActionsCard roomChange={<RoomChangeForm />} />}</>}
+        notices={notices}
         glance={<ErrorBoundary><SupervisorGlance rooms={rooms} onChanged={load} /></ErrorBoundary>}
         below={below}
-        only={mode === "release" ? release : mode === "problems" ? <><BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} />{board}</> : undefined}
+        // Simon-Feedback 19.11.: Zimmer-Aktionen (vorzeitige Abreise, Zimmerwechsel) nicht mehr auf der Übersicht, sondern unter „Probleme“
+        only={mode === "release" ? release : mode === "problems" ? <><BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} /><RoomActionsCard roomChange={<RoomChangeForm />} />{board}</> : undefined}
         detailOpen={!!detailRoom}
         detail={
           <DetailContainer open={!!detailRoom} onClose={() => setSelectedId(null)} title={detailRoom ? t("hkHub.roomTitle", { n: detailRoom.number }) : ""}>
