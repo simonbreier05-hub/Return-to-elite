@@ -1,7 +1,7 @@
 "use client";
 
 import RoomActionsCard from "@/components/roles/RoomActionsCard";
-import RoomChangeForm from "@/components/roles/RoomChangeForm";
+import RoomWindowActions from "@/components/roles/RoomWindowActions";
 import FrontOfficeDnd from "@/components/roles/FrontOfficeDnd";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -167,7 +167,9 @@ export default function FrontOfficeView({ mode = "arrivals" }: { mode?: "arrival
     return (
       <div className="flex flex-col gap-4 sm:gap-6">
         {departuresEl}
-        {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
+        {/* Simon-Feedback 19.11.: „Reist heute ab (vorzeitig)“ gehört zu den Abreisen (statt Karte „Zimmer-Aktionen“) */}
+        <RoomActionsCard title={t("roomActions.earlyDeparture")} />
+        {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} editor={<RoomWindowActions room={roomLookup.room} onChanged={() => void loadDepartures()} />} />}
       </div>
     );
   }
@@ -195,7 +197,7 @@ export default function FrontOfficeView({ mode = "arrivals" }: { mode?: "arrival
             {released && <Banner tone="info" icon="bell" title={released} />}
             <BlockedRoomsCard role="front_office" />
             <FrontOfficeDnd />
-            <RoomActionsCard roomChange={<RoomChangeForm />} />
+            {/* Zimmer-Aktionen-Karte entfällt (Simon-Feedback 19.11.): Zimmerwechsel im Zimmerfenster, vorzeitige Abreise unter „Abreisen“ */}
             <PriorityBanner
               items={[
                 { count: neededNowNotReady, label: t("priority.neededNowArrivals"), icon: "warning", tone: "urgent" },
@@ -205,7 +207,7 @@ export default function FrontOfficeView({ mode = "arrivals" }: { mode?: "arrival
           </>
         }
       />
-      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} />}
+      {roomLookup.room && <RoomDetailModal room={roomLookup.room} onClose={roomLookup.close} editor={<RoomWindowActions room={roomLookup.room} onChanged={() => void loadDepartures()} />} />}
     </>
   );
 }

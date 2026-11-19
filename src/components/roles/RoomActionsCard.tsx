@@ -19,7 +19,7 @@ export async function roomIdByNumber(n: string): Promise<string | null> {
  *  - Teil 4 (H9): Zimmerwechsel kommt als `roomChange` dazu.
  * Nur Zimmernummern, keine Gastdaten.
  */
-export default function RoomActionsCard({ roomChange }: { roomChange?: React.ReactNode }) {
+export default function RoomActionsCard({ roomChange, title }: { roomChange?: React.ReactNode; title?: string }) {
   const { t } = useLocale();
   const [n, setN] = useState("");
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -32,7 +32,7 @@ export default function RoomActionsCard({ roomChange }: { roomChange?: React.Rea
   };
   return (
     <GlassCard as="section" aria-labelledby="room-actions-title" className="flex flex-col gap-3" data-testid="room-actions">
-      <SectionLabel as="h2" icon="bed-single" title={t("roomActions.title")} />
+      <SectionLabel as="h2" icon="bed-single" title={title ?? t("roomActions.title")} />
       <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
         <Field className="sm:w-32" label={t("blocked.roomNumber")} value={n} maxLength={6} inputMode="numeric" onChange={(e) => setN(e.target.value)} />
         <TwoTapButton disabled={!n.trim()} onConfirm={early}>{t("roomActions.earlyDeparture")}</TwoTapButton>
