@@ -1485,6 +1485,7 @@
     "prevGuest.conflict": "Çakışma: Giriş, Çıkış'tan önce",
     "prevGuest.stillInLate": "Oda {{n}}: Ön büroya göre misafir hâlâ odada, geç çıkış {{time}}. Yine de devam edilsin mi?",
     "prevGuest.stillIn": "Oda {{n}}: Ön büroya göre misafir hâlâ odada. Yine de devam edilsin mi?",
+    "roomActions.openFull": "Tüm ayarları aç",
     "roomActions.changeDone": "Oda değişikliği {{from}} → {{to}} tamamlandı.",
     "roomActions.changeConfirmText": "Oda {{from}} kirli olur (Çıkış), oda {{to}} dolu (Konaklayan). {{to}} misafir ekranı misafiri hemen karşılar, {{from}} nötr olur.",
     "roomActions.changeConfirmTitle": "Misafir {{from}} odasından {{to}} odasına taşınsın mı?",

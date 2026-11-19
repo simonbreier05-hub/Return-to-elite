@@ -1485,6 +1485,7 @@
     "prevGuest.conflict": "टकराव: चेक-इन चेक-आउट से पहले",
     "prevGuest.stillInLate": "कमरा {{n}}: फ्रंट ऑफिस के अनुसार मेहमान अभी कमरे में है, लेट चेक-आउट {{time}}। फिर भी जारी रखें?",
     "prevGuest.stillIn": "कमरा {{n}}: फ्रंट ऑफिस के अनुसार मेहमान अभी कमरे में है। फिर भी जारी रखें?",
+    "roomActions.openFull": "सभी बदलाव खोलें",
     "roomActions.changeDone": "कमरा बदलना {{from}} → {{to}} पूरा।",
     "roomActions.changeConfirmText": "कमरा {{from}} गंदा होगा (चेक-आउट), कमरा {{to}} भरा (स्टेओवर)। {{to}} की मेहमान स्क्रीन अभी से स्वागत करेगी, {{from}} तटस्थ होगी।",
     "roomActions.changeConfirmTitle": "मेहमान को {{from}} से {{to}} में ले जाएँ?",

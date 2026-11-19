@@ -1,7 +1,7 @@
 "use client";
 
-import RoomActionsCard from "@/components/roles/RoomActionsCard";
-import RoomChangeForm from "@/components/roles/RoomChangeForm";
+import RoomWindowActions from "@/components/roles/RoomWindowActions";
+import LiveRoomModal from "@/components/lists/LiveRoomModal";
 import { sortReleaseQueue } from "@/lib/ui/supervisorHub";
 import BlockedRoomsCard from "@/components/BlockedRoomsCard";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +19,7 @@ import SupervisorFeed from "@/components/SupervisorFeed";
 import ErrorBoundary from "@/components/ErrorBoundary";
 import { DetailContainer } from "@/components/shell/DetailContainer";
 import { HkDefectDialog, HkNoteThread } from "@/components/hk/HkParts";
-import { Banner, Field, FilterChip, GlassCard, Glyph } from "@/components/ui";
+import { Banner, Button, Field, FilterChip, GlassCard, Glyph } from "@/components/ui";
 import { SupervisorHub, type HubTile } from "@/components/supervisor/SupervisorHub";
 import { OooDialog, ReworkDialog, SupervisorRoomDetail } from "@/components/supervisor/SupervisorRoomDetail";
 import { GlassSelect, ReleaseQueueCard, StatusLegend, StatusTile } from "@/components/supervisor/SupervisorParts";
@@ -113,6 +113,8 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
   const [rooms, setRooms] = useState<Room[]>([]);
   const [attendants, setAttendants] = useState<Attendant[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  // Simon-Feedback 19.11.: „Alle Anpassungen öffnen“ — dasselbe volle Zimmerfenster wie im Grundriss (Status, Zuteilung, DND, Traces …)
+  const [fullRoomId, setFullRoomId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [ticker, setTicker] = useState<string | null>(null);
   const [busyRoomId, setBusyRoomId] = useState<string | null>(null);
@@ -513,8 +515,8 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
         notices={notices}
         glance={<ErrorBoundary><SupervisorGlance rooms={rooms} onChanged={load} /></ErrorBoundary>}
         below={below}
-        // Simon-Feedback 19.11.: Zimmer-Aktionen (vorzeitige Abreise, Zimmerwechsel) nicht mehr auf der Übersicht, sondern unter „Probleme“
-        only={mode === "release" ? release : mode === "problems" ? <><BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} /><RoomActionsCard roomChange={<RoomChangeForm />} />{board}</> : undefined}
+        // Simon-Feedback 19.11.: Zimmer-Aktionen (vorzeitige Abreise, Zimmerwechsel) stehen im Zimmerfenster (einklappbar), nicht als Karte
+        only={mode === "release" ? release : mode === "problems" ? <><BlockedRoomsCard role={isDutyManager ? "duty_manager" : "supervisor"} />{board}</> : undefined}
         detailOpen={!!detailRoom}
         detail={
           <DetailContainer open={!!detailRoom} onClose={() => setSelectedId(null)} title={detailRoom ? t("hkHub.roomTitle", { n: detailRoom.number }) : ""}>
@@ -526,6 +528,8 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
                 isDutyManager={isDutyManager}
                 onAct={(status) => void act(detailRoom, status)}
                 onOpenDialog={(kind) => setDialog({ kind, room: detailRoom })}
+                extra={<RoomWindowActions room={detailRoom} onChanged={() => void load()}
+                  extra={<Button variant="secondary" icon="wrench" block onClick={() => setFullRoomId(detailRoom.id)}>{t("roomActions.openFull")}</Button>} />}
                 thread={
                   <HkNoteThread
                     roomId={detailRoom.id}
@@ -601,6 +605,7 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
           }}
         />
       )}
+      {fullRoomId && <LiveRoomModal roomRef={fullRoomId} onClose={() => setFullRoomId(null)} onChanged={() => void load()} />}
     </div>
   );
 }

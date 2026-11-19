@@ -1485,6 +1485,7 @@
     "prevGuest.conflict": "Conflitto: Arrivo prima della Partenza",
     "prevGuest.stillInLate": "Camera {{n}}: secondo il Front Office l'ospite è ancora in camera, late check-out {{time}}. Continuare comunque?",
     "prevGuest.stillIn": "Camera {{n}}: secondo il Front Office l'ospite è ancora in camera. Continuare comunque?",
+    "roomActions.openFull": "Apri tutte le modifiche",
     "roomActions.changeDone": "Cambio camera {{from}} → {{to}} eseguito.",
     "roomActions.changeConfirmText": "La camera {{from}} diventa sporca (Partenza), la camera {{to}} occupata (Fermata). Lo schermo ospite di {{to}} saluta l'ospite da subito, {{from}} diventa neutro.",
     "roomActions.changeConfirmTitle": "Spostare l'ospite da {{from}} a {{to}}?",

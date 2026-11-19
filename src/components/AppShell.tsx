@@ -6,6 +6,7 @@ import { api } from "./api";
 import NoteCountBadge from "./NoteCountBadge";
 import { RoomFlagIcons } from "./RoomFlags";
 import RoomDetailModal, { type SearchedRoom } from "./RoomDetailModal";
+import LiveRoomModal from "./lists/LiveRoomModal";
 import ErrorBoundary from "./ErrorBoundary";
 import { ChatProvider } from "./chat/ChatContext";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -321,7 +322,10 @@ export default function AppShell({
           {/* Schnellsuche: auf Glas-Seiten dasselbe Zimmer-Fenster im Glas-Stil (D7), auf alten Seiten hell. */}
           {selectedRoom && (
             <GlassMode on={!legacy}>
-              <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />
+              {/* Simon-Feedback 19.11.: Supervisor/Duty Manager bekommen auch aus der Suche das volle Zimmerfenster (Anpassungen, Zimmer-Aktionen) */}
+              {role === "supervisor" || role === "duty_manager"
+                ? <LiveRoomModal roomRef={selectedRoom.id} onClose={() => setSelectedRoom(null)} />
+                : <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
             </GlassMode>
           )}
 

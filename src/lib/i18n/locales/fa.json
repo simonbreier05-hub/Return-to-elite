@@ -1485,6 +1485,7 @@
     "prevGuest.conflict": "تداخل: ورود پیش از خروج",
     "prevGuest.stillInLate": "اتاق {{n}}: طبق پذیرش، مهمان هنوز در اتاق است، تأخیر در تخلیه {{time}}. با این حال ادامه دهید؟",
     "prevGuest.stillIn": "اتاق {{n}}: طبق پذیرش، مهمان هنوز در اتاق است. با این حال ادامه دهید؟",
+    "roomActions.openFull": "باز کردن همه تنظیمات",
     "roomActions.changeDone": "تعویض اتاق {{from}} → {{to}} انجام شد.",
     "roomActions.changeConfirmText": "اتاق {{from}} کثیف می‌شود (خروج)، اتاق {{to}} اشغال (ماندگار). صفحه مهمان {{to}} از همین حالا خوش‌آمد می‌گوید، {{from}} خنثی می‌شود.",
     "roomActions.changeConfirmTitle": "مهمان از {{from}} به {{to}} منتقل شود؟",

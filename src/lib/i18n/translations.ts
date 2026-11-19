@@ -2073,6 +2073,7 @@ const en = {
     checkinBlocked: "Check-in only after the previous guest has checked out.",
   },
   roomActions: {
+    openFull: "Open all adjustments",
     changeTitle: "Room change",
     changeFrom: "From room",
     changeTo: "To room",
@@ -4219,6 +4220,7 @@ const de = {
     checkinBlocked: "Einchecken erst, wenn der Vorgast ausgecheckt hat.",
   },
   roomActions: {
+    openFull: "Alle Anpassungen öffnen",
     changeTitle: "Zimmerwechsel",
     changeFrom: "Von Zimmer",
     changeTo: "Nach Zimmer",

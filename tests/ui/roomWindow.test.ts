@@ -83,7 +83,7 @@ describe("Glas nur mit GlassMode, sonst unverändert hell", () => {
     expect(g).toContain("Frau Testfrau");
     expect(g).not.toMatch(/bg-white|text-graphite/);
     const l = html(h(RoomDayInfo, { day }), false);
-    expect(l).toContain("bg-white");
+    expect(l).not.toMatch(/bg-white|text-graphite/); // Simon 19.11.2026: alles im Glas-Design, auch die frühere helle Fassung
   });
   it("RoomEditPanel: Glas ohne helle Klassen, Status-Knöpfe mit Symbol + Text, Zwei-Tipp bleibt", () => {
     const g = html(h(RoomEditPanel, { room: detail(), onChanged: () => {} }), true);
@@ -92,7 +92,7 @@ describe("Glas nur mit GlassMode, sonst unverändert hell", () => {
     expect(g).toMatch(/<svg[\s\S]*Auf In Reinigung setzen|<svg[\s\S]*setzen/);
     expect(g).toContain("Testkraft Eins");
     const l = html(h(RoomEditPanel, { room: detail(), onChanged: () => {} }), false);
-    expect(l).toContain("bg-parchment/40");
+    expect(l).not.toMatch(/bg-parchment|text-graphite|border-charcoal/); // Simon 19.11.2026: alles im Glas-Design
   });
   it("TwoTapButton: Glas-Tippfläche ≥ 48 px mit Fokusring", () => {
     const g = html(h(TwoTapButton, { onConfirm: () => {} }, "Speichern"), true);
@@ -119,6 +119,6 @@ describe("Aufbau (Quelltext)", () => {
     expect(read("components/lists/LiveRoomModal.tsx")).toMatch(/usePauseAction\(/);
   });
   it("Schnellsuche im Kopf: Glas nur auf Glas-Seiten", () => {
-    expect(read("components/AppShell.tsx")).toMatch(/<GlassMode on=\{!legacy\}>\s*<RoomDetailModal/);
+    expect(read("components/AppShell.tsx")).toMatch(/<GlassMode on=\{!legacy\}>[\s\S]*?<RoomDetailModal/);
   });
 });

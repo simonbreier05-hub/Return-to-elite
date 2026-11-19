@@ -43,6 +43,7 @@ export function SupervisorRoomDetail({
   onAct,
   onOpenDialog,
   thread,
+  extra,
 }: {
   room: SupDetailRoom;
   busy: boolean;
@@ -50,6 +51,8 @@ export function SupervisorRoomDetail({
   onAct: (status: RoomStatus) => void;
   onOpenDialog: (kind: "rework" | "ooo" | "roomTask" | "defect") => void;
   thread: ReactNode;
+  /** Simon-Feedback 19.11.2026: Zimmer-Aktionen und „Alle Anpassungen“ (einklappbar) vor den Notizen. */
+  extra?: ReactNode;
 }) {
   const { t } = useLocale();
   const ui = ROOM_STATUS_UI[room.status];
@@ -147,6 +150,7 @@ export function SupervisorRoomDetail({
         </div>
       )}
 
+      {extra}
       {thread}
 
       {isDutyManager && <p className="text-label text-center text-text-muted">{t("supervisor.dutyManagerAudit")}</p>}

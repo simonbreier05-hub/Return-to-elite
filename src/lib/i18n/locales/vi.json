@@ -1485,6 +1485,7 @@
     "prevGuest.conflict": "Xung đột: Check-in trước Check-out",
     "prevGuest.stillInLate": "Phòng {{n}}: theo Lễ tân, khách vẫn còn trong phòng, trả phòng muộn {{time}}. Vẫn tiếp tục?",
     "prevGuest.stillIn": "Phòng {{n}}: theo Lễ tân, khách vẫn còn trong phòng. Vẫn tiếp tục?",
+    "roomActions.openFull": "Mở tất cả điều chỉnh",
     "roomActions.changeDone": "Đã đổi phòng {{from}} → {{to}}.",
     "roomActions.changeConfirmText": "Phòng {{from}} thành bẩn (Check-out), phòng {{to}} có khách (Phòng ở tiếp). Màn hình khách của {{to}} chào khách ngay, {{from}} trở về trung tính.",
     "roomActions.changeConfirmTitle": "Chuyển khách từ {{from}} sang {{to}}?",
