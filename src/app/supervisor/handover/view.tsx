@@ -36,7 +36,7 @@ const WINDOWS = [4, 8, 12];
 
 /** Schichtübergabe (Supervisor). Simon-Feedback 19.11.2026: im Design der App („Glas & Premium“), Inhalt unverändert. */
 export default function HandoverView() {
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [hours, setHours] = useState(8);
   const [data, setData] = useState<{ handover: Handover; facts: Facts } | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,13 +48,13 @@ export default function HandoverView() {
     setBusy(true);
     setError(null);
     try {
-      setData(await api<{ handover: Handover; facts: Facts }>(`/api/handover?hours=${h}`));
+      setData(await api<{ handover: Handover; facts: Facts }>(`/api/handover?hours=${h}&lang=${locale}`));
     } catch (e) {
       setError(errorText(e, t));
     } finally {
       setBusy(false);
     }
-  }, [t]);
+  }, [t, locale]);
 
   useEffect(() => { void load(hours); }, [load, hours]);
 

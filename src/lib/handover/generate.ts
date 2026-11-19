@@ -1,4 +1,5 @@
 import { factsToBullets, humanise, type HandoverFacts } from "./collectFacts";
+import { bodyDe, bulletsDe, headlineDe } from "./germanWriter";
 
 /**
  * Shift handover, part two: turning facts into something readable in 30 seconds.
@@ -173,8 +174,8 @@ Rules:
   paragraphs.
 - Do not speculate about causes and do not give advice beyond what the facts support.`;
 
-async function anthropicWriter(f: HandoverFacts, apiKey: string): Promise<HandoverResult> {
-  const bullets = factsToBullets(f);
+async function anthropicWriter(f: HandoverFacts, apiKey: string, german = false): Promise<HandoverResult> {
+  const bullets = german ? bulletsDe(f) : factsToBullets(f);
   const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-5";
 
   const res = await fetch("https://api.anthropic.com/v1/messages", {
@@ -187,7 +188,8 @@ async function anthropicWriter(f: HandoverFacts, apiKey: string): Promise<Handov
     body: JSON.stringify({
       model,
       max_tokens: 700,
-      system: SYSTEM_PROMPT,
+      system: german ? `${SYSTEM_PROMPT}
+- Write the handover in German (Deutsch), plain professional language.` : SYSTEM_PROMPT,
       messages: [
         {
           role: "user",
@@ -219,27 +221,36 @@ async function anthropicWriter(f: HandoverFacts, apiKey: string): Promise<Handov
   }
 
   return {
-    headline: headlineFor(f), // computed, not generated — headlines carry numbers
+    headline: german ? headlineDe(f) : headlineFor(f), // computed, not generated — headlines carry numbers
     body: text,
     bullets,
     provider: "anthropic",
-    providerLabel: "Language model, phrasing facts computed by the system",
+    providerLabel: german ? "Sprachmodell, formuliert nur die vom System berechneten Fakten" : "Language model, phrasing facts computed by the system",
     model,
   };
 }
 
-export async function generateHandover(facts: HandoverFacts): Promise<HandoverResult> {
+/** Nachtrag: `lang` = Sprache der Oberfläche. Deutsch hat einen eigenen deterministischen Schreiber; übrige Sprachen vorerst Englisch. */
+export async function generateHandover(facts: HandoverFacts, lang = "en"): Promise<HandoverResult> {
+  const german = lang === "de";
+  const local = () => (german ? localWriterDe(facts) : localWriter(facts));
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) return localWriter(facts);
+  if (!apiKey) return local();
   try {
-    return await anthropicWriter(facts, apiKey);
+    const r = await anthropicWriter(facts, apiKey, german);
+    return german && r.provider === "local" ? { ...localWriterDe(facts), warning: r.warning ? "Das Sprachmodell war nicht erreichbar; diese Übergabe stammt vom festen Schreiber." : undefined } : r;
   } catch (err) {
-    const local = localWriter(facts);
     return {
-      ...local,
-      warning: `Could not reach the language model (${(err as Error).message}); this handover came from the deterministic writer.`,
+      ...local(),
+      warning: german
+        ? "Das Sprachmodell war nicht erreichbar; diese Übergabe stammt vom festen Schreiber."
+        : `Could not reach the language model (${(err as Error).message}); this handover came from the deterministic writer.`,
     };
   }
+}
+
+function localWriterDe(f: HandoverFacts): HandoverResult {
+  return { headline: headlineDe(f), body: bodyDe(f), bullets: bulletsDe(f), provider: "local", providerLabel: "Fester Schreiber (kein Sprachmodell)" };
 }
 
 export { localWriter as __localWriterForTests };

@@ -140,7 +140,8 @@ export async function GET(req: NextRequest) {
     })),
   };
 
-  const result = await generateHandover(facts);
+  // Nachtrag: Übergabetext in der Sprache der Oberfläche (?lang=de); Deutsch hat einen eigenen Schreiber
+  const result = await generateHandover(facts, req.nextUrl.searchParams.get("lang") ?? "en");
   await audit({
     action: "HANDOVER_GENERATED",
     userId: auth.session.userId,
