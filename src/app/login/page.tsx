@@ -115,7 +115,7 @@ export default function LoginPage() {
         {devUsers ? (
           <div className="glass rounded-(--glass-radius-lg) p-6">
             <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-title-22 text-text-primary text-accent-text">{t("login.choosePosition")}</h2>
+              <h2 className="text-title-22 text-accent-text">{t("login.choosePosition")}</h2>
               <span className="rounded-full bg-accent-subtle-bg px-3 py-1 text-[0.65rem] font-semibold uppercase tracking-wider text-accent-text">
                 {t("common.devMode")}
               </span>
@@ -202,7 +202,7 @@ function PasswordForm({
         type="email"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
-        className="mb-5 h-11 w-full border-0 border-b border-border-subtle bg-transparent px-0.5 text-base placeholder:text-text-secondary"
+        className="mb-5 h-11 w-full border-0 border-b border-border-subtle bg-transparent px-0.5 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text placeholder:text-text-secondary"
         placeholder="name@hotel.test"
         autoComplete="username"
       />
@@ -213,7 +213,7 @@ function PasswordForm({
         type="password"
         value={password}
         onChange={(e) => setPassword(e.target.value)}
-        className="mb-7 h-11 w-full border-0 border-b border-border-subtle bg-transparent px-0.5 text-base"
+        className="mb-7 h-11 w-full border-0 border-b border-border-subtle bg-transparent px-0.5 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-accent-text"
         autoComplete="current-password"
       />
       <button

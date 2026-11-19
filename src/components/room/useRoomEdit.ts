@@ -40,8 +40,11 @@ export function useRoomEdit(room: RoomDetail, onChanged: () => void | Promise<vo
     catch (e) { setMsg({ ok: false, text: errorText(e, t, "roomEdit.failed") }); }
   };
   const setStatus = (status: string, confirmOccupied = false, confirmGuestPresent = false) => run(async () => {
+    // F6-Nachtrag (M19): Fertigmelden durch Supervisor/DM — Wäschewechsel einmal bestätigen (nur wenn heute fällig)
+    const askLaundry = (status === "CLEAN" || status === "INSPECTED") && room.status !== "CLEAN" && room.status !== "INSPECTED" && !!room.day?.laundry;
+    const laundry = askLaundry ? { laundryChanged: window.confirm(t("hk.laundryConfirm", { n: room.number })) } : {};
     try {
-      await api(`/api/rooms/${room.id}/status`, { body: { status, ...(confirmGuestPresent ? { confirmGuestPresent } : {}), ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString(), oooReason: oooReason.trim(), confirmOccupied } : {}) } });
+      await api(`/api/rooms/${room.id}/status`, { body: { status, ...laundry, ...(confirmGuestPresent ? { confirmGuestPresent } : {}), ...(status === "OUT_OF_ORDER" ? { oooUntil: new Date(ooo).toISOString(), oooReason: oooReason.trim(), confirmOccupied } : {}) } });
       setOccupiedPrompt(null); setGuestPrompt(null);
     } catch (e) {
       if (e instanceof ApiError && e.code === "OCCUPIED_CONFIRM_REQUIRED") { setOccupiedPrompt(e.message); return false; }

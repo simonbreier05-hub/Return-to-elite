@@ -61,7 +61,7 @@ export const LABEL_STYLE: Record<MainLabel, { chip: string; edge: string }> = {
   DEPARTURE: { chip: "border-status-dirty/40 bg-status-dirty/10 text-status-dirty", edge: "border-s-status-dirty" },
   STAYOVER: { chip: "border-status-clean/40 bg-status-clean/10 text-status-success-fg", edge: "border-s-status-clean" },
   ARRIVAL: { chip: "border-status-inspected/40 bg-status-inspected/10 text-status-inspected", edge: "border-s-status-inspected" },
-  NONE: { chip: "border-border-subtle bg-surface-card-raised text-text-primary", edge: "border-s-charcoal/15" },
+  NONE: { chip: "border-border-subtle bg-surface-card-raised text-text-primary", edge: "border-s-border-subtle" },
   // F1: seit gestern offen — Gold (Achtung), Rand Rot wie Abreise; Zusatz ohne Tagesplan — neutral, Rand Rot
   CARRYOVER: { chip: "border-gold bg-champagne-soft/40 text-text-primary font-semibold", edge: "border-s-status-dirty" },
   EXTRA: { chip: "border-border-subtle bg-surface-card-raised text-text-primary", edge: "border-s-status-dirty" },
@@ -116,7 +116,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
             {traces.length > 0 && <span className={`${chip} border-border-subtle bg-surface-card-raised text-text-secondary`}><span aria-hidden>▸</span>{t("lists.rowTraces", { n: traces.length })}</span>}
             {(room.defects ?? 0) > 0 && <span className={`${chip} border-status-defect/40 bg-status-defect/10 text-status-defect`}><IconWrench className="h-3.5 w-3.5" />{t("lists.rowDefects", { n: room.defects ?? 0 })}</span>}
             {room.wish && <span className={`${chip} border-border-subtle bg-accent-subtle-bg text-text-primary`}><span aria-hidden>{room.wish === "CLEAN_REQUEST" ? "✨" : "💬"}</span>{t(`lists.wish${room.wish}` as TKey)}</span>}
-            {marks.has("HINT") && <span className={`${chip} border-navy/30 bg-accent-subtle-bg text-accent-text`}><span aria-hidden>📝</span>{t("lists.hint")}</span>}
+            {marks.has("HINT") && <span className={`${chip} border-border-subtle bg-accent-subtle-bg text-accent-text`}><span aria-hidden>📝</span>{t("lists.hint")}</span>}
             {room.pax != null && <span className={`${chip} border-border-subtle text-text-secondary`}><IconPerson className="h-3.5 w-3.5" />{room.pax === 1 ? t("lists.paxOne") : t("lists.pax", { n: room.pax })}</span>}
             {room.changed && <span className={`${chip} border-gold bg-accent-subtle-bg text-text-primary`}>↻ {t("lists.changed")}</span>}
             {room.pause && <PauseBadge pause={room.pause} showBy={showDept} />}
@@ -149,7 +149,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
         </div>
       </div>
       {(room.hints?.length ?? 0) > 0 && (
-        <ul className="mt-2 space-y-0.5 break-words rounded-(--glass-radius-sm) border border-navy/20 bg-champagne/5 px-2 py-1.5 text-sm text-accent-text" aria-label={t("lists.hints")}>
+        <ul className="mt-2 space-y-0.5 break-words rounded-(--glass-radius-sm) border border-border-subtle bg-champagne/5 px-2 py-1.5 text-sm text-accent-text" aria-label={t("lists.hints")}>
           {room.hints!.map((h) => <li key={h.id}><span aria-hidden>📝 </span><span className="font-semibold">{t("lists.hint")}:</span> {h.body}</li>)}
         </ul>
       )}

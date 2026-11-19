@@ -27,7 +27,7 @@ export default function WindowPanel({
       <div className="flex items-center justify-between gap-2 border-b border-border-subtle bg-surface-card-raised px-4 py-3">
         <div className="flex items-center gap-2">
           {icon ?? <span className="h-2 w-2 rounded-full bg-champagne" />}
-          <span className="text-body-18 text-text-primary text-text-primary">{title}</span>
+          <span className="text-body-18 text-text-primary">{title}</span>
         </div>
         {right}
       </div>

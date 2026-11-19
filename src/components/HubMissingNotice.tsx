@@ -33,7 +33,7 @@ export default function HubMissingNotice({ hub, planner, glass }: { hub: HubStat
       <p className="font-medium">{t("hubDay.missingTitle", { date })}</p>
       <p className="mt-1 text-text-secondary">{planner ? t("hubDay.missingPlanner") : t("hubDay.missingAttendant")}</p>
       {planner && (
-        <Link href="/planung" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border-accent px-5 font-medium focus-visible: focus-visible:ring-2 focus-visible:ring-gold-line">
+        <Link href="/planung" className="mt-3 inline-flex min-h-11 items-center rounded-full border border-border-accent px-5 font-medium focus-visible:ring-2 focus-visible:ring-gold-line">
           {t("hubDay.toHub")}
         </Link>
       )}

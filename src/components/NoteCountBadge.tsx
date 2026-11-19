@@ -31,7 +31,7 @@ export default function NoteCountBadge({
     </span>
   ) : (
     <span
-      className={`flex h-4 w-4 items-center justify-center rounded-full border border-gray-400 bg-gray-100 text-[9px] text-gray-600 ${className}`}
+      className={`flex h-4 w-4 items-center justify-center rounded-full border border-border-subtle bg-surface-card-raised text-[9px] text-text-muted ${className}`}
       title={t("roomFlags.notesAllDone")}
     >
       ✓

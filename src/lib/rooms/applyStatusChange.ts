@@ -187,7 +187,8 @@ export async function applyStatusChange(
       data: { status: to === "IN_PROGRESS" ? "IN_PROGRESS" : "DONE" },
     });
   }
-  if (to === "CLEAN" && input.laundryChanged === true) {
+  // F6-Nachtrag: auch wenn Supervisor/DM ein Zimmer direkt (ohne „Rein“) freigeben, zählt der bestätigte Wäschewechsel
+  if ((to === "CLEAN" || (to === "INSPECTED" && from !== "CLEAN")) && input.laundryChanged === true) {
     const due = await prisma.dayRoomPlan.findFirst({ where: { date: berlinDate(now), roomId: room.id, cleaningType: "STAYOVER", laundryDue: true }, select: { id: true } });
     if (due) {
       await prisma.room.update({ where: { id: room.id }, data: { lastLinenChangeAt: now } });

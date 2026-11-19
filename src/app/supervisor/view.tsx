@@ -264,6 +264,10 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
   /** Single place where a status change is issued, so busy-state and error handling are consistent. */
   const act = async (room: Room, status: RoomStatus, extra: Record<string, unknown> = {}) => {
     if (busyRoomId) return; // guards against a double tap while a request is in flight
+    // F6-Nachtrag (M19): Fertigmelden durch Supervisor/DM — Wäschewechsel wie bei der Housekeeperin einmal bestätigen, nie automatisch
+    if ((status === "CLEAN" || status === "INSPECTED") && room.status !== "CLEAN" && room.status !== "INSPECTED" && extra.laundryChanged === undefined && laundryIds.has(room.id)) {
+      extra = { ...extra, laundryChanged: window.confirm(t("hk.laundryConfirm", { n: room.number })) };
+    }
     setBusyRoomId(room.id);
     setError(null);
     try {
@@ -528,8 +532,11 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
                 isDutyManager={isDutyManager}
                 onAct={(status) => void act(detailRoom, status)}
                 onOpenDialog={(kind) => setDialog({ kind, room: detailRoom })}
-                extra={<RoomWindowActions room={detailRoom} onChanged={() => void load()}
-                  extra={<Button variant="secondary" icon="wrench" block onClick={() => setFullRoomId(detailRoom.id)}>{t("roomActions.openFull")}</Button>} />}
+                extra={<>
+                  {/* Review: „Alle Anpassungen“ gut sichtbar außerhalb des eingeklappten Bereichs; das Detail schließt, damit nur ein Fenster den Fokus hält */}
+                  <Button variant="secondary" icon="wrench" block onClick={() => { setFullRoomId(detailRoom.id); setSelectedId(null); }}>{t("roomActions.openFull")}</Button>
+                  <RoomWindowActions room={detailRoom} onChanged={() => void load()} />
+                </>}
                 thread={
                   <HkNoteThread
                     roomId={detailRoom.id}

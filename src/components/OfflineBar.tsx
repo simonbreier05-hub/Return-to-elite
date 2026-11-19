@@ -23,8 +23,8 @@ export default function OfflineBar({ state }: { state: OfflineState }) {
               {online ? t("offline.sending") : t("offline.noConnection")} · {pending.length}{" "}
               {pending.length === 1 ? t("offline.actionWaiting") : t("offline.actionsWaiting")}
             </p>
-            <p className="text-sm text-espresso">{t("offline.savedLocally")}</p>
-            <ul className="mt-1 text-xs text-espresso/90">
+            <p className="text-sm text-text-secondary">{t("offline.savedLocally")}</p>
+            <ul className="mt-1 text-xs text-text-secondary/90">
               {pending.slice(0, 4).map((a) => (
                 <li key={a.id}>· {a.label}</li>
               ))}
@@ -41,7 +41,7 @@ export default function OfflineBar({ state }: { state: OfflineState }) {
       )}
 
       {!online && pending.length === 0 && (
-        <div className="theme-glass rounded-(--glass-radius-md) border border-border-subtle bg-accent-subtle-bg px-4 py-2 text-sm text-espresso">
+        <div className="theme-glass rounded-(--glass-radius-md) border border-border-subtle bg-accent-subtle-bg px-4 py-2 text-sm text-text-secondary">
           {t("offline.canKeepWorking")}
         </div>
       )}

@@ -99,7 +99,7 @@ export default function LiveListsPanel() {
               <ul className="space-y-1.5">
                 {data.tasks.map((it) => (
                   <li key={it.id} className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-3 text-sm">
-                    <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-start font-medium underline decoration-charcoal/20 underline-offset-4">{it.roomNumber}</button>
+                    <button type="button" onClick={() => setRoomRef(it.roomNumber)} title={t("lists.hmOpenRoom", { n: it.roomNumber })} className="min-h-11 w-14 text-start font-medium underline decoration-border-subtle underline-offset-4">{it.roomNumber}</button>
                     <span className="min-w-0 flex-1 text-text-secondary">{it.text}</span>
                     {it.status === "OPEN" && <PauseBadge pause={it.pause} showBy />}
                     <span className="text-xs text-text-muted">{it.assignedToName ?? t("planungTool.housemanAll")}</span>
@@ -127,7 +127,7 @@ function ManualTasks({ tasks, onOpen }: { tasks: ManualTask[]; onOpen: (roomNumb
   const done = tasks.filter((x) => x.status === "DONE").slice(0, 10);
   const row = (x: ManualTask) => (
     <li key={x.id} className={`flex flex-wrap items-center gap-x-3 gap-y-1 rounded-(--glass-radius-md) border border-border-subtle p-3 text-sm ${x.status === "DONE" ? "bg-surface-card-raised" : "bg-surface-progress-track"}`}>
-      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-start font-medium underline decoration-charcoal/20 underline-offset-4">{x.room.number}</button>
+      <button type="button" onClick={() => onOpen(x.room.number)} title={t("lists.hmOpenRoom", { n: x.room.number })} className="min-h-11 w-14 text-start font-medium underline decoration-border-subtle underline-offset-4">{x.room.number}</button>
       <span className={`min-w-0 flex-1 ${x.status === "DONE" ? "text-text-muted line-through" : "text-text-secondary"}`}>{label(x)}</span>
       {x.status === "OPEN" && <PauseBadge pause={x.pause} showBy />}
       <span className="text-xs text-text-muted">

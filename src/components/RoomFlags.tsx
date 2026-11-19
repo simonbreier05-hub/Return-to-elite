@@ -41,7 +41,7 @@ export function RoomFlagIcons({
           role="img"
           aria-label={t("roomFlags.occupied")}
           title={t("roomFlags.occupied")}
-          className={`flex shrink-0 items-center justify-center rounded-full border border-navy/30 bg-accent-subtle-bg text-accent-text ${badgeClassName}`}
+          className={`flex shrink-0 items-center justify-center rounded-full border border-border-subtle bg-accent-subtle-bg text-accent-text ${badgeClassName}`}
         >
           <IconPerson className={iconClassName} />
         </span>

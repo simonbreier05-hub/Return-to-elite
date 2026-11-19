@@ -34,12 +34,12 @@ class ErrorBoundaryClass extends Component<InnerProps, InnerState> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 rounded-2xl border border-status-out-of-order/30 bg-status-out-of-order/5 p-8 text-center">
-          <p className="font-serif text-2xl text-status-out-of-order">{this.props.title}</p>
-          <p className="max-w-sm text-sm text-graphite/70">{this.props.message}</p>
+        <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 rounded-(--glass-radius-lg) border border-status-danger-fg/40 bg-status-danger-bg p-8 text-center">
+          <p className="text-title-22 text-status-danger-fg">{this.props.title}</p>
+          <p className="max-w-sm text-sm text-text-secondary">{this.props.message}</p>
           <button
             onClick={() => window.location.reload()}
-            className="mt-2 h-11 rounded-xl bg-charcoal px-5 text-sm font-semibold text-ivory transition active:scale-[0.98]"
+            className="mt-2 h-11 rounded-(--glass-radius-md) border border-border-accent bg-champagne px-5 text-sm font-semibold text-text-on-accent transition active:scale-[0.98]"
           >
             {this.props.reloadLabel}
           </button>

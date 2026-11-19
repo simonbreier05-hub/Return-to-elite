@@ -92,7 +92,7 @@ export function useNoteThread({ roomId, initialNotes, onNoteAdded, onNoteUpdated
     }
   };
 
-  return { notes, noteBody, setNoteBody, savingNote, togglingId, canMessage, asMessage, setAsMessage, outOfScope, messageMode, addNote, toggleStatus };
+  return { notes, noteBody, setNoteBody, savingNote, togglingId, canMessage, asMessage, setAsMessage, outOfScope, messageMode, addNote, toggleStatus, offline };
 }
 
 /** Rollenname für die Kopfzeile einer Notiz (Gast, bekannte Rolle oder Rohwert). */

@@ -59,7 +59,7 @@ function ReferenceFloorPlan() {
 
   const liveByNumber = useMemo(() => new Map(liveRooms.map((r) => [r.number, r])), [liveRooms]);
 
-  if (error) return <div className="rounded-(--glass-radius-sm) border border-red-300 bg-status-danger-bg p-3 text-sm text-status-danger-fg">{error}</div>;
+  if (error) return <div className="rounded-(--glass-radius-sm) border border-status-danger-fg/40 bg-status-danger-bg p-3 text-sm text-status-danger-fg">{error}</div>;
   if (!plan) return <p className="text-sm text-text-muted">{t("floorPlanRef.loading")}</p>;
 
   return (

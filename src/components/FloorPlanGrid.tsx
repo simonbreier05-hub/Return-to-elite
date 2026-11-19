@@ -101,7 +101,7 @@ export function FloorPlanLegend({
       className={`flex flex-wrap items-center gap-3 rounded-(--glass-radius-md) border border-border-subtle bg-surface-card-raised p-3 text-xs ${className}`}
     >
       {occupiedLabel && (
-        <span className="flex items-center gap-1.5 rounded-full border border-navy/30 bg-accent-subtle-bg px-2.5 py-1 font-medium text-accent-text">
+        <span className="flex items-center gap-1.5 rounded-full border border-border-subtle bg-accent-subtle-bg px-2.5 py-1 font-medium text-accent-text">
           <RoomFlagIcons occupancy="OCCUPIED" iconClassName="h-2.5 w-2.5" badgeClassName="h-4 w-4" />
           {occupiedLabel}
         </span>
@@ -283,7 +283,7 @@ export default function FloorPlanGrid({
                           onClick={() => onRoomClick?.(r)}
                           title={meta.title}
                           className={`relative flex min-h-11 min-w-11 items-center justify-center gap-1 rounded-(--glass-radius-sm) border px-2.5 text-xs transition active:scale-95 ${style.chip} ${
- meta.selected ? "ring-2 ring-navy ring-offset-1" : ""
+ meta.selected ? "ring-2 ring-border-accent ring-offset-1 ring-offset-bg-canvas" : ""
  }`}
                         >
                           {r.number}

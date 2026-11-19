@@ -28,7 +28,7 @@ export default function HubMoreMenu({ children, extraBadge }: { children?: React
       </button>
       {open && (
         <div className="theme-glass order-last flex w-full flex-wrap gap-2">
-          <Link href="/chat" className="flex h-12 items-center gap-2 rounded-(--glass-radius-md) border border-navy/30 bg-champagne px-5 text-sm font-semibold text-text-on-accent">
+          <Link href="/chat" className="flex h-12 items-center gap-2 rounded-(--glass-radius-md) border border-border-subtle bg-champagne px-5 text-sm font-semibold text-text-on-accent">
             💬 {t("chat.title")}
             {unread > 0 && <span className="rounded-full bg-surface-card-raised px-2 py-0.5 text-xs font-semibold text-accent-text">{unread}</span>}
           </Link>

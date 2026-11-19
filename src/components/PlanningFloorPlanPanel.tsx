@@ -61,7 +61,7 @@ export default function PlanningFloorPlanPanel({
   const { plan, view, setView, addingTo, setAddingTo, startedPrompt, setStartedPrompt, error, mode, activeAttendantId, setActiveAttendantId, sessionRoomNumbers, pickingRoom, setPickingRoom, dayRows, notice, setNotice, multiMode, setMultiMode, multiPick, setMultiPick, addPick, setAddPick, bulkPrompt, setBulkPrompt, changeMode, liveRooms, liveByNumber, liveById, numbers, unassignedRoomIds, unassignedNumbers, laundryIds, roomFacts, creditsByAttendant, roomsDueForLinen, targetCredits, assignRoom, markLinenChanged, assignMany, handleRoomClick, removeFromSession, dayRowIds, roomItem, openQuick, activeAttendant } = usePlanningFloorPlan({ onShiftAttendants, draft, initialView, reloadToken });
 
   if (error && !plan) {
-    return <div className="rounded-(--glass-radius-sm) border border-red-300 bg-status-danger-bg p-3 text-sm text-status-danger-fg">{error}</div>;
+    return <div className="rounded-(--glass-radius-sm) border border-status-danger-fg/40 bg-status-danger-bg p-3 text-sm text-status-danger-fg">{error}</div>;
   }
   if (!plan) {
     return <p className="text-sm text-text-muted">{t("planning.floorPlanLoading")}</p>;
