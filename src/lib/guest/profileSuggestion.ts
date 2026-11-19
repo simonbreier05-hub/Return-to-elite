@@ -104,16 +104,15 @@ export async function buildProfileSuggestion(stayId: string, now = new Date()): 
 }
 
 /*
- * Gastname im Vorschlag (Entscheidung Simon 19.11.2026 — bewusste Ausnahme von der Nachtlöschung um 22 Uhr):
- *  - sichtbar bis 24 Uhr am Abreisetag (Berlin),
- *  - danach ausgeblendet; der Duty Manager kann ihn im Notfall einblenden (Rückfrage, Logbuch PROFILE_NAME_REVEALED),
- *  - endgültig gelöscht am Folgetag um 12 Uhr (Annahme, Frist noch offen) — vom Löschtakt alle 10 Minuten.
+ * Gastname im Vorschlag (Entscheidung Simon 19.11.2026 — kleine, bewusste Ausnahme von der Nachtlöschung um 22 Uhr):
+ * sichtbar bis 24 Uhr am Abreisetag (Berlin), dann gelöscht (Löschtakt alle 10 Minuten). Kein Notfallzugriff —
+ * nachts schlägt man den Gast wie bisher in Opera nach.
  */
 const nextBerlinDay = (d: Date) => { const t = new Date(`${berlinDate(d)}T12:00:00Z`); t.setUTCDate(t.getUTCDate() + 1); return t.toISOString().slice(0, 10); };
 /** Ende der normalen Anzeige: 24 Uhr am Abreisetag (= 0 Uhr am Folgetag, Berlin). */
 export const profileNameVisibleUntil = (departure: Date) => berlinToUtc(nextBerlinDay(departure), "00:00");
-/** Endgültige Löschung des Namens: Folgetag 12 Uhr (Berlin). */
-export const profileNameDeleteAt = (departure: Date) => berlinToUtc(nextBerlinDay(departure), "12:00");
+/** Löschung des Namens: ebenfalls 24 Uhr am Abreisetag. */
+export const profileNameDeleteAt = profileNameVisibleUntil;
 
 /** Namen löschen, deren Frist abgelaufen ist (`all`: sofort alle — „Gastdaten jetzt löschen“ des DM). Gibt die Anzahl zurück. */
 export async function purgeExpiredProfileNames(now = new Date(), all = false): Promise<number> {

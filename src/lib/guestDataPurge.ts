@@ -80,7 +80,7 @@ async function purgeTraceTexts(): Promise<number> {
 const legacyText = (key: string, t: { code: string; date: string }) => key.split(`|${t.code}|${t.date}|`)[1] ?? "";
 
 /** Kernlauf: löscht alle Gastdaten laut Datenkarte. Idempotent — ein zweiter Lauf findet nichts mehr. */
-/** `opts.all`: „Gastdaten jetzt löschen“ (DM) — auch Namen, deren Notfall-Frist noch läuft (F8). */
+/** `opts.all`: „Gastdaten jetzt löschen“ (DM) — auch Namen, deren Frist (24 Uhr am Abreisetag) noch läuft (F8). */
 export async function purgeGuestDataNow(now = new Date(), opts: { all?: boolean } = {}): Promise<PurgeCounts> {
   const settings = await getSettings();
   // Fehlt das Gäste-Systemkonto (nicht gesät), darf das nicht die ganze Nachtlöschung verhindern.
@@ -96,7 +96,7 @@ export async function purgeGuestDataNow(now = new Date(), opts: { all?: boolean 
     where: { OR: [{ guestName: { not: null } }, { note: { not: null } }] }, data: { guestName: null, note: null },
   })).count;
   counts.traceTexts = await purgeTraceTexts();
-  // F8: Opera-Profil-Vorschläge — Namen bis Folgetag 12 Uhr (Notfallzugriff, Simon 19.11.), nach 30 Tagen ganz löschen
+  // F8: Opera-Profil-Vorschläge — Namen bis 24 Uhr am Abreisetag (Simon 19.11.), nach 30 Tagen ganz löschen
   counts.profileSuggestions = await purgeProfileSuggestions(now, 30, !!opts.all);
   // F7-Review: Opera-Text in Technikaufträgen und Freitext-Grund beim Aufschieben (Hausmann) nachts löschen
   counts.operaOrderNotes = await purgeOperaOrderNotes();
@@ -148,7 +148,7 @@ export async function lastSuccessfulPurge() {
 export async function runDuePurge(now = new Date()) {
   const settings = await getSettings();
   const last = await lastSuccessfulPurge();
-  // F8: Namen in Profil-Vorschlägen zur Frist (Folgetag 12 Uhr) löschen — unabhängig von der Nachtlöschung, in jedem Takt
+  // F8: Namen in Profil-Vorschlägen zur Frist (24 Uhr am Abreisetag) löschen — unabhängig von der Nachtlöschung, in jedem Takt
   const profileNames = await purgeExpiredProfileNames(now).catch(() => 0);
   if (!isPurgeDue(now, last?.finishedAt ?? null, settings.guestPurgeHour)) return { ran: false as const, profileNames };
   return { ran: true as const, ...(await runGuestDataPurge("SCHEDULE", null, now)) };

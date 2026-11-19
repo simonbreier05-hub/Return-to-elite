@@ -15,11 +15,11 @@ export async function GET() {
   return NextResponse.json({
     suggestions: rows.map((r) => {
       const name = [r.guestSalutation, r.guestTitle, r.guestLastName].filter(Boolean).join(" ") || null;
-      // Simon 19.11.: Name bis 24 Uhr am Abreisetag; danach nur über den Notfallzugriff (POST …/reveal, mit Logbuch)
+      // Simon 19.11.: Name bis 24 Uhr am Abreisetag (danach löscht ihn der Löschtakt; bis dahin hier schon ausgeblendet)
       const visible = now < profileNameVisibleUntil(r.departure);
       return {
         id: r.id, roomNumber: r.roomNumber, departure: r.departure.toISOString(),
-        guest: visible ? name : null, nameHidden: !visible && !!name,
+        guest: visible ? name : null,
         items: JSON.parse(r.items),
       };
     }),
