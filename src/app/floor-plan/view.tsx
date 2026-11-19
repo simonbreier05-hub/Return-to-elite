@@ -65,7 +65,6 @@ function ReferenceFloorPlan() {
   return (
     <div className="theme-glass flex flex-col gap-4">
       <div className="mb-5">
-        <h2 className="text-title-28 text-text-primary">{t("floorPlanRef.title")}</h2>
         
         <p className="text-sm text-text-secondary">
           {t("floorPlanRef.intro")}

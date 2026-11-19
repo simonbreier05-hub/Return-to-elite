@@ -52,7 +52,6 @@ export default function ImportView() {
 
   return (
     <div className="theme-glass pb-28">
-      <h2 className="text-title-28 text-text-primary">{t("importPage.title")}</h2>
       
       <PurgeBanner refreshKey={JSON.stringify(status ?? {})} />
       <p className="mb-4 max-w-2xl text-sm text-text-secondary">{t("importPage.intro")}</p>

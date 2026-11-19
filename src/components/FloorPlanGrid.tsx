@@ -255,7 +255,7 @@ export default function FloorPlanGrid({
                   key={f.id}
                   title={f.notes ?? undefined}
                   className={`rounded-full border px-2.5 py-1 text-xs ${
- f.isPrimaryHsk ? "border-gold bg-accent-subtle-bg font-semibold text-espresso" : "border-border-subtle text-text-secondary"
+ f.isPrimaryHsk ? "border-border-accent bg-accent-subtle-bg font-semibold text-accent-text" : "border-border-subtle text-text-secondary"
  }`}
                 >
                   {FACILITY_ICON[f.type] ?? "•"} {f.label}
