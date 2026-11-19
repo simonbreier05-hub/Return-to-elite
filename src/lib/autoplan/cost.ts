@@ -50,7 +50,20 @@ export function levelOverflow(input: PlanInput, suite: Uint8Array): Uint8Array {
   const out = new Uint8Array(rooms.length);
   const hks = input.housekeepers;
   const matching = hks.filter((h) => h.level >= 2);
-  if (!matching.length) return out;
+  const free = rooms.map((r, i) => i).filter((i) => !rooms[i].fixedTo && rooms[i].demanding.length > 0);
+  // Entscheidung Simon 20.11.2026: Die Zimmeranzahl überwiegt die Regeln — auch ohne Kraft ab Stufe 2 wird nach Zimmervorgabe
+  // verteilt (nicht mehr offen gelassen), und reicht für Suiten keine Kraft ohne „keine Suiten“, gilt auch diese Einschränkung
+  // für den Überhang nicht (Wert 2). Immer mit Warnung (`buildResult`).
+  const suiteOverflow = () => {
+    const allByRooms = hks.every((h) => h.roomsHi !== undefined);
+    const u2 = (r: PlanRoom) => (allByRooms ? 1 : r.credits);
+    const fixed2 = new Map<string, number>();
+    for (const r of rooms) if (r.fixedTo) fixed2.set(r.fixedTo, (fixed2.get(r.fixedTo) ?? 0) + u2(r));
+    let capable = hks.filter((h) => !(h.restrictions ?? []).includes("NO_SUITE")).reduce((a, h) => a + Math.max(0, (allByRooms ? h.roomsHi! : h.hi) - (fixed2.get(h.id) ?? 0)), 0);
+    const suites = rooms.map((_, i) => i).filter((i) => !rooms[i].fixedTo && suite[i]).sort((a, b) => rooms[b].demanding.length - rooms[a].demanding.length || rooms[b].credits - rooms[a].credits || a - b);
+    for (const i of suites) { const u = u2(rooms[i]); if (capable - u >= -1e-9) capable -= u; else out[i] = 2; }
+  };
+  if (!matching.length) { for (const i of free) out[i] = 1; suiteOverflow(); return out; }
   const byRooms = matching.every((h) => h.roomsHi !== undefined);
   const unit = (r: PlanRoom) => (byRooms ? 1 : r.credits);
   const fixedUnits = new Map<string, number>();
@@ -58,7 +71,6 @@ export function levelOverflow(input: PlanInput, suite: Uint8Array): Uint8Array {
   const cap = (h: PlanHousekeeper) => Math.max(0, (byRooms ? h.roomsHi! : h.hi) - (fixedUnits.get(h.id) ?? 0));
   const capAll = matching.reduce((a, h) => a + cap(h), 0);
   const capSuite = matching.filter((h) => !(h.restrictions ?? []).includes("NO_SUITE")).reduce((a, h) => a + cap(h), 0);
-  const free = rooms.map((r, i) => i).filter((i) => !rooms[i].fixedTo && rooms[i].demanding.length > 0);
   free.sort((a, b) => suite[b] - suite[a] || rooms[b].demanding.length - rooms[a].demanding.length || rooms[b].credits - rooms[a].credits ||
     (parseInt(rooms[a].number, 10) || 0) - (parseInt(rooms[b].number, 10) || 0) || a - b);
   let used = 0, usedSuite = 0;
@@ -67,6 +79,7 @@ export function levelOverflow(input: PlanInput, suite: Uint8Array): Uint8Array {
     const fits = used + u <= capAll + 1e-9 && (!suite[i] || usedSuite + u <= capSuite + 1e-9);
     if (fits) { used += u; if (suite[i]) usedSuite += u; } else out[i] = 1;
   }
+  suiteOverflow();
   return out;
 }
 
@@ -117,7 +130,7 @@ const popcount = (m: number) => { let n = 0; while (m) { n += m & 1; m >>= 1; } 
 export function eligible(c: Compiled, roomI: number, hkI: number): boolean {
   const h = c.input.housekeepers[hkI];
   if (h.level < 2 && c.rooms[roomI].demanding.length > 0 && !c.relaxed[roomI]) return false; // F4: außer Überhang (levelOverflow)
-  if (c.suite[roomI] && (h.restrictions ?? []).includes("NO_SUITE")) return false;
+  if (c.suite[roomI] && (h.restrictions ?? []).includes("NO_SUITE") && c.relaxed[roomI] !== 2) return false; // Simon 20.11.: Überhang
   return true;
 }
 

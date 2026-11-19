@@ -139,8 +139,11 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   const relaxedRooms = c.rooms.filter((_, i) => c.relaxed[i]);
   if (relaxedRooms.length) {
     const staff = input.housekeepers.filter((h) => h.level >= 2).map((h) => h.name).join(", ");
+    const list = `${relaxedRooms.length} anspruchsvolle Zimmer (${relaxedRooms.map((r) => r.number).join(", ")})`;
     warnings.push({ code: "LEVEL_RULE_RELAXED", severity: "WARNING", roomIds: relaxedRooms.map((r) => r.id),
-      message: `Personal ab Stufe 2 reicht nicht: ${relaxedRooms.length} anspruchsvolle Zimmer (${relaxedRooms.map((r) => r.number).join(", ")}) gehen nach der Zimmervorgabe auch an Stufe 1 — sonst lägen ${staff} über ihrer Zimmervorgabe. Bitte prüfen.` });
+      message: staff
+        ? `Personal ab Stufe 2 reicht nicht: ${list} gehen nach der Zimmervorgabe auch an Stufe 1 — sonst lägen ${staff} über ihrer Zimmervorgabe. Bitte prüfen.`
+        : `Keine Kraft ab Stufe 2 eingeplant: ${list} gehen nach der Zimmervorgabe an Stufe 1. Bitte prüfen.` });
   }
   const demandingOpen = unassigned.filter((id) => roomById.get(id)!.demanding.length);
   const plainOpen = unassigned.filter((id) => !roomById.get(id)!.demanding.length);

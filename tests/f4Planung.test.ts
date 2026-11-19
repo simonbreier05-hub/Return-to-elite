@@ -84,6 +84,17 @@ describe("F4 Kapazität (Entscheidung Simon 19.11.): Stufen-Regel nur, solange d
   });
 });
 
+describe("Simon 20.11.: Zimmeranzahl überwiegt auch „keine Suiten“", () => {
+  it("reicht niemand ohne „keine Suiten“, bekommt die Kraft mit Einschränkung den Überhang — mit Warnung, nichts offen", () => {
+    const suites = makeDay(94).filter((r) => r.demanding.includes("SUITE")).slice(0, 18);
+    const team = [hk("m", "VOLLZEIT", 3), hk("p", "VOLLZEIT", 3, { restrictions: ["NO_SUITE"] })];
+    const r = proposePlan(makeInput(suites, team));
+    expect(r.unassigned).toEqual([]);
+    expect(Object.values(r.assignment).filter((h) => h === "m").length).toBeLessThanOrEqual(13);
+    expect(r.warnings.some((w) => w.code === "RESTRICTION" && w.hkId === "p")).toBe(true);
+  });
+});
+
 describe("F4 (P4): Suiten gleichmäßig", () => {
   it("bei Engpass ist die höchste Suitenzahl je Kraft so klein wie möglich (Unterschied höchstens 1 unter Stufe 2/3)", () => {
     // 2 erfahrene Kräfte, 6 Suiten, max. 2 je Kraft → Engpass: 3 + 3 statt 4 + 2

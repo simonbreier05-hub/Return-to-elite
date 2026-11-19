@@ -38,22 +38,17 @@ describe("Zuteilungsvorschlag: harte Regeln", () => {
     for (const x of started.filter((y) => y.state === "STARTED")) expect(res.assignment[x.id]).toBe("c");
   });
 
-  it("F4 (P6 neu): nur Stufe 1 anwesend — anspruchsvolle Zimmer bleiben offen, ein gebündelter Hinweis ganz oben", () => {
+  it("Simon 20.11.: nur Stufe 1 anwesend — anspruchsvolle Zimmer werden nach Zimmervorgabe verteilt (nicht offen), Warnung ganz oben", () => {
     const res = proposePlan(makeInput(rooms, [hk("x", "VOLLZEIT", 1), hk("y", "VOLLZEIT", 1)]));
-    const demanding = rooms.filter((x) => x.demanding.length).map((x) => x.id).sort();
-    expect([...res.unassigned].sort()).toEqual(demanding);
-    expect(res.warnings.filter((w) => w.code === "LEVEL1_DEMANDING")).toEqual([]);
-    const w = res.warnings.find((x) => x.code === "DEMANDING_UNASSIGNED")!;
-    expect([...(w.roomIds ?? [])].sort()).toEqual(demanding);
-    expect(res.warnings.findIndex((x) => x.code === "DEMANDING_UNASSIGNED")).toBeLessThanOrEqual(1);
+    expect(res.unassigned).toEqual([]);
+    const w = res.warnings.find((x) => x.code === "LEVEL_RULE_RELAXED")!;
+    expect(w.message).toContain("Keine Kraft ab Stufe 2");
+    expect(res.warnings.findIndex((x) => x.code === "LEVEL_RULE_RELAXED")).toBeLessThanOrEqual(1);
   });
 
-  it("F4: einfache Zimmer bleiben nie offen; anspruchsvolle nur, wenn niemand ab Stufe 2 da ist", () => {
-    const demanding = new Set(rooms.filter((x) => x.demanding.length).map((x) => x.id));
+  it("Simon 20.11.: die Zimmeranzahl überwiegt die Regeln — kein Zimmer bleibt offen, egal welches Team", () => {
     for (const team of [[hk("a", "VOLLZEIT", 1)], [hk("a", "AZUBI", 1), hk("b", "TEILZEIT", 1)], TEAM(), [hk("a", "VOLLZEIT", 3)]]) {
-      const res = proposePlan(makeInput(rooms, team));
-      expect(res.unassigned.every((id) => demanding.has(id)), `Team ${team.length}`).toBe(true);
-      if (team.some((h) => h.level >= 2)) expect(res.unassigned, `Team ${team.length}`).toEqual([]);
+      expect(proposePlan(makeInput(rooms, team)).unassigned, `Team ${team.length}`).toEqual([]);
     }
   });
 });
