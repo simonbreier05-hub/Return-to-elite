@@ -7,7 +7,7 @@ import ChatView from "./view";
 export default async function ChatPage() {
   const session = await requirePage([...ROLES]);
   return (
-    <AppShell title="chat.title" userName={session.name} role={session.role} backHref={roleHome(session.role)}>
+    <AppShell title="chat.title" userName={session.name} role={session.role} backHref={roleHome(session.role)} legacy={false}>
       <ChatView />
     </AppShell>
   );

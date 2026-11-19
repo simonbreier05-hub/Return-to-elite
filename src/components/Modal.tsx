@@ -5,6 +5,7 @@ import { createPortal } from "react-dom";
 import CloseButton from "./CloseButton";
 import ErrorBoundary from "./ErrorBoundary";
 import { useEscapeKey } from "./useEscapeKey";
+import { useGlassMode } from "./shell/GlassMode";
 
 /**
  * Shared modal frame. Bottom sheet on phones, centred dialog from `sm` up,
@@ -44,6 +45,8 @@ export default function Modal({
   const [closing, setClosing] = useState(false);
   const [mounted, setMounted] = useState(false);
   useEffect(() => setMounted(true), []);
+  // Simon-Feedback 19.11.2026: auf Glas-Seiten dasselbe Fenster im Design der App (das Portal liegt außerhalb von .theme-glass)
+  const glass = useGlassMode();
 
   const close = () => {
     setClosing(true);
@@ -55,7 +58,7 @@ export default function Modal({
 
   return createPortal(
     <div
-      className={`fixed inset-0 z-50 flex items-end justify-center bg-charcoal/50 p-0 sm:items-center sm:p-4 ${
+      className={`fixed inset-0 z-50 flex items-end justify-center ${glass ? "theme-glass bg-black/60" : "bg-charcoal/50"} p-0 sm:items-center sm:p-4 ${
         closing ? "animate-overlay-out" : "animate-overlay"
       }`}
       onClick={() => {
@@ -64,7 +67,7 @@ export default function Modal({
       data-testid="modal-backdrop"
     >
       <div
-        className={`modal-sheet w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl bg-linen px-5 pt-0 shadow-2xl sm:rounded-2xl ${
+        className={`modal-sheet w-full max-w-md overflow-y-auto overscroll-contain rounded-t-2xl px-5 pt-0 shadow-2xl sm:rounded-2xl ${glass ? "bg-surface-card text-text-primary" : "bg-linen"} ${
           closing ? "animate-sheet-out" : "animate-sheet"
         }`}
         onClick={(e) => e.stopPropagation()}
@@ -73,10 +76,10 @@ export default function Modal({
         aria-label={title}
       >
         {/* Kopf bleibt beim Scrollen stehen, damit „Schließen“ immer erreichbar ist. */}
-        <div className="sticky top-0 z-10 -mx-5 mb-4 flex items-start justify-between gap-3 bg-linen px-5 pt-5 pb-2">
+        <div className={`sticky top-0 z-10 -mx-5 mb-4 flex items-start justify-between gap-3 px-5 pt-5 pb-2 ${glass ? "bg-surface-card" : "bg-linen"}`}>
           <div className="min-w-0">
-            <h3 className="font-serif text-2xl leading-tight text-navy">{title}</h3>
-            {subtitle && <p className="mt-0.5 text-sm text-graphite">{subtitle}</p>}
+            <h3 className={glass ? "text-title-22 text-text-primary" : "font-serif text-2xl leading-tight text-navy"}>{title}</h3>
+            {subtitle && <p className={glass ? "text-body-16 mt-0.5 text-text-secondary" : "mt-0.5 text-sm text-graphite"}>{subtitle}</p>}
           </div>
           <CloseButton onClick={close} />
         </div>

@@ -19,7 +19,7 @@ export default function PurgeBanner({ refreshKey }: { refreshKey?: string }) {
   const time = hhmm(info.lastOkAt);
   if (glass) return <div role="status" className="mb-4"><Banner tone="warning" title={t("purge.banner", { time })} /></div>;
   return (
-    <div className="mb-4 rounded-xl border border-gold-line bg-parchment p-3 text-sm" role="status">
+    <div className="mb-4 rounded-(--glass-radius-md) border border-border-accent bg-accent-subtle-bg p-3 text-sm" role="status">
       {t("purge.banner", { time })}
     </div>
   );
