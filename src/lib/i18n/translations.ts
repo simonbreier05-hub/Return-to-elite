@@ -298,6 +298,8 @@ const en = {
     moveFailed: "Could not move the room.",
   },
   supervisor: {
+    houseTaskDue: "For which day? (optional)",
+    houseTaskDueHint: "Empty = today. A later date: the task appears only on that day.",
     problemRooms: "Rooms with problems",
     etaSoon: "Arrival soon",
     etaOverdue: "Arrival overdue",
@@ -456,6 +458,12 @@ const en = {
     noOrders: "No open work orders — nothing reported right now.",
   },
   houseman: {
+    multiStart: "Complete several",
+    multiTitle: "Multiple selection",
+    multiPicked: "{{n}} selected — tap tasks to select",
+    multiDone: "Mark {{n}} done",
+    guestStillConfirmMany: "The guest is still in room(s) {{rooms}}. Mark as done anyway?",
+    multiFailed: "Not saved for room(s) {{rooms}} — please try again.",
     deferredSince: "deferred since {{date}}",
     overdueSince: "overdue since {{date}}",
     defer: "Defer to tomorrow",
@@ -2445,6 +2453,8 @@ const de = {
     moveFailed: "Zimmer konnte nicht verschoben werden.",
   },
   supervisor: {
+    houseTaskDue: "Für welchen Tag? (optional)",
+    houseTaskDueHint: "Leer = heute. Späteres Datum: Die Aufgabe erscheint erst an diesem Tag.",
     problemRooms: "Zimmer mit Problemen",
     etaSoon: "Anreise bald",
     etaOverdue: "Anreise überfällig",
@@ -2603,6 +2613,12 @@ const de = {
     noOrders: "Keine offenen Aufträge — aktuell nichts gemeldet.",
   },
   houseman: {
+    multiStart: "Mehrere erledigen",
+    multiTitle: "Mehrfachauswahl",
+    multiPicked: "{{n}} ausgewählt — Aufgaben antippen zum Auswählen",
+    multiDone: "{{n}} erledigt",
+    guestStillConfirmMany: "In Zimmer {{rooms}} ist der Gast noch da. Trotzdem als erledigt melden?",
+    multiFailed: "Für Zimmer {{rooms}} nicht gespeichert — bitte noch einmal versuchen.",
     deferredSince: "aufgeschoben seit {{date}}",
     overdueSince: "überfällig seit {{date}}",
     defer: "Aufschieben",

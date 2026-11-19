@@ -50,6 +50,8 @@ export interface RoleHubProps {
   extraFilters?: ReactNode;
   rows: RoleRow[];
   selectedKey: string | null;
+  /** Mehrfachauswahl (z. B. Hausmann „Mehrere erledigen“): diese Zeilen erscheinen ausgewählt. */
+  selectedKeys?: Set<string>;
   onSelect: (key: string) => void;
   /** Das Detail (`DetailContainer`): ab 1280 Panel in der Spalte, darunter Einschub/Sheet. */
   detail: ReactNode;
@@ -94,7 +96,7 @@ export function RoleHub(p: RoleHubProps) {
     </div>
   );
 
-  const state = (r: RoleRow) => (p.selectedKey === r.key ? "selected" : r.done ? "done" : "default");
+  const state = (r: RoleRow) => (p.selectedKey === r.key || p.selectedKeys?.has(r.key) ? "selected" : r.done ? "done" : "default");
 
   let body: ReactNode;
   if (p.loading) {

@@ -82,6 +82,28 @@ export default function HousemanView() {
     }
   };
 
+  // F7 (Nachtrag): mehrere auf einmal erledigen — dieselben Wege wie einzeln; Twin-Rückbau bei Gast im Zimmer einmal gesammelt nachfragen
+  const doneMany = async (list: HmItemView[]) => {
+    if (busyKey || list.length === 0) return;
+    const waiting = list.filter((i) => i.waitsForDeparture);
+    if (waiting.length && !window.confirm(t("houseman.guestStillConfirmMany", { rooms: waiting.map((i) => i.roomNumber).join(", ") }))) return;
+    setError(null);
+    setBusyKey("multi");
+    const failed: string[] = [];
+    for (const item of list) {
+      try {
+        if (item.kind === "trace") await hm.toggle({ id: item.id, status: "OPEN" });
+        else {
+          const res = await api<{ roomTask?: unknown }>(`/api/roomtasks/${item.id}`, { method: "PATCH", body: { status: "DONE" } });
+          const rt = res?.roomTask as { id?: string } | undefined;
+          if (rt?.id) setTasks((prev) => (prev ?? []).map((x) => ((x as { id?: string })?.id === rt.id ? rt : x)));
+        }
+      } catch { failed.push(item.roomNumber); }
+    }
+    setBusyKey(null);
+    if (failed.length) setError(t("houseman.multiFailed", { rooms: failed.join(", ") }));
+  };
+
   // F7 (H16): aufschieben — kurzer Grund optional; die Aufgabe steht morgen oben mit „aufgeschoben seit …“
   const defer = async (item: HmItemView) => {
     if (busyKey) return;
@@ -116,6 +138,7 @@ export default function HousemanView() {
       }}
       onToggle={toggle}
       onDefer={defer}
+      onDoneMany={(l) => void doneMany(l)}
       busyKey={busyKey}
       actionError={error ?? hm.error}
       loading={loading && !loadError}

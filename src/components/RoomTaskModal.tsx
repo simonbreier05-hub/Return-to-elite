@@ -21,11 +21,13 @@ export default function RoomTaskModal({
 }: {
   room: { number: string };
   onClose: () => void;
-  onSubmit: (payload: { type: RoomTaskType; note?: string }) => Promise<void>;
+  onSubmit: (payload: { type: RoomTaskType; note?: string; dueDate?: string }) => Promise<void>;
 }) {
   const { t } = useLocale();
   const [type, setType] = useState<RoomTaskType>("TWIN_SETUP");
   const [note, setNote] = useState("");
+  // F7 (Nachtrag): Einmal-Aufgabe für einen späteren Tag (leer = heute); erscheint beim Hausmann erst an diesem Tag
+  const [dueDate, setDueDate] = useState("");
   const [busy, setBusy] = useState(false);
   const needsNote = type === "SONSTIGES";
 
@@ -33,7 +35,7 @@ export default function RoomTaskModal({
     if (needsNote && !note.trim()) return;
     setBusy(true);
     try {
-      await onSubmit({ type, note: note.trim() || undefined });
+      await onSubmit({ type, note: note.trim() || undefined, ...(dueDate ? { dueDate } : {}) });
     } finally {
       setBusy(false);
     }
@@ -51,6 +53,7 @@ export default function RoomTaskModal({
           ))}
         </div>
         <Field multiline label={t("supervisor.houseTaskNotePlaceholder")} value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder={t("supervisor.houseTaskNotePlaceholder")} />
+        <Field type="date" label={t("supervisor.houseTaskDue")} hint={t("supervisor.houseTaskDueHint")} value={dueDate} min={new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" })} onChange={(e) => setDueDate(e.target.value)} className="sm:max-w-xs" />
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <Button variant="secondary" icon="x" onClick={onClose}>{t("common.cancel")}</Button>
           <Button icon="check" onClick={submit} disabled={busy || (needsNote && !note.trim())}>

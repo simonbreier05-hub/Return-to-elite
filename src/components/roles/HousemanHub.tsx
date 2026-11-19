@@ -23,6 +23,8 @@ export interface HousemanHubProps {
   onToggle: (item: HmItemView) => void;
   /** F7 (H16): Aufgabe aufschieben (nur von Hand angelegte Aufgaben; Traces wandern ohnehin mit). */
   onDefer?: (item: HmItemView) => void;
+  /** F7 (Nachtrag): mehrere offene Einträge auf einmal erledigen (Mehrfachauswahl). */
+  onDoneMany?: (items: HmItemView[]) => void;
   busyKey: string | null;
   actionError: string | null;
   loading: boolean;
@@ -43,6 +45,10 @@ export function HousemanHub(p: HousemanHubProps) {
   const { t } = useLocale();
   const [filter, setFilter] = useState<HmFilter>("all");
   const [floor, setFloor] = useState<number | null>(null);
+  // F7 (Nachtrag): Mehrfachauswahl — Antippen wählt aus statt das Detail zu öffnen; nur offene Einträge
+  const [multi, setMulti] = useState(false);
+  const [picked, setPicked] = useState<Set<string>>(new Set());
+  const endMulti = () => { setMulti(false); setPicked(new Set()); };
 
   const activeFloor = floor !== null && p.floors.includes(floor) ? floor : null;
   const counts = useMemo(() => hmFilterCounts(p.items, activeFloor), [p.items, activeFloor]);
@@ -71,7 +77,17 @@ export function HousemanHub(p: HousemanHubProps) {
     return m ? (m.kind === "iso" ? hhmm(m.value) : m.value) : undefined;
   };
 
-  const sel = p.selectedKey ? p.items.find((i) => i.key === p.selectedKey) ?? null : null;
+  const sel = !multi && p.selectedKey ? p.items.find((i) => i.key === p.selectedKey) ?? null : null;
+  const pickedItems = p.items.filter((i) => picked.has(i.key) && i.status === "OPEN");
+  const multiBar = multi && (
+    <div className="glass sticky top-2 z-10 flex flex-wrap items-center gap-3 rounded-(--glass-radius-md) p-3" role="region" aria-label={t("houseman.multiTitle")} data-testid="hm-multi">
+      <span className="text-body-16 min-w-0 flex-1 text-text-primary">{t("houseman.multiPicked", { n: pickedItems.length })}</span>
+      <Button icon="check" disabled={pickedItems.length === 0 || !!p.busyKey} onClick={() => { p.onDoneMany?.(pickedItems); endMulti(); }}>
+        {t("houseman.multiDone", { n: pickedItems.length })}
+      </Button>
+      <Button variant="secondary" icon="x" onClick={endMulti}>{t("roomEdit.cancel")}</Button>
+    </div>
+  );
 
   const detail = sel && (() => {
     const pill = hmPill(sel);
@@ -133,6 +149,9 @@ export function HousemanHub(p: HousemanHubProps) {
       ]}
       listTitle={t("houseman.tasks")}
       listIcon="bed-single"
+      listAction={p.onDoneMany && !multi && p.items.some((i) => i.status === "OPEN") ? (
+        <Button variant="secondary" icon="check" onClick={() => { setMulti(true); p.onSelect(null); }}>{t("houseman.multiStart")}</Button>
+      ) : undefined}
       filters={counts.map((c) => ({ id: c.filter, label: t(HM_FILTER_LABEL[c.filter]), count: c.count }))}
       activeFilter={active}
       onFilter={(id) => setFilter(id as HmFilter)}
@@ -147,20 +166,24 @@ export function HousemanHub(p: HousemanHubProps) {
           </div>
         ) : undefined
       }
-      rows={visible.map((i) => ({
+      rows={visible.filter((i) => !multi || i.status === "OPEN").map((i) => ({
         key: i.key,
-        icon: "bed-single",
+        icon: multi && picked.has(i.key) ? "check" : "bed-single",
         title: `${label(i)} · ${t("hkHub.earlyRooms", { rooms: i.roomNumber })}`,
         subtitle: subtitle(i) || undefined,
         pill: { label: t(hmPill(i).labelKey), tone: hmPill(i).tone },
         meta: meta(i),
         done: i.status === "DONE",
       }))}
-      selectedKey={p.selectedKey}
-      onSelect={(key) => p.onSelect(key)}
+      selectedKey={multi ? null : p.selectedKey}
+      selectedKeys={multi ? picked : undefined}
+      onSelect={(key) => {
+        if (!multi) return p.onSelect(key);
+        setPicked((s) => { const n = new Set(s); if (n.has(key)) n.delete(key); else n.add(key); return n; });
+      }}
       detail={detail}
       detailOpen={!!sel}
-      notices={p.notices}
+      notices={<>{p.notices}{multiBar}</>}
       // Betrieb L2 (Punkt 9): wiederkehrende Aufgaben anlegen/verwalten
       below={<RecurringTasksPanel />}
       loading={p.loading}
