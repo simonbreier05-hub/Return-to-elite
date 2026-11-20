@@ -41,3 +41,9 @@ Quelle: Antworten von Simon auf Abschnitt 7 von `docs/simulation/Fehlerbericht_S
 5. **Level 1 bei Personalmangel (Frage 1):** Wenn außer Level 1 niemand frei ist, bleiben solche Zimmer im Vorschlag **unzugeteilt** mit Hinweis; der Supervisor entscheidet von Hand. Das passt zu „System schlägt vor, Supervisor entscheidet“.
 6. **„Nicht im Service“ (Out of Service):** Nicht beantwortet. Annahme in F2: bleibt als eigener Status nur für den Betriebstag (verkaufbar, aber heute nicht vergeben). Wenn das Hotel ihn nicht nutzt, später entfernen.
 7. **Gepäck beim Zimmerwechsel** und **wer bei Sperre eines belegten Zimmers informiert wird**: nicht beantwortet, Annahmen in F3/F2 bleiben gekennzeichnet.
+
+## Nachtrag 20.11.2026 (Simon, nach der Gegenprüfung)
+
+| Nr. | Thema | Entscheidung | Ändert | Paket |
+|---|---|---|---|---|
+| N1 | Zuteilungsvorschlag: Reihenfolge der Regeln | **Zuerst die Obergrenze der Zimmeranzahl je Kraft** (Zimmervorgabe/feste Obergrenze aus den Einstellungen, z. B. 12) — sie wird im Vorschlag nie überschritten. **Danach** die übrigen Regeln (eingeteilte Etagen, Stufe 1, Suiten, „keine Suiten“, Fairness). Zimmer, die so nicht passen, kommen in den **Float** („nicht zugeteilte Zimmer“); der Duty Manager teilt sie später von Hand zu. Oben steht immer ein Hinweis mit Anzahl und Zimmernummern im Float. | ersetzt den Teil „kein Zimmer bleibt offen“ der Entscheidung vom 20.11. (Commit 512123c); „Zimmeranzahl überwiegt die Regeln“ bleibt als Grundsatz | F9 |

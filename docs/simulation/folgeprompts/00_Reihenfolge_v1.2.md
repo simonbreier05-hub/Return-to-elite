@@ -16,6 +16,7 @@ Alle Pakete starten vom Basis-Branch `fix/basis-simulation-v2` und werden nach S
 | 7 | `Prompt_F6_Bildschirme_v1.2.md` | H12, M1, M3, M11, M12, M13, M17, M19, M20, M23 | Viele kleine Verbesserungen, Mängel-Fotos. | mittel | gemergt (20.11., 29a63cf) |
 | 8 | `Prompt_F7_Gast_Hausmann_v1.2.md` | H13, H16, M10, M14, M15, M18, M21, M24 | Gastbildschirm, Hausmann, Concierge, Archiv beim Check-out. | mittel | gemergt (20.11., 29a63cf) |
 | 9 | `Prompt_F8_Opera_Profilvorschlag_v1.md` | – (neu) | Vorschlag fürs Opera-Gastprofil nach Abreise, nur DM. Braucht F7. | klein | gemergt (20.11., 29a63cf) |
+| 10 | `Prompt_F9_Gegenpruefung_v1.md` | Funde der Gegenprüfung (A1–A7 hoch) | Gastnamen/Gastcode nur für Berechtigte, alter Gast-Tab, Check-in setzt Aufenthalt, F1-Lücke, DND aufheben, Vorschlag nach N1 (Obergrenze zuerst, Rest in den Float). Vor echten Gästen nötig. | mittel | offen |
 
 ## Stand 20.11.2026
 
