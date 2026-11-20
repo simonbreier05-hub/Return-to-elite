@@ -18,6 +18,7 @@ import LanguageSwitcher from "./LanguageSwitcher";
 import LiveClock from "./LiveClock";
 import CloseButton from "./CloseButton";
 import { useEscapeKey } from "./useEscapeKey";
+import VoiceAssistant from "./VoiceAssistant";
 
 interface Notification {
   id: string;
@@ -317,6 +318,8 @@ export default function AppShell({
           </div>
         </div>
       )}
+
+      <VoiceAssistant />
 
       {selectedRoom && <RoomDetailModal room={selectedRoom} onClose={() => setSelectedRoom(null)} />}
 
