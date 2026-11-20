@@ -84,7 +84,7 @@ describe("Zahlen aus der Datenbank", () => {
 });
 
 describe("Planung nur mit den gewählten Kräften", () => {
-  it("4 von 6 Kräften gewählt, 37 Zimmer: alle werden verteilt, Warnung „Personal reicht nicht“, niemand sonst bekommt Zimmer", async () => {
+  it("4 von 6 Kräften gewählt, 37 Zimmer: je Kraft höchstens die Zimmervorgabe (N1/N2), Rest im Float, Warnung „Personal reicht nicht“, niemand sonst bekommt Zimmer", async () => {
     // Plan-1b: Bedarf nach Zimmern — bei 3–5 Zimmern je Vollzeitkraft (Mitte 4) brauchen 37 Zimmer mehr als die 4 gewählten Kräfte
     for (const [key, value] of [["roomsVzMin", "3"], ["roomsVzMax", "5"]]) await prisma.setting.create({ data: { key, value } });
     await prisma.setting.create({ data: { key: "planningTeam", value: JSON.stringify({ date: DATE, hk: [id.a, id.b, id.c, id.d], sup: [id.sup1], hm: [id.hm1] }) } });
@@ -92,11 +92,14 @@ describe("Planung nur mit den gewählten Kräften", () => {
     expect(await teamIdsFor(DATE)).toEqual([id.a, id.b, id.c, id.d]);
     const p = await proposeForDate(DATE, id.dm);
     expect(p.payload.input.housekeepers.map((h) => h.id).sort()).toEqual([id.a, id.b, id.c, id.d].sort());
-    expect(p.payload.result.unassigned).toEqual([]);
     expect(p.payload.input.rooms).toHaveLength(37);
+    // F9 (N1/N2): Obergrenze 5 je Kraft → 20 verteilt, 17 im Float, Hinweis ganz oben
+    for (const m of p.payload.result.metrics) expect(m.rooms).toBeLessThanOrEqual(5);
+    expect(p.payload.result.unassigned).toHaveLength(17);
+    expect(p.payload.result.warnings[0].code).toBe("FLOAT");
     const few = p.payload.result.warnings.find((w) => w.code === "TOO_FEW_STAFF");
     expect(few?.message).toMatch(/Personal reicht nicht: benötigt \d+ Kräfte, ausgewählt 4/);
-    expect(new Set(Object.values(p.payload.result.assignment))).toEqual(new Set([id.a, id.b, id.c, id.d]));
+    expect(new Set(Object.values(p.payload.result.assignment).filter(Boolean))).toEqual(new Set([id.a, id.b, id.c, id.d]));
   });
 
   it("Bestätigen erweitert die Auswahl nie; Hausmann bekommt alle Traces; Meldungen nur an die Betroffenen", async () => {
@@ -104,8 +107,8 @@ describe("Planung nur mit den gewählten Kräften", () => {
     await prisma.user.updateMany({ where: { id: { in: [id.e, id.f] } }, data: { absentDate: null } });
     const pr = await prisma.autoPlanProposal.findFirstOrThrow({ where: { date: DATE, status: "DRAFT" } });
     const { result } = JSON.parse(pr.payload);
-    const out = await confirmProposal(pr.id, result.assignment, dm);
-    expect(out.open).toBe(0);
+    const out = await confirmProposal(pr.id, result.assignment, dm, { acceptOpen: true }); // F9 (N1): Float wird ausdrücklich bestätigt
+    expect(out.open).toBe(17);
     expect(await teamIdsFor(DATE)).toEqual([id.a, id.b, id.c, id.d]);
     const day = await loadDay(DATE);
     expect(day.hks.filter((h) => h.present).map((h) => h.id).sort()).toEqual([id.a, id.b, id.c, id.d].sort());

@@ -67,6 +67,9 @@ async function expectFullDay() {
   expect(dd.rooms).toHaveLength(numbers.toClean); // Entwurf/Credits über alle zu reinigenden Zimmer
 }
 
+// F9: eigenes Zeitlimit — Merge über 145 Zimmer braucht auf dem Laptop zeitweise mehr als die Standard-5 s
+vi.setConfig({ testTimeout: 30_000 });
+
 describe("28.10.2026: fünf Listen → ein Tagesplan, gleiche Zahlen überall", () => {
   it("alle fünf Listen übernommen, Gate offen", async () => {
     for (const [name, type] of FILES) await importFile(name, type);

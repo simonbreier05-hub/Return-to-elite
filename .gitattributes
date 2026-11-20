@@ -1,0 +1,2 @@
+# F9: Skripte, die Tests einlesen, immer mit LF (sonst scheitert tests/ui/designTokens.test.ts unter Windows)
+*.mjs text eol=lf
