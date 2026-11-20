@@ -2,13 +2,14 @@ import { berlinHHMM } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAuth, requireRole } from "@/lib/rbac";
+import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 
+/** F9 (A1): Ausflüge (Gastname, Notiz) nur für Concierge, Front Office, Supervisor und Duty Manager. */
 export async function GET() {
-  const auth = await requireAuth();
+  const auth = await requireRole(["concierge", "front_office", "supervisor"]);
   if (!auth.ok) return auth.response;
   const excursions = await prisma.excursion.findMany({
     where: { endsAt: { gte: new Date(Date.now() - 12 * 60 * 60_000) } },

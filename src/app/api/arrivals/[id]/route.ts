@@ -9,6 +9,7 @@ import { notifyFloorSupervisors } from "@/lib/rooms/notifyFloorSupervisors";
 import { keyed } from "@/lib/i18n/notificationText";
 import { previousGuest, previousGuestText } from "@/lib/rooms/previousGuest";
 import { warnArrivalConflict } from "@/lib/rooms/arrivalConflict";
+import { markArrivingStayInHouse } from "@/lib/rooms/checkInStay";
 
 const PatchSchema = z.object({
   eta: z.coerce.date().nullable().optional(),
@@ -49,6 +50,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     data: parsed.data,
     include: { room: { select: { id: true, number: true, status: true } } },
   });
+  // F9 (A4): Check-in setzt den heutigen Aufenthalt auf „im Haus“ (Vorgast ist laut Prüfung oben schon ausgecheckt).
+  if (parsed.data.status === "CHECKED_IN" && existing.status !== "CHECKED_IN") {
+    const stayId = await markArrivingStayInHouse(arrival.roomId);
+    if (stayId) broadcast("room:update", { room: await prisma.room.findUnique({ where: { id: arrival.roomId } }) });
+  }
   await audit({ action: "ARRIVAL_UPDATED", userId: auth.session.userId, roomId: arrival.roomId, meta: parsed.data });
   broadcast("arrival:update", { arrival });
   // VIP/„wird jetzt gebraucht“/ETA ändern die Priorität des Zimmers — das zuständige Zimmermädchen erfährt es live.

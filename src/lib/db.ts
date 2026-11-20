@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
+import { PRISMA_OMIT } from "@/lib/dbOmit";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+const createClient = () => new PrismaClient({ omit: PRISMA_OMIT });
+type Client = ReturnType<typeof createClient>;
 
-export const prisma = globalForPrisma.prisma ?? new PrismaClient();
+const globalForPrisma = globalThis as unknown as { prisma?: Client };
+
+export const prisma = globalForPrisma.prisma ?? createClient();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;

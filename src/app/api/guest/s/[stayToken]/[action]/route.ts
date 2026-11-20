@@ -16,10 +16,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sta
   const access = await resolveGuestAccessByStayToken(stayToken);
   if (!access) return NextResponse.json({ error: "Not available." }, { status: 404 });
 
-  const rateLimit = await checkGuestRateLimit(access.room.id, getClientIp(req));
+  const rateLimit = await checkGuestRateLimit(access.room.id, getClientIp(req), new Date(), action);
   if (!rateLimit.ok) {
     return NextResponse.json(
-      { error: "Too many requests — please try again later." },
+      { error: "Too many requests — please try again later.", code: "GUEST_RATE_LIMITED" },
       { status: 429, headers: { "Retry-After": String(rateLimit.retryAfterSeconds) } }
     );
   }

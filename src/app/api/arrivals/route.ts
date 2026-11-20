@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { requireAuth, requireRole } from "@/lib/rbac";
+import { requireRole } from "@/lib/rbac";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
 import { arrivalBeforeLateCheckout, previousGuest } from "@/lib/rooms/previousGuest";
 import { berlinHHMM } from "@/lib/dayplan/time";
 
+/** F9 (A1): Anreisen mit vollen Gastnamen nur für Front Office, Supervisor und Duty Manager. */
 export async function GET() {
-  const auth = await requireAuth();
+  const auth = await requireRole(["front_office", "supervisor"]);
   if (!auth.ok) return auth.response;
   const arrivals = await prisma.arrival.findMany({
     where: { status: { not: "CANCELLED" } },

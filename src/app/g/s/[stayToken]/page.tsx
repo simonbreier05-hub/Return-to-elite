@@ -13,9 +13,11 @@ export const dynamic = "force-dynamic";
  * all render the same neutral "not available" page (see GuestUnavailable
  * — never distinguish the two).
  */
-export default async function GuestStayTokenPage({ params }: { params: Promise<{ stayToken: string }> }) {
-  const { stayToken } = await params;
-  const [access, legalLinks] = await Promise.all([resolveGuestAccessByStayToken(stayToken), getGuestLegalLinks()]);
+export default async function GuestStayTokenPage({ params, searchParams }: { params: Promise<{ stayToken: string }>; searchParams: Promise<{ ended?: string }> }) {
+  const [{ stayToken }, { ended }] = await Promise.all([params, searchParams]);
+  const legalLinks = await getGuestLegalLinks();
+  if (ended === "1") return <GuestUnavailable legalLinks={legalLinks} />; // F9 (A3): beendet → nichts auflösen
+  const access = await resolveGuestAccessByStayToken(stayToken);
   if (!access) return <GuestUnavailable legalLinks={legalLinks} />;
 
   return (
