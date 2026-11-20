@@ -11,15 +11,15 @@ import type { FloorTeamState } from "@/lib/planung/floorTeamData";
 const html = (el: ReturnType<typeof h>) => renderToStaticMarkup(h(LocaleProvider, null, el));
 const state: FloorTeamState = {
   date: "2026-11-02",
+  // F9 (N3): nur Supervisoren und Hausmänner — Housekeeper werden hier nicht mehr eingeteilt
   people: [
     { id: "s1", name: "Petra Test", role: "SUP", badge: { letter: "P", tone: 1, name: "Petra Test" } },
-    { id: "h1", name: "Anna Test", role: "HK", level: 3, kind: "VOLLZEIT", roomsLo: 13, roomsHi: 13 },
-    { id: "h2", name: "Berta Test", role: "HK", level: 1, kind: "AZUBI", roomsLo: 6, roomsHi: 8 },
+    { id: "s2", name: "Sara Test", role: "SUP", badge: { letter: "S", tone: 2, name: "Sara Test" } },
     { id: "m1", name: "Hans Test", role: "HM" },
   ],
   loads: [1, 2, 3, 4, 5].map((floor) => ({ floor, rooms: floor === 5 ? 0 : 12, credits: 9, departures: 4, stayovers: 8, demanding: floor === 4 ? 6 : 0 })),
-  assign: { s1: [1, 2, 3, 4, 5], h2: [4] },
-  suggestions: [{ userId: "h1", floor: 2, reason: { floor: 2, days: 4, of: 5, lastSeen: "2026-11-01" } }],
+  assign: { s1: [1, 2, 3, 4] },
+  suggestions: [{ userId: "m1", floor: 2, reason: { floor: 2, days: 4, of: 5, lastSeen: "2026-11-01" } }],
   rules: { window: 5, minDays: 3, demandingShare: 0.3, maxFloors: 2 },
 };
 const persons: Person[] = state.people.map((p) => ({ id: p.id, role: p.role, roomsLo: p.roomsLo ?? 0, roomsHi: p.roomsHi ?? 0, level: p.level ?? 0 }));
@@ -33,10 +33,11 @@ const props = (over: Partial<FloorTeamProps> = {}): FloorTeamProps => ({
 
 describe("Schritt 3 „Etagenzuweisung\" für das ganze Team", () => {
   const out = html(h(FloorTeamStep, props()));
-  it("Personal-Leiste gruppiert nach Rolle, mit Stufe bei Housekeepern", () => {
+  it("F9 (N3): Personal-Leiste nur mit Supervisoren und Hausmännern, Hinweis auf die Präferenz-Etagen", () => {
     expect(out).toContain("Heute anwesend");
-    for (const r of ["Supervisor", "Housekeeper", "Hausmann"]) expect(out).toContain(r);
-    expect(out).toContain("Anna Test · Stufe 3");
+    for (const r of ["Supervisor", "Hausmann"]) expect(out).toContain(r);
+    expect(out).not.toContain("Stufe");
+    expect(out).toContain("Präferenz-Etagen (Einstellungen)");
   });
   it("Etagen 5 → 1 mit Zimmern, Credits, Abreisen/Bleibern", () => {
     expect(out.indexOf(">Etage 5 · ")).toBeGreaterThan(-1);
@@ -49,19 +50,15 @@ describe("Schritt 3 „Etagenzuweisung\" für das ganze Team", () => {
     expect(out).toContain("zuletzt an 4 von 5 Tagen auf Etage 2");
     expect(out).toMatch(/border-dashed border-brass-light/);
   });
-  it("Warnungen mit Symbol: Stufe 1 auf anspruchsvoller Etage, Etage ohne Housekeeper", () => {
-    expect(out).toContain("Berta Test (Stufe 1) auf Etage 4");
-    expect(out).toContain("Etage 1 hat noch keinen Housekeeper.");
+  it("Warnung mit Symbol bei Etage ohne Supervisor; keine Housekeeper-Warnungen und keine Zi./HK-Kennzahl mehr", () => {
     expect(out).toContain("⚠");
-  });
-  it("Kennzahl mit Ampel-Symbol zusätzlich zur Farbe", () => {
-    expect(out).toMatch(/12 Zi\.\/HK · Ziel 6–8/); // Etage 4: Berta allein
-    expect(out).toContain("▲");
+    expect(out).not.toContain("noch keinen Housekeeper");
+    expect(out).not.toMatch(/Zi\.\/HK/);
   });
   it("angetippte Person: Etagen werden zu Buttons zum Zuteilen", () => {
-    const o = html(h(FloorTeamStep, props({ active: "h1" })));
-    expect(o).toContain("Anna Test gewählt: jetzt Etage(n) antippen.");
-    expect(o).toContain('aria-label="Anna Test auf Etage 3 einteilen"');
+    const o = html(h(FloorTeamStep, props({ active: "m1" })));
+    expect(o).toContain("Hans Test gewählt: jetzt Etage(n) antippen.");
+    expect(o).toContain('aria-label="Hans Test auf Etage 3 einteilen"');
   });
   it("Tap-Flächen ≥ 48 px (Glas-Design) und nur die Personal-Leiste scrollt waagrecht", () => {
     const src = readFileSync(path.join(process.cwd(), "src/components/planung/FloorTeamStep.tsx"), "utf8");

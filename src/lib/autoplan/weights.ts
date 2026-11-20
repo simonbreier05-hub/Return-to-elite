@@ -9,7 +9,7 @@ export const AUTOPLAN_WEIGHTS = {
   categoryFairness: 5, // Ungleichheit der Arten je Kraft: Turn, Deep clean, Tidy, Linen change (Plan-1b: vier Arten)
   demandingFairness: 8, // Ungleichheit bei anspruchsvollen Zimmern unter Stufe 2/3
   interconnectSplit: 20, // je getrenntes Interconnecting-Paar
-  homeFloor: 1, // je Zimmer abseits der Stammetage / gestrigen Etage
+  homeFloor: 6, // F9 (N3): je Zimmer abseits der Präferenz-Etagen (Einstellungen) bzw. auf der Präferenz-Etage einer anderen Kraft
   jump: 2, // je Flügel-/Nummernsprung
   rooms: 20, // H1: quadratische Abweichung vom Zimmer-Zielband (Hauptziel, vor den Credits)
   assignedFloor: 6, // H1: je Zimmer abseits der heute eingeteilten Etagen (Etagenzuweisung)

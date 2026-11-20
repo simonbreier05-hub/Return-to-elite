@@ -57,38 +57,41 @@ describe("Etagenzuweisung Team (Wegwerf-DB)", () => {
 
   it("schlägt Etagen aus tatsächlichen Einsätzen vor (3 von 5), neue Person ohne Vorschlag", async () => {
     const s = await getFloorTeamState(DATE);
-    expect(s.people.map((p) => p.role).sort()).toEqual(["HK", "HK", "HK", "HM", "SUP"]);
+    // F9 (N3, Simon 20.11.): Housekeeper werden hier nicht mehr eingeteilt — nur Supervisor und Hausmann
+    expect(s.people.map((p) => p.role).sort()).toEqual(["HM", "SUP"]);
     expect(s.loads.find((l) => l.floor === 2)?.rooms).toBe(6);
-    expect(s.suggestions).toEqual([{ userId: ids.anna, floor: 2, reason: { floor: 2, days: 4, of: 5, lastSeen: "2026-11-01" } }]);
+    expect(s.suggestions).toEqual([]); // Annas Einsätze erzeugen keinen Etagen-Vorschlag mehr
     expect(s.assign[ids.sup]).toEqual([1, 2, 3, 4, 5]); // bestehende Supervisor-Etagen laufen unverändert weiter
-    const ben = s.people.find((p) => p.id === ids.ben)!;
-    expect(ben).toMatchObject({ level: 1, roomsLo: 6, roomsHi: 7 }); // Planung L1: Teilzeit-Ziel 7 (6–7), unabhängig von der Stufe
   });
 
   it("Speichern: jede Etage braucht einen Supervisor", async () => {
-    await expect(saveFloorTeam(DATE, { [ids.sup]: [1, 2, 3, 4], [ids.anna]: [2] }, ids.sup)).rejects.toThrow(/Etage 5/);
+    await expect(saveFloorTeam(DATE, { [ids.sup]: [1, 2, 3, 4] }, ids.sup)).rejects.toThrow(/Etage 5/);
+  });
+
+  it("F9 (N3): Housekeeper lassen sich hier nicht mehr einteilen", async () => {
+    await expect(saveFloorTeam(DATE, { [ids.sup]: [1, 2, 3, 4, 5], [ids.anna]: [2] }, ids.sup)).rejects.toThrow(/Supervisoren und Hausmänner/);
   });
 
   it("Speichern schreibt Etagen + Tag, protokolliert vorher/nachher ohne Namen", async () => {
-    const r = await saveFloorTeam(DATE, { [ids.sup]: [1, 2, 3, 4, 5], [ids.anna]: [2], [ids.ben]: [4, 5], [ids.hm]: [1, 2, 3, 4, 5] }, ids.sup);
-    expect(r.changed).toBe(3);
-    const anna = await prisma.user.findUnique({ where: { id: ids.anna } });
-    expect(anna).toMatchObject({ assignedFloors: "2", floorsOn: DATE });
+    const r = await saveFloorTeam(DATE, { [ids.sup]: [1, 2, 3, 4, 5], [ids.hm]: [1, 2, 3] }, ids.sup);
+    expect(r.changed).toBe(1);
+    const hm = await prisma.user.findUnique({ where: { id: ids.hm } });
+    expect(hm).toMatchObject({ assignedFloors: "1,2,3", floorsOn: DATE });
     const logs = await prisma.auditLog.findMany({ where: { action: "FLOOR_TEAM_ASSIGNED" } });
-    expect(logs).toHaveLength(3);
+    expect(logs).toHaveLength(1);
     for (const l of logs) expect(l.meta).not.toMatch(/ANNA|BEN|HM|hkLevel|level/);
-    expect(JSON.parse(logs.find((l) => l.meta!.includes(ids.ben))!.meta!)).toMatchObject({ before: [], after: [4, 5], role: "room_attendant" });
-    // Danach: kein Vorschlag mehr für Anna (manuell hat Vorrang)
-    expect((await getFloorTeamState(DATE)).suggestions).toEqual([]);
+    expect(JSON.parse(logs[0].meta!)).toMatchObject({ before: [], after: [1, 2, 3], role: "houseman" });
   });
 
-  it("Zuteilungsvorschlag kennt die heutigen Etagen und das Zimmerband", async () => {
+  it("F9 (N2/N3): Vorschlag nutzt Präferenz-Etagen statt Etagenzuweisung; Obergrenze = Zimmervorgabe ≤ feste Obergrenze", async () => {
+    await prisma.user.update({ where: { id: ids.anna }, data: { homeFloors: "2", assignedFloors: "4", floorsOn: DATE } });
     const d = await loadDay(DATE);
     const anna = d.hks.find((h) => h.id === ids.anna)!;
-    expect(anna.todayFloors).toEqual([2]);
-    expect(anna).toMatchObject({ roomsLo: 10, roomsHi: 11 }); // Planung L1: Vollzeit-Ziel 11 (10–11)
-    expect(d.hks.find((h) => h.id === ids.neu)!.todayFloors).toEqual([]);
-    // Etagen von gestern gelten heute nicht mehr
-    expect((await loadDay("2026-11-03")).hks.find((h) => h.id === ids.anna)!.todayFloors).toEqual([]);
+    expect(anna.todayFloors).toBeUndefined(); // eine alte Etagenzuweisung wirkt nicht mehr
+    expect(anna.homeFloors).toEqual([2]);
+    expect(anna).toMatchObject({ roomsLo: 10, roomsHi: 11, cap: 11 }); // Planung L1: Vollzeit-Ziel 11 (10–11)
+    await prisma.setting.create({ data: { key: "roomsPerAttendantMax", value: "9" } });
+    expect((await loadDay(DATE)).hks.find((h) => h.id === ids.anna)!.cap).toBe(9);
+    await prisma.setting.delete({ where: { key: "roomsPerAttendantMax" } });
   });
 });

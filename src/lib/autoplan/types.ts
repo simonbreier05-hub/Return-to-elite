@@ -64,7 +64,12 @@ export interface PlanHousekeeper {
   /** Zielband in Zimmern (Hauptziel, je Typ — Plan-1b). Fehlt → nur Credits. */
   roomsLo?: number;
   roomsHi?: number;
-  /** H1: heutige Etagen laut Etagenzuweisung (User.floorsOn === heute). Gesetzt → ersetzt Stammetage/gestern als Präferenz. */
+  /**
+   * F9 (N1/N2): harte Obergrenze der Zimmeranzahl im Vorschlag = persönliche Zimmervorgabe, höchstens die feste Obergrenze
+   * (Einstellung `roomsPerAttendantMax`). Was darüber hinausgeht, bleibt im Float. Fehlt → keine harte Grenze.
+   */
+  cap?: number;
+  /** H1: heutige Etagen laut Etagenzuweisung. F9 (N3): für Housekeeper nicht mehr gesetzt — Präferenz = `homeFloors` (Einstellungen). */
   todayFloors?: number[];
   /** H3: gemessene bzw. geschätzte Minuten je Reinigungsart (nur wenn „Messdaten in Planung verwenden" an ist). */
   minutesByKind?: { TURN: number; DEPARTURE: number; STAYOVER: number; LAUNDRY: number; SUITE: number };

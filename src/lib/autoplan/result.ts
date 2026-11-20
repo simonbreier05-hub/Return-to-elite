@@ -145,15 +145,13 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
         ? `Personal ab Stufe 2 reicht nicht: ${list} gehen nach der Zimmervorgabe auch an Stufe 1 — sonst lägen ${staff} über ihrer Zimmervorgabe. Bitte prüfen.`
         : `Keine Kraft ab Stufe 2 eingeplant: ${list} gehen nach der Zimmervorgabe an Stufe 1. Bitte prüfen.` });
   }
-  const demandingOpen = unassigned.filter((id) => roomById.get(id)!.demanding.length);
-  const plainOpen = unassigned.filter((id) => !roomById.get(id)!.demanding.length);
-  if (demandingOpen.length) {
-    warnings.push({ code: "DEMANDING_UNASSIGNED", severity: "WARNING", roomIds: demandingOpen,
-      message: `${demandingOpen.length} anspruchsvolle Zimmer ohne passende Kraft (${demandingOpen.map((id) => roomById.get(id)!.number).join(", ")}) — bitte von Hand zuteilen.` });
-  }
-  if (plainOpen.length) {
-    warnings.push({ code: "UNASSIGNED", severity: "WARNING", roomIds: plainOpen,
-      message: `${plainOpen.length} Zimmer sind noch offen (${plainOpen.map((id) => roomById.get(id)!.number).join(", ")}). Bitte im Grundriss zuteilen.` });
+  // F9 (N1): Zimmer, die unter der Obergrenze je Kraft (bzw. ohne passende Kraft) nicht unterkommen, liegen im Float —
+  // ein Hinweis ganz oben mit Anzahl und Zimmernummern; der Duty Manager teilt sie von Hand zu.
+  if (unassigned.length) {
+    const nums = unassigned.map((id) => roomById.get(id)!).sort((x, y) => (parseInt(x.number, 10) || 0) - (parseInt(y.number, 10) || 0)).map((r) => r.number);
+    const demandingOpen = unassigned.filter((id) => roomById.get(id)!.demanding.length).length;
+    warnings.push({ code: "FLOAT", severity: "WARNING", roomIds: unassigned,
+      message: `${unassigned.length} Zimmer im Float: ${nums.join(", ")} — bitte von Hand zuteilen.${demandingOpen ? ` Davon ${demandingOpen} anspruchsvoll.` : ""}` });
   }
   const totalCredits = totalAll;
   const perHk = input.fullTimeRooms ? `${fmt(input.fullTimeRooms)} Zimmern` : `${fmt(input.fullTimeTarget)} Credits`;
@@ -166,11 +164,11 @@ export function buildResult(input: PlanInput, assignment: Assignment, timedOut =
   }
   if (present < needed) {
     warnings.push({ code: "TOO_FEW_STAFF", severity: "WARNING",
-      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${perHk} je Vollzeitkraft). Credit-Ziel und Etagenlimit werden überschritten. Bitte eine Kraft hinzufügen.` });
+      message: `Personal reicht nicht: benötigt ${needed} Kräfte, ausgewählt ${present} (bei ${perHk} je Vollzeitkraft). Die Obergrenze je Kraft bleibt, der Rest liegt im Float. Bitte eine Kraft hinzufügen oder von Hand zuteilen.` });
   }
 
   // F4 (M7): „Personal reicht nicht“ und „anspruchsvolle Zimmer ohne passende Kraft“ ganz oben
-  const TOP = ["TOO_FEW_STAFF", "LEVEL_RULE_RELAXED", "DEMANDING_UNASSIGNED"];
+  const TOP = ["FLOAT", "TOO_FEW_STAFF", "LEVEL_RULE_RELAXED"];
   warnings.sort((a, b) => (TOP.includes(a.code) ? TOP.indexOf(a.code) : 9) - (TOP.includes(b.code) ? TOP.indexOf(b.code) : 9));
   const { total, parts } = cost(c, idx);
   return {

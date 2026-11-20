@@ -108,12 +108,12 @@ describe("Zuteilungsvorschlag: Fairness", () => {
     for (const [a, b] of pairs) expect(rb.assignment[a], `${a}/${b}`).toBe(rb.assignment[b]);
   });
 
-  it("Stammetage: schwacher Wunsch (Gewicht 1); mit höherem Gewicht klar erkennbar", () => {
+  it("F9 (N3): Präferenz-Etagen aus den Einstellungen sind klar erkennbar (Gewicht 6), bleiben aber weich", () => {
     const team = TEAM();
     team[0].homeFloors = [3]; team[2].homeFloors = [1]; team[4].homeFloors = [5];
     const onHome = (res: PlanResult, id: string, f: number) => roomsOf(res, id).filter((rid) => rooms.find((x) => x.id === rid)!.floor === f).length;
-    expect(AUTOPLAN_WEIGHTS.homeFloor).toBe(1); // schwacher Wunsch: nicht ausschlaggebend (Interview)
-    const strong = proposePlan({ ...makeInput(rooms, team), weights: { ...AUTOPLAN_WEIGHTS, homeFloor: 25 } });
+    expect(AUTOPLAN_WEIGHTS.homeFloor).toBe(6); // F9 (N3): ersetzt die Etagenzuweisung für Housekeeper
+    const strong = proposePlan(makeInput(rooms, team));
     for (const [id, f] of [["a", 3], ["c", 1], ["e", 5]] as const) expect(onHome(strong, id, f) / roomsOf(strong, id).length, id).toBeGreaterThan(0.5);
     expect(credits(strong, "a")).toBeGreaterThanOrEqual(12.2);
   });
@@ -181,7 +181,7 @@ describe("Determinismus und Laufzeit", () => {
     const b = proposePlan(makeInput(rooms, TEAM()));
     expect(b.assignment).toEqual(a.assignment);
     expect(b.routes).toEqual(a.routes);
-  });
+  }, 15_000); // F9: zwei volle Vorschläge hintereinander — eigenes Zeitlimit, damit der Test unter Last nicht wackelt
 
   it("145 Zimmer, 10 Housekeeper: unter 3 Sekunden", () => {
     const team = [...TEAM(), hk("h", "VOLLZEIT", 2), hk("i", "VOLLZEIT", 3), hk("j", "TEILZEIT", 2)];
