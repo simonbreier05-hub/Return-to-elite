@@ -16,11 +16,13 @@ Alle Pakete starten vom Basis-Branch `fix/basis-simulation-v2` und werden nach S
 | 7 | `Prompt_F6_Bildschirme_v1.2.md` | H12, M1, M3, M11, M12, M13, M17, M19, M20, M23 | Viele kleine Verbesserungen, Mängel-Fotos. | mittel | gemergt (20.11., 29a63cf) |
 | 8 | `Prompt_F7_Gast_Hausmann_v1.2.md` | H13, H16, M10, M14, M15, M18, M21, M24 | Gastbildschirm, Hausmann, Concierge, Archiv beim Check-out. | mittel | gemergt (20.11., 29a63cf) |
 | 9 | `Prompt_F8_Opera_Profilvorschlag_v1.md` | – (neu) | Vorschlag fürs Opera-Gastprofil nach Abreise, nur DM. Braucht F7. | klein | gemergt (20.11., 29a63cf) |
-| 10 | `Prompt_F9_Gegenpruefung_v1.md` | Funde der Gegenprüfung (A1–A7 hoch) | Gastnamen/Gastcode nur für Berechtigte, alter Gast-Tab, Check-in setzt Aufenthalt, F1-Lücke, DND aufheben, Vorschlag nach N1 (Obergrenze zuerst, Rest in den Float). Vor echten Gästen nötig. | mittel | offen |
+| 10 | `Prompt_F9_Gegenpruefung_v1.md` | Funde der Gegenprüfung (A1–A7 hoch) | Gastnamen/Gastcode nur für Berechtigte, alter Gast-Tab, Check-in setzt Aufenthalt, F1-Lücke, DND aufheben, Vorschlag nach N1 (Obergrenze zuerst, Rest in den Float). Vor echten Gästen nötig. | mittel | gemergt (24.11., 82f95bb) |
 
 ## Stand 20.11.2026
 
 Alle Pakete S1–F8 sind zusammen mit UI-Feedback, Design-Rest und Nachtrag über `feature/nachtrag` in `fix/basis-simulation-v2` gemergt (Merge-Commit 29a63cf, OK Simon 20.11.2026). Details, Prüfberichte und Vorher/Nachher-Bilder: Artifact „StayClean Fix-Pakete“. Status je Befund: `docs/simulation/Fehlerbericht_Simulation_v2.md`, Spalte „Paket“.
+
+F9 (Gegenprüfung, A1–A7) ist über `feature/f9-gegenpruefung` in `fix/basis-simulation-v2` gemergt (Merge-Commit 82f95bb, OK Simon 24.11.2026). Keine Schemaänderung; `npm test` und `npm run build` grün. Teil B (Mittel) und Teil C (Niedrig) bleiben offen.
 
 ## Offen
 
