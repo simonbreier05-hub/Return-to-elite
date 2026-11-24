@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
@@ -20,7 +21,7 @@ async function lastEntries(roomIds: string[], since: Date): Promise<Map<string, 
 }
 
 /** Für „Meine Zimmer“: welches eigene Zimmer lässt sich gerade zurückspulen (und bis wann)? */
-export async function rewindOptions(session: Session, rooms: { id: string; status: string; assignedToId: string | null; assignedOn: string | null }[], now = new Date()) {
+export async function rewindOptions(session: Session, rooms: { id: string; status: string; assignedToId: string | null; assignedOn: string | null }[], now = clockNow()) {
   const out = new Map<string, { to: string; until: string }>();
   if (session.role !== "room_attendant" || !rooms.length) return out;
   const { statusRewindMinutes } = await getSettings();
@@ -37,7 +38,7 @@ export async function rewindOptions(session: Session, rooms: { id: string; statu
 export type RewindResult = { ok: true; room: unknown } | { ok: false; status: number; error: string; code?: string };
 
 /** Spult den eigenen letzten Statusschritt eine Stufe zurück — protokolliert als STATUS_REWIND, live als room:update. */
-export async function rewindRoomStatus(session: Session, roomId: string, now = new Date()): Promise<RewindResult> {
+export async function rewindRoomStatus(session: Session, roomId: string, now = clockNow()): Promise<RewindResult> {
   const room = await prisma.room.findUnique({ where: { id: roomId } });
   if (!room) return { ok: false, status: 404, error: "Zimmer nicht gefunden.", code: "ROOM_NOT_FOUND" };
   const opt = (await rewindOptions(session, [room], now)).get(room.id);

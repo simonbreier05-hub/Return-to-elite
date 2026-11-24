@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 
@@ -6,7 +7,7 @@ import { getSettings } from "@/lib/settings";
  * Direkt-Unterhaltungen ohne Nachricht nach derselben Frist auch. Läuft stündlich (server.js → guest-data-retention)
  * und in der Nachtlöschung (purgeGuestDataNow). Gibt nur Zähler zurück, nie Inhalte.
  */
-export async function purgeExpiredChat(now = new Date()): Promise<{ chatMessages: number; chatDirects: number }> {
+export async function purgeExpiredChat(now = clockNow()): Promise<{ chatMessages: number; chatDirects: number }> {
   const { chatRetentionDays } = await getSettings();
   const cutoff = new Date(now.getTime() - chatRetentionDays * 86_400_000);
   const chatMessages = (await prisma.chatMessage.deleteMany({ where: { createdAt: { lt: cutoff } } })).count;

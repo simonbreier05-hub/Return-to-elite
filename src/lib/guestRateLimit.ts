@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import type { NextRequest } from "next/server";
 import { getSettings } from "@/lib/settings";
 
@@ -37,7 +38,7 @@ export const UNLIMITED_GUEST_ACTIONS = new Set(["dnd-cancel", "green-cancel"]);
  * F9 (A6): Grenze `guestRateLimitPerHour` (Einstellung, Standard 5) gilt **je Aktion** und Gerät (IP); dazu bleibt die
  * Obergrenze je Zimmer über alle Aktionen und Geräte (20/Stunde). `action` leer = alle Aktionen zusammen (Alt-Aufrufer).
  */
-export async function checkGuestRateLimit(roomId: string, ip: string, now: Date = new Date(), action?: string): Promise<RateLimitResult> {
+export async function checkGuestRateLimit(roomId: string, ip: string, now: Date = clockNow(), action?: string): Promise<RateLimitResult> {
   if (action && UNLIMITED_GUEST_ACTIONS.has(action)) return { ok: true };
   const { guestRateLimitPerHour: limit } = await getSettings();
   const nowMs = now.getTime();

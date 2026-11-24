@@ -1,3 +1,4 @@
+import { nowMs as clockMs } from "@/lib/clock";
 /**
  * Front-Office-Hub im Design „Glas & Premium“ (Paket D5): reine Ableitungen für die Anzeige —
  * Anreise lesen (defensiv), Gast als „Anrede Titel Nachname“, Kennzeichen → Pille, Filter, Kennzahlen.
@@ -59,7 +60,7 @@ export function normalizeArrival(raw: unknown): ArrivalView | null {
 export const isReady = (a: Pick<ArrivalView, "room"> & Partial<Pick<ArrivalView, "prevGuest">>) => a.room.status === "INSPECTED" && !a.prevGuest?.present;
 
 /** ETA vorbei und Zimmer noch nicht frei (gleiche Regel wie die bisherige Dringend-Leiste). */
-export function isOverdue(a: ArrivalView, now: number = Date.now()): boolean {
+export function isOverdue(a: ArrivalView, now: number = clockMs()): boolean {
   if (a.status !== "EXPECTED" || !a.eta || isReady(a)) return false;
   const t = new Date(a.eta).getTime();
   return !Number.isNaN(t) && t < now;

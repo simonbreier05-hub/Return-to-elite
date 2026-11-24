@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 
@@ -12,7 +13,7 @@ export interface PreviousGuest { present: boolean; lateCheckout: string | null; 
 
 const NONE: PreviousGuest = { present: false, lateCheckout: null, reason: null };
 
-export async function previousGuest(roomId: string, now = new Date()): Promise<PreviousGuest> {
+export async function previousGuest(roomId: string, now = clockNow()): Promise<PreviousGuest> {
   const date = berlinDate(now);
   const plan = await prisma.dayRoomPlan.findUnique({ where: { date_roomId: { date, roomId } }, select: { cleaningType: true, stayId: true, lateCheckout: true } });
   if (!plan || (plan.cleaningType !== "DEPARTURE" && plan.cleaningType !== "SAME_DAY_TURN")) return NONE;

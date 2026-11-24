@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
@@ -18,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   // Ohne heutigen Tagesplan aus dem Planungshub gibt es keine Arbeit zu priorisieren (keine alten Board-Werte).
   const hub = await hubDay();
-  if (!hub.ready) return NextResponse.json({ priorities: [], computedAt: new Date().toISOString(), hub });
+  if (!hub.ready) return NextResponse.json({ priorities: [], computedAt: clockNow().toISOString(), hub });
 
   const attendantId =
     req.nextUrl.searchParams.get("attendantId") ??
@@ -40,7 +41,7 @@ export async function GET(req: NextRequest) {
 
   const settings = await getSettings();
   const weights = await getPriorityWeights();
-  const now = new Date();
+  const now = clockNow();
   const rooms = await prisma.room.findMany({
     where: {
       status: { in: ["DIRTY", "IN_PROGRESS", "PICKUP", "BLOCKED", "CLEAN"] },
@@ -56,7 +57,7 @@ export async function GET(req: NextRequest) {
       // Guest screen "Jetzt reinigen" (Prompt G2 Teil 4) — only the most
       // recent still-open one matters for scoring.
       guestRequests: {
-        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, createdAt: { gte: berlinToUtc(berlinDate(new Date()), "00:00") } }, // F7: nur heutige Wünsche
+        where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, createdAt: { gte: berlinToUtc(berlinDate(clockNow()), "00:00") } }, // F7: nur heutige Wünsche
         orderBy: { createdAt: "desc" },
         take: 1,
       },

@@ -214,3 +214,9 @@
 - Rollen-Agenten lesen nie App-Code; Zwei-Tipp-Knöpfe nur mit `tap2`; höchstens 3 Agenten und 5 Geräte gleichzeitig (Speicher), Uhr nie über Nacht laufen lassen (Nachtlöschung).
 - `tests/simulation/befunde.test.ts`: offene Befunde stehen als `it.fails` — nach einem Fix `.fails` entfernen und den Status im Bericht nachtragen.
 - Nur lokale Test-DB und erfundene Gäste; in Simulationsphasen kein App-Code ändern.
+
+## Simulation: Uhr (S0, nur Preview/lokal)
+- Geschäftslogik nimmt Zeit nur aus `now()`/`nowMs()` (`src/lib/clock.ts`), nie `new Date()`/`Date.now()` — Ausnahmen nur für technische Takte (Laufzeit, Drosseln, IDs).
+- Aktiv nur mit `SIMULATION_MODE=true` UND `SIM_ALLOWED=preview` (nie Dienst `StayClean`); dann: Banner oben, neue Zeilen bekommen Sim-`createdAt` (`db.ts`), automatische Nachtlöschung/Aufbewahrung ruht.
+- Steuern: `SIM_URL=<preview-url> SIM_CONTROL_TOKEN=… npm run sim:clock -- status | set 2026-12-07T07:00 | faktor 3 | pause | weiter | naechster-tag 07:00 | echt`.
+- Zustand in Tabelle `SimClock` (Zeile 1, übersteht Neustarts), Änderung geht als `clock:update` an alle Bildschirme.

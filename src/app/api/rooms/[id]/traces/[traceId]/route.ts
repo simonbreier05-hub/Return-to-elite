@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -38,7 +39,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
       await setHousemanTraceStatus(traceId, status, auth.session);
       await notifyTaskDone({ room: trace.room, actorId: auth.session.userId, done: status === "DONE" });
     } else {
-      await prisma.trace.update({ where: { id: traceId }, data: { status, doneAt: status === "DONE" ? new Date() : null } });
+      await prisma.trace.update({ where: { id: traceId }, data: { status, doneAt: status === "DONE" ? clockNow() : null } });
     }
     await audit({ action: status === "DONE" ? "TRACE_DONE" : "TRACE_REOPENED", userId: auth.session.userId, roomId: trace.roomId, meta: { traceId } });
   }

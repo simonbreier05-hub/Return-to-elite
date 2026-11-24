@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { berlinToday } from "@/lib/import/businessDay";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -54,14 +55,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     where: { id },
     data: {
       status: "DONE",
-      doneAt: new Date(),
+      doneAt: clockNow(),
       assignedToId: auth.session.role === "houseman" ? auth.session.userId : existing.assignedToId,
     },
     include: INCLUDE,
   });
 
   // Die zugehörige Hausmann-Trace-Zeile ist damit auch erledigt (eine Wahrheit für die Hausmann-Liste)
-  await prisma.trace.updateMany({ where: { roomTaskId: id, status: "OPEN" }, data: { status: "DONE", doneAt: new Date() } });
+  await prisma.trace.updateMany({ where: { roomTaskId: id, status: "OPEN" }, data: { status: "DONE", doneAt: clockNow() } });
 
   await endPauseOnChange("ROOMTASK", id, auth.session.userId, existing.roomId);
   for (const tr of await prisma.trace.findMany({ where: { roomTaskId: id }, select: { id: true } })) await endPauseOnChange("TRACE", tr.id, auth.session.userId, existing.roomId);

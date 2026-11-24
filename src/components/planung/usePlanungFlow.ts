@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/components/api";
@@ -116,7 +117,7 @@ export function usePlanRun(date: string | null, userId: string | null = null) {
     if (!date || !key || !restored.current) return;
     try {
       if (confirmed || !draft || !result) { if (confirmed) sessionStorage.removeItem(key); return; }
-      const snap: DraftSnapshot = { date, draft, result, active, startedOk: [...startedOk], savedAt: new Date().toISOString() };
+      const snap: DraftSnapshot = { date, draft, result, active, startedOk: [...startedOk], savedAt: clockNow().toISOString() };
       sessionStorage.setItem(key, JSON.stringify(snap));
     } catch { /* Speicher voll/gesperrt — Entwurf bleibt nur im Speicher der Seite */ }
   }, [date, key, draft, result, active, startedOk, confirmed]);

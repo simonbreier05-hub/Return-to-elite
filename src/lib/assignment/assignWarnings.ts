@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { getRoomTypeCredits, getSettings } from "@/lib/settings";
 import { computeRoomCredit } from "@/lib/rooms/roomCredit";
@@ -14,7 +15,7 @@ import { roomBand } from "@/lib/planung/floorTeam";
  */
 export interface AssignWarning { code: "LEVEL1_DEMANDING" | "RESTRICTION" | "TOO_MANY_SUITES" | "OVER_TARGET" | "ABSENT_TODAY"; message: string; rooms: string[] }
 
-export async function assignWarnings(hkId: string, roomIds: string[], now = new Date()): Promise<AssignWarning[]> {
+export async function assignWarnings(hkId: string, roomIds: string[], now = clockNow()): Promise<AssignWarning[]> {
   const date = berlinDate(now);
   const [u, settings] = await Promise.all([
     prisma.user.findUnique({ where: { id: hkId }, select: { name: true, role: true, hkLevel: true, hkType: true, hkRestrictions: true, dailyTarget: true, absentDate: true, sickDate: true } }),

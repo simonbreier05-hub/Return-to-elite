@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { purgeExpiredProfileNames, purgeProfileSuggestions } from "@/lib/guest/profileSuggestion";
 import { purgeOperaOrderNotes } from "@/lib/engineering/operaTraces";
 import { prisma } from "@/lib/db";
@@ -81,7 +82,7 @@ const legacyText = (key: string, t: { code: string; date: string }) => key.split
 
 /** Kernlauf: löscht alle Gastdaten laut Datenkarte. Idempotent — ein zweiter Lauf findet nichts mehr. */
 /** `opts.all`: „Gastdaten jetzt löschen“ (DM) — auch Namen, deren Frist (24 Uhr am Abreisetag) noch läuft (F8). */
-export async function purgeGuestDataNow(now = new Date(), opts: { all?: boolean } = {}): Promise<PurgeCounts> {
+export async function purgeGuestDataNow(now = clockNow(), opts: { all?: boolean } = {}): Promise<PurgeCounts> {
   const settings = await getSettings();
   // Fehlt das Gäste-Systemkonto (nicht gesät), darf das nicht die ganze Nachtlöschung verhindern.
   const guestSystemUserId = await getGuestSystemUserId().catch(() => null);
@@ -124,18 +125,18 @@ export async function purgeGuestDataNow(now = new Date(), opts: { all?: boolean 
 }
 
 /** Lauf mit Nachweis (PurgeRun). Fehler enthalten nur den Fehlertyp, nie Inhalte. */
-export async function runGuestDataPurge(trigger: "SCHEDULE" | "MANUAL", userId?: string | null, now = new Date()) {
+export async function runGuestDataPurge(trigger: "SCHEDULE" | "MANUAL", userId?: string | null, now = clockNow()) {
   const running = await prisma.purgeRun.findFirst({ where: { status: "RUNNING", startedAt: { gt: new Date(now.getTime() - 10 * 60_000) } } });
   if (running) return { skipped: true as const, reason: "RUNNING" };
   const run = await prisma.purgeRun.create({ data: { trigger, status: "RUNNING", userId: userId ?? null } });
   try {
     const counts = await purgeGuestDataNow(now, { all: trigger === "MANUAL" });
-    await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "OK", finishedAt: new Date(), counts: JSON.stringify(counts) } });
+    await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "OK", finishedAt: clockNow(), counts: JSON.stringify(counts) } });
     await audit({ action: "GUEST_DATA_PURGED", userId: userId ?? null, meta: { trigger, counts } });
     return { skipped: false as const, runId: run.id, counts };
   } catch (e) {
     console.error("[guest-data-purge] failed:", e instanceof Error ? e.name : "error");
-    await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "ERROR", finishedAt: new Date(), error: e instanceof Error ? e.name : "Error" } });
+    await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "ERROR", finishedAt: clockNow(), error: e instanceof Error ? e.name : "Error" } });
     throw e;
   }
 }
@@ -145,7 +146,7 @@ export async function lastSuccessfulPurge() {
 }
 
 /** Vom Ticker: läuft nur, wenn seit dem letzten geplanten Zeitpunkt noch nichts lief (auch nach Server-Ausfall). */
-export async function runDuePurge(now = new Date()) {
+export async function runDuePurge(now = clockNow()) {
   const settings = await getSettings();
   const last = await lastSuccessfulPurge();
   // F8: Namen in Profil-Vorschlägen zur Frist (24 Uhr am Abreisetag) löschen — unabhängig von der Nachtlöschung, in jedem Takt
@@ -175,7 +176,7 @@ export async function purgeStay(stayId: string, userId: string) {
   counts.traceTexts = traces.length;
   const roomNumber = (await prisma.room.findUnique({ where: { id: stay.roomId }, select: { number: true } }))?.number;
   counts.importRows = roomNumber ? (await prisma.importRow.deleteMany({ where: { room: roomNumber } })).count : 0; // nie ohne Zimmerfilter löschen
-  await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "OK", finishedAt: new Date(), counts: JSON.stringify(counts) } });
+  await prisma.purgeRun.update({ where: { id: run.id }, data: { status: "OK", finishedAt: clockNow(), counts: JSON.stringify(counts) } });
   await audit({ action: "GUEST_STAY_PURGED", userId, roomId: stay.roomId, meta: { stayId, counts } });
   return counts;
 }

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { mkdir, writeFile } from "fs/promises";
@@ -65,7 +66,7 @@ export function runGuestAction(action: GuestAction, room: GuestActionRoom, req: 
 
 /** F7 (Aufgabe 7): Green Option am selben Tag zurücknehmen — der Wäschewechsel ist wieder fällig; Housekeeper und Supervisor erfahren es. */
 async function handleGreenCancel(room: GuestActionRoom): Promise<NextResponse> {
-  const today = berlinDate(new Date());
+  const today = berlinDate(clockNow());
   const from = berlinToUtc(today, "00:00");
   const res = await prisma.guestRequest.updateMany({ where: { roomId: room.id, kind: GREEN_KIND, status: { not: "CANCELLED" }, createdAt: { gte: from } }, data: { status: "CANCELLED" } });
   if (res.count === 0) return NextResponse.json({ ok: true, already: true }, { status: 200 });
@@ -90,7 +91,7 @@ async function handleGreenCancel(room: GuestActionRoom): Promise<NextResponse> {
  * DSGVO-Aufbewahrung räumt den Eintrag wie andere geschlossene Gastwünsche ab. Housekeeper und Supervisor werden gemeldet.
  */
 async function handleGreen(room: GuestActionRoom): Promise<NextResponse> {
-  const today = berlinDate(new Date());
+  const today = berlinDate(clockNow());
   if ((await greenRoomsOn(today, [room.id])).has(room.id)) return NextResponse.json({ ok: true, already: true }, { status: 200 });
   const guestUserId = await getGuestSystemUserId();
   const [notification, guestRequest] = await Promise.all([
@@ -102,7 +103,7 @@ async function handleGreen(room: GuestActionRoom): Promise<NextResponse> {
       },
     }),
     // createdAt aus derselben Uhr wie `today` (nicht DB-now) — greenRoomsOn filtert über createdAt
-    prisma.guestRequest.create({ data: { roomId: room.id, kind: GREEN_KIND, status: "DONE", detail: JSON.stringify({ date: today }), createdAt: new Date() } }),
+    prisma.guestRequest.create({ data: { roomId: room.id, kind: GREEN_KIND, status: "DONE", detail: JSON.stringify({ date: today }), createdAt: clockNow() } }),
   ]);
   await audit({ action: "GUEST_GREEN_OPTION", userId: guestUserId, roomId: room.id, meta: { date: today } });
   broadcast("notification:new", { notification });

@@ -1,4 +1,5 @@
 "use client";
+import { nowMs as clockMs } from "@/lib/clock";
 
 import { useState, type ReactNode } from "react";
 import Link from "next/link";
@@ -112,7 +113,7 @@ export function SupervisorRoomDetail({
         <p className="text-body-18 text-text-primary">{room.assignedLabel ?? t("supervisor.unassignedOption")}</p>
         {room.startedAt && (
           <p className="text-body-16 text-text-secondary" data-testid="sup-running">
-            {t("hk.running", { start: hhmm(room.startedAt), min: Math.max(0, Math.round((Date.now() - new Date(room.startedAt).getTime()) / 60_000)), target: room.estMinutes ?? 0 })}
+            {t("hk.running", { start: hhmm(room.startedAt), min: Math.max(0, Math.round((clockMs() - new Date(room.startedAt).getTime()) / 60_000)), target: room.estMinutes ?? 0 })}
           </p>
         )}
         <Link href="/floor-plan" className={cx("text-body-16 inline-flex min-h-(--size-touch-min) items-center text-accent-text underline underline-offset-4", FOCUS_RING)}>
@@ -195,7 +196,7 @@ export function OooDialog({ number, onClose, onSubmit }: { number: string; onClo
   const { t } = useLocale();
   const [hours, setHours] = useState<number>(48);
   const [reason, setReason] = useState(""); // F2: Pflicht, kurzer Text, keine Gastdaten
-  const until = new Date(Date.now() + hours * 3600_000);
+  const until = new Date(clockMs() + hours * 3600_000);
   const presetLabel = (h: number) => (h < 24 ? `${h} h` : h % 24 === 0 ? `${h / 24} d` : `${h} h`);
   return (
     <HkWindow title={t("supervisor.oooModalTitle", { number })} subtitle={t("supervisor.oooModalSubtitle")} onClose={onClose}>

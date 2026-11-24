@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import RoomActionsCard from "@/components/roles/RoomActionsCard";
 import RoomWindowActions from "@/components/roles/RoomWindowActions";
@@ -20,7 +21,7 @@ import { isOverdue, normalizeArrival, type ArrivalView } from "@/lib/ui/frontOff
 /** „HH:MM“ → Zeitpunkt heute (Gerätezeit, wie bisher). */
 const timeToIso = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date();
+  const d = clockNow();
   d.setHours(h, m, 0, 0);
   return d.toISOString();
 };

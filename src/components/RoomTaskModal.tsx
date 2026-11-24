@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useState } from "react";
 import Modal from "@/components/Modal";
@@ -53,7 +54,7 @@ export default function RoomTaskModal({
           ))}
         </div>
         <Field multiline label={t("supervisor.houseTaskNotePlaceholder")} value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder={t("supervisor.houseTaskNotePlaceholder")} />
-        <Field type="date" label={t("supervisor.houseTaskDue")} hint={t("supervisor.houseTaskDueHint")} value={dueDate} min={new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" })} onChange={(e) => setDueDate(e.target.value)} className="sm:max-w-xs" />
+        <Field type="date" label={t("supervisor.houseTaskDue")} hint={t("supervisor.houseTaskDueHint")} value={dueDate} min={clockNow().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" })} onChange={(e) => setDueDate(e.target.value)} className="sm:max-w-xs" />
         <div className="flex flex-col-reverse gap-3 sm:flex-row sm:justify-between">
           <Button variant="secondary" icon="x" onClick={onClose}>{t("common.cancel")}</Button>
           <Button icon="check" onClick={submit} disabled={busy || (needsNote && !note.trim())}>

@@ -1,3 +1,4 @@
+import { nowMs as clockMs } from "@/lib/clock";
 import { berlinHHMM } from "@/lib/dayplan/time";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -12,7 +13,7 @@ export async function GET() {
   const auth = await requireRole(["concierge", "front_office", "supervisor"]);
   if (!auth.ok) return auth.response;
   const excursions = await prisma.excursion.findMany({
-    where: { endsAt: { gte: new Date(Date.now() - 12 * 60 * 60_000) } },
+    where: { endsAt: { gte: new Date(clockMs() - 12 * 60 * 60_000) } },
     orderBy: { startsAt: "asc" },
     include: {
       room: {
@@ -69,6 +70,6 @@ export async function POST(req: NextRequest) {
   broadcast("excursion:update", { excursion });
   // Gast außer Haus: die heute zuständige Kraft kann das Zimmer jetzt machen. Nur Zimmer + Etage, kein Gastname.
   // Nur wenn der Ausflug schon läuft oder heute beginnt — „kommt bald zurück“ meldet der Ticker (src/lib/escalations.ts).
-  if (excursion.startsAt.getTime() - Date.now() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}`, time: `${berlinHHMM(excursion.startsAt)}–${berlinHHMM(excursion.endsAt)}` });
+  if (excursion.startsAt.getTime() - clockMs() < 12 * 60 * 60_000) await notifyHousekeeperOfRoomChange({ roomId: room.id, kind: "EXCURSION", actorId: auth.session.userId, dedupeKey: `EXCURSION:${excursion.id}`, time: `${berlinHHMM(excursion.startsAt)}–${berlinHHMM(excursion.endsAt)}` });
   return NextResponse.json({ excursion }, { status: 201 });
 }

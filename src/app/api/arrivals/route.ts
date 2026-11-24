@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -28,7 +29,7 @@ export async function GET() {
     return { ...a, room: { ...room, openNotesCount: _count.notes } };
   });
   // F3 Teil 1 (K4, H10): Vorgast noch im Zimmer? Konflikt „Anreise vor Late Check-out“? — eine Regel (previousGuest.ts)
-  const now = new Date();
+  const now = clockNow();
   const prevBy = new Map<string, Awaited<ReturnType<typeof previousGuest>>>();
   for (const roomId of new Set(arrivals.filter((a) => a.status === "EXPECTED").map((a) => a.roomId))) prevBy.set(roomId, await previousGuest(roomId, now));
   const enriched = withNoteCounts.map((a) => {

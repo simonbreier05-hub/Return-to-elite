@@ -1,4 +1,5 @@
 "use client";
+import { nowMs as clockMs } from "@/lib/clock";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
@@ -180,7 +181,7 @@ function Conversation({ channel, me, onBack, onRead }: { channel: ChannelSummary
           // F5-Nachtrag (M16): Datum im Verlauf — Trenner, wenn ein neuer Tag beginnt (Berlin)
           const dayOf = (iso: string) => new Date(iso).toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
           const newDay = idx === 0 || dayOf(messages[idx - 1].createdAt) !== dayOf(m.createdAt);
-          const canRetract = !m.retracted && !m.hidden && ((mine && Date.now() - Date.parse(m.createdAt) < RETRACT_MS) || me.role === "duty_manager");
+          const canRetract = !m.retracted && !m.hidden && ((mine && clockMs() - Date.parse(m.createdAt) < RETRACT_MS) || me.role === "duty_manager");
           return (
             <Fragment key={m.id}>
             {newDay && (

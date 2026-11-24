@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { berlinHHMM } from "@/lib/dayplan/time";
 import { arrivalBeforeLateCheckout, previousGuest } from "@/lib/rooms/previousGuest";
@@ -10,7 +11,7 @@ import { notifyFloorLeads } from "@/lib/rooms/notifyLeads";
  * bekommen Supervisor der Etage und Duty Manager eine dringende Meldung. Front Office sieht das Kennzeichen „Konflikt“
  * (`GET /api/arrivals`). Nur Zimmer und Uhrzeiten, keine Gastdaten. Einmal je Stand (Dedupe über Uhrzeiten).
  */
-export async function warnArrivalConflict(roomId: string, actorId: string | null, rush = false, now = new Date()): Promise<number> {
+export async function warnArrivalConflict(roomId: string, actorId: string | null, rush = false, now = clockNow()): Promise<number> {
   const prev = await previousGuest(roomId, now);
   if (!prev.present) return 0;
   const arrival = await prisma.arrival.findFirst({ where: { roomId, ...arrivalTodayWhere(now) }, orderBy: { eta: "asc" }, select: { eta: true, neededNow: true } });

@@ -1,4 +1,5 @@
 "use client";
+import { nowMs as clockMs } from "@/lib/clock";
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
@@ -87,7 +88,7 @@ export default function SupervisorFeed() {
           <h3 className="text-section text-text-muted">{data.house ? t("feed.titleHouse") : t("feed.title")}</h3>
           {anyNew && (
             <button type="button" className={cx("text-body-16 min-h-(--size-touch-min) px-2 text-accent-text underline underline-offset-4", FOCUS_RING)}
-              onClick={() => { const now = Date.now(); writeSeen(now); setSeenAt(now); }}>{t("feed.markRead")}</button>
+              onClick={() => { const now = clockMs(); writeSeen(now); setSeenAt(now); }}>{t("feed.markRead")}</button>
           )}
         </div>
         {data.noFloors ? <p className="text-body-16 text-text-secondary">{t("feed.noFloors")}</p>
@@ -119,7 +120,7 @@ export default function SupervisorFeed() {
         <p className="text-xs font-semibold uppercase tracking-wider text-text-muted">{data.house ? t("feed.titleHouse") : t("feed.title")}</p>
         {anyNew && (
           <button type="button" className="min-h-11 text-sm font-medium text-accent-text underline underline-offset-2"
-            onClick={() => { const now = Date.now(); writeSeen(now); setSeenAt(now); }}>{t("feed.markRead")}</button>
+            onClick={() => { const now = clockMs(); writeSeen(now); setSeenAt(now); }}>{t("feed.markRead")}</button>
         )}
       </div>
       {data.noFloors ? <p className="text-sm text-text-secondary">{t("feed.noFloors")}</p>

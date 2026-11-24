@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { loadRoomRows, isDone, listDay, type RoomRow } from "./dayRows";
 import { listTier, sortByListOrder } from "@/lib/planung/listOrder";
 import { berlinHHMM } from "@/lib/dayplan/time";
@@ -21,7 +22,7 @@ const round = (n: number) => Math.round(n * 100) / 100;
  * Planung L1 (Regel 7): Reihenfolge nach `listTier` (Rush → Service Now → Turn ausgecheckt → Bleiber → Turn noch belegt →
  * Abreise → „Reinigung ab …“), innerhalb der Stufe Laufplan (`routeOrder`, per Drag manuell änderbar).
  */
-export async function getHousekeeperList(userId: string, now: Date = new Date()): Promise<HousekeeperList> {
+export async function getHousekeeperList(userId: string, now: Date = clockNow()): Promise<HousekeeperList> {
   const date = await listDay();
   if (!date) return { date: null, progress: { done: 0, total: 0, creditsDone: 0, creditsTotal: 0 }, rooms: [] };
   // Nur heutige Arbeit: Zimmer mit Tagesplan oder heute zugeteilt (alte Zuteilungen bleiben außen vor)

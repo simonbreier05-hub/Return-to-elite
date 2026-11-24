@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow, nowMs as clockMs } from "@/lib/clock";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ApiError, NetworkError, api } from "@/components/api";
@@ -287,7 +288,7 @@ export default function AttendantView() {
     if (d?.suite) parts.push(t("hk.suite"));
     if (d?.allergy) parts.push(t("hk.allergy"));
     if (r.status === "IN_PROGRESS" && d?.startedAt) {
-      parts.push(t("hk.running", { start: time(d.startedAt), min: Math.max(0, Math.round((Date.now() - new Date(d.startedAt).getTime()) / 60_000)), target: d.estMinutes ?? 0 }));
+      parts.push(t("hk.running", { start: time(d.startedAt), min: Math.max(0, Math.round((clockMs() - new Date(d.startedAt).getTime()) / 60_000)), target: d.estMinutes ?? 0 }));
     } else if (d?.estMinutes && r.status !== "CLEAN" && r.status !== "INSPECTED") parts.push(t("hk.target", { min: d.estMinutes }));
     const out = parts.filter(Boolean).join(" · ");
     return out || null;
@@ -299,7 +300,7 @@ export default function AttendantView() {
     return listTier({
       kind: d?.kind ?? null, rush: !!d?.rush || (r.arrivals ?? []).some((a) => a.neededNow), serviceNow: !!d?.serviceNow,
       cleanAfter: d?.cleanAfter ?? null, checkedOut: !!d?.checkedOut,
-    }, berlinHHMM(new Date()));
+    }, berlinHHMM(clockNow()));
   }, [dayById]);
 
   const groups = useMemo(() => {
@@ -453,7 +454,7 @@ export default function AttendantView() {
   // F6 (Block 1.2/1.4): Restzeit „noch N Zimmer, etwa X Std“ (ruhig; Warnton nur über Schichtende) und Abmeldung bei Krankmeldung
   const openRows = items.filter((i) => i.group === "NOW" || i.group === "NEXT");
   const restMin = openRows.reduce((a, i) => a + (dayById.get(i.view.id)?.estMinutes ?? 0), 0);
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMin = clockNow().getHours() * 60 + clockNow().getMinutes();
   const [eh, em] = (list?.shiftEnd ?? "23:59").split(":").map(Number);
   const overShift = nowMin + restMin > eh * 60 + em;
   const notices = (

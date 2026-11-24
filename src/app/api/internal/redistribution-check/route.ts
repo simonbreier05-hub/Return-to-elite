@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { hasInternalSecret } from "@/lib/internalAuth";
 import { requireRole } from "@/lib/rbac";
@@ -10,5 +11,5 @@ export async function POST(req: NextRequest) {
     const auth = await requireRole(["supervisor"]);
     if (!auth.ok) return auth.response;
   }
-  return NextResponse.json(await checkRedistribution(berlinDate(new Date())));
+  return NextResponse.json(await checkRedistribution(berlinDate(clockNow())));
 }

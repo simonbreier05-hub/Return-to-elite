@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -40,7 +41,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
   const room = await prisma.room.update({
     where: { id },
-    data: { assignedToId: parsed.data.attendantId, assignedOn: parsed.data.attendantId ? berlinDate(new Date()) : null },
+    data: { assignedToId: parsed.data.attendantId, assignedOn: parsed.data.attendantId ? berlinDate(clockNow()) : null },
     include: { assignedTo: { select: { id: true, name: true, dailyNumber: true } } },
   });
   await audit({

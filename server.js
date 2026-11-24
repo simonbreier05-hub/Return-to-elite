@@ -105,5 +105,9 @@ app.prepare().then(() => {
 
   httpServer.listen(port, hostname, () => {
     console.log(`> StayClean ready on http://localhost:${port} (${dev ? "dev" : "prod"})`);
+    // S0: Simulationsuhr nach einem Neustart sofort aus der DB laden (vor dem ersten Ticker-Lauf). Ohne Simulation ein No-op.
+    if (process.env.SIMULATION_MODE === "true") {
+      fetch(`http://127.0.0.1:${port}/api/sim/clock`).catch((err) => console.error("[sim-clock] load failed:", err.message));
+    }
   });
 });

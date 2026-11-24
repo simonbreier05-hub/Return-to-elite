@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
@@ -64,7 +65,7 @@ export async function moveRoomBetweenAttendants(
   const nextRouteOrder = targetRooms.reduce((max, r) => Math.max(max, r.routeOrder ?? -1), -1) + 1;
 
   const [updated] = await prisma.$transaction([
-    updateRoom(roomId, { assignedToId: toAttendantId, routeOrder: nextRouteOrder, assignedOn: berlinDate(new Date()) }),
+    updateRoom(roomId, { assignedToId: toAttendantId, routeOrder: nextRouteOrder, assignedOn: berlinDate(clockNow()) }),
     ...sourceSiblings.map((r, index) => prisma.room.update({ where: { id: r.id }, data: { routeOrder: index } })),
   ]);
 

@@ -1,4 +1,5 @@
 "use client";
+import { nowMs as clockMs } from "@/lib/clock";
 
 import { useMemo, useState, type ReactNode } from "react";
 import type { TKey } from "@/lib/i18n/translations";
@@ -49,7 +50,7 @@ export function ConciergeHub(p: ConciergeHubProps) {
   const { t } = useLocale();
   const [filter, setFilter] = useState<CcFilter>("all");
   const [newOpen, setNewOpen] = useState(!!p.newOpen);
-  const now = p.now ?? Date.now();
+  const now = p.now ?? clockMs();
 
   const sorted = useMemo(() => sortExcursions(p.excursions, now), [p.excursions, now]);
   const counts = ccFilterCounts(sorted, now);

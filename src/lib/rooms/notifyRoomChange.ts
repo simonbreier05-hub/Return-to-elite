@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { notifyFloorSupervisors } from "./notifyFloorSupervisors";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
@@ -49,10 +50,10 @@ export function roomChangeMessage(room: { number: string; floor: number }, kind:
 export async function notifyHousekeeperOfRoomChange(opts: { roomId: string; kind: RoomChangeKind; actorId?: string | null; now?: Date; skipUserId?: string | null; dedupeKey?: string; time?: string }): Promise<string | null> {
   try {
     const room = await prisma.room.findUnique({ where: { id: opts.roomId }, select: { id: true, number: true, floor: true, assignedToId: true, assignedOn: true } });
-    if (!room?.assignedToId || room.assignedOn !== berlinDate(opts.now ?? new Date()) || room.assignedToId === opts.actorId || room.assignedToId === opts.skipUserId) return null;
+    if (!room?.assignedToId || room.assignedOn !== berlinDate(opts.now ?? clockNow()) || room.assignedToId === opts.actorId || room.assignedToId === opts.skipUserId) return null;
     if (opts.dedupeKey && (await prisma.notification.findFirst({ where: { dedupeKey: opts.dedupeKey }, select: { id: true } }))) return null;
     // F6 (M20): krank/abwesend gemeldete Kraft bekommt nichts — die Meldung geht mit Hinweis an den Supervisor der Etage
-    const today = berlinDate(opts.now ?? new Date());
+    const today = berlinDate(opts.now ?? clockNow());
     const hk = await prisma.user.findUnique({ where: { id: room.assignedToId }, select: { name: true, sickDate: true, absentDate: true } });
     if (hk && (hk.sickDate === today || hk.absentDate === today)) {
       await notifyFloorSupervisors({

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 /**
  * Reine Logik des Planungstools (/planung): Haus-Kacheln, Etagenbalken, Stepper- und Dateizustände.
  * Keine DB, kein React — dadurch testbar und von Server und Client gleich genutzt.
@@ -112,7 +113,7 @@ export function listsReady(applied: Record<string, boolean>): boolean {
 
 /** "DIENSTAG, 22.09.2026" — Kalendertag unabhängig von der Zeitzone des Rechners. */
 export function dateLabel(iso: string | null, locale = "de-DE"): string {
-  const d = iso ? new Date(`${iso}T12:00:00Z`) : new Date();
+  const d = iso ? new Date(`${iso}T12:00:00Z`) : clockNow();
   return d.toLocaleDateString(locale, { weekday: "long", day: "2-digit", month: "2-digit", year: "numeric", timeZone: iso ? "UTC" : "Europe/Berlin" }).replace(", ", ", ").toUpperCase();
 }
 

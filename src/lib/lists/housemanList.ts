@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import { listDay, type Kind } from "./dayRows";
@@ -103,12 +104,12 @@ export async function setHousemanTraceStatus(traceId: string, status: "OPEN" | "
   const t = await prisma.trace.findUnique({ where: { id: traceId }, include: { room: { select: { number: true } } } });
   if (!t || t.dept !== "HOUSEMAN") return null;
   if (t.status === status) return { trace: t, changed: false, roomTaskId: t.roomTaskId, roomNumber: t.room.number };
-  const trace = await prisma.trace.update({ where: { id: t.id }, data: { status, doneAt: status === "DONE" ? new Date() : null } });
+  const trace = await prisma.trace.update({ where: { id: t.id }, data: { status, doneAt: status === "DONE" ? clockNow() : null } });
   if (t.roomTaskId) {
     await prisma.roomTask.update({
       where: { id: t.roomTaskId },
       data: status === "DONE"
-        ? { status: "DONE", doneAt: new Date(), ...(actor.role === "houseman" ? { assignedToId: actor.userId } : {}) }
+        ? { status: "DONE", doneAt: clockNow(), ...(actor.role === "houseman" ? { assignedToId: actor.userId } : {}) }
         : { status: "OPEN", doneAt: null },
     }).catch(() => null);
   }

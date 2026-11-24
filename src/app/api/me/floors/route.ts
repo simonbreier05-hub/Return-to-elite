@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextResponse } from "next/server";
 import { requireAuth } from "@/lib/rbac";
 import { prisma } from "@/lib/db";
@@ -9,6 +10,6 @@ export async function GET() {
   const auth = await requireAuth();
   if (!auth.ok) return auth.response;
   const u = await prisma.user.findUnique({ where: { id: auth.session.userId }, select: { role: true, assignedFloors: true, floorsOn: true } });
-  const floors = !u ? [] : u.role === "supervisor" || u.floorsOn === berlinDate(new Date()) ? parseAssignedFloors(u.assignedFloors) : [];
+  const floors = !u ? [] : u.role === "supervisor" || u.floorsOn === berlinDate(clockNow()) ? parseAssignedFloors(u.assignedFloors) : [];
   return NextResponse.json({ floors });
 }

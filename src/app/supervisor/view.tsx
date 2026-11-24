@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow, nowMs as clockMs } from "@/lib/clock";
 
 import RoomWindowActions from "@/components/roles/RoomWindowActions";
 import LiveRoomModal from "@/components/lists/LiveRoomModal";
@@ -188,7 +189,7 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
     },
     "attendant:location": (p: { userId: string; roomId: string }) => {
       setAttendants((prev) =>
-        prev.map((a) => (a.id === p.userId ? { ...a, currentRoomId: p.roomId, lastSeenAt: new Date().toISOString() } : a))
+        prev.map((a) => (a.id === p.userId ? { ...a, currentRoomId: p.roomId, lastSeenAt: clockNow().toISOString() } : a))
       );
     },
     // S1: Live-Nachricht ohne Notiztext — den Text lädt die geschützte API nach.
@@ -353,9 +354,9 @@ export default function SupervisorView({ isDutyManager, mode = "home" }: { isDut
       rooms={sortReleaseQueue(releaseQueue.map((r) => ({
         id: r.id,
         number: r.number,
-        waitingMin: Math.round((Date.now() - new Date(r.statusSince).getTime()) / 60000),
+        waitingMin: Math.round((clockMs() - new Date(r.statusSince).getTime()) / 60000),
         // F6 (M11): die dringendste Anreise des Zimmers zählt (Sofort vor früher Zeit)
-        arrival: [...r.arrivals].filter((a) => !a.eta || Date.now() - new Date(a.eta).getTime() < 12 * 3_600_000).sort((a, b) => Number(b.neededNow) - Number(a.neededNow) || (a.eta ?? "9").localeCompare(b.eta ?? "9"))[0] ?? null,
+        arrival: [...r.arrivals].filter((a) => !a.eta || clockMs() - new Date(a.eta).getTime() < 12 * 3_600_000).sort((a, b) => Number(b.neededNow) - Number(a.neededNow) || (a.eta ?? "9").localeCompare(b.eta ?? "9"))[0] ?? null,
       })))}
       busyRoomId={busyRoomId}
       onRelease={(id) => { const room = roomById.get(id); if (room) void act(room, "INSPECTED"); }}

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -10,7 +11,7 @@ import { berlinDate } from "@/lib/dayplan/time";
 export async function GET() {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
-  const today = berlinDate(new Date());
+  const today = berlinDate(clockNow());
   const users = await prisma.user.findMany({
     where: { role: "room_attendant" }, orderBy: { name: "asc" },
     select: { id: true, name: true, hkType: true, hkLevel: true, homeFloors: true, dailyTarget: true, hkActive: true, absentDate: true, hkRestrictions: true },

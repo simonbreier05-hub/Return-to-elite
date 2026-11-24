@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow, nowMs as clockMs } from "@/lib/clock";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
@@ -14,7 +15,7 @@ import { ccKpis, normalizeExcursion, type ExcursionView } from "@/lib/ui/concier
 /** „HH:MM“ → Zeitpunkt heute (Gerätezeit, wie bisher). */
 const timeToIso = (hhmm: string) => {
   const [h, m] = hhmm.split(":").map(Number);
-  const d = new Date();
+  const d = clockNow();
   d.setHours(h, m, 0, 0);
   return d.toISOString();
 };
@@ -29,7 +30,7 @@ export default function ConciergeView() {
   const [raw, setRaw] = useState<unknown[] | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => clockMs());
   const roomLookup = useRoomLookup();
 
   const load = useCallback(async () => {
@@ -46,7 +47,7 @@ export default function ConciergeView() {
   }, [load]);
   // Zustand (außer Haus / kommt bald zurück) hängt an der Uhr: einmal pro Minute neu berechnen.
   useEffect(() => {
-    const id = setInterval(() => setNow(Date.now()), 60_000);
+    const id = setInterval(() => setNow(clockMs()), 60_000);
     return () => clearInterval(id);
   }, []);
 

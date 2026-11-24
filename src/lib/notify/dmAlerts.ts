@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { keyed } from "@/lib/i18n/notificationText";
@@ -37,7 +38,7 @@ export async function staffing(date: string) {
  * Krankmeldung (Entscheidung Frage 9: immer direkt an den DM, keine Rückfrage). Annahme: Supervisoren der Etagen der offenen
  * Zimmer werden ebenfalls informiert. Danach Personal neu rechnen → „Personal reicht nicht“, wenn zu wenige da sind.
  */
-export async function alertSick(hkId: string, now = new Date()): Promise<number> {
+export async function alertSick(hkId: string, now = clockNow()): Promise<number> {
   const date = berlinDate(now);
   const u = await prisma.user.findUnique({ where: { id: hkId }, select: { name: true } });
   if (!u) return 0;
@@ -59,7 +60,7 @@ export async function alertSick(hkId: string, now = new Date()): Promise<number>
  * „Fortschritt hinter Plan“: geschätzte Restzeit der offenen Zimmer (Credits × Minuten je Credit) größer als die Restkapazität
  * der heute arbeitenden Kräfte bis Schichtende. Nur zwischen Arbeitsbeginn und Schichtende, höchstens einmal je Stunde.
  */
-export async function alertBehindPlan(now = new Date()): Promise<number> {
+export async function alertBehindPlan(now = clockNow()): Promise<number> {
   const date = berlinDate(now);
   const s = await getSettings();
   const start = berlinToUtc(date, `${String(s.workStartHour).padStart(2, "0")}:00`);
@@ -85,7 +86,7 @@ export async function alertBehindPlan(now = new Date()): Promise<number> {
 }
 
 /** VIP-Anreise: Zimmer wird erst nach der geplanten Ankunftszeit freigegeben → DM (ohne Gastnamen). */
-export async function alertVipLate(room: { id: string; number: string }, arrival: { id: string; vip: boolean; eta: Date | null }, now = new Date()): Promise<number> {
+export async function alertVipLate(room: { id: string; number: string }, arrival: { id: string; vip: boolean; eta: Date | null }, now = clockNow()): Promise<number> {
   if (!arrival.vip || !arrival.eta || arrival.eta >= now) return 0;
   const late = Math.round((now.getTime() - arrival.eta.getTime()) / 60_000);
   return create({ type: "VIP_RELEASE_LATE", targetRole: "duty_manager", roomId: room.id, message: `VIP-Zimmer ${room.number} ${late} Min. nach der Ankunftszeit freigegeben.`,

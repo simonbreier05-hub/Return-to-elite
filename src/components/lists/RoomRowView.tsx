@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { IconBan, IconBroom, IconClock, IconLaundry, IconMoon, IconPerson, IconSuitcase, IconWrench, StatusIcon } from "@/components/icons";
 import { mainLabel, markers, type MainLabel } from "@/lib/lists/rowLabels";
@@ -88,7 +89,7 @@ export default function RoomRowView({ room, highlight = false, showDept = false,
   const style = STATUS_STYLES[room.status as RoomStatus];
   const traces = Array.isArray(room.traces) ? room.traces : [];
   const openTraces = traces.filter((x) => x.status === "OPEN");
-  const wp = workProgress(room.startedAt, room.estMinutes ?? 0, new Date());
+  const wp = workProgress(room.startedAt, room.estMinutes ?? 0, clockNow());
   return (
     <li data-room={room.number} data-highlight={highlight ? "1" : undefined}
       className={`rounded-(--glass-radius-md) border border-s-4 bg-surface-progress-track transition-shadow duration-500 ${LABEL_STYLE[label].edge} ${highlight ? "border-gold shadow-[0_0_0_3px_rgba(169,132,63,0.35)]" : "border-border-subtle"}`}>

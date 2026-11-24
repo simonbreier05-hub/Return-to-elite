@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { getSettings } from "@/lib/settings";
 import { berlinToday } from "@/lib/import/businessDay";
@@ -38,7 +39,7 @@ export async function currentStayForRoom(roomId: string) {
  */
 export async function isStayTokenValid(
   stay: { status: string; checkIn: Date; checkOut: Date },
-  now: Date = new Date()
+  now: Date = clockNow()
 ): Promise<boolean> {
   if (stay.status === "CANCELLED" || stay.status === "CHECKED_OUT") return false;
   if (berlinToday(now) < berlinToday(stay.checkIn)) return false;

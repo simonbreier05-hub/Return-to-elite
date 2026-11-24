@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useMemo, useState } from "react";
 import { api, ApiError, NetworkError } from "@/components/api";
@@ -123,13 +124,13 @@ function GuestScreen({
     month: "short",
     year: "numeric",
     timeZone: "Europe/Berlin",
-  }).format(new Date());
+  }).format(clockNow());
 
   const dndHint = activeDnd
     ? [t("dndActive.short"), dndDetail.window ? t(`dndWindow.${dndDetail.window}` as GuestTKey) : null].filter(Boolean).join(" · ")
     : undefined;
 
-  const greenToday = items.some((i) => i.kind === "GREEN" && i.status !== "CANCELLED" && new Date(i.createdAt).toDateString() === new Date().toDateString());
+  const greenToday = items.some((i) => i.kind === "GREEN" && i.status !== "CANCELLED" && new Date(i.createdAt).toDateString() === clockNow().toDateString());
   const tiles: { kind: Exclude<ModalKind, null>; icon: IconName; title: string; ariaLabel: string; active?: boolean; hint?: string }[] = [
     activeDnd
       ? {

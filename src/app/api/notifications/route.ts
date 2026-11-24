@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -86,7 +87,7 @@ export async function PATCH(req: NextRequest) {
   const { userId } = auth.session;
   // Nur Meldungen, die ich sehen darf; schon gelesene (von mir oder Altbestand) auslassen.
   const unread = await prisma.notification.findMany({
-    where: { ...scopeFor(auth.session), ...("id" in parsed.data ? { id: parsed.data.id } : {}), ...("olderThanToday" in parsed.data ? { createdAt: { lt: berlinToUtc(berlinDate(new Date()), "00:00") } } : {}), acknowledged: false, reads: { none: { userId } } },
+    where: { ...scopeFor(auth.session), ...("id" in parsed.data ? { id: parsed.data.id } : {}), ...("olderThanToday" in parsed.data ? { createdAt: { lt: berlinToUtc(berlinDate(clockNow()), "00:00") } } : {}), acknowledged: false, reads: { none: { userId } } },
     select: { id: true },
   });
   if (unread.length) {

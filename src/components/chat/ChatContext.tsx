@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
@@ -28,7 +29,7 @@ export function asChatMessage(p: unknown): ChatMessageView | null {
   if (!m || typeof m.id !== "string" || typeof m.channelId !== "string" || !m.author || typeof m.author.id !== "string") return null;
   return {
     id: m.id, channelId: m.channelId, body: typeof m.body === "string" ? m.body : "", originalLanguage: m.originalLanguage ?? "",
-    urgent: !!m.urgent, createdAt: typeof m.createdAt === "string" ? m.createdAt : new Date().toISOString(),
+    urgent: !!m.urgent, createdAt: typeof m.createdAt === "string" ? m.createdAt : clockNow().toISOString(),
     author: { id: m.author.id, name: m.author.name ?? "", role: m.author.role ?? "" }, retracted: !!m.retracted, hidden: !!m.hidden,
   };
 }

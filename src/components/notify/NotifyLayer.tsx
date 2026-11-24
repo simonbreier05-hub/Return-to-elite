@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
@@ -126,7 +127,7 @@ function NotifyPanel() {
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   useEscapeKey(() => setOpen(false), open);
   if (!open) return null;
-  const today = new Date().toDateString();
+  const today = clockNow().toDateString();
   const when = (iso: string | Date) => (new Date(iso).toDateString() === today ? fmt.time(iso) : fmt.dateTime(new Date(iso)));
   const visible = urgentOnly ? ctx.notifications.filter(isUrgentNotification) : ctx.notifications;
   const hasOld = ctx.notifications.some((n) => new Date(n.createdAt).toDateString() !== today && isUnreadMine(n, ctx.me));

@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/components/api";
@@ -170,7 +171,7 @@ export function usePlanningFloorPlan({
 
   // Category + laundry-due + credit, computed once per live room per render
   // so the grid, the credits rail and the linen list all agree.
-  const now = useMemo(() => new Date(), [liveRooms]);
+  const now = useMemo(() => clockNow(), [liveRooms]);
   const roomFacts = useMemo(() => {
     const credits = settings?.roomTypeCredits ?? {};
     const draftCredit = new Map((draft?.rooms ?? []).map((r) => [r.id, r.credits]));
@@ -249,7 +250,7 @@ ${t("assign.warnConfirm")}`)) {
   };
 
   const markLinenChanged = async (roomId: string) => {
-    setLiveRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, lastLinenChangeAt: new Date().toISOString() } : r)));
+    setLiveRooms((prev) => prev.map((r) => (r.id === roomId ? { ...r, lastLinenChangeAt: clockNow().toISOString() } : r)));
     try {
       await api(`/api/rooms/${roomId}/linen`, { body: {} });
     } catch (e) {

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -40,7 +41,7 @@ export async function proposeForDate(date: string, userId: string, attendantIds?
     message: `Anreise in gesperrtes Zimmer: ${blockedArrivals.map((b) => b.room.number).sort().join(", ")} — bitte Zimmer tauschen oder Sperre aufheben.`,
   });
   await prisma.autoPlanProposal.updateMany({ where: { date, status: "DRAFT" }, data: { status: "SUPERSEDED" } });
-  const payload: ProposalPayload = { input, result, generatedAt: new Date().toISOString() };
+  const payload: ProposalPayload = { input, result, generatedAt: clockNow().toISOString() };
   const row = await prisma.autoPlanProposal.create({ data: { date, createdById: userId, payload: JSON.stringify(payload) } });
   await audit({ action: "AUTOPLAN_PROPOSED", userId, meta: { date, rooms: input.rooms.length, housekeepers: input.housekeepers.length, unassigned: result.unassigned.length, warnings: result.warnings.length, ms: Date.now() - t0 } });
   return { proposalId: row.id, payload };
@@ -143,7 +144,7 @@ export async function confirmProposal(proposalId: string, final: Assignment, ses
     ...numbers.map((n) => prisma.user.update({ where: { id: n.id }, data: { dailyNumber: n.dailyNumber } })),
     ...hmFinal.map((a) => prisma.trace.update({ where: { id: a.traceId }, data: { assignedToId: a.userId } })),
     prisma.autoPlanProposal.updateMany({ where: { date: row.date, status: "CONFIRMED" }, data: { status: "SUPERSEDED" } }),
-    prisma.autoPlanProposal.update({ where: { id: row.id }, data: { status: "CONFIRMED", confirmedAt: new Date(), confirmedById: session.userId, deviations: JSON.stringify(deviations.map((d) => ({ ...d, at: new Date().toISOString() }))) } }),
+    prisma.autoPlanProposal.update({ where: { id: row.id }, data: { status: "CONFIRMED", confirmedAt: clockNow(), confirmedById: session.userId, deviations: JSON.stringify(deviations.map((d) => ({ ...d, at: clockNow().toISOString() }))) } }),
   ]);
   // H3: Abweichungen fürs Lernen (Zimmer verschoben/zurückgestellt), ohne Namen
   await recordRoomDeviations(row.date, deviations, input.housekeepers.length).catch(() => 0);
@@ -242,7 +243,7 @@ export async function decideSuggestion(id: string, action: "confirm" | "reject",
   const row = await prisma.redistributionSuggestion.findUnique({ where: { id } });
   if (!row || row.status !== "OPEN") throw new Error("Vorschlag ist nicht mehr offen.");
   if (action === "reject") {
-    await prisma.redistributionSuggestion.update({ where: { id }, data: { status: "REJECTED", decidedAt: new Date(), decidedById: session.userId } });
+    await prisma.redistributionSuggestion.update({ where: { id }, data: { status: "REJECTED", decidedAt: clockNow(), decidedById: session.userId } });
     await audit({ action: "REDISTRIBUTION_REJECTED", userId: session.userId, meta: { date: row.date, kind: row.kind } });
     return { applied: 0, skipped: 0 };
   }
@@ -266,7 +267,7 @@ export async function decideSuggestion(id: string, action: "confirm" | "reject",
     }
     applied++; rooms.push(room.number);
   }
-  await prisma.redistributionSuggestion.update({ where: { id }, data: { status: "CONFIRMED", decidedAt: new Date(), decidedById: session.userId } });
+  await prisma.redistributionSuggestion.update({ where: { id }, data: { status: "CONFIRMED", decidedAt: clockNow(), decidedById: session.userId } });
   await audit({ action: "REDISTRIBUTION_CONFIRMED", userId: session.userId, meta: { date: row.date, kind: row.kind, rooms, changed: !!override?.length, skipped } });
   broadcast("assignments:applied", { by: session.name, totalRooms: applied });
   await checkRedistribution(row.date);
@@ -274,7 +275,7 @@ export async function decideSuggestion(id: string, action: "confirm" | "reject",
 }
 
 /** Ein Tap: Housekeeper heute abwesend (oder wieder da). Löst die Prüfung auf Umverteilung aus. */
-export async function setAbsent(hkId: string, absent: boolean, userId: string, now = new Date()) {
+export async function setAbsent(hkId: string, absent: boolean, userId: string, now = clockNow()) {
   const date = berlinDate(now);
   const u = await prisma.user.findUnique({ where: { id: hkId } });
   if (!u || u.role !== "room_attendant") throw new Error("Housekeeper nicht gefunden.");

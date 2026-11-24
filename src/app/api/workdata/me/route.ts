@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextResponse } from "next/server";
 import { requireRole } from "@/lib/rbac";
 import { berlinDate } from "@/lib/dayplan/time";
@@ -7,6 +8,6 @@ import { loadWorkData, statsFor } from "@/lib/workdata/load";
 export async function GET() {
   const auth = await requireRole(["room_attendant"]);
   if (!auth.ok) return auth.response;
-  const set = await loadWorkData(berlinDate(new Date()));
+  const set = await loadWorkData(berlinDate(clockNow()));
   return NextResponse.json({ since: set.since, minSamples: set.minSamples, stats: statsFor(set, auth.session.userId) });
 }

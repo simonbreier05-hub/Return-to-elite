@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -43,7 +44,7 @@ export async function POST(req: NextRequest) {
     const warnings = await assignWarnings(attendantId, changing.map((r) => r.id));
     if (warnings.length) return NextResponse.json({ error: warnings.map((w) => w.message).join(" "), code: "ASSIGN_WARNINGS", warnings }, { status: 409 });
   }
-  const today = berlinDate(new Date());
+  const today = berlinDate(clockNow());
   const nextOrder = attendantId
     ? ((await prisma.room.aggregate({ where: { assignedToId: attendantId }, _max: { routeOrder: true } }))._max.routeOrder ?? -1) + 1
     : 0;

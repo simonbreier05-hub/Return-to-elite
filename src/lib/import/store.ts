@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -91,7 +92,7 @@ export async function applyBatch(batchId: string, userId: string) {
       if (rows.length) await tx.forecastDay.createMany({ data: rows.map((d) => ({ ...d, batchId: batch.id })) });
       await tx.importRow.deleteMany({ where: { batchId: batch.id, kind: "FORECAST" } }); // Zählwerte liegen jetzt in ForecastDay
     }
-    await tx.importBatch.update({ where: { id: batch.id }, data: { status: "APPLIED", appliedAt: new Date() } });
+    await tx.importBatch.update({ where: { id: batch.id }, data: { status: "APPLIED", appliedAt: clockNow() } });
     return old.count;
   }, { timeout: APPLY_TIMEOUT_MS, maxWait: APPLY_TIMEOUT_MS });
   // Protokoll ohne Gastnamen: nur Typ, Tag, Anzahl.
@@ -105,7 +106,7 @@ export async function rejectBatch(batchId: string, userId: string) {
 }
 
 /** Server-Gate: fehlende und unbestätigt veraltete Listen (nur übernommene Stände zählen, Betriebstag = Berlin heute). */
-export async function listBlockersNow(now = new Date()) {
+export async function listBlockersNow(now = clockNow()) {
   return listBlockers(await dataStatus(), berlinToday(now));
 }
 
@@ -113,7 +114,7 @@ export async function listBlockersNow(now = new Date()) {
 export async function acceptStaleList(type: ImportType, userId: string) {
   const b = await prisma.importBatch.findFirst({ where: { type, status: "APPLIED" }, orderBy: { appliedAt: "desc" } });
   if (!b) throw new Error("Diese Liste ist nicht übernommen.");
-  await prisma.importBatch.update({ where: { id: b.id }, data: { staleAcceptedAt: new Date(), staleAcceptedById: userId } });
+  await prisma.importBatch.update({ where: { id: b.id }, data: { staleAcceptedAt: clockNow(), staleAcceptedById: userId } });
   await audit({ action: "IMPORT_STALE_ACCEPTED", userId, meta: { batchId: b.id, type, businessDate: b.businessDate, today: berlinToday() } });
   return b.businessDate;
 }
