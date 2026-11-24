@@ -148,6 +148,8 @@ const en = {
   },
   error: {
     generic: "Sorry, that didn't work.",
+    rateLimited: "Too many requests in a short time. Please try again a little later.",
+    unavailable: "This service is no longer available for your stay.",
   },
   offline: {
     noConnection: "No connection",
@@ -301,6 +303,8 @@ const de = {
   },
   error: {
     generic: "Das hat leider nicht geklappt.",
+    rateLimited: "Zu viele Anfragen in kurzer Zeit. Bitte versuchen Sie es etwas später noch einmal.",
+    unavailable: "Dieser Service steht für Ihren Aufenthalt nicht mehr zur Verfügung.",
   },
   offline: {
     noConnection: "Keine Verbindung",

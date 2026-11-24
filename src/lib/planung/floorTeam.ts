@@ -175,9 +175,12 @@ export function floorWarnings(loads: FloorLoad[], people: Person[], assign: Floo
   for (const p of people) {
     if (p.role === "HK" && (assign[p.id]?.length ?? 0) > FLOOR_MAX_SOFT) out.push({ code: "HK_TOO_MANY_FLOORS", userId: p.id });
   }
+  // F9 (N3): Housekeeper-Warnungen nur, wenn überhaupt Housekeeper eingeteilt werden (im Planungstool nicht mehr)
+  const withHk = people.some((p) => p.role === "HK");
   for (const l of loads) {
     const on = people.filter((p) => (assign[p.id] ?? []).includes(l.floor));
     if (!on.some((p) => p.role === "SUP")) out.push({ code: "FLOOR_NO_SUP", floor: l.floor });
+    if (!withHk) continue;
     if (l.rooms > 0 && !on.some((p) => p.role === "HK")) out.push({ code: "FLOOR_NO_HK", floor: l.floor });
     const share = l.rooms ? l.demanding / l.rooms : 0;
     if (l.demanding > 0 && share >= demandingShare) {

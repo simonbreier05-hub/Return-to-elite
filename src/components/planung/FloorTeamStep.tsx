@@ -7,7 +7,8 @@ import { hm } from "@/lib/workdata/stats";
 import type { FloorPerson, FloorTeamState } from "@/lib/planung/floorTeamData";
 import type { TKey } from "@/lib/i18n/translations";
 
-const ROLES: TeamRole[] = ["SUP", "HK", "HM"];
+/** F9 (N3): nur Supervisoren und Hausmänner — Housekeeper richten sich nach ihren Präferenz-Etagen (Einstellungen). */
+const ROLES: TeamRole[] = ["SUP", "HM"];
 const ROLE_ICON: Record<TeamRole, string> = { SUP: "◆", HK: "●", HM: "▲" };
 const TONE_ICON = { ok: "✓", high: "▲", low: "▼", none: "✕" } as const;
 const TONE_CLASS = { ok: "border-status-clean/50 text-status-clean", high: "border-brass-light text-brass-ink", low: "border-line-2 text-pl-muted", none: "border-brass-light text-brass-ink" } as const;
@@ -124,7 +125,7 @@ export default function FloorTeamStep(p: FloorTeamProps) {
                       <span className="block text-sm font-semibold">{t("planungTool.floorN", { n: f })} · <span className="font-normal text-pl-muted">{t("planungTool.ftRoomsCredits", { rooms: l.rooms, credits: l.credits })}</span></span>
                       <span className="block text-label text-pl-muted">{t("planungTool.ftDepStay", { dep: l.departures, stay: l.stayovers })}</span>
                     </span>
-                    {k && l.rooms > 0 && (
+                    {k && l.rooms > 0 && k.roomsPerHk !== null && (
                       <span className={`shrink-0 rounded-full border px-2 py-1 text-label ${TONE_CLASS[k.tone]}`}>
                         <span aria-hidden>{TONE_ICON[k.tone]} </span>
                         {k.roomsPerHk === null ? t("planungTool.ftToneNone") : t("planungTool.ftPerHk", { n: k.roomsPerHk, lo: k.targetLo, hi: k.targetHi })}

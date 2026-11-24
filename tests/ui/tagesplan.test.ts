@@ -98,12 +98,14 @@ describe("Hinweise", () => {
     const many = Array.from({ length: 16 }, (_, i) => room(`r${i}`, (i % 3) + 1, "tidy", "a"));
     const rooms = [...many, room("x1", 4, "turn", "b"), room("x2", 4, "tidy", null, 0.5, true)];
     const crew = crewSummaries([{ id: "a", name: "Testkraft A" }, { id: "b", name: "Testkraft B" }], rooms);
-    const hints = planHints({ crew, rooms, levelWarnings: [{ code: "LEVEL1_DEMANDING", hkId: "b", roomIds: ["x1"] }, { code: "TOO_FEW_STAFF" }] });
-    expect(hints.map((h) => h.kind)).toEqual(["overload", "floors", "level", "unassigned"]);
-    expect(hints[0]).toMatchObject({ crewId: "a", count: 16 });
-    expect(hints[1]).toMatchObject({ crewId: "a", floors: [1, 2, 3] });
-    expect(hints[2]).toMatchObject({ crewId: "b", floor: 4 });
-    expect(hints[3]).toMatchObject({ count: 1, floor: 4, roomIds: ["x2"] });
+    const hints = planHints({ crew, rooms, levelWarnings: [{ code: "LEVEL1_DEMANDING", hkId: "b", roomIds: ["x1"] }, { code: "TOO_FEW_STAFF", message: "Personal reicht nicht" }, { code: "FLOAT", message: "1 Zimmer im Float" }] });
+    // F9 (A7/N1): Float ganz oben; übrige Vorschlags-Hinweise zählen mit (vorher „0 Hinweise“), FLOAT nicht doppelt
+    expect(hints.map((h) => h.kind)).toEqual(["unassigned", "overload", "floors", "level", "plan"]);
+    expect(hints[0]).toMatchObject({ count: 1, floor: 4, roomIds: ["x2"] });
+    expect(hints[1]).toMatchObject({ crewId: "a", count: 16 });
+    expect(hints[2]).toMatchObject({ crewId: "a", floors: [1, 2, 3] });
+    expect(hints[3]).toMatchObject({ crewId: "b", floor: 4 });
+    expect(hints[4]).toMatchObject({ text: "Personal reicht nicht" });
   });
   it("Level-Konflikt verschwindet, wenn das Zimmer die Kraft gewechselt hat", () => {
     const rooms = [room("x1", 4, "turn", "a")];

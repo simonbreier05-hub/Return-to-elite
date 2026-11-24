@@ -41,7 +41,8 @@ describe("Umverteilung bei Ausfall", () => {
     for (const m of s.moves) after[m.roomId] = m.toId;
     for (const h of l.present) {
       const mine = l.rooms.filter((r) => after[r.id] === h.id);
-      expect(mine.reduce((a, r) => a + r.credits, 0), h.id).toBeLessThan(21);
+      // Plan-1b: gemessen wird an der Zimmerzahl (Credits nur Gegenprobe) — höchstens 2 über dem fairen Anteil der Anwesenden
+      expect(mine.length, h.id).toBeLessThanOrEqual(Math.ceil(l.rooms.length / l.present.length) + 2);
     }
   });
 

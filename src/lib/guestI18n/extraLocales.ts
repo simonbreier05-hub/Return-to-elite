@@ -57,7 +57,7 @@ export const it: GuestDict = {
     RECEIVED: "Ricevuta", IN_PROGRESS: "In corso", DONE: "Completata", FIXED: "Risolto", CANCELLED: "Annullata",
     kind: { DND: "Non disturbare", CLEAN_REQUEST: "Richiesta di pulizia", CONTACT: "Contatto reparto", DEFECT: "Problema segnalato", NOTE: "Messaggio", GREEN: "Green Option" },
   },
-  error: { generic: "Spiacenti, non ha funzionato." },
+  error: { generic: "Spiacenti, non ha funzionato.", rateLimited: "Troppe richieste in poco tempo. Riprovi tra poco.", unavailable: "Questo servizio non è più disponibile per il suo soggiorno." },
   offline: {
     noConnection: "Nessuna connessione", canKeepWorking: "Può continuare — invieremo appena torna la connessione.", sending: "Invio",
     actionWaiting: "richiesta in attesa", actionsWaiting: "richieste in attesa", savedLocally: "Salvato su questo dispositivo.", tryNow: "Riprova ora",
@@ -117,7 +117,7 @@ export const tr: GuestDict = {
     RECEIVED: "Alındı", IN_PROGRESS: "İşlemde", DONE: "Tamamlandı", FIXED: "Giderildi", CANCELLED: "İptal edildi",
     kind: { DND: "Rahatsız etmeyin", CLEAN_REQUEST: "Temizlik isteği", CONTACT: "Departman iletişimi", DEFECT: "Bildirilen arıza", NOTE: "Mesaj", GREEN: "Green Option" },
   },
-  error: { generic: "Üzgünüz, bu işlem olmadı." },
+  error: { generic: "Üzgünüz, bu işlem olmadı.", rateLimited: "Kısa sürede çok fazla istek. Lütfen biraz sonra tekrar deneyin.", unavailable: "Bu hizmet konaklamanız için artık kullanılamıyor." },
   offline: {
     noConnection: "Bağlantı yok", canKeepWorking: "Dokunmaya devam edebilirsiniz — bağlantı gelince göndereceğiz.", sending: "Gönderiliyor",
     actionWaiting: "istek bekliyor", actionsWaiting: "istek bekliyor", savedLocally: "Bu cihazda kaydedildi.", tryNow: "Şimdi dene",
@@ -177,7 +177,7 @@ export const fa: GuestDict = {
     RECEIVED: "دریافت شد", IN_PROGRESS: "در حال انجام", DONE: "انجام شد", FIXED: "برطرف شد", CANCELLED: "لغو شد",
     kind: { DND: "مزاحم نشوید", CLEAN_REQUEST: "درخواست نظافت", CONTACT: "تماس با بخش", DEFECT: "خرابی گزارش‌شده", NOTE: "پیام", GREEN: "Green Option" },
   },
-  error: { generic: "متأسفیم، انجام نشد." },
+  error: { generic: "متأسفیم، انجام نشد.", rateLimited: "درخواست‌های زیادی در زمان کوتاه. لطفاً کمی بعد دوباره تلاش کنید.", unavailable: "این خدمت دیگر برای اقامت شما در دسترس نیست." },
   offline: {
     noConnection: "اتصال برقرار نیست", canKeepWorking: "می‌توانید ادامه دهید — پس از اتصال ارسال می‌کنیم.", sending: "در حال ارسال",
     actionWaiting: "درخواست در انتظار", actionsWaiting: "درخواست در انتظار", savedLocally: "در این دستگاه ذخیره شد.", tryNow: "اکنون امتحان کنید",
@@ -237,7 +237,7 @@ export const hi: GuestDict = {
     RECEIVED: "मिला", IN_PROGRESS: "जारी", DONE: "पूरा", FIXED: "ठीक हुआ", CANCELLED: "रद्द",
     kind: { DND: "कृपया परेशान न करें", CLEAN_REQUEST: "सफ़ाई अनुरोध", CONTACT: "विभाग संपर्क", DEFECT: "बताई गई ख़राबी", NOTE: "संदेश", GREEN: "Green Option" },
   },
-  error: { generic: "क्षमा करें, यह नहीं हुआ।" },
+  error: { generic: "क्षमा करें, यह नहीं हुआ।", rateLimited: "कम समय में बहुत अधिक अनुरोध। कृपया थोड़ी देर बाद फिर से प्रयास करें।", unavailable: "यह सेवा अब आपके ठहराव के लिए उपलब्ध नहीं है।" },
   offline: {
     noConnection: "कनेक्शन नहीं", canKeepWorking: "आप जारी रख सकते हैं — कनेक्शन आते ही हम भेज देंगे।", sending: "भेजा जा रहा है",
     actionWaiting: "अनुरोध प्रतीक्षा में", actionsWaiting: "अनुरोध प्रतीक्षा में", savedLocally: "इस डिवाइस पर सहेजा गया।", tryNow: "अभी कोशिश करें",
@@ -297,7 +297,7 @@ export const vi: GuestDict = {
     RECEIVED: "Đã nhận", IN_PROGRESS: "Đang xử lý", DONE: "Hoàn tất", FIXED: "Đã khắc phục", CANCELLED: "Đã hủy",
     kind: { DND: "Xin đừng làm phiền", CLEAN_REQUEST: "Yêu cầu dọn phòng", CONTACT: "Liên hệ bộ phận", DEFECT: "Hư hỏng đã báo", NOTE: "Tin nhắn", GREEN: "Green Option" },
   },
-  error: { generic: "Xin lỗi, thao tác không thành công." },
+  error: { generic: "Xin lỗi, thao tác không thành công.", rateLimited: "Quá nhiều yêu cầu trong thời gian ngắn. Vui lòng thử lại sau ít phút.", unavailable: "Dịch vụ này không còn khả dụng cho kỳ lưu trú của quý khách." },
   offline: {
     noConnection: "Không có kết nối", canKeepWorking: "Quý khách cứ tiếp tục — chúng tôi sẽ gửi khi có mạng.", sending: "Đang gửi",
     actionWaiting: "yêu cầu đang chờ", actionsWaiting: "yêu cầu đang chờ", savedLocally: "Đã lưu trên thiết bị này.", tryNow: "Thử lại ngay",

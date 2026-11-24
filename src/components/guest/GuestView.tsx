@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { api, ApiError, NetworkError } from "@/components/api";
+import { guestErrorText } from "./guestErrorText";
 import { ActionTile } from "@/components/ui/ActionTile";
 import { Banner } from "@/components/ui/Banner";
 import { Button } from "@/components/ui/Button";
@@ -318,7 +319,7 @@ function MessageForm({ actionBase, offline, onSent }: { actionBase: string; offl
         onSent();
         return;
       }
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -387,7 +388,7 @@ function DndModal({
         onSubmit();
         return;
       }
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -442,7 +443,7 @@ function GreenModal({
         onSubmit();
         return;
       }
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -493,7 +494,7 @@ function DndCancelModal({
         onSubmit();
         return;
       }
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -539,7 +540,7 @@ function CleanModal({
         onSubmit();
         return;
       }
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -596,7 +597,7 @@ function DefectModal({ actionBase, onClose, onSubmit }: { actionBase: string; on
       await api(`${actionBase}/defect`, { formData: fd });
       onSubmit();
     } catch (e) {
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }
@@ -667,7 +668,7 @@ function ContactModal({
         onSubmit(label);
         return;
       }
-      setError(e instanceof ApiError ? e.message : t("error.generic"));
+      setError(guestErrorText(e, t));
     } finally {
       setBusy(false);
     }

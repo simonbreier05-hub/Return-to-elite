@@ -72,6 +72,19 @@ export default function PlanStep({
       {error && <div role="alert" className="mt-3"><Banner tone="warning" icon="triangle-alert" title={t("planungTool.planFailed")} detail={error} /></div>}
       {counts && (
         <>
+          {/* F9 (A7): Hinweise oben (Float zuerst), nicht mehr unter der Zusammenfassung */}
+          <section className="mt-5" aria-labelledby="plan-warn">
+            <h2 id="plan-warn" className="text-section mb-2 text-text-muted">{t("planungTool.warningsTitle")}</h2>
+            {warnings.length === 0 ? <p className="text-body-16 text-text-secondary">{t("planungTool.noWarnings")}</p> : (
+              <ul className="text-body-16 flex flex-col gap-1">
+                {warnings.map((w, i) => (
+                  <li key={i} className={`flex items-start gap-2 ${w.severity === "INFO" ? "text-text-secondary" : "text-status-warning-fg"}`}>
+                    <Glyph name={w.severity === "INFO" ? "info" : "triangle-alert"} size={20} className="mt-0.5 shrink-0" /> <span>{w.message}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
           <div className="relative mx-auto mt-6 h-36 max-w-md" role="list" aria-label={t("planungTool.draft")}>
             {cards.map((c, i) => (
               <div key={i} role="listitem" className="pl-fan absolute bottom-0 start-[34%] w-[32%]"
@@ -117,18 +130,6 @@ export default function PlanStep({
               </div>
             </section>
           )}
-          <section className="mt-5" aria-labelledby="plan-warn">
-            <h2 id="plan-warn" className="text-section mb-2 text-text-muted">{t("planungTool.warningsTitle")}</h2>
-            {warnings.length === 0 ? <p className="text-body-16 text-text-secondary">{t("planungTool.noWarnings")}</p> : (
-              <ul className="text-body-16 flex flex-col gap-1">
-                {warnings.map((w, i) => (
-                  <li key={i} className={`flex items-start gap-2 ${w.severity === "INFO" ? "text-text-secondary" : "text-status-warning-fg"}`}>
-                    <Glyph name={w.severity === "INFO" ? "info" : "triangle-alert"} size={20} className="mt-0.5 shrink-0" /> <span>{w.message}</span>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
           {!confirmed && <Banner tone="accent" icon="info" title={t("planungTool.notLive")} className="mt-4" />}
         </>
       )}

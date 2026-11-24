@@ -10,6 +10,7 @@ import { berlinToday } from "@/lib/import/businessDay";
 import { notifyHousekeeperOfRoomChange } from "@/lib/rooms/notifyRoomChange";
 import { notifyFloorSupervisors } from "@/lib/rooms/notifyFloorSupervisors";
 import { keyed } from "@/lib/i18n/notificationText";
+import { newGuestCheckedInToday } from "@/lib/rooms/checkInStay";
 
 /**
  * POST /api/rooms/[id]/checkout — Front Office oder Supervisor (Duty Manager immer) meldet: der abreisende Gast eines
@@ -66,7 +67,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
   const stay = await prisma.stay.findUnique({ where: { id: plan.stayId }, select: { status: true } });
   if (stay?.status !== "CHECKED_OUT") return NextResponse.json({ ok: true, already: true });
-  if (plan.arrivingStayId && (await prisma.stay.findUnique({ where: { id: plan.arrivingStayId }, select: { status: true } }))?.status === "IN_HOUSE") {
+  // F9 (A4): gesperrt, sobald der neue Gast eingecheckt ist (Aufenthalt „im Haus“ oder Check-in am Front Office heute)
+  if (await newGuestCheckedInToday(id, plan.arrivingStayId)) {
     return NextResponse.json({ error: "Der neue Gast ist schon eingecheckt — Rücknahme nicht möglich.", code: "NEW_GUEST_CHECKED_IN" }, { status: 409 });
   }
   await prisma.stay.update({ where: { id: plan.stayId }, data: { status: "IN_HOUSE" } });

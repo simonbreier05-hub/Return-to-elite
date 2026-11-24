@@ -298,6 +298,7 @@ export function hintText(t: ReturnType<typeof useLocale>["t"], h: PlanHint): str
     case "floors": return t("tagesplan.hintFloors", { name: h.name ?? "", list: (h.floors ?? []).join(", ") });
     case "level": return t("tagesplan.hintLevel", { name: h.name ?? "" });
     case "unassigned": return t("tagesplan.hintUnassigned", { n: h.count ?? 0, list: (h.floors ?? []).join(", ") });
+    case "plan": return h.text ?? "";
   }
 }
 

@@ -116,7 +116,8 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
       // S1: Begrüßung auf dem Gastbildschirm „Anrede Titel Nachname“ (src/lib/guestGreeting.ts).
       guestSalutation: g ? salutationKey(g.salutation) : null, guestTitle: g?.title ?? null, guestLastName: g?.lastName ?? null,
       // S1: Ein vom Front Office gemeldeter Check-out bleibt bestehen — ein späterer Import setzt ihn nie zurück auf „im Haus“.
-      status: existing?.status === "CHECKED_OUT" ? "CHECKED_OUT" : s.status === "CKIN" || s.status === "DUOT" ? "IN_HOUSE" : "EXPECTED",
+      // F9 (A4): ebenso bleibt ein Check-in am Front Office („im Haus“) bestehen, auch wenn Opera den Gast noch als Reservierung führt.
+      status: existing?.status === "CHECKED_OUT" ? "CHECKED_OUT" : existing?.status === "IN_HOUSE" ? "IN_HOUSE" : s.status === "CKIN" || s.status === "DUOT" ? "IN_HOUSE" : "EXPECTED",
       adults: s.adults, children: s.children, vip: s.vip, arrivalTime: s.arrTime, resStatus: s.status,
       needsReview: false, lastImportAt: now,
     };
@@ -257,11 +258,11 @@ async function initRoomStatus(date: string, plan: { roomId: string; cleaningType
   const key = `boardInit:${date}`;
   const stored = await prisma.setting.findUnique({ where: { key } });
   const old: StatusMarker = stored ? JSON.parse(stored.value) : {};
-  const { updates, marker, carryover } = planBoardStatus({ rooms, needsCleaning: needs, needsCheck: check, marker: old, dayStart: berlinToUtc(date, "00:00") });
+  const { updates, marker, carryover, origins } = planBoardStatus({ rooms, needsCleaning: needs, needsCheck: check, marker: old, dayStart: berlinToUtc(date, "00:00") });
   const now = new Date();
   for (const u of updates) {
     const room = await prisma.room.update({ where: { id: u.id }, data: { status: u.status, statusSince: now, blockReason: null, blockedSince: null, reworkNote: null } });
-    marker[u.id] = [room.status, room.statusSince.toISOString()];
+    marker[u.id] = [room.status, room.statusSince.toISOString(), ...origins[u.id]]; // F9 (A5): Ursprungsstand mitführen
     broadcast("room:update", { room });
   }
   const value = JSON.stringify(marker);

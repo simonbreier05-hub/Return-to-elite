@@ -177,7 +177,7 @@ export function roomsWithoutFloor(inventory: number, roomsOnFloors: number): num
 
 // ── Hinweise ──────────────────────────────────────────────────────────────
 
-export const HINT_KINDS = ["overload", "floors", "level", "unassigned"] as const;
+export const HINT_KINDS = ["overload", "floors", "level", "unassigned", "plan"] as const;
 export type HintKind = (typeof HINT_KINDS)[number];
 
 export interface PlanHint {
@@ -190,6 +190,8 @@ export interface PlanHint {
   name?: string;
   count?: number;
   floors?: number[];
+  /** F9 (A7): Hinweis aus dem Vorschlag (`buildResult`) im Klartext — ohne Gastdaten. */
+  text?: string;
 }
 
 export const HINT_UI: Record<HintKind, { icon: IconName; tone: Tone; labelKey: TKey }> = {
@@ -197,10 +199,14 @@ export const HINT_UI: Record<HintKind, { icon: IconName; tone: Tone; labelKey: T
   floors: { icon: "list", tone: "warning", labelKey: "tagesplan.hintFloors" },
   level: { icon: "star", tone: "warning", labelKey: "tagesplan.hintLevel" },
   unassigned: { icon: "circle", tone: "accent", labelKey: "tagesplan.hintUnassigned" },
+  plan: { icon: "info", tone: "warning", labelKey: "tagesplan.warnings" },
 };
 
 /** Level-Konflikt aus dem Vorschlag (`buildResult`-Warnung `LEVEL1_DEMANDING`) — nur im Supervisor-/DM-Bild. */
-export interface LevelWarning { code: string; hkId?: string; roomIds?: string[] }
+export interface LevelWarning { code: string; hkId?: string; roomIds?: string[]; message?: string }
+
+/** F9 (A7): Diese Vorschlags-Hinweise zeigt der Tagesplan schon über eigene Hinweise (Float, Stufe, Etagen). */
+const COVERED_CODES = new Set(["LEVEL1_DEMANDING", "FLOAT", "TOO_MANY_FLOORS"]);
 
 export function planHints(input: { crew: CrewSummary[]; rooms: PlanRoom[]; levelWarnings?: LevelWarning[]; maxFloors?: number }): PlanHint[] {
   const maxFloors = input.maxFloors ?? MAX_FLOORS_HINT;
@@ -220,10 +226,16 @@ export function planHints(input: { crew: CrewSummary[]; rooms: PlanRoom[]; level
     if (r && r.assignedToId !== w.hkId) continue;
     out.push({ kind: "level", crewId: w.hkId, name: names.get(w.hkId) ?? "", roomIds: w.roomIds, floor: r?.floor ?? undefined });
   }
+  // F9 (A7): alle übrigen Hinweise des Vorschlags zählen mit (vorher „0 Hinweise“ bei 13–17 Hinweisen)
+  for (const w of input.levelWarnings ?? []) {
+    if (COVERED_CODES.has(w.code) || !w.message) continue;
+    out.push({ kind: "plan", text: w.message, crewId: w.hkId, roomIds: w.roomIds });
+  }
+  // F9 (N1): Float ganz oben
   const open = input.rooms.filter((r) => r.open);
   if (open.length) {
     const floors = [...new Set(open.map((r) => r.floor).filter((f): f is number => f != null))].sort((a, b) => a - b);
-    out.push({ kind: "unassigned", count: open.length, floors, floor: floors[0], roomIds: open.map((r) => r.id) });
+    out.unshift({ kind: "unassigned", count: open.length, floors, floor: floors[0], roomIds: open.map((r) => r.id) });
   }
   return out;
 }

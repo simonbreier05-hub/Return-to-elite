@@ -25,6 +25,10 @@ export interface Compiled {
   roomCenters: number[];
   roomCenterSum: number;
   pref: Set<number>[];
+  /** F9 (N1): harte Obergrenze der Zimmeranzahl je Kraft (Infinity = keine). */
+  cap: number[];
+  /** F9 (N3): Etage ist die Präferenz-Etage mindestens einer Kraft — fremde Kräfte dort kosten (`homeFloor`). */
+  ownedFloors: Set<number>;
   /** Heutige Etagen laut Etagenzuweisung (leer = keine). */
   today: Set<number>[];
   /** Planung L1 (vorberechnet, damit die Kostenfunktion schnell bleibt): 1 = Zimmer zählt als Suite. */
@@ -59,7 +63,7 @@ export function levelOverflow(input: PlanInput, suite: Uint8Array): Uint8Array {
     const u2 = (r: PlanRoom) => (allByRooms ? 1 : r.credits);
     const fixed2 = new Map<string, number>();
     for (const r of rooms) if (r.fixedTo) fixed2.set(r.fixedTo, (fixed2.get(r.fixedTo) ?? 0) + u2(r));
-    let capable = hks.filter((h) => !(h.restrictions ?? []).includes("NO_SUITE")).reduce((a, h) => a + Math.max(0, (allByRooms ? h.roomsHi! : h.hi) - (fixed2.get(h.id) ?? 0)), 0);
+    let capable = hks.filter((h) => !(h.restrictions ?? []).includes("NO_SUITE")).reduce((a, h) => a + Math.max(0, (allByRooms ? Math.min(h.roomsHi!, h.cap ?? Infinity) : h.hi) - (fixed2.get(h.id) ?? 0)), 0);
     const suites = rooms.map((_, i) => i).filter((i) => !rooms[i].fixedTo && suite[i]).sort((a, b) => rooms[b].demanding.length - rooms[a].demanding.length || rooms[b].credits - rooms[a].credits || a - b);
     for (const i of suites) { const u = u2(rooms[i]); if (capable - u >= -1e-9) capable -= u; else out[i] = 2; }
   };
@@ -68,7 +72,7 @@ export function levelOverflow(input: PlanInput, suite: Uint8Array): Uint8Array {
   const unit = (r: PlanRoom) => (byRooms ? 1 : r.credits);
   const fixedUnits = new Map<string, number>();
   for (const r of rooms) if (r.fixedTo) fixedUnits.set(r.fixedTo, (fixedUnits.get(r.fixedTo) ?? 0) + unit(r));
-  const cap = (h: PlanHousekeeper) => Math.max(0, (byRooms ? h.roomsHi! : h.hi) - (fixedUnits.get(h.id) ?? 0));
+  const cap = (h: PlanHousekeeper) => Math.max(0, (byRooms ? Math.min(h.roomsHi!, h.cap ?? Infinity) : h.hi) - (fixedUnits.get(h.id) ?? 0));
   const capAll = matching.reduce((a, h) => a + cap(h), 0);
   const capSuite = matching.filter((h) => !(h.restrictions ?? []).includes("NO_SUITE")).reduce((a, h) => a + cap(h), 0);
   free.sort((a, b) => suite[b] - suite[a] || rooms[b].demanding.length - rooms[a].demanding.length || rooms[b].credits - rooms[a].credits ||
@@ -109,12 +113,15 @@ export function compile(input: PlanInput): Compiled {
   if (restricted) rooms.forEach((r, i) => input.housekeepers.forEach((h, k) => { if (restrictionHit(h, r, input.suiteMinCredit)) restricted[i * H + k] = 1; }));
   const stayHk = Int16Array.from(rooms, (r) => (r.stayHk !== undefined && hkIdx.has(r.stayHk) ? hkIdx.get(r.stayHk)! : -1));
   const relaxed = levelOverflow(input, suite);
+  const pref = input.housekeepers.map((h) => (h.todayFloors?.length || h.type === "EXTERN" ? new Set<number>() : new Set(h.homeFloors.length ? h.homeFloors : h.yesterdayFloors)));
   return {
-    suite, restricted, stayHk, relaxed,
+    suite, restricted, stayHk, relaxed, pref,
+    cap: input.housekeepers.map((h) => (h.cap !== undefined ? h.cap : Infinity)),
+    ownedFloors: new Set(input.housekeepers.flatMap((h) => (h.type === "EXTERN" ? [] : h.homeFloors))),
     input, rooms, order, roomIdx, hkIdx, pairs, num, centers, centerSum: centers.reduce((a, b) => a + b, 0) || 1,
     roomCenters, roomCenterSum: roomCenters.reduce((a, b) => a + b, 0) || 1,
-    // Planung L1: Springer (EXTERN) haben keine Präferenz-Etagen — sie gehen dorthin, wo Bedarf ist
-    pref: input.housekeepers.map((h) => (h.todayFloors?.length || h.type === "EXTERN" ? new Set<number>() : new Set([...h.homeFloors, ...h.yesterdayFloors]))),
+    // Planung L1: Springer (EXTERN) haben keine Präferenz-Etagen — sie gehen dorthin, wo Bedarf ist.
+    // F9 (N3): Präferenz = Präferenz-Etagen aus den Einstellungen; nur wer keine hat, nimmt die Etagen von gestern.
     today: input.housekeepers.map((h) => new Set(h.todayFloors ?? [])),
   };
 }
@@ -132,6 +139,13 @@ export function eligible(c: Compiled, roomI: number, hkI: number): boolean {
   if (h.level < 2 && c.rooms[roomI].demanding.length > 0 && !c.relaxed[roomI]) return false; // F4: außer Überhang (levelOverflow)
   if (c.suite[roomI] && (h.restrictions ?? []).includes("NO_SUITE") && c.relaxed[roomI] !== 2) return false; // Simon 20.11.: Überhang
   return true;
+}
+
+/** F9 (N1): Zimmeranzahl je Kraft in einer Zuteilung. */
+export function countsOf(c: Compiled, assign: Int16Array): Int32Array {
+  const n = new Int32Array(c.input.housekeepers.length);
+  for (let i = 0; i < assign.length; i++) if (assign[i] >= 0) n[assign[i]]++;
+  return n;
 }
 
 /** Nur für Systemvorschläge zur Umverteilung: anspruchsvolle Zimmer nicht von sich aus auf Stufe 1 schieben. Von Hand ist alles erlaubt. */
@@ -170,7 +184,8 @@ export function cost(c: Compiled, assign: Int16Array, opts: CostOptions = {}): {
     if (c.stayHk[i] >= 0 && c.stayHk[i] !== a) stayMis++;
     mask[a] |= 1 << r.floor;
     const pref = c.pref[a];
-    if (pref.size && !pref.has(r.floor)) homeMis++;
+    // F9 (N3): abseits der eigenen Präferenz-Etagen ODER auf der Präferenz-Etage einer anderen Kraft
+    if ((pref.size && !pref.has(r.floor)) || (!pref.has(r.floor) && c.ownedFloors.has(r.floor))) homeMis++;
     const l = last[a];
     if (l >= 0) {
       const p = c.rooms[l];

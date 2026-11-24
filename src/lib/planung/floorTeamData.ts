@@ -92,7 +92,8 @@ export async function getFloorTeamState(date: string): Promise<FloorTeamState> {
   const settings = await getSettings();
   const team = await savedTeam(date);
   const users = await prisma.user.findMany({
-    where: { role: { in: ["room_attendant", "supervisor", "houseman"] } }, orderBy: { name: "asc" },
+    // F9 (N3, Simon 20.11.): Housekeeper werden im Planungstool nicht mehr Etagen zugeteilt — Präferenz-Etagen stehen in den Einstellungen
+    where: { role: { in: ["supervisor", "houseman"] } }, orderBy: { name: "asc" },
     select: { id: true, name: true, role: true, hkType: true, hkLevel: true, dailyTarget: true, hkActive: true, assignedFloors: true, floorsOn: true },
   });
   const roleOf = (r: string): TeamRole => (r === "supervisor" ? "SUP" : r === "houseman" ? "HM" : "HK");
@@ -151,9 +152,9 @@ export async function saveFloorTeam(date: string, assign: FloorAssign, actorId: 
   const team = await savedTeam(date);
   if (!team) throw new Error("Bitte zuerst das Team speichern.");
   const proposed = (await getFloorTeamState(date)).suggestions; // Systemvorschlag vor dem Speichern (für das Lernen)
-  const allowed = new Set([...team.hk, ...team.sup, ...team.hm]);
+  const allowed = new Set([...team.sup, ...team.hm]); // F9 (N3): keine Housekeeper
   for (const [id, floors] of Object.entries(assign)) {
-    if (!allowed.has(id)) throw new Error("Nur heute anwesende Personen können Etagen bekommen.");
+    if (!allowed.has(id)) throw new Error("Nur heute anwesende Supervisoren und Hausmänner können Etagen bekommen.");
     if (floors.some((f) => !(PLAN_FLOORS as readonly number[]).includes(f))) throw new Error("Unbekannte Etage.");
   }
   for (const f of PLAN_FLOORS) {

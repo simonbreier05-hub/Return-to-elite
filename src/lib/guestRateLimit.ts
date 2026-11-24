@@ -27,11 +27,22 @@ export type RateLimitResult = { ok: true } | { ok: false; retryAfterSeconds: num
  */
 export const GUEST_ROOM_LIMIT_PER_HOUR = 20;
 
-export async function checkGuestRateLimit(roomId: string, ip: string, now: Date = new Date()): Promise<RateLimitResult> {
+/**
+ * F9 (A6): Aufheben/Zurücknehmen (DND aufheben, Green zurücknehmen) wird nie begrenzt — sonst bliebe ein Zimmer
+ * ungereinigt, weil der Gast vorher zu viel getippt hat.
+ */
+export const UNLIMITED_GUEST_ACTIONS = new Set(["dnd-cancel", "green-cancel"]);
+
+/**
+ * F9 (A6): Grenze `guestRateLimitPerHour` (Einstellung, Standard 5) gilt **je Aktion** und Gerät (IP); dazu bleibt die
+ * Obergrenze je Zimmer über alle Aktionen und Geräte (20/Stunde). `action` leer = alle Aktionen zusammen (Alt-Aufrufer).
+ */
+export async function checkGuestRateLimit(roomId: string, ip: string, now: Date = new Date(), action?: string): Promise<RateLimitResult> {
+  if (action && UNLIMITED_GUEST_ACTIONS.has(action)) return { ok: true };
   const { guestRateLimitPerHour: limit } = await getSettings();
   const nowMs = now.getTime();
   const windowStart = nowMs - WINDOW_MS;
-  const ipKey = `${roomId}:${ip}`;
+  const ipKey = action ? `${roomId}:${ip}:${action}` : `${roomId}:${ip}`;
   const roomKey = `room:${roomId}`;
   const recentIp = (hits.get(ipKey) ?? []).filter((t) => t > windowStart);
   const recentRoom = (hits.get(roomKey) ?? []).filter((t) => t > windowStart);

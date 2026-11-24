@@ -11,7 +11,6 @@ import type { Assignment, DemandingReason, HkType, PlanHousekeeper, PlanInput, P
 import { parseRestrictions } from "./types";
 import type { SettingsShape } from "@/lib/domain";
 import { bandTarget, roomBand } from "@/lib/planung/floorTeam";
-import { parseAssignedFloors } from "@/lib/floors";
 import { activePatterns } from "@/lib/learning/store";
 import { planningMinutesFor } from "@/lib/workdata/load";
 import { lastCleanerByStay, type StayRef } from "@/lib/learning/stayContinuity";
@@ -139,8 +138,10 @@ export async function loadDay(date: string, opts: { attendantIds?: string[] } = 
     homeFloors: floors(u.homeFloors), yesterdayFloors: yesterday.get(u.id) ?? [],
     ...bandFor(band, avgCredit, settings.creditTolerance),
     roomsLo: band.lo, roomsHi: band.hi,
+    // F9 (N2): harte Obergrenze = persönliche Zimmervorgabe, höchstens die feste Obergrenze aus den Einstellungen
+    cap: Math.min(band.hi, settings.roomsPerAttendantMax),
     restrictions: parseRestrictions(u.hkRestrictions),
-    todayFloors: u.floorsOn === date ? parseAssignedFloors(u.assignedFloors) : [],
+    // F9 (N3): keine Etagenzuweisung mehr für Housekeeper — Präferenz kommt aus den Präferenz-Etagen (Einstellungen)
     absent: u.absentDate === date,
     present: u.absentDate !== date && (!team || team.includes(u.id)),
   };

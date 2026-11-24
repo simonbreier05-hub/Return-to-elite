@@ -27,7 +27,7 @@ describe("Entwurf bearbeiten (nur Rechnung, nichts live)", () => {
     expect(moved.unassigned).toEqual([]);
     const removed = buildResult(input, { ...base, [id]: null });
     expect(removed.unassigned).toEqual([id]);
-    expect(removed.warnings.find((w) => w.code === "UNASSIGNED")?.message).toMatch(/1 Zimmer sind noch offen/);
+    expect(removed.warnings[0]).toMatchObject({ code: "FLOAT", message: expect.stringMatching(/^1 Zimmer im Float: \S+ — bitte von Hand zuteilen\./) }); // F9 (N1)
     const added = buildResult(input, { ...removed.assignment, [id]: from });
     expect(added.unassigned).toEqual([]);
     expect(added.metrics.find((m) => m.hkId === from)!.rooms).toBe(buildResult(input, base).metrics.find((m) => m.hkId === from)!.rooms);

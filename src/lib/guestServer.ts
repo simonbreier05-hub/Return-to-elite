@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { prisma } from "@/lib/db";
 import { GUEST_SYSTEM_EMAIL } from "@/lib/guest";
 import { resolveStayByToken, roomStayState } from "@/lib/guestStay";
@@ -27,7 +28,8 @@ export interface GuestAccess {
  * this room right now (src/lib/guestStay.ts) — never to the room by itself. No active stay means no access, same
  * as an unknown code. Two stays IN_HOUSE at once: no access either, and the Duty Manager is warned once a day.
  */
-export async function resolveGuestAccessByRoomCode(roomCode: string): Promise<GuestAccess | null> {
+export async function resolveGuestAccessByRoomCode(roomParam: string): Promise<GuestAccess | null> {
+  const { code: roomCode, ref } = splitRoomParam(roomParam);
   const room = await prisma.room.findUnique({ where: { guestAccessCode: roomCode } });
   if (!room) return null;
   const state = await roomStayState(room.id);
@@ -36,7 +38,24 @@ export async function resolveGuestAccessByRoomCode(roomCode: string): Promise<Gu
     return null;
   }
   if (state.kind !== "active") return null;
+  // F9 (A3): an einen Aufenthalt gebundene Adresse (`<code>.<ref>`) gilt nur, solange genau dieser Aufenthalt aktiv ist —
+  // der offene Tab des Vorgasts sieht so nie den nächsten Gast.
+  if (ref !== null && ref !== stayRef(state.stay.id)) return null;
   return { room, stay: state.stay };
+}
+
+/**
+ * F9 (A3): Kennung eines Aufenthalts für die Gastseite — abgeleitet, nicht umkehrbar, ohne Gastdaten. Die Seite hängt sie
+ * an ihre API-Adresse (`/api/guest/r/<code>.<ref>/…`), damit Status und Aktionen nur für *ihren* Aufenthalt gelten.
+ */
+export function stayRef(stayId: string): string {
+  return createHash("sha256").update(`guest-stay:${stayId}`).digest("base64url").slice(0, 16);
+}
+
+/** Zimmer-Code ist base64url (nie ein Punkt) — alles nach dem ersten Punkt ist die Aufenthalts-Kennung. */
+export function splitRoomParam(param: string): { code: string; ref: string | null } {
+  const i = param.indexOf(".");
+  return i < 0 ? { code: param, ref: null } : { code: param.slice(0, i), ref: param.slice(i + 1) };
 }
 
 /** Pre-arrival / personal link entry point (Prompt G2 Teil 2): resolves straight off the Stay's own token. */

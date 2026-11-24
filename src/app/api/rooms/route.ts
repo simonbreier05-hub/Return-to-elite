@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
+import { canSeeExcursionDetails, canSeeGuestNames, excursionWithoutGuest } from "@/lib/guestNameAccess";
 import { resolveFloorScope } from "@/lib/floors";
 import { shortGuestName } from "@/lib/lists/guestName";
 import { withoutPhotosFor } from "@/lib/rooms/defectPhotoAccess";
@@ -108,6 +109,9 @@ export async function GET(req: NextRequest) {
     // Housekeeper sehen fremde Zuteilungen nicht (nur ihre eigenen Zimmer tragen einen Namen).
     ...(attendantView && room.assignedToId !== me ? { assignedToId: null, assignedTo: null, routeOrder: null } : {}),
     ...(attendantView ? { arrivals: room.arrivals.map((a) => ({ ...a, guestName: shortGuestName(a.guestName, a.source) ?? "—" })) } : {}),
+    // F9 (A1): Hausmann, Technik, Concierge bekommen Anreisen ohne Gastnamen; Ausflüge mit Name/Notiz nur Concierge/FO/Sup/DM.
+    ...(!attendantView && !canSeeGuestNames(auth.session.role) ? { arrivals: room.arrivals.map((a) => ({ ...a, guestName: "—" })) } : {}),
+    ...(canSeeExcursionDetails(auth.session.role) ? {} : { excursions: room.excursions.map(excursionWithoutGuest) }),
     openNotesCount: _count.notes,
     // Nachrichten (kind MESSAGE) nur für Beteiligte; die Vorschau kennt nur Zimmermädchen/Supervisor/Duty Manager als Beteiligte.
     notes: room.notes.filter((n) => n.kind !== "MESSAGE" || canSeeMessages(

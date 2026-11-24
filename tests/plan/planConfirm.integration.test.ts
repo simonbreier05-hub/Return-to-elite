@@ -67,13 +67,20 @@ beforeAll(async () => {
 }, 90_000);
 afterAll(async () => { await prisma.$disconnect(); rmSync(dir, { recursive: true, force: true }); });
 
-describe("Auto-Planung: einfache Zimmer nie offen, anspruchsvolle nur ohne passende Kraft (F4, P6 neu)", () => {
-  it("nur Stufe 1 anwesend: anspruchsvolle Zimmer bleiben offen mit Hinweis; mit Stufe 2 ist alles verteilt", async () => {
+describe("Auto-Planung nach N1/N2 (20.11.): Obergrenze zuerst, Rest in den Float", () => {
+  it("nur Stufe 1 anwesend: anspruchsvolle Zimmer gehen nach Zimmervorgabe an Stufe 1 (Hinweis), über der Obergrenze in den Float; mit Stufe 2 ist alles verteilt", async () => {
     const r = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]); // nur Stufe 1
     const demanding = r.payload.input.rooms.filter((x) => x.demanding.length).map((x) => x.id).sort();
     expect(demanding.length).toBeGreaterThan(0);
-    expect([...r.payload.result.unassigned].sort()).toEqual(demanding);
-    expect(r.payload.result.warnings.map((w) => w.code)).toContain("DEMANDING_UNASSIGNED");
+    expect(r.payload.result.unassigned).toEqual([]); // „Zimmeranzahl überwiegt die Regeln“ (Grundsatz bleibt)
+    expect(r.payload.result.warnings.map((w) => w.code)).toContain("LEVEL_RULE_RELAXED");
+    // N2: feste Obergrenze 5 → je Kraft höchstens 5 Zimmer, 2 im Float, Hinweis ganz oben mit den Zimmernummern
+    await prisma.setting.create({ data: { key: "roomsPerAttendantMax", value: "5" } });
+    const capped = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk3]);
+    await prisma.setting.delete({ where: { key: "roomsPerAttendantMax" } });
+    expect(capped.payload.result.metrics.every((m) => m.rooms <= 5)).toBe(true);
+    expect(capped.payload.result.unassigned).toHaveLength(2);
+    expect(capped.payload.result.warnings[0]).toMatchObject({ code: "FLOAT", message: expect.stringMatching(/^2 Zimmer im Float: \d{3}, \d{3} — bitte von Hand zuteilen\./) });
     const all = await proposeForDate(DATE, ids.sup, [ids.hk1, ids.hk2, ids.hk3]);
     proposalId = all.proposalId; assignment = { ...all.payload.result.assignment };
     expect(all.payload.result.unassigned).toEqual([]);
