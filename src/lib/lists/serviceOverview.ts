@@ -2,24 +2,10 @@ import { prisma } from "@/lib/db";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
 import { isDone, listDay, loadRoomRows, type Kind, type RoomRow } from "./dayRows";
 import { floorsFor } from "./supervisorList";
-import { isToClean, type DayKind } from "@/lib/dayplan/dayNumbers";
+import { serviceOf, needsCleaning, type ServiceKey } from "./serviceKeys";
 
-/** Welcher Service ein Zimmer heute braucht — eine Definition für alle Ansichten. */
-export type ServiceKey = "TURN" | "DEPARTURE" | "STAYOVER_LINEN" | "STAYOVER" | "ARRIVAL";
-export const SERVICE_ORDER: ServiceKey[] = ["TURN", "DEPARTURE", "STAYOVER_LINEN", "STAYOVER", "ARRIVAL"];
-
-export function serviceOf(kind: Kind, laundry: boolean): ServiceKey {
-  if (kind === "SAME_DAY_TURN") return "TURN";
-  if (kind === "DEPARTURE" || kind === "CARRYOVER" || kind === "EXTRA") return "DEPARTURE"; // F1: Rest vom Vortag/Zusatz wie Abreise
-  if (kind === "ARRIVAL") return "ARRIVAL";
-  return laundry ? "STAYOVER_LINEN" : "STAYOVER";
-}
-const DAY_KIND: Record<ServiceKey, DayKind> = { TURN: "TURN", DEPARTURE: "DEPARTURE", STAYOVER_LINEN: "STAYOVER", STAYOVER: "STAYOVER", ARRIVAL: "ARRIVAL" };
-/**
- * Wird das Zimmer heute gereinigt? Dieselbe Regel wie die Tageszahlen (`isToClean`): Abreise, Turn und Bleiber immer,
- * eine Anreise nur in ein noch nicht gereinigtes Zimmer. Ohne Status (nur Art bekannt) gilt die Anreise als bereit.
- */
-export const needsCleaning = (s: ServiceKey, status = "INSPECTED") => isToClean(DAY_KIND[s], status);
+/** Welcher Service ein Zimmer heute braucht — eine Definition für alle Ansichten (client-sicher in ./serviceKeys). */
+export { SERVICE_ORDER, serviceOf, needsCleaning, type ServiceKey } from "./serviceKeys";
 
 export interface ServiceExtra { dept: string; label: string; done: boolean }
 export interface ServiceRoom {

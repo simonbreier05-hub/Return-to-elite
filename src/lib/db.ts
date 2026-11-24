@@ -7,7 +7,7 @@ type Client = ReturnType<typeof createBase>;
 
 /** Modell → Felder mit `@default(now())` (createdAt, statusSince, pausedAt, …). */
 export const NOW_DEFAULT_FIELDS: ReadonlyMap<string, readonly string[]> = new Map(
-  Prisma.dmmf.datamodel.models
+  (Prisma.dmmf?.datamodel?.models ?? []) // im Browser undefined — db.ts gehört nie ins Client-Bündel (tests/ui/clientNoDb.test.ts)
     .map((m) => [m.name, m.fields.filter((f) => (f.default as { name?: string } | undefined)?.name === "now").map((f) => f.name)] as const)
     .filter(([, fs]) => fs.length > 0),
 );

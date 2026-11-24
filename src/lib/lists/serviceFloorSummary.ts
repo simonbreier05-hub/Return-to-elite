@@ -1,4 +1,5 @@
-import { needsCleaning, type ServiceRoom } from "./serviceOverview";
+import { needsCleaning } from "./serviceKeys";
+import type { ServiceRoom } from "./serviceOverview";
 
 /**
  * Kopfzeile je Etage in „Zimmer und Service heute" (H2, Schritt 8): Kurzinfos aus denselben Zeilen wie die Liste,
