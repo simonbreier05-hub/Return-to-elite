@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -26,7 +27,7 @@ export async function GET(req: NextRequest) {
   if (all.length < 20) return NextResponse.json({ error: "Zu wenige Zimmer im Zimmerstamm für das Beispiel." }, { status: 409 });
   const rooms = Array.from({ length: 20 }, (_, i) => all[Math.floor((i * all.length) / 20)]); // gleichmäßig über das Haus verteilt
 
-  const today = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+  const today = clockNow().toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
   const sc = todayScenario(today, rooms, (await getSettings()).roomInventory);
   const bytes = {
     arrivals: () => buildArrivalsPdf(sc),

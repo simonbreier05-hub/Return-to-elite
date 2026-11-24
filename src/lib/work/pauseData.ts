@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast } from "@/lib/realtime";
@@ -26,7 +27,7 @@ export async function viewerFor(session: { role: string; userId: string }): Prom
 type Loaded = WorkTarget & { roomId: string; roomNumber: string };
 
 /** Lädt die Aufgabe so, wie die Regeln (`checkPause`) sie brauchen. */
-export async function loadWorkTarget(type: PauseTarget, id: string, now = new Date()): Promise<Loaded | null> {
+export async function loadWorkTarget(type: PauseTarget, id: string, now = clockNow()): Promise<Loaded | null> {
   const room = { select: { id: true, number: true, floor: true } } as const;
   switch (type) {
     case "ROOM": {
@@ -72,7 +73,7 @@ export async function setPause(session: Session, type: PauseTarget, id: string, 
   const active = await prisma.workPause.findFirst({ where: { targetType: type, targetId: id, resumedAt: null } });
   const check = checkPause(await viewerFor(session), target, action, !!active);
   if (!check.ok) return check;
-  const now = new Date();
+  const now = clockNow();
   if (action === "pause") {
     await prisma.workPause.create({ data: { targetType: type, targetId: id, roomId: target.roomId, reason: reason ?? null, pausedById: session.userId, pausedAt: now } });
   } else {
@@ -89,7 +90,7 @@ export async function setPause(session: Session, type: PauseTarget, id: string, 
  * den Zustand, für den sie gesetzt wurde. Ohne aktive Pause passiert nichts (keine Abfrage-Kette, kein Logbuch-Eintrag).
  */
 export async function endPauseOnChange(type: PauseTarget, id: string, userId: string, roomId: string | null, roomNumber?: string): Promise<void> {
-  const { count } = await prisma.workPause.updateMany({ where: { targetType: type, targetId: id, resumedAt: null }, data: { resumedAt: new Date(), resumedById: userId } });
+  const { count } = await prisma.workPause.updateMany({ where: { targetType: type, targetId: id, resumedAt: null }, data: { resumedAt: clockNow(), resumedById: userId } });
   if (!count) return;
   await audit({ action: "WORK_RESUMED", userId, roomId, meta: { targetType: type, targetId: id, auto: true } });
   broadcast("work:pause", { targetType: type, targetId: id, roomId, roomNumber, paused: false, pause: null });

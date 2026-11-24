@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { broadcast, emitTo } from "@/lib/realtime";
@@ -173,7 +174,7 @@ export async function postMessage(s: ChatSession, ch: NonNullable<Awaited<Return
   return out;
 }
 
-export async function markRead(s: ChatSession, channelId: string, at = new Date()) {
+export async function markRead(s: ChatSession, channelId: string, at = clockNow()) {
   await prisma.chatReadState.upsert({
     where: { channelId_userId: { channelId, userId: s.userId } },
     create: { channelId, userId: s.userId, lastReadAt: at },
@@ -221,7 +222,7 @@ export async function directStillAllowed(s: ChatSession, ch: { kind: string; mem
 }
 
 /** Zurückziehen (Autor, binnen RETRACT_WINDOW_MS) oder Ausblenden (Duty Manager): Text weg, Eintrag bleibt gekennzeichnet. */
-export async function retractOrHide(s: ChatSession, messageId: string, now = new Date()): Promise<"ok" | "forbidden" | "notFound" | "tooLate"> {
+export async function retractOrHide(s: ChatSession, messageId: string, now = clockNow()): Promise<"ok" | "forbidden" | "notFound" | "tooLate"> {
   const m = await prisma.chatMessage.findUnique({ where: { id: messageId }, select: { id: true, channelId: true, authorId: true, createdAt: true, retractedAt: true, hiddenAt: true } });
   if (!m || !(await accessibleChannel(s, m.channelId))) return "notFound";
   const own = m.authorId === s.userId;

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { GUEST_SYSTEM_EMAIL } from "@/lib/guest";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
@@ -22,7 +23,7 @@ function metaEnums(raw: string | null): { role?: string; blockReason?: string; c
  * Feed „Das ist jetzt wichtig“ für bestimmte Etagen, heute (Berliner Kalendertag). Leere Etagenliste → leerer Feed.
  * `viewerId`: persönliche Meldungen (Notification.targetUserId) anderer Personen erscheinen nie.
  */
-export async function loadFeed(floors: number[], viewerId: string, limit: number, now = new Date()): Promise<{ items: FeedItem[]; hasMore: boolean }> {
+export async function loadFeed(floors: number[], viewerId: string, limit: number, now = clockNow()): Promise<{ items: FeedItem[]; hasMore: boolean }> {
   if (!floors.length) return { items: [], hasMore: false };
   const since = berlinToUtc(berlinDate(now), "00:00");
   const rooms = await prisma.room.findMany({ where: { floor: { in: floors } }, select: { id: true, number: true, floor: true } });

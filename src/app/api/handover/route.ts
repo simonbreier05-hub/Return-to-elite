@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   if (!auth.ok) return auth.response;
 
   const hours = Math.min(24, Math.max(1, Number(req.nextUrl.searchParams.get("hours")) || 8));
-  const now = new Date();
+  const now = clockNow();
   const since = new Date(now.getTime() - hours * 3600_000);
 
   const rooms = await prisma.room.findMany({

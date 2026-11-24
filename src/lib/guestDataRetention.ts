@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { closeStaleCleanRequests, purgeArchivedStayHistory } from "@/lib/guest/stayArchive";
 import { unlink } from "fs/promises";
 import { deleteResolvedDefectPhotos } from "@/lib/rooms/defectPhotoCleanup";
@@ -28,7 +29,7 @@ import { getGuestSystemUserId } from "@/lib/guestServer";
  * alone — the logbook is the house's own accountability record, a separate
  * retention question from the guest's own submitted content.
  */
-export async function runGuestDataRetention(now = new Date()) {
+export async function runGuestDataRetention(now = clockNow()) {
   const settings = await getSettings();
   const cutoff = new Date(now.getTime() - settings.guestDataRetentionDays * 24 * 60 * 60 * 1000);
   const guestSystemUserId = await getGuestSystemUserId();

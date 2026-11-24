@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
@@ -24,7 +25,7 @@ export async function notifyFloorLeads(opts: {
   const targets: { targetRole: string; targetUserId: string | null }[] = sups.length
     ? sups.map((s) => ({ targetRole: "supervisor", targetUserId: s.id }))
     : [{ targetRole: "supervisor", targetUserId: null }];
-  if (opts.housekeeper && room.assignedToId && room.assignedOn === berlinDate(opts.now ?? new Date()) && room.assignedToId !== opts.skipUserId) {
+  if (opts.housekeeper && room.assignedToId && room.assignedOn === berlinDate(opts.now ?? clockNow()) && room.assignedToId !== opts.skipUserId) {
     targets.push({ targetRole: "room_attendant", targetUserId: room.assignedToId });
   }
   if (opts.frontOffice) targets.push({ targetRole: "front_office", targetUserId: null });

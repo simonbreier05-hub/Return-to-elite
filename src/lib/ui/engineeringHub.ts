@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 /**
  * Techniker-Hub im Design „Glas & Premium“ (Paket D5): reine Ableitungen für die Anzeige —
  * Auftrag lesen (defensiv), Status → Pille, Herkunft (Gast/Housekeeping), Filter, Kennzahlen, nächster Schritt.
@@ -141,7 +142,7 @@ export function sortWorkOrders(views: WorkOrderView[]): WorkOrderView[] {
 }
 
 /** Kennzahlen: Offen (neu + bestätigt), In Arbeit, Erledigt heute (Berliner Tag), offene Gast-Meldungen. */
-export function engKpis(views: WorkOrderView[], now: Date = new Date()) {
+export function engKpis(views: WorkOrderView[], now: Date = clockNow()) {
   const today = berlinDate(now);
   const active = views.filter((v) => v.status !== "RESOLVED");
   return {

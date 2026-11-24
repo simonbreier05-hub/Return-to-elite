@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { audit } from "@/lib/audit";
@@ -56,7 +57,7 @@ function updateRoom(id: string, data: Parameters<typeof prisma.room.update>[0]["
 }
 
 /** F2: Ist das Zimmer belegt (Board) oder kommt heute ein Gast (erwartete Anreise / Tagesplan Anreise oder Turn)? */
-export async function occupancyOf(room: { id: string; occupancy: string }, now = new Date()): Promise<{ occupied: boolean; arrivalToday: boolean }> {
+export async function occupancyOf(room: { id: string; occupancy: string }, now = clockNow()): Promise<{ occupied: boolean; arrivalToday: boolean }> {
   const date = berlinDate(now);
   const [arrival, plan] = await Promise.all([
     prisma.arrival.findFirst({ where: { roomId: room.id, ...arrivalTodayWhere(now) }, select: { id: true } }),
@@ -151,7 +152,7 @@ export async function applyStatusChange(
     };
   }
 
-  const now = new Date();
+  const now = clockNow();
   const updated = await updateRoom(room.id, {
     status: to,
     statusSince: now,

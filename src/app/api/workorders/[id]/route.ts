@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -43,7 +44,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "A note is required to resolve a work order.", code: "RESOLUTION_NOTE_REQUIRED" }, { status: 400 });
   }
 
-  const now = new Date();
+  const now = clockNow();
   const workOrder = await prisma.workOrder.update({
     where: { id },
     data: {

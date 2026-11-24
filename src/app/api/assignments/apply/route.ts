@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
 
   // A room can't be both assigned today and pushed to tomorrow at once.
   const deferredIds = [...new Set(deferredRoomIds)].filter((id) => !roomIds.includes(id));
-  const now = new Date();
+  const now = clockNow();
 
   // Per-room updates (not updateMany) because each room also gets its
   // position in the attendant's running order — the plan's roomIds are

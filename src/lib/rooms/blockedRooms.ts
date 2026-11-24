@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 
@@ -12,12 +13,12 @@ export interface BlockedRoom {
 }
 
 /** Erwartete Anreise HEUTE (ETA am Betriebstag, oder ohne ETA heute angelegt) — alte Einträge lösen keine Rückfrage aus. */
-export function arrivalTodayWhere(now = new Date()) {
+export function arrivalTodayWhere(now = clockNow()) {
   const from = berlinToUtc(berlinDate(now), "00:00"), to = new Date(from.getTime() + 86_400_000);
   return { status: "EXPECTED", OR: [{ eta: { gte: from, lt: to } }, { eta: null, createdAt: { gte: from } }] };
 }
 
-export async function loadBlockedRooms(now = new Date(), floors?: number[] | null): Promise<BlockedRoom[]> {
+export async function loadBlockedRooms(now = clockNow(), floors?: number[] | null): Promise<BlockedRoom[]> {
   const date = berlinDate(now);
   const rooms = await prisma.room.findMany({
     where: { status: { in: ["OUT_OF_ORDER", "OUT_OF_SERVICE"] }, ...(floors?.length ? { floor: { in: floors } } : {}) },

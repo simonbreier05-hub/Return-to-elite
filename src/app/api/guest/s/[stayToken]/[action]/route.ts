@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { resolveGuestAccessByStayToken } from "@/lib/guestServer";
 import { checkGuestRateLimit, getClientIp } from "@/lib/guestRateLimit";
@@ -16,7 +17,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sta
   const access = await resolveGuestAccessByStayToken(stayToken);
   if (!access) return NextResponse.json({ error: "Not available." }, { status: 404 });
 
-  const rateLimit = await checkGuestRateLimit(access.room.id, getClientIp(req), new Date(), action);
+  const rateLimit = await checkGuestRateLimit(access.room.id, getClientIp(req), clockNow(), action);
   if (!rateLimit.ok) {
     return NextResponse.json(
       { error: "Too many requests — please try again later.", code: "GUEST_RATE_LIMITED" },

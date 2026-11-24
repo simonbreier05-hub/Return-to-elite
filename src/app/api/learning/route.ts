@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
@@ -12,7 +13,7 @@ import { deletePattern, getLearningState, listPatterns, setLearningEnabled, setP
 export async function GET() {
   const auth = await requireRole(["supervisor"]);
   if (!auth.ok) return auth.response;
-  const today = berlinDate(new Date());
+  const today = berlinDate(clockNow());
   const [state, patterns] = await Promise.all([getLearningState(), listPatterns(today)]);
   const ids = [...new Set(patterns.flatMap((p) => [p.personId, p.target]).filter((x): x is string => !!x))];
   const users = await prisma.user.findMany({ where: { id: { in: ids } }, select: { id: true, name: true } });
@@ -46,6 +47,6 @@ export async function DELETE(req: NextRequest) {
   if (!auth.ok) return auth.response;
   const key = req.nextUrl.searchParams.get("key");
   if (!key) return NextResponse.json({ error: "Muster fehlt." }, { status: 400 });
-  await deletePattern(key, berlinDate(new Date()), auth.session.userId);
+  await deletePattern(key, berlinDate(clockNow()), auth.session.userId);
   return NextResponse.json({ ok: true });
 }

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireAuth } from "@/lib/rbac";
@@ -59,7 +60,7 @@ export async function GET(req: NextRequest) {
     include: {
       assignedTo: { select: { id: true, name: true, dailyNumber: true } },
       arrivals: { where: { status: "EXPECTED" } },
-      excursions: { where: { endsAt: { gte: new Date() } } },
+      excursions: { where: { endsAt: { gte: clockNow() } } },
       notes: { where: { archivedAt: null }, orderBy: { createdAt: "desc" }, take: 3, include: { author: { select: { name: true, role: true } } } },
       defects: {
         include: { workOrder: true, reportedBy: { select: { name: true, role: true } } },

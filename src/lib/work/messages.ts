@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { broadcast } from "@/lib/realtime";
 import { berlinDate } from "@/lib/dayplan/time";
@@ -14,7 +15,7 @@ import { keyed } from "@/lib/i18n/notificationText";
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 /** Wer ist heute an diesem Zimmer beteiligt (Zimmermädchen, Hausmann-Aufgaben, Arbeitsaufträge)? */
-export async function involvementFor(roomId: string, now = new Date()): Promise<RoomInvolvement | null> {
+export async function involvementFor(roomId: string, now = clockNow()): Promise<RoomInvolvement | null> {
   const room = await prisma.room.findUnique({ where: { id: roomId }, select: { floor: true, assignedToId: true, assignedOn: true } });
   if (!room) return null;
   const today = berlinDate(now);

@@ -1,3 +1,4 @@
+import { nowMs as clockMs } from "@/lib/clock";
 /**
  * Concierge-Hub im Design „Glas & Premium“ (Paket D5): reine Ableitungen für die Anzeige —
  * Ausflug lesen (defensiv), Zustand aus den vorhandenen Zeiten (geplant / Gast außer Haus / kommt bald zurück /
@@ -44,7 +45,7 @@ export const ENDING_SOON_MS = 60 * 60_000;
 
 export type ExcursionPhase = "planned" | "out" | "endingSoon" | "back";
 
-export function phaseOf(e: Pick<ExcursionView, "startsAt" | "endsAt">, now: number = Date.now()): ExcursionPhase {
+export function phaseOf(e: Pick<ExcursionView, "startsAt" | "endsAt">, now: number = clockMs()): ExcursionPhase {
   const s = ms(e.startsAt);
   const end = ms(e.endsAt);
   if (!Number.isNaN(end) && end <= now) return "back";
@@ -69,18 +70,18 @@ export const CC_FILTER_LABEL: Record<CcFilter, TKey> = {
   back: "roleHub.back",
 };
 
-export function matchesCcFilter(e: ExcursionView, f: CcFilter, now: number = Date.now()): boolean {
+export function matchesCcFilter(e: ExcursionView, f: CcFilter, now: number = clockMs()): boolean {
   if (f === "all") return true;
   const p = phaseOf(e, now);
   return f === "out" ? p === "out" || p === "endingSoon" : p === f;
 }
 
-export function ccFilterCounts(list: ExcursionView[], now: number = Date.now()): { filter: CcFilter; count: number }[] {
+export function ccFilterCounts(list: ExcursionView[], now: number = clockMs()): { filter: CcFilter; count: number }[] {
   return CC_FILTERS.map((f) => ({ filter: f, count: list.filter((e) => matchesCcFilter(e, f, now)).length })).filter((c) => c.filter === "all" || c.count > 0);
 }
 
 /** Kennzahlen: Ausflüge gesamt, Gast gerade außer Haus, kommt bald zurück, noch geplant. */
-export function ccKpis(list: ExcursionView[], now: number = Date.now()) {
+export function ccKpis(list: ExcursionView[], now: number = clockMs()) {
   const phases = list.map((e) => phaseOf(e, now));
   return {
     total: list.length,
@@ -91,7 +92,7 @@ export function ccKpis(list: ExcursionView[], now: number = Date.now()) {
 }
 
 /** Offene Fenster zuerst (nach Beginn), zurückgekehrte ans Ende. */
-export function sortExcursions(list: ExcursionView[], now: number = Date.now()): ExcursionView[] {
+export function sortExcursions(list: ExcursionView[], now: number = clockMs()): ExcursionView[] {
   const byStart = (a: ExcursionView, b: ExcursionView) => (ms(a.startsAt) || 0) - (ms(b.startsAt) || 0);
   return [...list.filter((e) => phaseOf(e, now) !== "back").sort(byStart), ...list.filter((e) => phaseOf(e, now) === "back").sort(byStart)];
 }

@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { archiveStayHistory } from "@/lib/guest/stayArchive";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
@@ -23,7 +24,7 @@ import type { Session } from "@/lib/auth";
  */
 export interface RoomChangeTarget { id: string; number: string; floor: number; type: string }
 
-export async function eligibleTargets(now = new Date()): Promise<RoomChangeTarget[]> {
+export async function eligibleTargets(now = clockNow()): Promise<RoomChangeTarget[]> {
   const date = berlinDate(now);
   const [rooms, arrivals, plans, inHouse] = await Promise.all([
     prisma.room.findMany({ where: { active: true, occupancy: "VACANT", status: "INSPECTED" }, select: { id: true, number: true, floor: true, type: true }, orderBy: { number: "asc" } }),
@@ -37,7 +38,7 @@ export async function eligibleTargets(now = new Date()): Promise<RoomChangeTarge
 
 export type RoomChangeResult = { ok: true; from: string; to: string } | { ok: false; status: number; code: string; error: string };
 
-export async function changeRoom(session: Session, fromId: string, toId: string, reason: string, now = new Date()): Promise<RoomChangeResult> {
+export async function changeRoom(session: Session, fromId: string, toId: string, reason: string, now = clockNow()): Promise<RoomChangeResult> {
   const date = berlinDate(now);
   const [from, to] = await Promise.all([prisma.room.findUnique({ where: { id: fromId } }), prisma.room.findUnique({ where: { id: toId } })]);
   if (!from || !to) return { ok: false, status: 404, code: "ROOM_NOT_FOUND", error: "Zimmer nicht gefunden." };

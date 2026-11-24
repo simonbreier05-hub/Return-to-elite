@@ -58,6 +58,8 @@ const LEADS: readonly Role[] = ["supervisor", "duty_manager"];
 export const EVENT_ROLES: Record<string, readonly Role[]> = {
   // Zimmer-/Planungsstand: braucht jeder Bildschirm (Gastnamen werden je Rolle entfernt).
   "room:update": ALL_STAFF,
+  // S0 Simulationsuhr (nur Preview): jeder Bildschirm zeigt die Sim-Zeit; keine Gastdaten.
+  "clock:update": ALL_STAFF,
   "dayplan:updated": ALL_STAFF,
   "assignments:applied": ALL_STAFF,
   "trace:update": ALL_STAFF,

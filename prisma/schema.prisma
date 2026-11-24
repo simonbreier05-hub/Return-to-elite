@@ -733,3 +733,14 @@ model ProfileSuggestion {
 
   @@index([createdAt])
 }
+
+// S0 Simulationsuhr (nur Preview/lokal, src/lib/clock.ts): genau eine Zeile id=1, übersteht Neustarts.
+// In Produktion nie gelesen (Sperre SIMULATION_MODE + SIM_ALLOWED). Rein additiv.
+model SimClock {
+  id        Int      @id
+  simAnker  DateTime
+  echtAnker DateTime
+  faktor    Float    @default(1)
+  pausiert  Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+}

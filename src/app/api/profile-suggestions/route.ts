@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -11,7 +12,7 @@ export async function GET() {
   const auth = await requireRole(["duty_manager"]);
   if (!auth.ok) return auth.response;
   const rows = await prisma.profileSuggestion.findMany({ where: { status: "OPEN" }, orderBy: { departure: "desc" } });
-  const now = new Date();
+  const now = clockNow();
   return NextResponse.json({
     suggestions: rows.map((r) => {
       const name = [r.guestSalutation, r.guestTitle, r.guestLastName].filter(Boolean).join(" ") || null;

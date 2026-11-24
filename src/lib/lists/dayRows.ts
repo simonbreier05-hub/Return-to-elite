@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { latestPlanDate } from "@/lib/dayplan/latest";
 import { getRoomTypeCredits, getSettings } from "@/lib/settings";
@@ -92,7 +93,7 @@ const stayIdFor = (p: { cleaningType: string; stayId: string | null; arrivingSta
  * `depts` begrenzt die Traces auf Abteilungen (Housekeeper: nur HOUSEKEEPING).
  */
 export async function loadRoomRows(date: string, where: { roomIds?: string[]; assignedToId?: string; floors?: number[] }, depts: string[] | null, opts: { extra?: boolean; now?: Date } = {}): Promise<RoomRow[]> {
-  const now = opts.now ?? new Date();
+  const now = opts.now ?? clockNow();
   const [settings, typeCredits] = await Promise.all([getSettings(), getRoomTypeCredits()]);
   const rooms = await prisma.room.findMany({
     where: {

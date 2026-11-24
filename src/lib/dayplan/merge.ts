@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { recordRoomTypes } from "@/lib/import/roomTypes";
 import { closeDepartedImportStays } from "@/lib/guest/stayArchive";
 import { prisma } from "@/lib/db";
@@ -97,7 +98,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   const stayIdByKey = new Map<string, string>();
   /** F3: Schlüssel (altes Zimmer|Anreise) von Aufenthalten, die per Zimmerwechsel umgezogen sind. */
   const movedKeys = new Set<string>();
-  const now = new Date();
+  const now = clockNow();
   for (const s of derived.stays) {
     const room = roomByNumber.get(s.room)!;
     const key = `${s.room}|${s.arrDate}`;
@@ -140,7 +141,7 @@ export async function mergeDay(date: string, userId: string): Promise<MergeResul
   const freshLists = !!ih && ih.batch.businessDate === date && !ih.purged && dep.batch.businessDate === date && !dep.purged;
   if (freshLists) {
     try {
-      const departed = await closeDepartedImportStays(date, new Date(), { keep: [...seen].map((k) => k.split("|")) });
+      const departed = await closeDepartedImportStays(date, clockNow(), { keep: [...seen].map((k) => k.split("|")) });
       if (departed) issues.push(issue("INFO", "STAYS_CLOSED", `${departed} abgereiste(r) Aufenthalt(e) ohne Check-out-Meldung abgeschlossen (Verlauf archiviert).`));
     } catch (e) {
       console.error("[merge] closeDepartedImportStays:", e instanceof Error ? e.name : "error");
@@ -259,7 +260,7 @@ async function initRoomStatus(date: string, plan: { roomId: string; cleaningType
   const stored = await prisma.setting.findUnique({ where: { key } });
   const old: StatusMarker = stored ? JSON.parse(stored.value) : {};
   const { updates, marker, carryover, origins } = planBoardStatus({ rooms, needsCleaning: needs, needsCheck: check, marker: old, dayStart: berlinToUtc(date, "00:00") });
-  const now = new Date();
+  const now = clockNow();
   for (const u of updates) {
     const room = await prisma.room.update({ where: { id: u.id }, data: { status: u.status, statusSince: now, blockReason: null, blockedSince: null, reworkNote: null } });
     marker[u.id] = [room.status, room.statusSince.toISOString(), ...origins[u.id]]; // F9 (A5): Ursprungsstand mitführen

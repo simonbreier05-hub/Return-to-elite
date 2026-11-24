@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -169,7 +170,7 @@ function GlassSupervisorList({ data, open, toggle, flash, stand, error, roomRef,
     if (room.changed || flash.has(room.number)) extra.push({ label: t("lists.changed"), tone: "accent" });
     if (phone) for (const m of markers.slice(1)) extra.push({ label: m.label, tone: "neutral" });
     // Betrieb L2: In Arbeit (Start, Laufzeit, Restzeit) · Late Check-out · Ausgecheckt · Green Option
-    const wp = workProgress(room.startedAt, room.estMinutes ?? 0, new Date());
+    const wp = workProgress(room.startedAt, room.estMinutes ?? 0, clockNow());
     if (wp) extra.push(wp.overMin > 0
       ? { label: t("lists.workOver", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, over: wp.overMin }), tone: "warning" }
       : { label: t("lists.workRunning", { start: hhmm(wp.startedAt), elapsed: wp.elapsedMin, remaining: wp.remainingMin }), tone: "info" });

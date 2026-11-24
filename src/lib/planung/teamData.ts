@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { audit } from "@/lib/audit";
 import { berlinDate } from "@/lib/dayplan/time";
@@ -118,4 +119,4 @@ export async function saveFloors(date: string, assign: Record<number, string>, u
   }
 }
 
-export const todayBerlin = () => berlinDate(new Date());
+export const todayBerlin = () => berlinDate(clockNow());

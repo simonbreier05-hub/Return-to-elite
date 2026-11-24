@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 
 /**
@@ -12,7 +13,7 @@ import { prisma } from "@/lib/db";
  */
 /** `before`: nur bis zu diesem Zeitpunkt Angelegtes (Turn: Notizen/Wünsche des anreisenden Gastes von heute bleiben). */
 export async function archiveStayHistory(roomId: string, opts: { stayId?: string | null; now?: Date; before?: Date } = {}): Promise<{ requests: number; notes: number }> {
-  const now = opts.now ?? new Date();
+  const now = opts.now ?? clockNow();
   const created = opts.before ? { createdAt: { lt: opts.before } } : {};
   const closed = await prisma.guestRequest.updateMany({
     where: { roomId, archivedAt: null, status: { in: ["RECEIVED", "IN_PROGRESS"] }, ...created },
@@ -30,7 +31,7 @@ export async function unarchiveStayHistory(roomId: string, since: Date): Promise
 }
 
 /** Nachtlöschung: archivierter Verlauf älter als `days` Tage wird gelöscht. */
-export async function purgeArchivedStayHistory(now = new Date(), days = 30): Promise<{ requests: number; notes: number }> {
+export async function purgeArchivedStayHistory(now = clockNow(), days = 30): Promise<{ requests: number; notes: number }> {
   const cutoff = new Date(now.getTime() - days * 86_400_000);
   const requests = await prisma.guestRequest.deleteMany({ where: { archivedAt: { lt: cutoff } } });
   const notes = await prisma.roomNote.deleteMany({ where: { archivedAt: { lt: cutoff } } });
@@ -38,7 +39,7 @@ export async function purgeArchivedStayHistory(now = new Date(), days = 30): Pro
 }
 
 /** F7 (H13, Aufgabe 2): offene Reinigungswünsche von früheren Tagen schließen (gelten nur am Tag ihrer Erfassung). Nachtlauf. */
-export async function closeStaleCleanRequests(now = new Date()): Promise<number> {
+export async function closeStaleCleanRequests(now = clockNow()): Promise<number> {
   const { berlinDate, berlinToUtc } = await import("@/lib/dayplan/time");
   const todayStart = berlinToUtc(berlinDate(now), "00:00");
   const r = await prisma.guestRequest.updateMany({ where: { kind: "CLEAN_REQUEST", status: { in: ["RECEIVED", "IN_PROGRESS"] }, createdAt: { lt: todayStart } }, data: { status: "CANCELLED" } });
@@ -52,7 +53,7 @@ export async function closeStaleCleanRequests(now = new Date()): Promise<number>
  * Status CHECKED_OUT. Ein verlängerter Aufenthalt hat im heutigen Import ein späteres Abreisedatum und bleibt unberührt.
  * Logbuch `GUEST_DEPARTED_IMPORT` (nur Ids, keine Gastdaten). Gibt die Anzahl zurück.
  */
-export async function closeDepartedImportStays(date: string, now = new Date(), opts: { keep?: string[][] } = {}): Promise<number> {
+export async function closeDepartedImportStays(date: string, now = clockNow(), opts: { keep?: string[][] } = {}): Promise<number> {
   /** Review (H1): Aufenthalte, die heute noch in den Listen stehen ([Zimmer, Anreise]), bleiben in jedem Fall. */
   const keep = new Set((opts.keep ?? []).map(([room, arr]) => `${room}|${arr}`));
   const { berlinDate, berlinToUtc } = await import("@/lib/dayplan/time");

@@ -1,3 +1,4 @@
+import { nowMs as clockMs } from "@/lib/clock";
 /**
  * Anzeige-Regeln der Supervisor-Seiten im Design „Glas & Premium“ (D3): Übersicht (Kennzahlen, „Team heute“,
  * Zimmer je Person nach Gruppen) und Tagesplanung (Kachelzustand, Credits je Kraft, Überlast).
@@ -217,7 +218,7 @@ export function sortReleaseQueue<T extends QueueItem>(items: T[]): T[] {
   const eta = (x: T) => (x.arrival?.eta ? new Date(x.arrival.eta).getTime() : Number.POSITIVE_INFINITY);
   return [...items].sort((a, b) => rank(a) - rank(b) || eta(a) - eta(b) || Number(!!b.arrival?.vip) - Number(!!a.arrival?.vip) || b.waitingMin - a.waitingMin);
 }
-export function etaState(eta: string | null | undefined, now = Date.now(), soonMin = 45): "overdue" | "soon" | null {
+export function etaState(eta: string | null | undefined, now = clockMs(), soonMin = 45): "overdue" | "soon" | null {
   if (!eta) return null;
   const t = new Date(eta).getTime();
   if (t < now) return "overdue";

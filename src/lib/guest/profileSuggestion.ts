@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { berlinDate, berlinToUtc } from "@/lib/dayplan/time";
 import { classifyTraceText } from "@/lib/import/traceClassifier";
@@ -74,7 +75,7 @@ export function profileItemsFrom(input: {
  * Baut den Vorschlag für einen abgereisten Aufenthalt — einmal je Aufenthalt (`stayId` eindeutig; Rücknahme und erneuter
  * Check-out legen keinen zweiten an). Ohne brauchbare Punkte: nichts. Gibt die Id zurück oder null.
  */
-export async function buildProfileSuggestion(stayId: string, now = new Date()): Promise<string | null> {
+export async function buildProfileSuggestion(stayId: string, now = clockNow()): Promise<string | null> {
   if (await prisma.profileSuggestion.findUnique({ where: { stayId }, select: { id: true } })) return null;
   // Schon einmal erzeugt und danach erledigt/gelöscht? Logbuch merkt es sich (nur Id, kein Name).
   if (await prisma.auditLog.findFirst({ where: { action: "PROFILE_SUGGESTION_CREATED", meta: { contains: stayId } }, select: { id: true } })) return null;
@@ -115,7 +116,7 @@ export const profileNameVisibleUntil = (departure: Date) => berlinToUtc(nextBerl
 export const profileNameDeleteAt = profileNameVisibleUntil;
 
 /** Namen löschen, deren Frist abgelaufen ist (`all`: sofort alle — „Gastdaten jetzt löschen“ des DM). Gibt die Anzahl zurück. */
-export async function purgeExpiredProfileNames(now = new Date(), all = false): Promise<number> {
+export async function purgeExpiredProfileNames(now = clockNow(), all = false): Promise<number> {
   const rows = await prisma.profileSuggestion.findMany({
     where: { OR: [{ guestSalutation: { not: null } }, { guestTitle: { not: null } }, { guestLastName: { not: null } }] },
     select: { id: true, departure: true },
@@ -126,7 +127,7 @@ export async function purgeExpiredProfileNames(now = new Date(), all = false): P
 }
 
 /** Nachtlöschung (aus `purgeGuestDataNow`): abgelaufene Namen leeren (siehe oben), Vorschläge älter als `days` Tage löschen. */
-export async function purgeProfileSuggestions(now = new Date(), days = 30, all = false): Promise<number> {
+export async function purgeProfileSuggestions(now = clockNow(), days = 30, all = false): Promise<number> {
   const cutoff = new Date(now.getTime() - days * 86_400_000);
   await purgeExpiredProfileNames(now, all);
   const r = await prisma.profileSuggestion.deleteMany({ where: { createdAt: { lt: cutoff } } });

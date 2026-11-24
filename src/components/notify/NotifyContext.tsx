@@ -133,7 +133,7 @@ export function NotifyProvider({ role, onOpenRoom, children }: { role: string; o
   }, [sound]);
 
   const resync = useCallback(() => {
-    const now = Date.now();
+    const now = Date.now(); // technischer Takt (Resync-Drossel), echte Zeit
     if (!shouldResync(lastResync.current, now)) return;
     lastResync.current = now;
     void load("resync");

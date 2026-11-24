@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -19,7 +20,7 @@ export async function POST(_req: NextRequest, { params }: { params: Promise<{ id
 
   const room = await prisma.room.update({
     where: { id },
-    data: { lastLinenChangeAt: new Date() },
+    data: { lastLinenChangeAt: clockNow() },
   });
   await audit({ action: "LINEN_CHANGED", userId: auth.session.userId, roomId: id });
   broadcast("room:update", { room });

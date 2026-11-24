@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useEffect, useState } from "react";
 import { useLocale } from "@/lib/i18n/LocaleContext";
@@ -8,8 +9,8 @@ export default function LiveClock({ tone = "shell" }: { tone?: "shell" | "pl" })
   const { intl } = useLocale();
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 1000);
+    setNow(clockNow());
+    const id = setInterval(() => setNow(clockNow()), 1000);
     return () => clearInterval(id);
   }, []);
   if (!now) return tone === "pl" ? <span className="inline-block h-4 w-44" aria-hidden /> :  <div className="h-10 w-16 md:hidden lg:block lg:w-40" aria-hidden />;

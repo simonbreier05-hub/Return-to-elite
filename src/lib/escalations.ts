@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "./db";
 import { broadcast } from "./realtime";
 import { getSettings } from "./settings";
@@ -39,7 +40,7 @@ async function notifyOnce(entry: {
   return notification;
 }
 
-export async function runEscalations(now = new Date()) {
+export async function runEscalations(now = clockNow()) {
   const settings = await getSettings();
   const created: string[] = [];
 

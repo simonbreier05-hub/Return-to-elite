@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -49,8 +50,8 @@ function HeaderDate() {
   const { fmt } = useLocale();
   const [now, setNow] = useState<Date | null>(null);
   useEffect(() => {
-    setNow(new Date());
-    const id = setInterval(() => setNow(new Date()), 30_000);
+    setNow(clockNow());
+    const id = setInterval(() => setNow(clockNow()), 30_000);
     return () => clearInterval(id);
   }, []);
   if (!now) return <span className="text-label block h-5" aria-hidden />;
@@ -97,7 +98,7 @@ export default function AppShell({
   const [profileOpen, setProfileOpen] = useState(false);
   const [devUsers, setDevUsers] = useState<{ email: string; name: string; role: string }[] | null>(null);
   const [greetingAt, setGreetingAt] = useState<Date | null>(null);
-  useEffect(() => setGreetingAt(new Date()), []);
+  useEffect(() => setGreetingAt(clockNow()), []);
 
   // Globale Zimmer-Schnellsuche — im Rahmen, damit sie von jeder Seite erreichbar ist.
   const [query, setQuery] = useState("");

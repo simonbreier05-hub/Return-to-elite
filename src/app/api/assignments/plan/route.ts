@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
@@ -49,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   const settings = await getSettings();
   const weights = await getPriorityWeights();
-  const now = new Date();
+  const now = clockNow();
 
   const attendants = await prisma.user.findMany({
     where: {

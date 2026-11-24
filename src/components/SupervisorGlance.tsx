@@ -1,4 +1,5 @@
 "use client";
+import { nowMs as clockMs } from "@/lib/clock";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { api } from "@/components/api";
@@ -78,7 +79,7 @@ export default function SupervisorGlance({ rooms, releaseQueue, onChanged }: { r
       const busy = releaseQueue.busyRoomId === r.id;
       return {
         key: r.id, title: r.number, roomRef: r.id,
-        meta: [t("glance.floorShort", { n: r.floor }), r.assignedTo?.name, r.statusSince ? t("glance.waitingMin", { minutes: Math.max(0, Math.round((Date.now() - Date.parse(r.statusSince)) / 60000)) }) : ""].filter(Boolean).join(" · "),
+        meta: [t("glance.floorShort", { n: r.floor }), r.assignedTo?.name, r.statusSince ? t("glance.waitingMin", { minutes: Math.max(0, Math.round((clockMs() - Date.parse(r.statusSince)) / 60000)) }) : ""].filter(Boolean).join(" · "),
         actions: (
           <>
             <button type="button" onClick={() => releaseQueue.onRelease(r.id)} disabled={busy}

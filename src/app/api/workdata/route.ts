@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireRole } from "@/lib/rbac";
@@ -17,7 +18,7 @@ export async function GET(req: NextRequest) {
   const userId = req.nextUrl.searchParams.get("userId");
   if (!userId) return NextResponse.json({ people, usePlanning });
   if (!people.some((p) => p.id === userId)) return NextResponse.json({ error: "Unbekannte Person." }, { status: 404 });
-  const set = await loadWorkData(berlinDate(new Date()));
+  const set = await loadWorkData(berlinDate(clockNow()));
   return NextResponse.json({ people, usePlanning, since: set.since, minSamples: set.minSamples, defaults: set.defaults, stats: statsFor(set, userId) });
 }
 

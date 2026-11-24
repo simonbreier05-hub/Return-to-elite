@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { berlinToday } from "@/lib/import/businessDay";
 
@@ -8,7 +9,7 @@ import { berlinToday } from "@/lib/import/businessDay";
  */
 export interface HubDay { date: string; ready: boolean }
 
-export async function hubDay(now: Date = new Date()): Promise<HubDay> {
+export async function hubDay(now: Date = clockNow()): Promise<HubDay> {
   const date = berlinToday(now);
   const ready = (await prisma.dayRoomPlan.count({ where: { date } })) > 0;
   return { date, ready };

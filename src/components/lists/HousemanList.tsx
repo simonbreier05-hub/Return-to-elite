@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useCallback, useEffect, useState } from "react";
 import { api } from "@/components/api";
@@ -49,7 +50,7 @@ export function useHousemanList(onLinkedTasks?: (roomTaskIds: Set<string>) => vo
     const next = item.status === "DONE" ? "OPEN" : "DONE";
     try {
       await api(`/api/traces/${item.id}`, { method: "PATCH", body: { status: next } });
-      setData((d) => d && { ...d, items: d.items.map((i) => (i.id === item.id ? { ...i, status: next, doneAt: next === "DONE" ? new Date().toISOString() : null } : i)) });
+      setData((d) => d && { ...d, items: d.items.map((i) => (i.id === item.id ? { ...i, status: next, doneAt: next === "DONE" ? clockNow().toISOString() : null } : i)) });
       soon();
       return true;
     } catch { setError(t("lists.hmFailed")); return false; } finally { setBusy(null); }

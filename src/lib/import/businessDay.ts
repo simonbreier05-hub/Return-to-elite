@@ -1,7 +1,8 @@
+import { now as clockNow } from "@/lib/clock";
 import type { ImportType } from "@/lib/domain";
 
 /** Betriebstag = Kalendertag der App-Uhr in Berlin (YYYY-MM-DD). Das Datum in einer Datei ist nur ein Abgleich. */
-export const berlinToday = (now: Date = new Date()): string => now.toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
+export const berlinToday = (now: Date = clockNow()): string => now.toLocaleDateString("sv-SE", { timeZone: "Europe/Berlin" });
 
 /** Stand einer Liste gegenüber dem Betriebstag. */
 export type FreshState = "fresh" | "stale" | "accepted";

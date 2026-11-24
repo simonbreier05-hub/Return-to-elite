@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { prisma } from "@/lib/db";
 import { getGuestSystemUserId } from "@/lib/guestServer";
 
@@ -37,7 +38,7 @@ const NOTE_TO_GUEST_STATUS: Record<string, GuestStatus> = { OPEN: "RECEIVED", DO
  * S1: Der Verlauf beginnt frühestens mit dem letzten Check-out in diesem Zimmer — ein neuer Gast sieht nie die
  * Anfragen oder Notizen des Vorgasts (Same-Day-Turn). Quelle: Logbuch GUEST_CHECKED_OUT (Check-out-Route).
  */
-export async function getGuestStatusFeed(roomId: string, now: Date = new Date()): Promise<{
+export async function getGuestStatusFeed(roomId: string, now: Date = clockNow()): Promise<{
   items: GuestStatusItem[];
   activeDnd: { id: string; detail: string | null } | null;
 }> {

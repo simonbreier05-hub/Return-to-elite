@@ -1,4 +1,5 @@
 "use client";
+import { now as clockNow } from "@/lib/clock";
 
 import { useState } from "react";
 import { EngineeringHub } from "@/components/roles/EngineeringHub";
@@ -15,7 +16,7 @@ import { hhmm } from "@/lib/i18n/format";
 export type DemoRole = "engineering" | "houseman" | "front_office" | "concierge";
 
 /** Erfundene Testdaten wie im Figma-Entwurf (keine echten Gäste/Mitarbeiter, kein Alter). Uhrzeiten = heute. */
-const today = (hhmm: string) => berlinToUtc(berlinDate(new Date()), hhmm).toISOString();
+const today = (hhmm: string) => berlinToUtc(berlinDate(clockNow()), hhmm).toISOString();
 const room = (n: string) => ({ id: `demo-${n}`, number: n, status: "DIRTY", floor: Number(n[0]), openNotesCount: 0 });
 
 const ORDERS = [

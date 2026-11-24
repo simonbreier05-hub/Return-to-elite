@@ -19,6 +19,7 @@
     "rooms:sync": "tsx scripts/sync-room-list.ts",
     "fixtures:opera": "tsx scripts/generate-opera-fixtures.ts",
     "test": "vitest run",
+    "sim:clock": "node scripts/sim-clock.mjs",
     "test:watch": "vitest",
     "i18n:review": "tsx scripts/i18n.ts review",
     "i18n:import": "tsx scripts/i18n.ts import",

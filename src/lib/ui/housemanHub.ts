@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 /**
  * Hausmann-Hub im Design „Glas & Premium“ (Paket D5): reine Ableitungen für die Anzeige —
  * Hausmann-Liste (Traces, `/api/lists/houseman`) und von Hand angelegte Aufgaben (`/api/roomtasks`) zu einer Liste,
@@ -110,7 +111,7 @@ export function taskItem(raw: unknown): HmItemView | null {
  * Eine Liste aus beiden Quellen: Aufgaben, die schon als Trace-Zeile erscheinen (`roomTaskId`), nicht doppelt;
  * von Hand angelegte erledigte Aufgaben nur, wenn sie heute (Berlin) erledigt wurden. Offene zuerst.
  */
-export function mergeHousemanItems(traces: unknown[], tasks: unknown[], now: Date = new Date()): HmItemView[] {
+export function mergeHousemanItems(traces: unknown[], tasks: unknown[], now: Date = clockNow()): HmItemView[] {
   const linked = new Set(traces.map((t) => str(obj(t).roomTaskId)).filter((x): x is string => !!x));
   const today = berlinDate(now);
   const tr = traces.map(traceItem).filter((x): x is HmItemView => !!x);

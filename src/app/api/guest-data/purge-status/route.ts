@@ -1,3 +1,4 @@
+import { now as clockNow } from "@/lib/clock";
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { requireRole } from "@/lib/rbac";
@@ -12,7 +13,7 @@ export async function GET() {
   const last = await lastSuccessfulPurge();
   const latest = await prisma.purgeRun.findFirst({ orderBy: { startedAt: "desc" } });
   const latestImport = await prisma.importBatch.findFirst({ where: { status: "APPLIED" }, orderBy: { appliedAt: "desc" } });
-  const now = new Date();
+  const now = clockNow();
   return NextResponse.json({
     purgeHour: settings.guestPurgeHour,
     stayDeleteDays: settings.guestStayDeleteDays,
